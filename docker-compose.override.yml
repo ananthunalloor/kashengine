@@ -1,39 +1,54 @@
 # Dev settings. Compose loads this file automatically.
-# Start: docker compose up --build
+# Start once: docker compose up --build
+#
+# Hot-reload:
+#   web    - Django runserver reloads when a .py file changes.
+#   worker - watchfiles restarts Celery when a .py file changes.
+#   beat   - watchfiles restarts Celery beat when a .py file changes.
+# Rebuild (docker compose up --build) only when pyproject.toml or uv.lock changes.
 
 services:
-    web:
-        build:
-            args:
-                INSTALL_DEV: "true"
-        env_file: .env.dev
-        command: uv run python manage.py runserver 0.0.0.0:8000
-        volumes:
-            - .:/app
+  web:
+    build:
+      args:
+        INSTALL_DEV: "true"
+    env_file: .env.dev
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+    environment:
+      # Make file change detection work on Docker Desktop (Mac and Windows).
+      WATCHFILES_FORCE_POLLING: "true"
+    volumes:
+      - .:/app
 
-    worker:
-        build:
-            args:
-                INSTALL_DEV: "true"
-        env_file: .env.dev
-        command: uv run celery -A config worker -l info
-        volumes:
-            - .:/app
+  worker:
+    build:
+      args:
+        INSTALL_DEV: "true"
+    env_file: .env.dev
+    command: watchfiles --filter python "celery -A config worker -l info" /app
+    environment:
+      WATCHFILES_FORCE_POLLING: "true"
+    volumes:
+      - .:/app
 
-    beat:
-        build:
-            args:
-                INSTALL_DEV: "true"
-        env_file: .env.dev
-        command: uv run celery -A config beat -l info
-        volumes:
-            - .:/app
+  beat:
+    build:
+      args:
+        INSTALL_DEV: "true"
+    env_file: .env.dev
+    command: watchfiles --filter python "celery -A config beat -l info" /app
+    environment:
+      WATCHFILES_FORCE_POLLING: "true"
+    volumes:
+      - .:/app
 
-    db:
-        env_file: .env.dev
-        ports:
-            - "5432:5432"
+  db:
+    env_file: .env.dev
+    ports:
+      - "5432:5432"
 
-    ollama:
-        ports:
-            - "11434:11434"
+  ollama:
+    ports:
+      - "11434:11434"
