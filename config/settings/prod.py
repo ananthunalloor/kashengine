@@ -5,6 +5,10 @@ from .base import BASE_DIR, LOGGING, env
 
 DEBUG = False
 
+DATABASES = {
+    "default": env.db("DATABASE_URL"),
+}
+
 # HTTPS behind Nginx
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = env.bool("DJANGO_SECURE_SSL_REDIRECT", default=True)
@@ -30,5 +34,5 @@ LOGGING["handlers"]["file"] = {
     "backupCount": 5,
     "formatter": "standard",
 }
-LOGGING["root"]["handlers"] = ["console", "file"]
-LOGGING["root"]["level"] = "INFO"
+LOGGING["root"]["handlers"] = ["console", "file"]  # ty: ignore[invalid-assignment]
+LOGGING["root"]["level"] = "INFO"  # ty: ignore[invalid-assignment]
