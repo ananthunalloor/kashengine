@@ -25,3 +25,6 @@ logs/
 
 # git
 *.patch
+
+# Celery Beat schedule files
+celerybeat-schedule*

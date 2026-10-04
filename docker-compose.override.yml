@@ -1,0 +1,39 @@
+# Dev settings. Compose loads this file automatically.
+# Start: docker compose up --build
+
+services:
+    web:
+        build:
+            args:
+                INSTALL_DEV: "true"
+        env_file: .env.dev
+        command: uv run python manage.py runserver 0.0.0.0:8000
+        volumes:
+            - .:/app
+
+    worker:
+        build:
+            args:
+                INSTALL_DEV: "true"
+        env_file: .env.dev
+        command: uv run celery -A config worker -l info
+        volumes:
+            - .:/app
+
+    beat:
+        build:
+            args:
+                INSTALL_DEV: "true"
+        env_file: .env.dev
+        command: uv run celery -A config beat -l info
+        volumes:
+            - .:/app
+
+    db:
+        env_file: .env.dev
+        ports:
+            - "5432:5432"
+
+    ollama:
+        ports:
+            - "11434:11434"
