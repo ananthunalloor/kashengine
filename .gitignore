@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Environment files with secrets
+.env
+.env.dev
+.env.prod
+
+# Django
+staticfiles/
+media/
+*.sqlite3
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+
+# Logs
+logs/
+
+# git
+*.patch
