@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import environ
+from celery.schedules import crontab
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -87,6 +88,27 @@ CELERY_TASK_TRACK_STARTED = True
 LLM_BASE_URL = env("LLM_BASE_URL", default="http://ollama:11434")
 LLM_MODEL = env("LLM_MODEL", default="llama3.2:3b")
 
+# News collection
+# Standard bot format (like Googlebot). It names our bot and gives a contact link.
+# Do not make it look like a browser. Change the link to your own site or repository.
+NEWS_USER_AGENT = env(
+    "NEWS_USER_AGENT",
+    default="Mozilla/5.0 (compatible; KashEngineBot/0.1; +https://github.com/ananthunalloor/kashengine)",
+)
+NEWS_REQUEST_TIMEOUT = env.int("NEWS_REQUEST_TIMEOUT", default=20)  # seconds
+NEWS_FETCH_EVERY_HOURS = env.int("NEWS_FETCH_EVERY_HOURS", default=3)
+NEWS_SCRAPE_FULL_TEXT = env.bool("NEWS_SCRAPE_FULL_TEXT", default=True)
+NEWS_SCRAPE_DELAY_SECONDS = env.float("NEWS_SCRAPE_DELAY_SECONDS", default=3.0)  # per host
+NEWS_SCRAPE_BATCH_SIZE = env.int("NEWS_SCRAPE_BATCH_SIZE", default=50)
+NEWS_SCRAPE_MAX_AGE_HOURS = env.int("NEWS_SCRAPE_MAX_AGE_HOURS", default=48)
+
+CELERY_BEAT_SCHEDULE = {
+    "fetch-news-feeds": {
+        "task": "news.fetch_feeds",
+        "schedule": crontab(minute=5, hour=f"*/{NEWS_FETCH_EVERY_HOURS}"),
+    },
+}
+
 # Telegram
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", default="")
 
@@ -104,4 +126,9 @@ LOGGING = {
         "console": {"class": "logging.StreamHandler", "formatter": "standard"},
     },
     "root": {"handlers": ["console"], "level": "INFO"},
+    # These libraries write many debug lines. Dev sets the root level to DEBUG.
+    "loggers": {
+        name: {"level": "WARNING"}
+        for name in ("trafilatura", "htmldate", "courlan", "httpcore", "charset_normalizer")
+    },
 }

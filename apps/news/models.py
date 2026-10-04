@@ -8,7 +8,13 @@ class NewsArticle(models.Model):
     source = models.CharField(max_length=100, help_text="Source name, for example Moneycontrol.")
     title = models.CharField(max_length=500)
     url = models.URLField(max_length=1000, unique=True)
+    summary = models.TextField(blank=True, help_text="Short text from the RSS feed.")
     text = models.TextField(blank=True, help_text="Full article text, if it was scraped.")
+    text_scraped_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When we tried to scrape the full text. Empty means not tried yet.",
+    )
     published_at = models.DateTimeField(null=True, blank=True, db_index=True)
     fetched_at = models.DateTimeField(auto_now_add=True)
 
