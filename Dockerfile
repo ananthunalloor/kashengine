@@ -26,6 +26,19 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         uv sync --frozen --no-install-project --no-dev; \
     fi
 
-COPY . .
+# Run as a normal user, not as root. On Linux, if your user ID is not 1000, build with
+#   --build-arg UID=$(id -u) --build-arg GID=$(id -g)
+ARG UID=1000
+ARG GID=1000
+RUN groupadd --gid "$GID" app \
+    && useradd --uid "$UID" --gid "$GID" --create-home --shell /usr/sbin/nologin app
+
+COPY --chown=app:app . .
+
+# The folders that the app writes to in prod. A new named volume takes its owner from here.
+RUN mkdir -p /app/logs /app/staticfiles \
+    && chown app:app /app /app/logs /app/staticfiles
+
+USER app
 
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]

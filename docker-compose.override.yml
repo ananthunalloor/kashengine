@@ -38,7 +38,9 @@ services:
       args:
         INSTALL_DEV: "true"
     env_file: .env.dev
-    command: watchfiles --filter python "celery -A config beat -l info" /app
+    command: >
+      watchfiles --filter python
+      "celery -A config beat -l info -s /tmp/celerybeat-schedule" /app
     environment:
       WATCHFILES_FORCE_POLLING: "true"
     volumes:

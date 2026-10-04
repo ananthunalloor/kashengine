@@ -53,7 +53,8 @@ services:
 
   beat:
     <<: *app
-    command: celery -A config beat -l info
+    # The schedule file is in /tmp, because the app user can write there.
+    command: celery -A config beat -l info -s /tmp/celerybeat-schedule
 
 volumes:
   postgres_data:

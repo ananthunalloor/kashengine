@@ -8,10 +8,12 @@ dependencies = [
     "django>=6.1.1",
     "django-environ>=0.14.0",
     "django-stubs>=6.1.1",
+    "feedparser>=6.0.14",
     "gunicorn>=26.2.0",
     "httpx>=0.28.1",
     "psycopg[binary]>=3.3.6",
     "redis>=8.1.0",
+    "trafilatura>=2.3.0",
     "whitenoise>=6.12.0",
 ]
 
