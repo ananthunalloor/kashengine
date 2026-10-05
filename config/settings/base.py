@@ -27,6 +27,8 @@ INSTALLED_APPS = [
     "apps.ipos",
     "apps.reports",
     "apps.delivery",
+    "apps.llm",
+    "apps.markets",
 ]
 
 MIDDLEWARE = [
@@ -87,6 +89,8 @@ CELERY_TASK_TRACK_STARTED = True
 # Local LLM (Ollama). All code reads these values through LLMClient.
 LLM_BASE_URL = env("LLM_BASE_URL", default="http://ollama:11434")
 LLM_MODEL = env("LLM_MODEL", default="llama3.2:3b")
+# A small model on a CPU can need a minute for one answer. Wait at most this long.
+LLM_TIMEOUT_SECONDS = env.int("LLM_TIMEOUT_SECONDS", default=180)
 
 # News collection
 # Standard bot format (like Googlebot). It names our bot and gives a contact link.
@@ -102,14 +106,27 @@ NEWS_SCRAPE_DELAY_SECONDS = env.float("NEWS_SCRAPE_DELAY_SECONDS", default=3.0) 
 NEWS_SCRAPE_BATCH_SIZE = env.int("NEWS_SCRAPE_BATCH_SIZE", default=50)
 NEWS_SCRAPE_MAX_AGE_HOURS = env.int("NEWS_SCRAPE_MAX_AGE_HOURS", default=48)
 
-# Company data from Screener.in. It is OFF by default.
-# The Screener.in terms allow "personal, non-commercial transitory viewing". Read the note at the
-# top of apps/companies/screener.py before you turn this on.
+# Company data from Screener.in.
 SCREENER_ENABLED = env.bool("SCREENER_ENABLED", default=False)
 SCREENER_DELAY_SECONDS = env.float("SCREENER_DELAY_SECONDS", default=5.0)
 SCREENER_REFRESH_DAYS = env.int("SCREENER_REFRESH_DAYS", default=7)
-SCREENER_BATCH_SIZE = env.int("SCREENER_BATCH_SIZE", default=100)  # Companies for each run.
+SCREENER_BATCH_SIZE = env.int("SCREENER_BATCH_SIZE", default=100)
 
+# Sentiment scoring with the local LLM
+SENTIMENT_MAX_CHARS = env.int("SENTIMENT_MAX_CHARS", default=2000)  # Article text for the model.
+SENTIMENT_BATCH_SIZE = env.int("SENTIMENT_BATCH_SIZE", default=50)  # Articles for each run.
+SENTIMENT_MAX_AGE_HOURS = env.int("SENTIMENT_MAX_AGE_HOURS", default=48)
+SENTIMENT_MAX_ATTEMPTS = env.int("SENTIMENT_MAX_ATTEMPTS", default=3)
+
+# Market data and the prediction.
+MARKET_FLAT_BAND_PCT = env.float("MARKET_FLAT_BAND_PCT", default=0.25)  # A day within this is flat.
+PREDICTION_NEWS_WEIGHT = env.float(
+    "PREDICTION_NEWS_WEIGHT", default=0.5
+)  # The rest is global cues.
+PREDICTION_THRESHOLD = env.float("PREDICTION_THRESHOLD", default=0.15)  # Score for up or down.
+PREDICTION_MIN_ARTICLES = env.int("PREDICTION_MIN_ARTICLES", default=5)
+
+# All times are IST. The daily report is sent at 07:30 (Phase 7), after the prediction at 07:00.
 CELERY_BEAT_SCHEDULE = {
     "fetch-news-feeds": {
         "task": "news.fetch_feeds",
@@ -120,6 +137,25 @@ CELERY_BEAT_SCHEDULE = {
     "refresh-stale-companies": {
         "task": "companies.refresh_stale",
         "schedule": crontab(minute=30, hour=2),
+    },
+    # Scores the articles that are not scored yet. It also starts after each news fetch.
+    "score-news": {
+        "task": "news.score_articles",
+        "schedule": crontab(minute=20),
+    },
+    # Quotes before the prediction. This also checks the older predictions.
+    "fetch-market-quotes-morning": {
+        "task": "markets.fetch_quotes",
+        "schedule": crontab(minute=45, hour=6),
+    },
+    "predict-market": {
+        "task": "markets.predict",
+        "schedule": crontab(minute=0, hour=7),
+    },
+    # The market closes at 15:30. This gets the final quotes and checks today's prediction.
+    "fetch-market-quotes-evening": {
+        "task": "markets.fetch_quotes",
+        "schedule": crontab(minute=30, hour=17),
     },
 }
 
