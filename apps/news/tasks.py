@@ -5,6 +5,8 @@ import logging
 from celery import shared_task
 from django.conf import settings
 
+from apps.companies.tasks import link_news
+
 from .rss import fetch_all_feeds
 from .scraper import scrape_pending
 
@@ -18,8 +20,10 @@ def fetch_feeds() -> dict:
     logger.info(
         "News fetch done: %d new articles, %d feeds failed", result["new"], len(result["failed"])
     )
-    if settings.NEWS_SCRAPE_FULL_TEXT and result["new"]:
-        scrape_articles.delay()
+    if result["new"]:
+        link_news.delay()  # Link the new articles to the companies that they name.
+        if settings.NEWS_SCRAPE_FULL_TEXT:
+            scrape_articles.delay()
     return result
 
 

@@ -6,10 +6,15 @@ class Company(models.Model):
 
     name = models.CharField(max_length=200)
     symbol = models.CharField(max_length=50, unique=True, help_text="NSE or BSE symbol.")
+    aliases = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Other names used in news, for example ["SBI", "State Bank of India"].',
+    )
     sector = models.CharField(max_length=100, blank=True)
     screener_url = models.URLField(max_length=500, blank=True)
     screener_data = models.JSONField(
-        default=dict, blank=True, help_text="Raw data from Screener.in."
+        default=dict, blank=True, help_text="Data from Screener.in. Empty until the first refresh."
     )
     last_updated = models.DateTimeField(
         null=True,

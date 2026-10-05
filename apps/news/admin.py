@@ -9,6 +9,7 @@ class NewsArticleAdmin(admin.ModelAdmin):
     list_filter = ("source", "published_at")
     search_fields = ("title", "summary", "text", "url")
     date_hierarchy = "published_at"
+    autocomplete_fields = ("companies",)
     readonly_fields = ("fetched_at", "text_scraped_at")
 
     @admin.display(boolean=True, description="Full text")

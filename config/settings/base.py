@@ -102,10 +102,24 @@ NEWS_SCRAPE_DELAY_SECONDS = env.float("NEWS_SCRAPE_DELAY_SECONDS", default=3.0) 
 NEWS_SCRAPE_BATCH_SIZE = env.int("NEWS_SCRAPE_BATCH_SIZE", default=50)
 NEWS_SCRAPE_MAX_AGE_HOURS = env.int("NEWS_SCRAPE_MAX_AGE_HOURS", default=48)
 
+# Company data from Screener.in. It is OFF by default.
+# The Screener.in terms allow "personal, non-commercial transitory viewing". Read the note at the
+# top of apps/companies/screener.py before you turn this on.
+SCREENER_ENABLED = env.bool("SCREENER_ENABLED", default=False)
+SCREENER_DELAY_SECONDS = env.float("SCREENER_DELAY_SECONDS", default=5.0)
+SCREENER_REFRESH_DAYS = env.int("SCREENER_REFRESH_DAYS", default=7)
+SCREENER_BATCH_SIZE = env.int("SCREENER_BATCH_SIZE", default=100)  # Companies for each run.
+
 CELERY_BEAT_SCHEDULE = {
     "fetch-news-feeds": {
         "task": "news.fetch_feeds",
         "schedule": crontab(minute=5, hour=f"*/{NEWS_FETCH_EVERY_HOURS}"),
+    },
+    # Runs every day. A company is read again only when its data is older than
+    # SCREENER_REFRESH_DAYS, so each company is read about once a week.
+    "refresh-stale-companies": {
+        "task": "companies.refresh_stale",
+        "schedule": crontab(minute=30, hour=2),
     },
 }
 

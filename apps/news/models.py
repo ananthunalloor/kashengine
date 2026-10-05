@@ -27,6 +27,13 @@ class NewsArticle(models.Model):
     )
     sentiment_reason = models.TextField(blank=True)
 
+    # Set by apps.companies.matching. It finds company names and symbols in the title and summary.
+    companies = models.ManyToManyField(
+        "companies.Company",
+        blank=True,
+        related_name="news_articles",
+    )
+
     class Meta:
         ordering = ["-published_at", "-fetched_at"]
 
