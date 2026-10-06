@@ -126,6 +126,23 @@ PREDICTION_NEWS_WEIGHT = env.float(
 PREDICTION_THRESHOLD = env.float("PREDICTION_THRESHOLD", default=0.15)  # Score for up or down.
 PREDICTION_MIN_ARTICLES = env.int("PREDICTION_MIN_ARTICLES", default=5)
 
+# IPOs. The fetch is OFF by default. Read the note at the top of apps/ipos/sources.py first.
+IPO_FETCH_ENABLED = env.bool("IPO_FETCH_ENABLED", default=False)
+# The URL can have {month}, {year}, and {fy}. We use this month and last month.
+IPO_SOURCE_URLS = env.list(
+    "IPO_SOURCE_URLS",
+    default=[
+        "https://webnodejs.chittorgarh.com/cloud/report/data-read/82/1/{month}/{year}/{fy}/0/all/0"
+        "?search=&v=1"
+    ],
+)
+IPO_KEEP_DAYS = env.int("IPO_KEEP_DAYS", default=60)  # We skip new IPOs that opened before this.
+IPO_METRIC_MAX_AGE_HOURS = env.int("IPO_METRIC_MAX_AGE_HOURS", default=72)  # GMP, subscription.
+IPO_NEWS_DAYS = env.int("IPO_NEWS_DAYS", default=14)
+IPO_GOOD_SCORE = env.float("IPO_GOOD_SCORE", default=0.3)  # A score from this up is "good".
+IPO_WEAK_SCORE = env.float("IPO_WEAK_SCORE", default=0.1)  # A score under this is "weak".
+IPO_GOOD_GAIN_PCT = env.float("IPO_GOOD_GAIN_PCT", default=10.0)  # A listing gain "did well".
+
 # All times are IST. The daily report is sent at 07:30 (Phase 7), after the prediction at 07:00.
 CELERY_BEAT_SCHEDULE = {
     "fetch-news-feeds": {
@@ -156,6 +173,21 @@ CELERY_BEAT_SCHEDULE = {
     "fetch-market-quotes-evening": {
         "task": "markets.fetch_quotes",
         "schedule": crontab(minute=30, hour=17),
+    },
+    # IPO list from the source (if IPO_FETCH_ENABLED), then the scores. The evening run gets the
+    # listing results.
+    "collect-ipos-morning": {
+        "task": "ipos.collect",
+        "schedule": crontab(minute=15, hour=6),
+    },
+    "collect-ipos-evening": {
+        "task": "ipos.collect",
+        "schedule": crontab(minute=45, hour=18),
+    },
+    # Scores again after the news scoring, before the report at 07:30.
+    "score-ipos": {
+        "task": "ipos.score",
+        "schedule": crontab(minute=10, hour=7),
     },
 }
 

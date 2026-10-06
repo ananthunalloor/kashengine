@@ -2,6 +2,7 @@
 
 from django.conf import settings
 
+from apps.ipos import tasks as ipo_tasks  # noqa: F401  (registers the tasks)
 from apps.markets import tasks as market_tasks  # noqa: F401  (registers the tasks)
 from apps.news import tasks
 from config.celery import app
@@ -16,6 +17,8 @@ def test_tasks_are_registered_and_every_scheduled_task_exists():
         "companies.link_news",
         "markets.fetch_quotes",
         "markets.predict",
+        "ipos.collect",
+        "ipos.score",
     ):
         assert name in app.tasks
     for entry in settings.CELERY_BEAT_SCHEDULE.values():

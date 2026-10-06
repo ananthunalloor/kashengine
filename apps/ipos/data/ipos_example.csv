@@ -1,0 +1,4 @@
+name,open_date,close_date,listing_date,price_band_low,price_band_high,lot_size,issue_size_cr,category,gmp,subscription_times,listing_price,listing_gain_pct,source_url
+Example Foods Limited,2026-10-05,2026-10-07,2026-10-12,95,100,150,500,mainboard,22,,,,
+Example Steel Limited,2026-10-06,2026-10-08,2026-10-13,180,190,78,1200,mainboard,2,,,,
+Example Tech Limited,2026-10-12,2026-10-14,2026-10-19,70,74,200,45,sme,,,,,
