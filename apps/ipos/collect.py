@@ -144,34 +144,6 @@ def save_record(record: IpoRecord, today: date | None = None) -> str:
     return outcome
 
 
-def financial_year(day: date) -> str:
-    """The Indian financial year of a day, like "2026-27". It starts on 1 April."""
-    start = day.year if day.month >= 4 else day.year - 1
-    return f"{start}-{(start + 1) % 100:02d}"
-
-
-def expand_urls(urls, today: date) -> list[str]:
-    """Fill in {month}, {year}, and {fy} in the source URLs, for this month and last month.
-
-    A URL without these marks is used as it is. The same URL is used once.
-    """
-    first_of_month = today.replace(day=1)
-    months = [first_of_month, (first_of_month - timedelta(days=1)).replace(day=1)]
-    expanded: list[str] = []
-    for url in urls:
-        if not any(mark in url for mark in ("{month}", "{year}", "{fy}")):
-            candidates = [url]
-        else:
-            candidates = [
-                url.replace("{month}", str(m.month))
-                .replace("{year}", str(m.year))
-                .replace("{fy}", financial_year(m))
-                for m in months
-            ]
-        expanded.extend(c for c in candidates if c not in expanded)
-    return expanded
-
-
 def collect_ipos(
     fetcher: PoliteFetcher | None = None, urls=None, today: date | None = None
 ) -> dict:
@@ -180,8 +152,7 @@ def collect_ipos(
     Return {"created", "updated", "unchanged", "skipped", "failed": {url: error text}}.
     """
     stats = {"created": 0, "updated": 0, "unchanged": 0, "skipped": 0, "failed": {}}
-    today = today or today_ist()
-    urls = expand_urls(settings.IPO_SOURCE_URLS if urls is None else urls, today)
+    urls = settings.IPO_SOURCE_URLS if urls is None else urls
 
     client = None
     if fetcher is None:
@@ -194,7 +165,7 @@ def collect_ipos(
     try:
         for url in urls:
             try:
-                records = fetch_records(url, fetcher)
+                records = fetch_records(url, fetcher, today, settings.IPO_KEEP_DAYS)
             except IpoSourceError as exc:
                 logger.warning("IPO source failed: %s", exc)
                 stats["failed"][url] = str(exc)
@@ -294,7 +265,6 @@ __all__ = [
     "CSV_COLUMNS",
     "collect_ipos",
     "compute_status",
-    "expand_urls",
     "find_existing",
     "import_csv",
     "read_csv",

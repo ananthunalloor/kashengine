@@ -2,6 +2,7 @@
 
 from django.conf import settings
 
+from apps.delivery import tasks as delivery_tasks  # noqa: F401  (registers the tasks)
 from apps.ipos import tasks as ipo_tasks  # noqa: F401  (registers the tasks)
 from apps.markets import tasks as market_tasks  # noqa: F401  (registers the tasks)
 from apps.news import tasks
@@ -19,6 +20,7 @@ def test_tasks_are_registered_and_every_scheduled_task_exists():
         "markets.predict",
         "ipos.collect",
         "ipos.score",
+        "delivery.send_daily_report",
     ):
         assert name in app.tasks
     for entry in settings.CELERY_BEAT_SCHEDULE.values():

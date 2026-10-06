@@ -5,7 +5,7 @@ from django.utils import timezone
 
 from apps.ipos.collect import refresh_statuses
 from apps.ipos.models import Ipo
-from apps.ipos.scoring import score_ipo
+from apps.ipos.scoring import score_ipos
 
 
 def _decimal(value: str | None, option: str) -> Decimal | None:
@@ -65,9 +65,9 @@ class Command(BaseCommand):
             gain = "-" if ipo.listing_gain_pct is None else f"{ipo.listing_gain_pct:+.1f}%"
             self.stdout.write(f"  Listed. Gain at the listing: {gain}")
             return
-        outcome = score_ipo(ipo)
-        score = "-" if outcome.score is None else f"{outcome.score:+.2f}"
-        self.stdout.write(f"  Verdict now: {outcome.verdict} (score {score})")
-        for note in outcome.notes:
+        score_ipos()  # Save the new score now. The report uses the saved scores.
+        ipo.refresh_from_db()
+        score = "-" if ipo.score is None else f"{ipo.score:+.2f}"
+        self.stdout.write(f"  Verdict now: {ipo.verdict} (score {score}). The score is saved.")
+        for note in ipo.score_inputs.get("notes", []):
             self.stdout.write(self.style.WARNING(f"  Note: {note}"))
-        self.stdout.write("  The daily scoring run saves the score. Or run: score_ipos")

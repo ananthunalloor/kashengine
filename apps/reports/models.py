@@ -19,6 +19,11 @@ class Report(models.Model):
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
         help_text="From 0 to 1.",
     )
+    data = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="The numbers and the lists behind the text. The web page uses them.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

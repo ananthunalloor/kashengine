@@ -143,7 +143,23 @@ IPO_GOOD_SCORE = env.float("IPO_GOOD_SCORE", default=0.3)  # A score from this u
 IPO_WEAK_SCORE = env.float("IPO_WEAK_SCORE", default=0.1)  # A score under this is "weak".
 IPO_GOOD_GAIN_PCT = env.float("IPO_GOOD_GAIN_PCT", default=10.0)  # A listing gain "did well".
 
-# All times are IST. The daily report is sent at 07:30 (Phase 7), after the prediction at 07:00.
+# Telegram. TELEGRAM_CHAT_IDS is a list of chat IDs (users, groups, or channels), separated by
+# commas. To find your chat ID: send a message to your bot, then run
+# `python manage.py telegram_check`.
+TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", default="")
+TELEGRAM_CHAT_IDS = env.list("TELEGRAM_CHAT_IDS", default=[])
+TELEGRAM_TIMEOUT_SECONDS = env.int("TELEGRAM_TIMEOUT_SECONDS", default=20)
+
+# Report time (IST). The report is sent on trading days (Monday to Friday).
+# A second run, 20 minutes later, sends only to the chats that did not get the report.
+REPORT_HOUR = env.int("REPORT_HOUR", default=7)
+REPORT_MINUTE = env.int("REPORT_MINUTE", default=30)
+REPORT_NEWS_ITEMS = env.int("REPORT_NEWS_ITEMS", default=3)  # For good news, and for bad news.
+REPORT_NEWS_MIN_RELEVANCE = env.float("REPORT_NEWS_MIN_RELEVANCE", default=0.4)
+REPORT_IPO_ITEMS = env.int("REPORT_IPO_ITEMS", default=6)  # For each IPO list.
+REPORT_IPO_DAYS_AHEAD = env.int("REPORT_IPO_DAYS_AHEAD", default=7)
+
+# All times are IST. The daily report is sent at 07:30, after the prediction at 07:00.
 CELERY_BEAT_SCHEDULE = {
     "fetch-news-feeds": {
         "task": "news.fetch_feeds",
@@ -189,14 +205,21 @@ CELERY_BEAT_SCHEDULE = {
         "task": "ipos.score",
         "schedule": crontab(minute=10, hour=7),
     },
+    # The daily report. It is built and sent on trading days. The second run sends again only
+    # to the chats that did not get it (a network problem, for example).
+    "send-daily-report": {
+        "task": "delivery.send_daily_report",
+        "schedule": crontab(minute=REPORT_MINUTE, hour=REPORT_HOUR, day_of_week="mon-fri"),
+    },
+    "send-daily-report-retry": {
+        "task": "delivery.send_daily_report",
+        "schedule": crontab(
+            minute=(REPORT_HOUR * 60 + REPORT_MINUTE + 20) % 60,
+            hour=((REPORT_HOUR * 60 + REPORT_MINUTE + 20) // 60) % 24,
+            day_of_week="mon-fri",
+        ),
+    },
 }
-
-# Telegram
-TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", default="")
-
-# Report time (IST)
-REPORT_HOUR = env.int("REPORT_HOUR", default=7)
-REPORT_MINUTE = env.int("REPORT_MINUTE", default=30)
 
 LOGGING = {
     "version": 1,

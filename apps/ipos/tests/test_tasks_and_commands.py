@@ -132,6 +132,8 @@ def test_update_ipo_sets_the_gmp_and_shows_the_verdict(capsys):
     assert ipo.gmp == D("25")
     assert ipo.gmp_updated_at is not None
     assert "Verdict now: good" in out
+    assert ipo.verdict == "good"  # The score is saved at once.
+    assert ipo.score is not None
 
 
 def test_update_ipo_confirms_an_unchanged_gmp():
