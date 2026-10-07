@@ -1,0 +1,47 @@
+{% extends "web/base.html" %}
+{% load web_extras %}
+{% block title %}{{ ipo.name }} · Kash Engine{% endblock %}
+{% block content %}
+<p class="text-sm"><a href="{% url 'web:ipos' %}">All IPOs</a></p>
+<div class="mt-2 flex flex-wrap items-start justify-between gap-3">
+  <div>
+    <h1 class="font-serif text-3xl font-semibold">{{ ipo.name }}</h1>
+    <p class="mt-1 text-muted">{{ ipo.get_category_display }}, {{ ipo.get_status_display|lower }}</p>
+  </div>
+  <span class="rounded px-3 py-1 text-sm font-medium {{ ipo.verdict|default:'unknown'|badge }}">{{ ipo.verdict|default:"unknown"|capfirst }}{% if ipo.score is not None %}, score {{ ipo.score|signed:2 }}{% endif %}</span>
+</div>
+
+<div class="mt-8 grid gap-10 md:grid-cols-2">
+  <section aria-labelledby="facts-title">
+    <h2 id="facts-title" class="font-serif text-2xl font-semibold">The issue</h2>
+    <dl class="mt-3 divide-y divide-rule border-y border-rule text-sm">
+      {% for label, value in facts %}
+      <div class="flex justify-between gap-4 py-2"><dt class="text-muted">{{ label }}</dt><dd class="num text-right font-medium">{{ value }}</dd></div>
+      {% endfor %}
+    </dl>
+    {% if ipo.source_url %}<p class="mt-3 text-sm"><a href="{{ ipo.source_url }}" rel="noopener noreferrer" target="_blank">Source page</a></p>{% endif %}
+  </section>
+
+  <section aria-labelledby="score-title">
+    <h2 id="score-title" class="font-serif text-2xl font-semibold">How the verdict was made</h2>
+    {% if signals %}
+    <table class="mt-3 w-full text-sm">
+      <thead class="text-left text-muted"><tr><th scope="col" class="py-2 pr-4 font-normal">Signal</th><th scope="col" class="py-2 pr-4 text-right font-normal">Value</th><th scope="col" class="py-2 text-right font-normal">Signal (−1 to +1)</th></tr></thead>
+      <tbody class="divide-y divide-rule border-y border-rule">
+        {% for s in signals %}
+        <tr>
+          <th scope="row" class="py-2 pr-4 text-left font-medium">{% if s.name == "gmp" %}GMP{% elif s.name == "subscription" %}Subscription{% else %}News{% endif %}</th>
+          <td class="num py-2 pr-4 text-right">{% if s.name == "gmp" %}{{ s.value|signed }}%{% elif s.name == "subscription" %}{{ s.value|times }}{% else %}{{ s.value|signed:2 }}{% endif %}</td>
+          <td class="num py-2 text-right font-medium {{ s.signal|tone }}">{{ s.signal|signed:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="mt-3 text-muted">There is no usable signal yet.</p>
+    {% endif %}
+    {% for note in notes %}<p class="mt-2 text-sm text-muted">{{ note }}</p>{% endfor %}
+    {% if ipo.scored_at %}<p class="mt-3 text-sm text-muted">Scored {{ ipo.scored_at|date:"j M Y, H:i" }}.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

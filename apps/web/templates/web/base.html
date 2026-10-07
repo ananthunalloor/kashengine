@@ -1,0 +1,38 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}Kash Engine{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% block head %}{% endblock %}
+</head>
+<body class="antialiased">
+  <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:bg-card focus:px-3 focus:py-2">Skip to the content</a>
+  <header class="border-b border-rule bg-card">
+    <div class="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+      <a href="{% url 'web:dashboard' %}" class="font-serif text-xl font-semibold text-ink no-underline">Kash Engine</a>
+      {% if user.is_authenticated %}
+      <nav aria-label="Main" class="flex flex-wrap gap-x-5 gap-y-1 text-sm">
+        {% for item in nav %}
+        <a href="{{ item.url }}" class="no-underline hover:text-ink {% if item.active %}font-semibold text-ink{% else %}text-muted{% endif %}"{% if item.active %} aria-current="page"{% endif %}>{{ item.label }}</a>
+        {% endfor %}
+      </nav>
+      <form method="post" action="{% url 'web:logout' %}" class="ml-auto">
+        {% csrf_token %}
+        <button type="submit" class="text-sm text-muted hover:text-ink">Log out</button>
+      </form>
+      {% endif %}
+    </div>
+  </header>
+  <main id="main" class="mx-auto max-w-5xl px-4 py-8">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="mx-auto max-w-5xl px-4 pb-10 text-xs leading-relaxed text-muted">
+    The signals are made by a simple rule and a local language model. They are not advice. GMP is
+    unofficial data. Do not use these pages as the only reason to buy or sell.
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

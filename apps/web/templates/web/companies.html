@@ -1,0 +1,19 @@
+{% extends "web/base.html" %}
+{% block title %}Companies · Kash Engine{% endblock %}
+{% block content %}
+<h1 class="font-serif text-3xl font-semibold">Companies</h1>
+<p class="mt-1 max-w-prose text-muted">The companies that we link to news. Data comes from Screener.in.</p>
+
+<form method="get" action="{% url 'web:companies' %}" class="mt-6 max-w-md" data-signals="{{ signals }}" data-indicator:fetching>
+  <label for="q" class="block text-sm font-medium">Search by name, symbol, or sector</label>
+  <input id="q" name="q" type="search" value="{{ filters.q }}" data-bind:q autocomplete="off"
+         data-on:input__debounce.300ms="$page = '1'; @get('{% url 'web:companies' %}')"
+         class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+  <noscript><button type="submit" class="mt-2 rounded-md bg-accent px-3 py-2 text-paper">Search</button></noscript>
+</form>
+
+<div class="mt-6" data-attr:aria-busy="$fetching ? 'true' : 'false'">
+  {% include "web/_company_results.html" %}
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ datastar_src }}"></script>{% endblock %}

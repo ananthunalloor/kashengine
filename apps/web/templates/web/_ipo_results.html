@@ -1,0 +1,40 @@
+{% load web_extras %}
+<div id="ipo-results">
+  <p class="text-sm text-muted">{{ page.paginator.count }} IPO{{ page.paginator.count|pluralize }}</p>
+  {% if page.object_list %}
+  <div class="mt-2 overflow-x-auto">
+    <table class="w-full min-w-[40rem] text-sm">
+      <thead class="text-left text-muted">
+        <tr>
+          <th scope="col" class="py-2 pr-4 font-normal">IPO</th>
+          <th scope="col" class="py-2 pr-4 font-normal">Dates</th>
+          <th scope="col" class="py-2 pr-4 text-right font-normal">Price band</th>
+          <th scope="col" class="py-2 pr-4 text-right font-normal">GMP</th>
+          <th scope="col" class="py-2 pr-4 text-right font-normal">Subscribed</th>
+          <th scope="col" class="py-2 pr-4 text-right font-normal">Listing gain</th>
+          <th scope="col" class="py-2 font-normal">Verdict</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-rule border-y border-rule">
+        {% for ipo in page.object_list %}
+        <tr>
+          <th scope="row" class="py-2 pr-4 text-left font-medium">
+            <a href="{% url 'web:ipo' ipo.pk %}" class="text-ink">{{ ipo.name }}</a>
+            <span class="block text-xs font-normal text-muted">{{ ipo.get_category_display }}, {{ ipo.get_status_display|lower }}</span>
+          </th>
+          <td class="py-2 pr-4 text-muted">{% if ipo.open_date %}{{ ipo.open_date|date:"j M" }}{% if ipo.close_date %} to {{ ipo.close_date|date:"j M" }}{% endif %}{% else %}–{% endif %}</td>
+          <td class="num py-2 pr-4 text-right">{% if ipo.price_band_high %}{{ ipo.price_band_high|rupees }}{% else %}–{% endif %}</td>
+          <td class="num py-2 pr-4 text-right {{ ipo.gmp_pct|tone }}">{% if ipo.gmp_pct is not None %}{{ ipo.gmp_pct|signed }}%{% else %}–{% endif %}</td>
+          <td class="num py-2 pr-4 text-right">{{ ipo.subscription_times|times }}</td>
+          <td class="num py-2 pr-4 text-right font-medium {{ ipo.listing_gain_pct|tone }}">{% if ipo.listing_gain_pct is not None %}{{ ipo.listing_gain_pct|signed }}%{% else %}–{% endif %}</td>
+          <td class="py-2"><span class="rounded px-2 py-0.5 text-xs font-medium {{ ipo.verdict|default:'unknown'|badge }}">{{ ipo.verdict|default:"unknown"|capfirst }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% url 'web:ipos' as list_url %}{% include "web/_pager.html" with page_url=list_url %}
+  {% else %}
+  <p class="mt-4 text-muted">No IPO matches. Change the filters.{% if not filters.q %} If the list is always empty, turn on <code>IPO_FETCH_ENABLED</code> and run <code>python manage.py collect_ipos</code>, or add IPOs with <code>import_ipo_csv</code>.{% endif %}</p>
+  {% endif %}
+</div>

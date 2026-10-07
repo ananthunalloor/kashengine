@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "apps.delivery",
     "apps.llm",
     "apps.markets",
+    "apps.web",
 ]
 
 MIDDLEWARE = [
@@ -38,6 +39,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Every page needs a login, unless the view says @login_not_required (for example /health/).
+    "django.contrib.auth.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -54,6 +57,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.web.context.web_settings",
             ],
         },
     },
@@ -73,6 +77,18 @@ LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Asia/Kolkata"
 USE_I18N = True
 USE_TZ = True
+
+# The web pages. There is one login for the whole site (create it with `createsuperuser`).
+LOGIN_URL = "web:login"
+LOGIN_REDIRECT_URL = "web:dashboard"
+LOGOUT_REDIRECT_URL = "web:login"
+# The Datastar script. The default is the CDN. To serve it from this site instead, save the file
+# as static/vendor/datastar.js and set DATASTAR_SRC=/static/vendor/datastar.js.
+DATASTAR_SRC = env(
+    "DATASTAR_SRC",
+    default="https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.4/bundles/datastar.js",
+)
+WEB_PAGE_SIZE = env.int("WEB_PAGE_SIZE", default=25)
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"

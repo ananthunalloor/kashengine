@@ -1,0 +1,120 @@
+{% extends "web/base.html" %}
+{% load web_extras %}
+{% block title %}Today · Kash Engine{% endblock %}
+{% block content %}
+
+{# The outlook. This is the one big element of the page. #}
+{% if outlook %}
+{% with p=outlook.prediction %}
+<section aria-labelledby="outlook-title" class="rounded-lg border border-rule bg-card p-6 sm:p-8">
+  <p class="text-sm text-muted">Outlook for {{ p.target_date|date:"l j F Y" }}</p>
+  <div class="mt-3 flex items-start gap-4">
+    <span aria-hidden="true" class="mt-1 text-4xl leading-none sm:text-5xl {% if p.direction == 'up' %}text-gain{% elif p.direction == 'down' %}text-loss{% else %}text-muted{% endif %}">{{ p.direction|arrow }}</span>
+    <h1 id="outlook-title" class="font-serif text-3xl font-semibold leading-tight sm:text-4xl">
+      The Nifty 50 is likely to {% if p.direction == "up" %}rise{% elif p.direction == "down" %}fall{% else %}stay flat{% endif %}.
+    </h1>
+  </div>
+
+  <div class="mt-6 grid gap-x-10 gap-y-6 md:grid-cols-2">
+    <div>
+      <p class="text-sm"><span class="font-medium">{{ outlook.strength|capfirst }} signal.</span>
+        <span class="text-muted">The strength is {{ p.confidence|percent }}. It is not a chance of being right.</span></p>
+      <div class="relative mt-2 h-2 rounded-full bg-flat-soft" role="img" aria-label="Signal strength {{ p.confidence|percent }}">
+        <div class="h-2 rounded-full {% if p.direction == 'up' %}bg-gain{% elif p.direction == 'down' %}bg-loss{% else %}bg-muted{% endif %}" style="width: {% widthratio p.confidence 1 100 %}%"></div>
+        <span class="absolute top-0 h-2 w-px bg-paper" style="left: 40%"></span>
+        <span class="absolute top-0 h-2 w-px bg-paper" style="left: 60%"></span>
+      </div>
+      <p class="mt-1 grid grid-cols-[40fr_20fr_40fr] text-xs text-muted"><span>weak</span><span>moderate</span><span>strong</span></p>
+    </div>
+
+    <div>
+      <dl class="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+        <div>
+          <dt class="text-muted">News</dt>
+          <dd class="num font-medium {{ p.news_score|tone }}">{{ p.news_score|signed:2 }}
+            <span class="font-normal text-muted">from {{ p.news_articles }} article{{ p.news_articles|pluralize }}</span></dd>
+        </div>
+        <div>
+          <dt class="text-muted">Global markets</dt>
+          <dd class="num font-medium {{ p.global_score|tone }}">{{ p.global_score|signed:2 }}</dd>
+        </div>
+      </dl>
+      {% if outlook.cues %}
+      <ul class="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm">
+        {% for cue in outlook.cues %}
+        <li><span class="text-muted">{{ cue.name }}</span> <span class="num font-medium {{ cue.change_pct|tone }}">{{ cue.change_pct|signed:2 }}%</span></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+  </div>
+  {% for note in outlook.notes %}<p class="mt-5 text-sm text-muted">{{ note }}</p>{% endfor %}
+</section>
+{% endwith %}
+{% else %}
+<section class="rounded-lg border border-rule bg-card p-6 sm:p-8">
+  <h1 class="font-serif text-3xl font-semibold">No outlook yet</h1>
+  <p class="mt-2 max-w-prose text-muted">The prediction is made each morning before the report. To make one now, run <code>python manage.py predict_market</code>.</p>
+</section>
+{% endif %}
+
+<p class="mt-4 text-sm text-muted">
+  {% if stats.total %}
+  The prediction was right on {{ stats.correct }} of {{ stats.total }} days ({{ stats.accuracy|percent }}).
+  Guessing the most common result every day would be right {{ stats.baseline_accuracy|percent }}.
+  {% if not stats.enough_results %}There are too few results to trust these numbers.{% endif %}
+  {% else %}There are no results yet to check the prediction against.{% endif %}
+  <a href="{% url 'web:markets' %}">See the history</a>.
+</p>
+
+<div class="mt-10 grid gap-10 md:grid-cols-2">
+  <section aria-labelledby="news-title">
+    <h2 id="news-title" class="font-serif text-2xl font-semibold">Stories that move the market</h2>
+    <p class="mt-1 text-sm text-muted">The last 36 hours. {{ news.articles }} scored article{{ news.articles|pluralize }}, {{ news.positive }} good and {{ news.negative }} bad.</p>
+    {% if news.good or news.bad %}
+    {% if news.good %}
+    <h3 class="mt-4 text-sm font-semibold text-gain">Good for stocks</h3>
+    <ul class="divide-y divide-rule">{% for item in news.good %}{% include "web/_story_item.html" %}{% endfor %}</ul>
+    {% endif %}
+    {% if news.bad %}
+    <h3 class="mt-4 text-sm font-semibold text-loss">Bad for stocks</h3>
+    <ul class="divide-y divide-rule">{% for item in news.bad %}{% include "web/_story_item.html" %}{% endfor %}</ul>
+    {% endif %}
+    {% else %}
+    <p class="mt-4 text-muted">No strong stories yet. The news is fetched and scored through the day.</p>
+    {% endif %}
+    <p class="mt-3 text-sm"><a href="{% url 'web:news' %}">All news</a></p>
+  </section>
+
+  <section aria-labelledby="ipo-title">
+    <h2 id="ipo-title" class="font-serif text-2xl font-semibold">IPOs</h2>
+    {% if ipos.likely_good %}
+    <h3 class="mt-4 text-sm font-semibold text-gain">Likely to do well</h3>
+    <ul class="divide-y divide-rule">{% for item in ipos.likely_good %}{% include "web/_ipo_item.html" %}{% endfor %}</ul>
+    {% endif %}
+    {% if ipos.open_now %}
+    <h3 class="mt-4 text-sm font-semibold">Open now</h3>
+    <ul class="divide-y divide-rule">{% for item in ipos.open_now %}{% include "web/_ipo_item.html" %}{% endfor %}</ul>
+    {% endif %}
+    {% if ipos.upcoming %}
+    <h3 class="mt-4 text-sm font-semibold">Opening in the next {{ ipos.days_ahead }} days</h3>
+    <ul class="divide-y divide-rule">{% for item in ipos.upcoming %}{% include "web/_ipo_item.html" %}{% endfor %}</ul>
+    {% endif %}
+    {% if not ipos.likely_good and not ipos.open_now and not ipos.upcoming %}
+    <p class="mt-4 text-muted">No IPO is open or coming soon. Turn on <code>IPO_FETCH_ENABLED</code> to read the IPO list.</p>
+    {% endif %}
+    <p class="mt-3 text-sm"><a href="{% url 'web:ipos' %}">All IPOs</a></p>
+  </section>
+</div>
+
+{% if quotes %}
+<section class="mt-10" aria-labelledby="quotes-title">
+  <h2 id="quotes-title" class="font-serif text-2xl font-semibold">Last close</h2>
+  {% include "web/_quotes.html" %}
+</section>
+{% endif %}
+
+{% if report %}
+<p class="mt-10 text-sm text-muted">The latest report is from {{ report.date|date:"j F Y" }}. <a href="{% url 'web:report' report.date %}">Read it</a>.</p>
+{% endif %}
+{% endblock %}

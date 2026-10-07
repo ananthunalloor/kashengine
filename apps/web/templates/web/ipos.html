@@ -1,0 +1,45 @@
+{% extends "web/base.html" %}
+{% block title %}IPOs · Kash Engine{% endblock %}
+{% block content %}
+<h1 class="font-serif text-3xl font-semibold">IPOs</h1>
+<p class="mt-1 max-w-prose text-muted">The verdict comes from the GMP, the final subscription, and the news. The rule is a first guess, and GMP is not official data.</p>
+
+<form method="get" action="{% url 'web:ipos' %}" class="mt-6 grid gap-3 sm:grid-cols-[1fr_auto_auto_auto]"
+      data-signals="{{ signals }}" data-indicator:fetching>
+  <div>
+    <label for="q" class="block text-sm font-medium">Search</label>
+    <input id="q" name="q" type="search" value="{{ filters.q }}" data-bind:q autocomplete="off"
+           data-on:input__debounce.300ms="$page = '1'; @get('{% url 'web:ipos' %}')"
+           class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+  </div>
+  <div>
+    <label for="status" class="block text-sm font-medium">Status</label>
+    <select id="status" name="status" data-bind:status data-on:change="$page = '1'; @get('{% url 'web:ipos' %}')"
+            class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+      {% for value, label in tabs.items %}<option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="verdict" class="block text-sm font-medium">Verdict</label>
+    <select id="verdict" name="verdict" data-bind:verdict data-on:change="$page = '1'; @get('{% url 'web:ipos' %}')"
+            class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+      <option value="">All</option>
+      {% for value, label in verdicts.items %}<option value="{{ value }}" {% if filters.verdict == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="category" class="block text-sm font-medium">Board</label>
+    <select id="category" name="category" data-bind:category data-on:change="$page = '1'; @get('{% url 'web:ipos' %}')"
+            class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+      <option value="">All</option>
+      {% for value, label in categories.items %}<option value="{{ value }}" {% if filters.category == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <noscript><button type="submit" class="rounded-md bg-accent px-3 py-2 text-paper">Apply</button></noscript>
+</form>
+
+<div class="mt-6" data-attr:aria-busy="$fetching ? 'true' : 'false'">
+  {% include "web/_ipo_results.html" %}
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ datastar_src }}"></script>{% endblock %}

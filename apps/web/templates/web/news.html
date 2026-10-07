@@ -1,0 +1,38 @@
+{% extends "web/base.html" %}
+{% block title %}News · Kash Engine{% endblock %}
+{% block content %}
+<h1 class="font-serif text-3xl font-semibold">News</h1>
+<p class="mt-1 text-muted">Every article that we fetched, with the score of the language model. A score goes from −1 (bad for stocks) to +1 (good).</p>
+
+<form method="get" action="{% url 'web:news' %}" class="mt-6 grid gap-3 sm:grid-cols-[1fr_auto_auto]"
+      data-signals="{{ signals }}" data-indicator:fetching>
+  <div>
+    <label for="q" class="block text-sm font-medium">Search</label>
+    <input id="q" name="q" type="search" value="{{ filters.q }}" data-bind:q autocomplete="off"
+           data-on:input__debounce.300ms="$page = '1'; @get('{% url 'web:news' %}')"
+           class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+  </div>
+  <div>
+    <label for="sentiment" class="block text-sm font-medium">Score</label>
+    <select id="sentiment" name="sentiment" data-bind:sentiment data-on:change="$page = '1'; @get('{% url 'web:news' %}')"
+            class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+      <option value="">All</option>
+      {% for value, label in sentiments.items %}<option value="{{ value }}" {% if filters.sentiment == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="source" class="block text-sm font-medium">Source</label>
+    <select id="source" name="source" data-bind:source data-on:change="$page = '1'; @get('{% url 'web:news' %}')"
+            class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+      <option value="">All</option>
+      {% for name in sources %}<option value="{{ name }}" {% if filters.source == name %}selected{% endif %}>{{ name }}</option>{% endfor %}
+    </select>
+  </div>
+  <noscript><button type="submit" class="rounded-md bg-accent px-3 py-2 text-paper">Apply</button></noscript>
+</form>
+
+<div class="mt-6" data-attr:aria-busy="$fetching ? 'true' : 'false'">
+  {% include "web/_news_results.html" %}
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ datastar_src }}"></script>{% endblock %}

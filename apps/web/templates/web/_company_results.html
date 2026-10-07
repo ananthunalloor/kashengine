@@ -1,0 +1,25 @@
+<div id="company-results">
+  <p class="text-sm text-muted">{{ page.paginator.count }} compan{{ page.paginator.count|pluralize:"y,ies" }}</p>
+  {% if page.object_list %}
+  <div class="mt-2 overflow-x-auto">
+    <table class="w-full min-w-[32rem] text-sm">
+      <thead class="text-left text-muted">
+        <tr><th scope="col" class="py-2 pr-4 font-normal">Company</th><th scope="col" class="py-2 pr-4 font-normal">Symbol</th><th scope="col" class="py-2 pr-4 font-normal">Sector</th><th scope="col" class="py-2 font-normal">Data from</th></tr>
+      </thead>
+      <tbody class="divide-y divide-rule border-y border-rule">
+        {% for c in page.object_list %}
+        <tr>
+          <th scope="row" class="py-2 pr-4 text-left font-medium">{% if c.screener_url %}<a href="{{ c.screener_url }}" rel="noopener noreferrer" target="_blank" class="text-ink">{{ c.name }}</a>{% else %}{{ c.name }}{% endif %}</th>
+          <td class="py-2 pr-4">{{ c.symbol }}</td>
+          <td class="py-2 pr-4 text-muted">{{ c.sector|default:"–" }}</td>
+          <td class="py-2 text-muted">{% if c.last_updated %}{{ c.last_updated|date:"j M Y" }}{% else %}Not fetched{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% url 'web:companies' as list_url %}{% include "web/_pager.html" with page_url=list_url %}
+  {% else %}
+  <p class="mt-4 text-muted">No company matches.{% if not filters.q %} Add companies with <code>python manage.py import_companies</code>.{% endif %}</p>
+  {% endif %}
+</div>

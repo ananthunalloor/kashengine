@@ -1,0 +1,36 @@
+{% extends "web/base.html" %}
+{% load web_extras %}
+{% block title %}Report {{ report.date|date:"j M Y" }} · Kash Engine{% endblock %}
+{% block content %}
+<p class="text-sm"><a href="{% url 'web:reports' %}">All reports</a></p>
+<h1 class="mt-2 font-serif text-3xl font-semibold">{{ report.date|date:"l j F Y" }}</h1>
+{% if report.prediction %}
+<p class="mt-2"><span class="rounded px-2 py-0.5 text-sm font-medium {{ report.prediction|badge }}">{{ report.prediction|arrow }} {{ report.prediction|direction_word }}{% if report.confidence is not None %}, strength {{ report.confidence|percent }}{% endif %}</span></p>
+{% endif %}
+
+<article class="mt-6 rounded-lg border border-rule bg-card p-5 sm:p-6">
+  <div class="report-text">{{ report.text }}</div>
+</article>
+
+<section class="mt-8" aria-labelledby="sent-title">
+  <h2 id="sent-title" class="font-serif text-xl font-semibold">Delivery</h2>
+  {% if deliveries %}
+  <ul class="mt-2 divide-y divide-rule border-y border-rule text-sm">
+    {% for d in deliveries %}
+    <li class="flex flex-wrap items-center justify-between gap-2 py-2">
+      <span>{{ d.get_channel_display }}, {{ d.created_at|date:"j M, H:i" }}</span>
+      <span class="rounded px-2 py-0.5 text-xs font-medium {{ d.status|badge }}">{{ d.get_status_display }}</span>
+      {% if d.error %}<span class="w-full text-loss">{{ d.error }}</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="mt-2 text-sm text-muted">This report was not sent.</p>
+  {% endif %}
+</section>
+
+<nav aria-label="Other reports" class="mt-8 flex justify-between text-sm">
+  <div>{% if older %}<a href="{% url 'web:report' older.date %}">Older: {{ older.date|date:"j M" }}</a>{% endif %}</div>
+  <div>{% if newer %}<a href="{% url 'web:report' newer.date %}">Newer: {{ newer.date|date:"j M" }}</a>{% endif %}</div>
+</nav>
+{% endblock %}

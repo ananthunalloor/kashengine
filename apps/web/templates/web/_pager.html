@@ -1,0 +1,16 @@
+{# Needs: page (a Django page), qs (the filters as a query string), page_url (the list URL). #}
+{% if page.paginator.num_pages > 1 %}
+<nav aria-label="Pages" class="mt-6 flex items-center justify-between text-sm">
+  <div>
+    {% if page.has_previous %}
+    <a href="{{ page_url }}?{{ qs }}&page={{ page.previous_page_number }}" data-on:click__prevent="$page = '{{ page.previous_page_number }}'; @get('{{ page_url }}')">Newer</a>
+    {% endif %}
+  </div>
+  <p class="text-muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</p>
+  <div>
+    {% if page.has_next %}
+    <a href="{{ page_url }}?{{ qs }}&page={{ page.next_page_number }}" data-on:click__prevent="$page = '{{ page.next_page_number }}'; @get('{{ page_url }}')">Older</a>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}

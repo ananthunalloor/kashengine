@@ -1,0 +1,26 @@
+{% load web_extras %}
+<div id="news-results">
+  <p class="text-sm text-muted">{{ page.paginator.count }} article{{ page.paginator.count|pluralize }}</p>
+  {% if page.object_list %}
+  <ul class="mt-2 divide-y divide-rule border-y border-rule">
+    {% for a in page.object_list %}
+    <li class="py-3">
+      <div class="flex items-start justify-between gap-4">
+        <p class="font-medium leading-snug"><a href="{{ a.url }}" rel="noopener noreferrer" target="_blank" class="text-ink">{{ a.title }}</a></p>
+        {% if a.sentiment_score is not None %}
+        <span class="num shrink-0 rounded px-2 py-0.5 text-xs font-medium {% if a.sentiment_score >= 0.2 %}{{ 'up'|badge }}{% elif a.sentiment_score <= -0.2 %}{{ 'down'|badge }}{% else %}{{ 'flat'|badge }}{% endif %}">{{ a.sentiment_score|signed:2 }}</span>
+        {% endif %}
+      </div>
+      <p class="mt-0.5 text-sm text-muted">
+        {{ a.source }}{% if a.published_at %}, {{ a.published_at|date:"j M, H:i" }}{% endif %}{% if a.relevance is not None %}, relevance {{ a.relevance|floatformat:1 }}{% endif %}
+      </p>
+      {% if a.sentiment_reason %}<p class="mt-1 text-sm">{{ a.sentiment_reason }}</p>{% endif %}
+      {% if a.companies.all %}<p class="mt-1 text-sm text-muted">{% for c in a.companies.all|slice:":4" %}{{ c.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% url 'web:news' as list_url %}{% include "web/_pager.html" with page_url=list_url %}
+  {% else %}
+  <p class="mt-4 text-muted">No article matches. Change the search, or clear the filters.{% if not filters.q and not filters.sentiment and not filters.source %} If the list is always empty, run <code>python manage.py fetch_news</code>.{% endif %}</p>
+  {% endif %}
+</div>

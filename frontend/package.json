@@ -1,0 +1,13 @@
+{
+  "name": "kash-engine-frontend",
+  "private": true,
+  "description": "Builds static/css/app.css from the templates. Run from this folder.",
+  "scripts": {
+    "build": "tailwindcss -i app.css -o ../static/css/app.css --minify",
+    "watch": "tailwindcss -i app.css -o ../static/css/app.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "tailwindcss": "^4.3.3"
+  }
+}

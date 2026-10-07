@@ -1,0 +1,10 @@
+{% load web_extras %}
+<li class="flex items-baseline justify-between gap-3 py-2">
+  <div class="min-w-0">
+    <p class="truncate font-medium">{{ item.name }}</p>
+    <p class="text-sm text-muted">
+      {% if item.status == "open" %}Closes {{ item.close_date|date:"j M" }}{% elif item.open_date %}Opens {{ item.open_date|date:"j M" }}{% endif %}{% if item.price_band_high %}, price up to {{ item.price_band_high|rupees }}{% endif %}{% if item.gmp_pct is not None %}, GMP {{ item.gmp_pct|signed }}%{% endif %}{% if item.subscription_times %}, {{ item.subscription_times|times }} subscribed{% endif %}
+    </p>
+  </div>
+  <span class="shrink-0 rounded px-2 py-0.5 text-xs font-medium {{ item.verdict|badge }}">{{ item.verdict|capfirst }}</span>
+</li>

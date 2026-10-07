@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+/* Where Tailwind looks for class names. */
+@source "../apps/web/templates";
+@source "../apps/web/templatetags";
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+/* Colours. Light first. Dark values are set below, by the system setting or by data-theme. */
+@theme {
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: Charter, "Bitstream Charter", "Iowan Old Style", "Sitka Text", Georgia, serif;
+
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-rule: var(--rule);
+  --color-accent: var(--accent);
+  --color-gain: var(--gain);
+  --color-loss: var(--loss);
+  --color-gain-soft: var(--gain-soft);
+  --color-loss-soft: var(--loss-soft);
+  --color-flat-soft: var(--flat-soft);
+}
+
+:root {
+  --paper: #eef0f6;
+  --card: #ffffff;
+  --ink: #1b2340;
+  --muted: #5b647f;
+  --rule: #d5d9e6;
+  --accent: #3b4ba8;
+  --gain: #17714a;
+  --loss: #b3372f;
+  --gain-soft: #dcf0e5;
+  --loss-soft: #f6dedb;
+  --flat-soft: #e3e6f0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #12162a;
+    --card: #1a2038;
+    --ink: #e6e9f5;
+    --muted: #98a1c0;
+    --rule: #2c3454;
+    --accent: #8d9bff;
+    --gain: #5fd39b;
+    --loss: #ff8a80;
+    --gain-soft: #17382b;
+    --loss-soft: #43201f;
+    --flat-soft: #262d4a;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #12162a;
+  --card: #1a2038;
+  --ink: #e6e9f5;
+  --muted: #98a1c0;
+  --rule: #2c3454;
+  --accent: #8d9bff;
+  --gain: #5fd39b;
+  --loss: #ff8a80;
+  --gain-soft: #17382b;
+  --loss-soft: #43201f;
+  --flat-soft: #262d4a;
+}
+
+@layer base {
+  html {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    min-height: 100vh;
+  }
+  h1, h2 {
+    font-family: var(--font-serif);
+    letter-spacing: -0.01em;
+  }
+  a {
+    color: var(--accent);
+    text-underline-offset: 3px;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* The text of a report. It keeps the line breaks of the plain text that Telegram gets. */
+  .report-text {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  /* A request in flight. Datastar sets the data-indicator signal; we fade the results. */
+  [aria-busy="true"] {
+    opacity: 0.55;
+    transition: opacity 120ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

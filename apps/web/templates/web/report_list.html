@@ -1,0 +1,26 @@
+{% extends "web/base.html" %}
+{% load web_extras %}
+{% block title %}Reports · Kash Engine{% endblock %}
+{% block content %}
+<h1 class="font-serif text-3xl font-semibold">Reports</h1>
+<p class="mt-1 text-muted">Each report is the text that we send on Telegram.</p>
+{% if page.object_list %}
+<ul class="mt-6 divide-y divide-rule border-y border-rule">
+  {% for r in page.object_list %}
+  <li class="flex items-center justify-between gap-4 py-3">
+    <a href="{% url 'web:report' r.date %}" class="font-medium text-ink">{{ r.date|date:"l j F Y" }}</a>
+    {% if r.prediction %}<span class="rounded px-2 py-0.5 text-xs font-medium {{ r.prediction|badge }}">{{ r.prediction|arrow }} {{ r.prediction|direction_word }}{% if r.confidence is not None %}, {{ r.confidence|percent }}{% endif %}</span>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% if page.paginator.num_pages > 1 %}
+<nav aria-label="Pages" class="mt-6 flex items-center justify-between text-sm">
+  <div>{% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">Newer</a>{% endif %}</div>
+  <p class="text-muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</p>
+  <div>{% if page.has_next %}<a href="?page={{ page.next_page_number }}">Older</a>{% endif %}</div>
+</nav>
+{% endif %}
+{% else %}
+<p class="mt-6 text-muted">There is no report yet. The report is built each trading day at the report time. To build one now, run <code>python manage.py build_report</code>.</p>
+{% endif %}
+{% endblock %}

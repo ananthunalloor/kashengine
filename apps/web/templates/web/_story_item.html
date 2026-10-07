@@ -1,0 +1,8 @@
+{% load web_extras %}
+<li class="py-2">
+  <p class="leading-snug"><a href="{{ item.url }}" rel="noopener noreferrer" target="_blank" class="font-medium text-ink">{{ item.title }}</a></p>
+  <p class="mt-0.5 text-sm text-muted">
+    {{ item.source }}<span class="num {{ item.score|tone }}"> {{ item.score|signed:2 }}</span>{% if item.companies %}, {{ item.companies|join:", " }}{% endif %}
+  </p>
+  {% if item.reason %}<p class="text-sm text-muted">{{ item.reason }}</p>{% endif %}
+</li>

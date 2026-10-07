@@ -1,0 +1,26 @@
+{% extends "web/base.html" %}
+{% block title %}Log in · Kash Engine{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-sm">
+  <h1 class="font-serif text-3xl font-semibold">Log in</h1>
+  <p class="mt-2 text-sm text-muted">Use the account that you made with <code>createsuperuser</code>.</p>
+  <form method="post" class="mt-6 space-y-4">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <p role="alert" class="rounded-md bg-loss-soft px-3 py-2 text-sm text-loss">The user name or the password is not correct. Try again.</p>
+    {% endif %}
+    <div>
+      <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium">User name</label>
+      <input type="text" name="username" id="{{ form.username.id_for_label }}" autocomplete="username" autofocus required
+             class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+    </div>
+    <div>
+      <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium">Password</label>
+      <input type="password" name="password" id="{{ form.password.id_for_label }}" autocomplete="current-password" required
+             class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+    </div>
+    <input type="hidden" name="next" value="{{ next }}">
+    <button type="submit" class="w-full rounded-md bg-accent px-3 py-2 font-medium text-paper hover:opacity-90">Log in</button>
+  </form>
+</div>
+{% endblock %}
