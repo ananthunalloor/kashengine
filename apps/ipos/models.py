@@ -93,6 +93,11 @@ class Ipo(models.Model):
     )
 
     source_url = models.URLField(max_length=1000, blank=True)
+
+    # Exchange codes. The source gives them after the listing. We use them to get the listing price.
+    nse_symbol = models.CharField(max_length=30, blank=True)
+    bse_code = models.CharField(max_length=10, blank=True)
+    isin = models.CharField(max_length=12, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

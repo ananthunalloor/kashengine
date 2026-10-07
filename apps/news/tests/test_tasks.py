@@ -19,6 +19,7 @@ def test_tasks_are_registered_and_every_scheduled_task_exists():
         "markets.fetch_quotes",
         "markets.predict",
         "ipos.collect",
+        "ipos.refresh_metrics",
         "ipos.score",
         "delivery.send_daily_report",
     ):

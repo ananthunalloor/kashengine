@@ -104,6 +104,14 @@ def test_save_record_creates_an_ipo_with_the_status():
     assert (ipo.status, ipo.category, ipo.price_band_high) == ("open", "sme", D("100"))
 
 
+def test_save_record_saves_the_exchange_codes_and_keeps_them_when_a_record_has_none():
+    save_record(record(nse_symbol="ACME", bse_code="544001", isin="INE000A01010"), TODAY)
+    save_record(record(), TODAY)
+
+    ipo = Ipo.objects.get()
+    assert (ipo.nse_symbol, ipo.bse_code, ipo.isin) == ("ACME", "544001", "INE000A01010")
+
+
 def test_save_record_updates_and_does_not_erase_known_values():
     make_ipo(lot_size=150, issue_size_cr=D("500"))
 

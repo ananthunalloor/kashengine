@@ -30,6 +30,9 @@ PLAIN_FIELDS = (
     "issue_size_cr",
     "listing_price",
     "listing_gain_pct",
+    "nse_symbol",
+    "bse_code",
+    "isin",
     "source_url",
 )
 

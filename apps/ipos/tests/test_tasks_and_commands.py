@@ -44,13 +44,15 @@ def test_the_collect_task_fetches_then_scores_when_the_fetch_is_on(monkeypatch, 
     settings.IPO_FETCH_ENABLED = True
     calls = []
     monkeypatch.setattr(tasks, "collect_ipos", lambda: calls.append("fetch") or {"created": 1})
-    monkeypatch.setattr(tasks, "refresh_statuses", lambda: calls.append("status") or 0)
-    monkeypatch.setattr(tasks, "score_ipos", lambda: calls.append("score") or {"scored": 0})
+    monkeypatch.setattr(
+        tasks, "refresh_metrics", lambda: calls.append("metrics") or {"scores": {"scored": 0}}
+    )
 
     result = tasks.collect()
 
-    assert calls == ["fetch", "status", "score"]
+    assert calls == ["fetch", "metrics"]  # The metrics step does the status and the scores.
     assert result["fetch"] == {"created": 1}
+    assert result["scores"] == {"scored": 0}
 
 
 def test_the_score_task_updates_the_status_and_scores():

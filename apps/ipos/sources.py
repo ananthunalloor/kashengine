@@ -58,6 +58,9 @@ class IpoRecord:
     subscription_times: Decimal | None = None
     listing_price: Decimal | None = None
     listing_gain_pct: float | None = None
+    nse_symbol: str = ""
+    bse_code: str = ""
+    isin: str = ""
     source_url: str = ""
 
 
@@ -224,17 +227,23 @@ def parse_ipo_json(text: str, source_url: str = "") -> list[IpoRecord]:
     columns = _column_map(headers)
     if "name" not in columns or not ({"open", "close"} & columns.keys()):
         return []
+    source_rows = [row for row in rows if isinstance(row, dict)]
     cell_rows = [
         [lxml_html.fragment_fromstring(str(row.get(h) or ""), create_parent="td") for h in headers]
-        for row in rows
-        if isinstance(row, dict)
+        for row in source_rows
     ]
-    return _read_rows(columns, len(headers), cell_rows, source_url)
+    return _read_rows(columns, len(headers), cell_rows, source_url, source_rows=source_rows)
 
 
-def _read_rows(columns: dict[str, int], width: int, rows, source_url: str) -> list[IpoRecord]:
+def _read_rows(
+    columns: dict[str, int],
+    width: int,
+    rows,
+    source_url: str,
+    source_rows: list[dict] | None = None,
+) -> list[IpoRecord]:
     records = []
-    for cells in rows:
+    for row_index, cells in enumerate(rows):
         if len(cells) < width:
             continue  # A note row or a banner row.
 
@@ -252,6 +261,7 @@ def _read_rows(columns: dict[str, int], width: int, rows, source_url: str) -> li
         links = name_cell.xpath(".//a/@href")
         low, high = parse_price_band(text("price"))
         lot = parse_number(text("lot"))
+        source_row = source_rows[row_index] if source_rows is not None else {}
         records.append(
             IpoRecord(
                 name=name,
@@ -264,6 +274,9 @@ def _read_rows(columns: dict[str, int], width: int, rows, source_url: str) -> li
                 issue_size_cr=parse_issue_size_cr(text("issue_size")),
                 category=SME if "sme" in text("exchange").lower() else MAINBOARD,
                 listing_gain_pct=parse_percent(text("listing_gain")),
+                nse_symbol=str(source_row.get("~nse_symbol") or "").strip().upper(),
+                bse_code=str(source_row.get("~bse_script_code") or "").strip(),
+                isin=str(source_row.get("~isin") or "").strip().upper(),
                 source_url=urljoin(source_url, links[0]) if links else source_url,
             )
         )

@@ -136,6 +136,13 @@ IPO_SOURCE_URLS = env.list(
         "?search=&v=1"
     ],
 )
+# The GMP and the subscription come from a live table. OFF by default. Read the note at the top of
+# apps/ipos/gmp.py first.
+IPO_GMP_ENABLED = env.bool("IPO_GMP_ENABLED", default=False)
+IPO_GMP_URL = env("IPO_GMP_URL", default="https://www.investorgain.com/report/ipo-gmp-live/331/")
+# The listing price comes from Yahoo Finance (first day open). See apps/ipos/listing.py.
+IPO_LISTING_ENABLED = env.bool("IPO_LISTING_ENABLED", default=True)
+IPO_LISTING_CHECK_DAYS = env.int("IPO_LISTING_CHECK_DAYS", default=14)  # Look back this long.
 IPO_KEEP_DAYS = env.int("IPO_KEEP_DAYS", default=60)  # We skip new IPOs that opened before this.
 IPO_METRIC_MAX_AGE_HOURS = env.int("IPO_METRIC_MAX_AGE_HOURS", default=72)  # GMP, subscription.
 IPO_NEWS_DAYS = env.int("IPO_NEWS_DAYS", default=14)
@@ -199,6 +206,11 @@ CELERY_BEAT_SCHEDULE = {
     "collect-ipos-evening": {
         "task": "ipos.collect",
         "schedule": crontab(minute=45, hour=18),
+    },
+    # GMP and subscription (if IPO_GMP_ENABLED), listing results, and the scores again.
+    "refresh-ipo-metrics": {
+        "task": "ipos.refresh_metrics",
+        "schedule": crontab(minute=0, hour="7-19/2"),
     },
     # Scores again after the news scoring, before the report at 07:30.
     "score-ipos": {

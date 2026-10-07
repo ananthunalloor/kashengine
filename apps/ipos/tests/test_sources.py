@@ -218,6 +218,9 @@ FEED = {
             "Listing Date": "08-Oct-2026",
             "Issue Price (Rs.)": "220.00",
             "Issue Amount (Rs.cr.)": "410.5",
+            "~nse_symbol": "vishal ",
+            "~bse_script_code": "544999",
+            "~isin": "ine0abc01012",
         },
         {"Company": "", "Opening Date": "05-Oct-2026"},
     ],
@@ -247,6 +250,8 @@ def test_parse_ipo_json_reads_the_rows_of_the_feed():
     assert vishal.price_band_high == Decimal("220")
     assert vishal.issue_size_cr == Decimal("410.5")  # The fallback field.
     assert vishal.source_url == "https://feed.test/data"  # No link in the row.
+    assert (vishal.nse_symbol, vishal.bse_code, vishal.isin) == ("VISHAL", "544999", "INE0ABC01012")
+    assert (fashion.nse_symbol, fashion.bse_code, fashion.isin) == ("", "", "")
 
 
 def test_parse_ipo_json_finds_the_rows_in_other_shapes_and_ignores_bad_data():
