@@ -7,7 +7,7 @@ import pytest
 from django.utils import timezone
 
 from apps.news.models import NewsArticle
-from apps.news.scraper import MIN_TEXT_CHARS, extract_text, scrape_pending
+from apps.news.scraper import MIN_TEXT_CHARS, extract_text, robots_agent_name, scrape_pending
 
 # The paragraphs must be different. The text extractor removes repeated paragraphs.
 ARTICLE_HTML = """<html><head><title>Sensex jumps</title></head><body>
@@ -50,6 +50,20 @@ def make_article(path: str = "/a", host: str = "news.test") -> NewsArticle:
     return NewsArticle.objects.create(
         source="Test News", title=f"Title {path}", url=f"https://{host}{path}"
     )
+
+
+def test_robots_agent_name_from_user_agent():
+    assert robots_agent_name("KashEngineBot/0.1") == "KashEngineBot"
+    standard = "Mozilla/5.0 (compatible; KashEngineBot/0.1; +https://example.com)"
+    assert robots_agent_name(standard) == "KashEngineBot"
+    assert robots_agent_name("") == "*"
+
+
+def test_default_user_agent_names_our_bot_and_is_not_a_browser(settings):
+    user_agent = settings.NEWS_USER_AGENT
+    assert robots_agent_name(user_agent) == "KashEngineBot"
+    assert "compatible; KashEngineBot/" in user_agent
+    assert "+http" in user_agent  # A contact link.
 
 
 def test_extract_text_returns_main_text():

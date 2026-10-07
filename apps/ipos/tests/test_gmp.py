@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 
 import httpx
 import pytest
@@ -318,3 +319,59 @@ def test_update_gmp_uses_the_url_from_the_settings(settings):
     update_gmp(make_fetcher(handler), now=NOW)
 
     assert "https://gmp.test/from-settings" in seen
+
+
+# --- The real page -------------------------------------------------------------------------
+# apps/ipos/tests/data/gmp_page_sample.html is the table of the live page, cut to 6 rows. It was
+# saved on 7 Oct 2026 with `refresh_ipo_data --save-page`.
+
+SAMPLE = Path(__file__).parent / "data" / "gmp_page_sample.html"
+SAMPLE_NOW = datetime(2026, 10, 7, 12, 0, tzinfo=IST)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("₹167 (-%)148 ↓ / 167 ↑", D("167")),
+        ("₹15 (18.29%)7 ↓ / 15 ↑", D("15")),
+        ("₹-- (0.00%)0 ↓ / 0 ↑", None),  # No GMP. The 0.00% must not become a GMP of 0.
+        ("₹--", None),
+        ("₹0 (0.00%)", D("0")),  # A real GMP of zero.
+        ("₹-5 (-5.00%)", D("-5")),
+        ("₹1,234 (10%)", D("1234")),
+    ],
+)
+def test_parse_gmp_value_on_the_texts_of_the_live_page(text, expected):
+    assert parse_gmp_value(text) == expected
+
+
+def test_the_live_page_sample_is_read_correctly():
+    rows = parse_gmp_table(SAMPLE.read_text(encoding="utf-8"), SAMPLE_NOW)
+
+    assert [r.name for r in rows] == [
+        "Jio Platforms",
+        "HD Fire Protect",
+        "R.K.Fashion Accessories",
+        "TNA Solutions",
+        "Acme India Industries",
+        "Paramount Syntex",
+    ]
+    jio, hd_fire, fashion, tna, acme, paramount = rows
+    assert (jio.gmp, jio.subscription_times) == (D("167"), None)
+    assert (hd_fire.gmp, hd_fire.subscription_times) == (None, None)  # "₹--" and "-".
+    assert (fashion.gmp, fashion.subscription_times) == (D("15"), D("0.44"))
+    assert (tna.gmp, tna.subscription_times) == (D("3"), D("55.2"))
+    assert (acme.gmp, acme.subscription_times) == (D("65"), D("124.23"))
+    assert (paramount.gmp, paramount.subscription_times) == (None, D("1.88"))
+    assert fashion.updated_at == datetime(2026, 10, 7, 9, 37, tzinfo=IST)
+
+
+def test_the_live_page_sample_updates_a_saved_ipo():
+    ipo = make_ipo("R.K.Fashion Accessories Limited", price_band_high=D("82"))
+    rows = parse_gmp_table(SAMPLE.read_text(encoding="utf-8"), SAMPLE_NOW)
+
+    apply_gmp_rows(rows, SAMPLE_NOW)
+
+    ipo.refresh_from_db()
+    assert (ipo.gmp, ipo.subscription_times) == (D("15"), D("0.44"))
+    assert ipo.gmp_updated_at == datetime(2026, 10, 7, 9, 37, tzinfo=IST)

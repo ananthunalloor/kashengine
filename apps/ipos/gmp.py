@@ -46,7 +46,10 @@ MIN_PREFIX_CHARS = 6  # A shorter name gives too many false matches.
 MAX_GMP_TO_PRICE = 5  # A GMP of more than 5 times the price is a mistake in the source.
 SAMPLE_SIZE = 5
 
-_RUPEE_NUMBER = re.compile(r"(?:₹|rs\.?)\s*(-?\d[\d,]*(?:\.\d+)?)", re.IGNORECASE)
+# The text right after the rupee sign, up to a space or a bracket. The live page writes a GMP
+# that it does not have as "₹-- (0.00%)". The 0.00% is not a GMP, so the text after the sign
+# decides.
+_RUPEE_TOKEN = re.compile(r"(?:₹|rs\.?)\s*([^\s(]*)", re.IGNORECASE)
 _UPDATED = re.compile(
     r"(?P<day>\d{1,2})[-\s/]+(?P<month>[A-Za-z]{3,9})(?:[-\s/,]+(?P<year>\d{2,4}))?"
     r"[\s,]*(?P<hour>\d{1,2}):(?P<minute>\d{2})\s*(?P<ampm>[AaPp][Mm])?"
@@ -92,11 +95,14 @@ class GmpResult:
 
 
 def parse_gmp_value(text: str | None) -> Decimal | None:
-    """Read a GMP in rupees. "₹12", "₹ -5", "Rs 7 (3%)" and "12" work. "-" gives None."""
+    """Read a GMP in rupees. "₹12", "₹ -5", "Rs 7 (3%)" and "12" work.
+
+    "-", "--", and "₹--" give None: the source has no GMP. A real "₹0" gives 0.
+    """
     cleaned = (text or "").replace("−", "-").replace("\xa0", " ").strip()
-    found = _RUPEE_NUMBER.search(cleaned)
+    found = _RUPEE_TOKEN.search(cleaned)
     if found:
-        return parse_number(found.group(1))
+        return parse_number(found.group(1))  # None if the token has no digit, like "--".
     if re.fullmatch(r"[-–—\s]*", cleaned):
         return None
     return parse_number(cleaned)

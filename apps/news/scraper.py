@@ -9,6 +9,7 @@ Rules:
 """
 
 import logging
+import re
 import time
 from datetime import timedelta
 from urllib.parse import urlsplit
@@ -32,6 +33,17 @@ class RobotsDisallowed(Exception):
     """robots.txt does not allow this URL."""
 
 
+def robots_agent_name(user_agent: str) -> str:
+    """Get the bot name that robots.txt rules match.
+
+    "KashEngineBot/0.1" -> "KashEngineBot"
+    "Mozilla/5.0 (compatible; KashEngineBot/0.1; +https://example.com)" -> "KashEngineBot"
+    """
+    match = re.search(r"compatible;\s*([A-Za-z0-9_-]+)", user_agent)
+    name = match.group(1) if match else user_agent.split("/")[0].strip()
+    return name or "*"
+
+
 class PoliteFetcher:
     """Fetch URLs. Check robots.txt first and wait between requests to the same host."""
 
@@ -45,8 +57,7 @@ class PoliteFetcher:
     ):
         self.client = client
         self.delay = delay
-
-        self.agent = user_agent.split("/")[0].strip() or "*"
+        self.agent = robots_agent_name(user_agent)
         self._sleep = sleep
         self._clock = clock
         self._robots: dict[str, RobotFileParser] = {}
@@ -58,8 +69,7 @@ class PoliteFetcher:
         rules = self._rules(parts.scheme, parts.netloc)
         if not rules.can_fetch(self.agent, url):
             raise RobotsDisallowed(url)
-        crawl_delay = rules.crawl_delay(self.agent)
-        self._wait(parts.netloc, float(crawl_delay) if crawl_delay is not None else None)
+        self._wait(parts.netloc, rules.crawl_delay(self.agent))
         return self.client.get(url)
 
     def _rules(self, scheme: str, host: str) -> RobotFileParser:
@@ -75,17 +85,15 @@ class PoliteFetcher:
             response = self.client.get(f"{origin}/robots.txt")
         except httpx.HTTPError as exc:
             logger.warning("Cannot read robots.txt for %s: %s. Skip this host.", host, exc)
-            rules.parse(["User-agent: *", "Disallow: /"])
+            rules.disallow_all = True
         else:
             if response.status_code >= 500:
                 logger.warning(
                     "robots.txt for %s gave HTTP %s. Skip this host.", host, response.status_code
                 )
-                rules.parse(["User-agent: *", "Disallow: /"])
+                rules.disallow_all = True
             elif response.status_code >= 400:
-                rules.parse(
-                    ["User-agent: *", "Allow: /"]
-                )  # No robots.txt file. Everything is allowed.
+                rules.allow_all = True  # No robots.txt file. Everything is allowed.
             else:
                 rules.parse(response.text.splitlines())
         rules.modified()  # Without this, RobotFileParser refuses all URLs.

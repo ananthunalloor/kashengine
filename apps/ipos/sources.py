@@ -1,28 +1,31 @@
-"""Read the IPO list from a web page.
+"""Read the IPO list from a source.
 
 READ THIS FIRST.
-- The default source is the IPO list of
-  chittorgarh.com. Its robots.txt allows the page. We could not find a written permission or a
-  written ban for automated use, and the footer says "All rights reserved". Read their terms
-  before you turn the fetch on. Use the data for yourself only. Do not publish it.
-- We read one page, one or two times a day, and we obey robots.txt (PoliteFetcher).
-- Since late 2026 the chittorgarh page has no HTML table. The browser loads the rows from a
-  JSON API (webnodejs.chittorgarh.com). For a chittorgarh report URL we read that API instead.
-- We could NOT test the parser on the live page when we wrote it (the build server cannot reach
-  the site). The parser does not use fixed column numbers or CSS classes. It reads the table
-  header names, so a small change of the page should not break it. If the site changes a lot,
-  the run saves nothing, logs a warning, and you can still enter IPOs with `import_ipo_csv`,
-  `update_ipo`, or the admin.
-- This source gives dates, price band, issue size, and the listing gain. It does NOT give the
-  GMP (grey market premium) or the subscription. Enter those with `update_ipo` or `import_ipo_csv`.
-  GMP is not official data. Treat it with care.
+- The fetch is OFF by default (IPO_FETCH_ENABLED=false). The default source is the IPO list report
+  of chittorgarh.com. The page of the report loads its table with JavaScript, so the HTML of the
+  page has no table. We read the JSON feed that the page itself uses
+  (webnodejs.chittorgarh.com). It is not a documented public API. It can change or stop at any
+  time. robots.txt of the host allows it. We found no written permission or ban for automated use,
+  and the site says "All rights reserved". Read their terms before you turn the fetch on. Use the
+  data for yourself only. Do not publish it.
+- We read one or two URLs, one or two times a day, and we obey robots.txt (PoliteFetcher).
+- The JSON feed gives dates, price band, and issue size. It does NOT give the GMP (grey market
+  premium), the subscription, or the listing result. Enter those with `update_ipo` or
+  `import_ipo_csv`. GMP is not official data. Treat it with care.
+- A source URL can have {month}, {year}, and {fy} (financial year, like 2026-27). We fill them in
+  for this month and for last month (see collect.expand_urls).
+- If the feed changes, the run saves nothing, logs a warning, and you can still enter IPOs with
+  `import_ipo_csv`, `update_ipo`, or the admin. A source that returns an HTML page is read with a
+  table parser that finds the columns by header name.
+- We tested the parser on sample data that has the fields of the feed. We could not test it on the
+  live service from the build server.
 """
 
 import json
 import logging
 import re
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from urllib.parse import urljoin
 
@@ -159,7 +162,7 @@ def _header_field(header: str) -> str | None:
         return None  # For example "Listing Day Close". We do not use it.
     if re.search(r"company|issuer|ipo name|^name", h):
         return "name"
-    if re.search(r"exchange|platform|category", h):
+    if re.search(r"exchange|platform", h):
         return "exchange"
     if re.search(r"issue size|issue amount|^amount|^size", h):
         return "issue_size"
@@ -207,120 +210,133 @@ def parse_ipo_table(page: str, source_url: str = "") -> list[IpoRecord]:
         if "name" not in columns or not ({"open", "close"} & columns.keys()):
             continue
 
-        rows = [row.xpath("./td") for row in table.xpath(".//tr[td]")]
-        return _read_rows(columns, len(headers), rows, source_url)
+        records = []
+        for row in table.xpath(".//tr[td]"):
+            cells = row.xpath("./td")
+            if len(cells) < len(headers):
+                continue  # A note row or a banner row.
+
+            def text(field: str, cells=cells, columns=columns) -> str:
+                index = columns.get(field)
+                return " ".join(cells[index].text_content().split()) if index is not None else ""
+
+            name_cell = cells[columns["name"]]
+            name = clean_name(name_cell.text_content())
+            if not name or _is_withdrawn(name_cell):
+                continue
+            links = name_cell.xpath(".//a/@href")
+            low, high = parse_price_band(text("price"))
+            lot = parse_number(text("lot"))
+            records.append(
+                IpoRecord(
+                    name=name,
+                    open_date=parse_date(text("open")),
+                    close_date=parse_date(text("close")),
+                    listing_date=parse_date(text("listing_date")),
+                    price_band_low=low,
+                    price_band_high=high,
+                    lot_size=int(lot) if lot and lot > 0 else None,
+                    issue_size_cr=parse_issue_size_cr(text("issue_size")),
+                    category=SME if "sme" in text("exchange").lower() else MAINBOARD,
+                    listing_gain_pct=parse_percent(text("listing_gain")),
+                    source_url=urljoin(source_url, links[0]) if links else source_url,
+                )
+            )
+        return records
     return []
 
 
-def parse_ipo_json(text: str, source_url: str = "") -> list[IpoRecord]:
-    """Read the rows of the chittorgarh JSON API. Each row maps a column header to cell HTML."""
-    try:
-        data = json.loads(text)
-    except ValueError:
-        return []
-    rows = data.get("reportTableData") if isinstance(data, dict) else None
-    if not rows or not isinstance(rows, list) or not isinstance(rows[0], dict):
-        return []
-
-    # Keys that start with "~" are hidden helper fields, not columns.
-    headers = [key for key in rows[0] if not key.startswith("~")]
-    columns = _column_map(headers)
-    if "name" not in columns or not ({"open", "close"} & columns.keys()):
-        return []
-    source_rows = [row for row in rows if isinstance(row, dict)]
-    cell_rows = [
-        [lxml_html.fragment_fromstring(str(row.get(h) or ""), create_parent="td") for h in headers]
-        for row in source_rows
-    ]
-    return _read_rows(columns, len(headers), cell_rows, source_url, source_rows=source_rows)
+# --- The JSON feed ------------------------------------------------------------------------
 
 
-def _read_rows(
-    columns: dict[str, int],
-    width: int,
-    rows,
-    source_url: str,
-    source_rows: list[dict] | None = None,
-) -> list[IpoRecord]:
+def _first(row: dict, *names: str) -> str:
+    """The first non-empty text value among some field names."""
+    for name in names:
+        value = row.get(name)
+        if value not in (None, ""):
+            return str(value).strip()
+    return ""
+
+
+def _find_rows(payload) -> list[dict]:
+    """Find the list of IPO rows in the JSON. The feed uses the key "reportTableData"."""
+    if isinstance(payload, dict):
+        rows = payload.get("reportTableData")
+        if isinstance(rows, list):
+            return [row for row in rows if isinstance(row, dict)]
+        for value in payload.values():
+            found = _find_rows(value)
+            if found:
+                return found
+    elif isinstance(payload, list) and payload and all(isinstance(row, dict) for row in payload):
+        if any("Company" in row for row in payload):
+            return payload
+    return []
+
+
+def parse_ipo_json(payload, source_url: str = "") -> list[IpoRecord]:
+    """Read the rows of the JSON feed. Return an empty list if there are no rows.
+
+    A row has the fields "Company" (an HTML link), "Issue Category", "Opening Date",
+    "Closing Date", "Listing Date", "Issue Price (Rs.)", and the issue amount in crore rupees.
+    A field that is missing or empty gives None.
+    """
     records = []
-    for row_index, cells in enumerate(rows):
-        if len(cells) < width:
-            continue  # A note row or a banner row.
-
-        def text(field: str, cells=cells) -> str:
-            index = columns.get(field)
-            return " ".join(cells[index].text_content().split()) if index is not None else ""
-
-        name_cell = cells[columns["name"]]
-        # Drop status badges such as <span class="badge">CT</span> from the name.
-        for badge in name_cell.xpath(".//span[contains(@class, 'badge')]"):
-            badge.drop_tree()
-        name = clean_name(name_cell.text_content())
-        if not name or _is_withdrawn(name_cell):
+    for row in _find_rows(payload):
+        company = _first(row, "Company", "~IPO")
+        if not company:
             continue
-        links = name_cell.xpath(".//a/@href")
-        low, high = parse_price_band(text("price"))
-        lot = parse_number(text("lot"))
-        source_row = source_rows[row_index] if source_rows is not None else {}
+        cell = lxml_html.fragment_fromstring(company, create_parent="div")
+        name = clean_name(cell.text_content())
+        if not name:
+            continue
+        links = cell.xpath(".//a/@href")
+
+        def day(field: str, row=row) -> date | None:
+            # Planned dates (fields that start with ~) are not real dates. We do not use them.
+            return parse_date(_first(row, field))
+
+        low, high = parse_price_band(_first(row, "Issue Price (Rs.)", "Price Band"))
         records.append(
             IpoRecord(
                 name=name,
-                open_date=parse_date(text("open")),
-                close_date=parse_date(text("close")),
-                listing_date=parse_date(text("listing_date")),
+                open_date=day("Opening Date"),
+                close_date=day("Closing Date"),
+                listing_date=day("Listing Date"),
                 price_band_low=low,
                 price_band_high=high,
-                lot_size=int(lot) if lot and lot > 0 else None,
-                issue_size_cr=parse_issue_size_cr(text("issue_size")),
-                category=SME if "sme" in text("exchange").lower() else MAINBOARD,
-                listing_gain_pct=parse_percent(text("listing_gain")),
-                nse_symbol=str(source_row.get("~nse_symbol") or "").strip().upper(),
-                bse_code=str(source_row.get("~bse_script_code") or "").strip(),
-                isin=str(source_row.get("~isin") or "").strip().upper(),
+                issue_size_cr=parse_issue_size_cr(
+                    _first(
+                        row,
+                        "Total Issue Amount (Incl.Firm reservations) (Rs.cr.)",
+                        "Issue Amount (Rs.cr.)",
+                    )
+                ),
+                category=SME if "sme" in _first(row, "Issue Category").lower() else MAINBOARD,
+                nse_symbol=_first(row, "~nse_symbol").upper(),
+                bse_code=_first(row, "~bse_script_code"),
+                isin=_first(row, "~isin").upper(),
                 source_url=urljoin(source_url, links[0]) if links else source_url,
             )
         )
     return records
 
 
-_CHITTORGARH_REPORT = re.compile(r"^https?://(?:www\.)?chittorgarh\.com/report/[^/]+/(\d+)/")
-CHITTORGARH_API = (
-    "https://webnodejs.chittorgarh.com/cloud/report/data-read/"
-    "{report_id}/1/{month}/{year}/{fy}/0/all/0?search="
-)
-
-
-def _financial_year(day: date) -> str:
-    start = day.year if day.month >= 4 else day.year - 1
-    return f"{start}-{(start + 1) % 100:02d}"
-
-
-def chittorgarh_api_urls(url: str, today: date, keep_days: int = 60) -> list[str]:
-    """The JSON API URLs behind a chittorgarh yearly report page, or [] for another URL.
-
-    Early in a year we also read last year, so recent IPOs still get their listing results.
-    """
-    match = _CHITTORGARH_REPORT.match(url)
-    if not match:
-        return []
-    urls = []
-    for year in sorted({(today - timedelta(days=keep_days)).year, today.year}):
-        day = today if year == today.year else date(year, 12, 31)
-        urls.append(
-            CHITTORGARH_API.format(
-                report_id=match.group(1),
-                month=day.month,
-                year=year,
-                fy=_financial_year(day),
-            )
-        )
-    return urls
-
-
 # --- Fetching ------------------------------------------------------------------------------
 
 
-def _get_text(url: str, fetcher: PoliteFetcher) -> str:
+def parse_response(text: str, url: str, content_type: str = "") -> list[IpoRecord]:
+    """Read a response as JSON (if it looks like JSON) or as an HTML page."""
+    if "json" in content_type.lower() or text.lstrip().startswith(("{", "[")):
+        try:
+            return parse_ipo_json(json.loads(text), url)
+        except (ValueError, TypeError) as exc:
+            raise IpoSourceError(f"{url}: the answer is not valid JSON ({exc})") from exc
+    return parse_ipo_table(text, url)
+
+
+def fetch_records(url: str, fetcher: PoliteFetcher) -> list[IpoRecord]:
+    """Download one URL and read the IPOs in it. Raise IpoSourceError if that does not work."""
     try:
         response = fetcher.get(url)
     except RobotsDisallowed as exc:
@@ -330,20 +346,8 @@ def _get_text(url: str, fetcher: PoliteFetcher) -> str:
 
     if response.status_code >= 400:
         raise IpoSourceError(f"{url}: HTTP {response.status_code}")
-    return response.text
 
-
-def fetch_records(
-    url: str, fetcher: PoliteFetcher, today: date | None = None, keep_days: int = 60
-) -> list[IpoRecord]:
-    """Download one page and read the IPOs in it. Raise IpoSourceError if that does not work."""
-    api_urls = chittorgarh_api_urls(url, today or date.today(), keep_days)
-    if api_urls:
-        records = []
-        for api_url in api_urls:
-            records += parse_ipo_json(_get_text(api_url, fetcher), url)
-    else:
-        records = parse_ipo_table(_get_text(url, fetcher), url)
+    records = parse_response(response.text, url, response.headers.get("content-type", ""))
     if not records:
-        raise IpoSourceError(f"{url}: no IPO table found. The page may have changed.")
+        raise IpoSourceError(f"{url}: no IPOs found. The source may have changed.")
     return records
