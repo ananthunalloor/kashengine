@@ -1,42 +1,125 @@
 # Prod settings. Start with:
-#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#   docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 # This file does not use the dev override file.
+#
+# Security model:
+# - Only Caddy publishes ports (80 and 443). No other service is reachable from outside.
+# - The networks keep the services apart:
+#     edge     Caddy only. It has the published ports and can reach the internet (for TLS).
+#     proxy    Caddy and web. No route to the internet.
+#     backend  web, worker, beat, db, redis, ollama. No route to the internet.
+#     egress   worker, beat, ollama. Outbound only: news, quotes, Telegram, model downloads.
+# - Every container drops all Linux capabilities and cannot gain new ones.
+# - The app containers and Caddy have a read-only root file system (Caddy: see docker-compose.yml).
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-hardened: &hardened
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  logging: *logging
+
+# Web, worker, and beat run as the "app" user. They write only to the volumes and to /tmp.
+x-app-runtime: &app-runtime
+  <<: *hardened
+  env_file: .env.prod
+  read_only: true
+  tmpfs:
+    - /tmp
+  environment:
+    XDG_CACHE_HOME: /tmp/cache  # yfinance and other libraries write their cache here.
+  volumes:
+    - logs:/app/logs
 
 services:
-    web:
-        env_file: .env.prod
-        restart: unless-stopped
-        command: >
-            sh -c "python manage.py migrate --noinput &&
-                   python manage.py collectstatic --noinput &&
-                   gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
-        volumes:
-            - logs:/app/logs
-        # Put Nginx in front of this port. Do not open it to the internet.
-        ports:
-            - "127.0.0.1:8000:8000"
+  caddy:
+    restart: unless-stopped
+    logging: *logging
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    # Compose reads these values from .env.prod (use --env-file). Caddy gets only these four,
+    # not the database password or the other secrets.
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?Set SITE_ADDRESS in .env.prod (your domain name)}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in .env.prod (an email address for certificate notices)}
+      ADMIN_ALLOWED_IPS: ${ADMIN_ALLOWED_IPS:-0.0.0.0/0 ::/0}
+      CSP_HEADER: ${CSP_HEADER:-Content-Security-Policy}
+    networks:
+      - edge
+      - proxy
 
-    worker:
-        env_file: .env.prod
-        restart: unless-stopped
-        volumes:
-            - logs:/app/logs
+  web:
+    <<: *app-runtime
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    volumes:
+      - logs:/app/logs
+      - staticfiles:/app/staticfiles
+    networks:
+      - proxy
+      - backend
 
-    beat:
-        env_file: .env.prod
-        restart: unless-stopped
-        volumes:
-            - logs:/app/logs
+  worker:
+    <<: *app-runtime
+    networks:
+      - backend
+      - egress
 
-    db:
-        env_file: .env.prod
-        restart: unless-stopped
+  beat:
+    <<: *app-runtime
+    networks:
+      - backend
+      - egress
 
-    redis:
-        restart: unless-stopped
+  db:
+    <<: *hardened
+    env_file: .env.prod
+    # The Postgres entrypoint needs these to set the owner of the data folder and to drop root.
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    networks:
+      - backend
 
-    ollama:
-        restart: unless-stopped
+  redis:
+    <<: *hardened
+    # The Redis entrypoint needs these to set the owner of /data and to drop root.
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    networks:
+      - backend
+
+  ollama:
+    <<: *hardened
+    # It needs the internet only to download models: docker compose exec ollama ollama pull <model>
+    networks:
+      - backend
+      - egress
+
+networks:
+  edge: {}
+  proxy:
+    internal: true
+  backend:
+    internal: true
+  egress: {}
 
 volumes:
-    logs:
+  logs:
+  staticfiles:

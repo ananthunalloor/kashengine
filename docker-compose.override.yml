@@ -6,8 +6,24 @@
 #   worker - watchfiles restarts Celery when a .py file changes.
 #   beat   - watchfiles restarts Celery beat when a .py file changes.
 # Rebuild (docker compose up --build) only when pyproject.toml or uv.lock changes.
+#
+# Open https://localhost/ . Caddy makes a local certificate (see the README to trust it).
+# Every port is bound to 127.0.0.1, so only this computer can reach the services.
+# Port 8000 is a direct way to Django. It skips Caddy, so use it only to debug.
 
 services:
+  caddy:
+    ports:
+      - "127.0.0.1:80:80"
+      - "127.0.0.1:443:443"
+      - "127.0.0.1:443:443/udp" # HTTP/3
+    environment:
+      SITE_ADDRESS: localhost # Caddy signs the certificate with its own local CA.
+      ACME_EMAIL: dev@localhost # Not used for "localhost", but the Caddyfile needs a value.
+      ADMIN_ALLOWED_IPS: "0.0.0.0/0 ::/0"
+      # Report only: the Django debug pages use inline styles, and the policy must not block them.
+      CSP_HEADER: Content-Security-Policy-Report-Only
+
   web:
     build:
       args:
@@ -19,6 +35,8 @@ services:
     environment:
       # Make file change detection work on Docker Desktop (Mac and Windows).
       WATCHFILES_FORCE_POLLING: "true"
+    ports:
+      - "127.0.0.1:8000:8000"
     volumes:
       - .:/app
 
@@ -49,8 +67,8 @@ services:
   db:
     env_file: .env.dev
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
 
   ollama:
     ports:
-      - "11434:11434"
+      - "127.0.0.1:11434:11434"

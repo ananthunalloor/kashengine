@@ -29,3 +29,6 @@ logs/
 
 # Celery Beat schedule files
 celerybeat-schedule*
+
+# Caddy local CA certificate (dev)
+caddy-local-root.crt

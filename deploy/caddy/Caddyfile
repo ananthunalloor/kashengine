@@ -1,0 +1,68 @@
+# Caddy is the only service that is open to the internet. It ends TLS and sends the requests to
+# the Django app (web:8000) on a private Docker network.
+#
+# Settings come from the environment (see docker-compose.prod.yml and .env.prod.example):
+#   SITE_ADDRESS        Your domain name. A public name gets a Let's Encrypt certificate.
+#                       "localhost" or an IP address gets a certificate from Caddy's own CA.
+#   ACME_EMAIL          Where Let's Encrypt sends notices about the certificate.
+#   ADMIN_ALLOWED_IPS   Who may open /admin/ (IP addresses or ranges, separated by spaces).
+#   CSP_HEADER          Content-Security-Policy to enforce the policy. Use
+#                       Content-Security-Policy-Report-Only to test it without blocking.
+
+{
+	# No admin API. This closes a port and a way to change the config at run time.
+	admin off
+	email {$ACME_EMAIL}
+
+	servers {
+		# Close slow clients (slowloris) and idle connections.
+		timeouts {
+			read_header 10s
+			read_body 30s
+			write 60s
+			idle 2m
+		}
+	}
+}
+
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# Django already sends HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy and
+	# Cross-Origin-Opener-Policy (see config/settings/prod.py). Caddy adds the headers that
+	# Django does not send.
+	header {
+		{$CSP_HEADER:Content-Security-Policy} "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		Cross-Origin-Resource-Policy same-origin
+	}
+
+	# Limit the size of a request body. The app needs only small forms.
+	request_body {
+		max_size 2MB
+	}
+
+	# The admin site is open to ADMIN_ALLOWED_IPS only. The default is everyone.
+	@admin_denied {
+		path /admin /admin/*
+		not remote_ip {$ADMIN_ALLOWED_IPS:0.0.0.0/0 ::/0}
+	}
+	respond @admin_denied "Forbidden" 403
+
+	log {
+		output stdout
+		format json
+	}
+
+	# Caddy replaces any X-Forwarded-* header from the client, so the app can trust
+	# X-Forwarded-Proto (SECURE_PROXY_SSL_HEADER).
+	reverse_proxy web:8000 {
+		header_down -Server
+	}
+}
+
+# Health check for the Docker healthcheck. It listens inside the container only.
+http://:8081 {
+	bind 127.0.0.1
+	respond /healthz 200
+}

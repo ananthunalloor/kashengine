@@ -1,5 +1,8 @@
 # Common services. Dev settings are in docker-compose.override.yml.
 # Prod settings are in docker-compose.prod.yml.
+#
+# Caddy is the way in to the web app, in dev and in prod. Its ports, TLS settings, and
+# networks are set per environment.
 
 x-app: &app
   build:
@@ -36,10 +39,36 @@ services:
       - ollama_data:/root/.ollama
 
   # The env_file for web, worker, and beat is set per environment.
+  # Reverse proxy. Dev and prod use the same image, the same Caddyfile, and the same hardening.
+  caddy:
+    image: caddy:2-alpine
+    volumes:
+      - ./deploy/caddy:/etc/caddy:ro
+      - caddy_data:/data # The TLS certificates and keys. Keep this volume.
+      - caddy_config:/config
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      web:
+        condition: service_healthy
+
+  # No service in this file publishes a port. Dev publishes ports on 127.0.0.1 in
+  # docker-compose.override.yml. Prod publishes only Caddy (80 and 443) in docker-compose.prod.yml.
   web:
     <<: *app
-    ports:
-      - "8000:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')"]
       interval: 15s
@@ -59,3 +88,5 @@ services:
 volumes:
   postgres_data:
   ollama_data:
+  caddy_data:
+  caddy_config:
