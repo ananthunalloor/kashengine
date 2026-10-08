@@ -4,9 +4,8 @@ Datastar sends its signals (the values of the filter fields) in a query paramete
 "datastar", as JSON. A page that is loaded without Datastar uses plain query parameters. These
 helpers read both, so a filter page works with and without JavaScript.
 
-Our answer to a Datastar request is a piece of HTML (content type text/html). Datastar puts the
-elements of the answer in the page by their id. We need no streaming for this, so it works with
-the normal Gunicorn workers.
+The answer to a Datastar request is a piece of HTML. Datastar puts its elements in the page by
+id. No streaming is needed, so it works with the normal Gunicorn workers.
 """
 
 import json
@@ -16,6 +15,7 @@ MAX_VALUE_CHARS = 100
 
 
 def is_datastar(request) -> bool:
+    """Return True if the request comes from Datastar."""
     return request.headers.get("Datastar-Request") == "true"
 
 

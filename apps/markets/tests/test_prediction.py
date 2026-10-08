@@ -34,11 +34,15 @@ def all_cues(good: float) -> list[CueReading]:
     ]  # fmt: skip
 
 
-def run(news_score, articles, readings, **overrides):
-    return decide(NewsSignal(news_score, articles), readings, **{**CONFIG, **overrides})
-
-
-# --- The pure rule -------------------------------------------------------------------------
+def run(news_score, articles, readings, **overrides: float):
+    config = {**CONFIG, **overrides}
+    return decide(
+        NewsSignal(news_score, articles),
+        readings,
+        news_weight=config["news_weight"],
+        threshold=config["threshold"],
+        min_articles=int(config["min_articles"]),
+    )
 
 
 def test_cue_signal_is_cut_to_one():
@@ -142,9 +146,6 @@ def test_confidence_stays_inside_its_limits():
     assert 0.05 <= run(0.0, 1, []).confidence <= 0.9
 
 
-# --- The news signal -----------------------------------------------------------------------
-
-
 @pytest.mark.django_db
 def test_news_signal_is_the_average_weighted_by_relevance():
     since = ist(FRI, 15, 30)
@@ -189,9 +190,6 @@ def test_the_news_window_starts_at_the_last_close_before_the_target_day():
     assert news_window_start(NEXT_MON) == ist(FRI, 15, 30)
 
 
-# --- The cues ------------------------------------------------------------------------------
-
-
 @pytest.mark.django_db
 def test_read_cues_takes_the_latest_recent_quote_for_each_cue():
     quote("^GSPC", FRI, 1.0)
@@ -214,9 +212,6 @@ def test_read_cues_skips_old_quotes_and_quotes_without_a_change():
     quote("^N225", FRI, None)
 
     assert read_cues(NEXT_MON) == []
-
-
-# --- Making and saving the prediction ------------------------------------------------------
 
 
 def seed_good_data():

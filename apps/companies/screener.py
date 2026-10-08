@@ -1,19 +1,15 @@
 """Read company data from Screener.in and save it in the Company model.
 
-READ THIS FIRST. This code is OFF until you set SCREENER_ENABLED=true.
-The Screener.in Terms of Service (https://www.screener.in/guides/terms) allow "personal,
-non-commercial transitory viewing". They forbid copying the materials, mirroring them on another
-server, and public display. They do not name scraping or bots. Saving their data in our database
-and sending it to other people is close to what they forbid. Turn this on only when you have
-decided that your use is fine. We take these steps to be a light user:
-- We obey robots.txt, and we wait several seconds between requests.
-- We read each company page once a week (not more).
-- We save only the top ratios and the last few periods of the main tables, not the whole page.
-- Do not copy this data into reports for other people. Use it for your own analysis.
+Legal note: this code is OFF until SCREENER_ENABLED=true. The Screener.in Terms of Service
+(https://www.screener.in/guides/terms) allow only "personal, non-commercial transitory viewing".
+They forbid copying, mirroring and public display. Saving their data here is close to that, so
+turn this on only after you decide that your use is fine. Do not share the data with other people.
 
-The page layout is read from known Screener.in element names. We could not check the live site
-when we wrote this. If Screener.in changes its layout, ScreenerParseError is raised and the
-company is not changed.
+To stay a light user, we obey robots.txt, wait several seconds between requests, read each page
+at most once a week, and save only the top ratios and the last few periods of the main tables.
+
+The page layout is read from known Screener.in element names. We did not test this against the
+live site. If the layout changes, ScreenerParseError is raised and the company is not changed.
 """
 
 import logging
@@ -29,7 +25,7 @@ from django.utils import timezone
 from lxml import html as lxml_html
 
 from apps.news.client import make_client
-from apps.news.scraper import PoliteFetcher, RobotsDisallowed
+from apps.news.scraper import PoliteFetcher, RobotsDisallowedError
 
 from .models import Company
 
@@ -47,21 +43,19 @@ TABLE_SECTIONS = {
 }
 MAX_COLUMNS = 8  # We keep the latest 8 periods of each table.
 MAX_CONSECUTIVE_ERRORS = 5  # Stop the run if the page layout seems to have changed.
+HTTP_NOT_FOUND = 404
 
 
 class ScreenerError(Exception):
     """Base class for Screener.in errors."""
 
 
-class ScreenerNotFound(ScreenerError):
+class ScreenerNotFoundError(ScreenerError):
     """Screener.in has no page for this symbol."""
 
 
 class ScreenerParseError(ScreenerError):
     """The page does not have the layout that we expect."""
-
-
-# --- Parsing -------------------------------------------------------------------------------
 
 
 def parse_number(text: str) -> float | None:
@@ -71,10 +65,12 @@ def parse_number(text: str) -> float | None:
 
 
 def _text(node) -> str:
+    """Return the text of an HTML node, with single spaces."""
     return " ".join(node.text_content().replace("\xa0", " ").split())
 
 
 def _parse_top_ratios(root) -> tuple[dict, dict]:
+    """Return the top ratios as numbers, and the same ratios as the raw text."""
     ratios: dict[str, float | None] = {}
     ratios_text: dict[str, str] = {}
     for item in root.xpath('//ul[@id="top-ratios"]/li'):
@@ -94,6 +90,7 @@ def _parse_top_ratios(root) -> tuple[dict, dict]:
 
 
 def _parse_table(section) -> dict | None:
+    """Return the periods and rows of the first table in a section, or None if it is empty."""
     tables = section.xpath(".//table")
     if not tables:
         return None
@@ -155,19 +152,16 @@ def parse_company_page(page: str) -> dict:
     }
 
 
-# --- Fetching and saving -------------------------------------------------------------------
-
-
 def fetch_company_page(symbol: str, fetcher: PoliteFetcher) -> tuple[str, str]:
     """Download the page of a company. Try the consolidated view first. Return (url, html)."""
     for suffix in ("consolidated/", ""):
         url = f"{SCREENER_BASE}/company/{quote(symbol, safe='')}/{suffix}"
-        response = fetcher.get(url)  # Can raise RobotsDisallowed or httpx.HTTPError.
-        if response.status_code == 404:
+        response = fetcher.get(url)  # Can raise RobotsDisallowedError or httpx.HTTPError.
+        if response.status_code == HTTP_NOT_FOUND:
             continue
         response.raise_for_status()
         return url, response.text
-    raise ScreenerNotFound(symbol)
+    raise ScreenerNotFoundError(symbol)
 
 
 def refresh_company(company: Company, fetcher: PoliteFetcher) -> None:
@@ -245,11 +239,11 @@ def refresh_stale(
         for company in companies:
             try:
                 refresh_company(company, fetcher)
-            except ScreenerNotFound:
+            except ScreenerNotFoundError:
                 logger.warning("Screener.in has no page for %s", company.symbol)
                 _mark_checked(company, "not_found")
                 stats["not_found"] += 1
-            except RobotsDisallowed:
+            except RobotsDisallowedError:
                 logger.warning("robots.txt does not allow the page for %s", company.symbol)
                 _mark_checked(company, "blocked_by_robots")
                 stats["blocked"] += 1
@@ -258,7 +252,7 @@ def refresh_stale(
                 stats["failed"] += 1
                 errors_in_a_row += 1
                 if errors_in_a_row >= MAX_CONSECUTIVE_ERRORS:
-                    logger.error(
+                    logger.exception(
                         "Stop: %d errors in a row. Check the page layout.", errors_in_a_row
                     )
                     stats["stopped_early"] = True

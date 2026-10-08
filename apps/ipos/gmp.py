@@ -1,23 +1,14 @@
 """Read the GMP and the subscription of the open IPOs from a live table.
 
-READ THIS FIRST.
-- The fetch is OFF by default (IPO_GMP_ENABLED=false). The default source is the live GMP page of
-  investorgain.com. It is a normal HTML page with a static table. robots.txt of the site allows
-  it. We found no written permission or ban for automated use, and the site says "All Rights
-  Reserved". Read their terms before you turn the fetch on. Use the data for yourself only.
-  Do not publish it.
-- GMP (grey market premium) is NOT official data. It is a rumour price from a private market.
-  The score uses it only when it is fresh, so we keep the time that the SOURCE gives
-  ("Updated-On"), not the time of our fetch. If the source stops, our value gets old, and the
-  score ignores it.
-- We read one page, a few times a day, and we obey robots.txt (PoliteFetcher).
-- The table is found by the names of its columns (Name, GMP, Sub, Updated-On). If the page
-  changes, the error text lists the columns that we found. Then use `refresh_ipo_data` to see
-  the problem. `update_ipo` and `import_ipo_csv` still work as a manual route.
-- We tested the parser on sample data made from the column names of the live page. We could not
-  test it on the live page from the build server.
+The fetch is OFF by default (IPO_GMP_ENABLED=false). The default source is the live GMP page of
+investorgain.com. The site says "All Rights Reserved" and we found no written permission for
+automated use. Read the terms of the site before you turn the fetch on, and use the data for
+yourself only. We obey robots.txt and read one page a few times a day (PoliteFetcher).
 
-A manual entry is never overwritten by an older value from the source: the newer time wins.
+GMP (grey market premium) is unofficial data: it is a rumour price from a private market. The
+score uses it only when it is fresh, so we keep the time that the source gives ("Updated-On"),
+not the time of our fetch. A manual entry is never overwritten by an older value from the source.
+This code was tested on sample data only, NOT against the live page.
 """
 
 import logging
@@ -35,7 +26,7 @@ from lxml import html as lxml_html
 from apps.companies.matching import normalize_name
 from apps.markets.trading import market_tz
 from apps.news.client import make_client
-from apps.news.scraper import PoliteFetcher, RobotsDisallowed
+from apps.news.scraper import PoliteFetcher, RobotsDisallowedError
 
 from .models import Ipo
 from .sources import parse_number
@@ -45,6 +36,11 @@ logger = logging.getLogger(__name__)
 MIN_PREFIX_CHARS = 6  # A shorter name gives too many false matches.
 MAX_GMP_TO_PRICE = 5  # A GMP of more than 5 times the price is a mistake in the source.
 SAMPLE_SIZE = 5
+MAX_HOUR_12 = 12  # Highest hour on a 12-hour clock.
+MAX_HOUR_24 = 23
+MAX_MINUTE = 59
+TWO_DIGIT_YEAR_LIMIT = 100  # A year below this has two digits, like "26".
+HTTP_ERROR_STATUS = 400  # First HTTP status code that means an error.
 
 # The text right after the rupee sign, up to a space or a bracket. The live page writes a GMP
 # that it does not have as "₹-- (0.00%)". The 0.00% is not a GMP, so the text after the sign
@@ -69,6 +65,8 @@ class GmpSourceError(Exception):
 
 @dataclass
 class GmpRow:
+    """One row of the GMP table."""
+
     name: str
     gmp: Decimal | None
     subscription_times: Decimal | None
@@ -77,6 +75,8 @@ class GmpRow:
 
 @dataclass
 class GmpResult:
+    """Counts of what one GMP update did."""
+
     rows: int = 0
     matched: int = 0
     updated: int = 0
@@ -86,12 +86,10 @@ class GmpResult:
     unmatched: list[str] = field(default_factory=list)  # Names that no saved IPO has.
 
     def as_dict(self) -> dict:
+        """Return the counts as a dict. The unmatched names become a count."""
         data = {k: v for k, v in self.__dict__.items() if k != "unmatched"}
         data["unmatched"] = len(self.unmatched)
         return data
-
-
-# --- Small parsers -------------------------------------------------------------------------
 
 
 def parse_gmp_value(text: str | None) -> Decimal | None:
@@ -129,10 +127,10 @@ def parse_updated_on(text: str | None, now: datetime | None = None) -> datetime 
     now = (now or timezone.now()).astimezone(tz)
     hour, minute = int(found["hour"]), int(found["minute"])
     if found["ampm"]:
-        if not 1 <= hour <= 12:
+        if not 1 <= hour <= MAX_HOUR_12:
             return None
         hour = hour % 12 + (12 if found["ampm"].lower() == "pm" else 0)
-    if hour > 23 or minute > 59:
+    if hour > MAX_HOUR_24 or minute > MAX_MINUTE:
         return None
 
     def build(year: int) -> datetime | None:
@@ -143,7 +141,7 @@ def parse_updated_on(text: str | None, now: datetime | None = None) -> datetime 
 
     if found["year"]:
         year = int(found["year"])
-        return build(year + 2000 if year < 100 else year)
+        return build(year + 2000 if year < TWO_DIGIT_YEAR_LIMIT else year)
     stamp = build(now.year)
     if stamp is not None and stamp > now + timedelta(days=1):
         stamp = build(now.year - 1)
@@ -157,10 +155,8 @@ def clean_gmp_name(text: str) -> str:
     return name.strip()
 
 
-# --- The table -----------------------------------------------------------------------------
-
-
 def _column(headers: list[str], *patterns: str) -> int | None:
+    """Return the index of the first header that matches a pattern, or None."""
     for index, header in enumerate(headers):
         h = " ".join(header.lower().split())
         if any(re.search(pattern, h) for pattern in patterns):
@@ -169,6 +165,7 @@ def _column(headers: list[str], *patterns: str) -> int | None:
 
 
 def _headers_of(table) -> list[str]:
+    """Return the header texts of a table."""
     cells = table.xpath(".//thead//th") or table.xpath(".//tr[1]/th|.//tr[1]/td")
     return [" ".join(cell.text_content().split()) for cell in cells]
 
@@ -225,9 +222,6 @@ def parse_gmp_table(page: str, now: datetime | None = None) -> list[GmpRow]:
 
     found = "; ".join(", ".join(headers) or "(no header)" for headers in seen[:5]) or "no table"
     raise GmpSourceError(f"no GMP table found. The columns that we saw: {found}")
-
-
-# --- Matching and saving -------------------------------------------------------------------
 
 
 def _match(key: str, candidates: dict[str, Ipo]) -> Ipo | None:
@@ -294,17 +288,15 @@ def apply_gmp_rows(rows: list[GmpRow], now: datetime | None = None) -> GmpResult
     return result
 
 
-# --- Fetching ------------------------------------------------------------------------------
-
-
 def fetch_page(url: str, fetcher: PoliteFetcher) -> str:
+    """Download a page and return its text. Raise GmpSourceError if that does not work."""
     try:
         response = fetcher.get(url)
-    except RobotsDisallowed as exc:
+    except RobotsDisallowedError as exc:
         raise GmpSourceError(f"robots.txt does not allow {url}, or it could not be read") from exc
     except httpx.HTTPError as exc:
         raise GmpSourceError(f"{url}: {exc}") from exc
-    if response.status_code >= 400:
+    if response.status_code >= HTTP_ERROR_STATUS:
         raise GmpSourceError(f"{url}: HTTP {response.status_code}")
     return response.text
 

@@ -1,4 +1,4 @@
-"""Celery app. Beat schedules are added in later phases."""
+"""Celery app for the project."""
 
 import os
 

@@ -1,3 +1,5 @@
+"""Management command: build the daily report and print it."""
+
 from datetime import date
 
 from django.core.management.base import BaseCommand, CommandError
@@ -6,18 +8,22 @@ from apps.reports.builder import build_report
 
 
 class Command(BaseCommand):
+    """Build the daily report."""
+
     help = (
         "Build the daily report and show the text. It is saved, but not sent "
         "(use send_report for that)."
     )
 
     def add_arguments(self, parser):
+        """Add the command options."""
         parser.add_argument("--date", help="The date of the report, as YYYY-MM-DD. Default: today.")
         parser.add_argument(
             "--force", action="store_true", help="Build it again, even if the report exists."
         )
 
     def handle(self, *args, **options):
+        """Run the command."""
         day = None
         if options["date"]:
             try:

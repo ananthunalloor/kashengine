@@ -1,3 +1,7 @@
+"""Database model for IPOs."""
+
+from typing import ClassVar
+
 from django.db import models
 from django.utils import timezone
 
@@ -86,7 +90,7 @@ class Ipo(models.Model):
         blank=True,
         help_text="Our score for this IPO, from -1 to 1. Set by the scoring step.",
     )
-    verdict = models.CharField(max_length=10, choices=Verdict, blank=True)
+    verdict = models.CharField(max_length=10, choices=Verdict.choices, blank=True)
     scored_at = models.DateTimeField(null=True, blank=True)
     score_inputs = models.JSONField(
         default=dict, blank=True, help_text="All the numbers that gave the score."
@@ -102,8 +106,8 @@ class Ipo(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["-open_date", "name"]
-        constraints = [
+        ordering: ClassVar[list[str]] = ["-open_date", "name"]
+        constraints: ClassVar[list[models.BaseConstraint]] = [
             models.UniqueConstraint(fields=["name", "open_date"], name="unique_ipo_name_open_date"),
         ]
 

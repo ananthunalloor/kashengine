@@ -1,3 +1,5 @@
+"""Django admin for IPOs."""
+
 from django.contrib import admin
 
 from .models import Ipo
@@ -5,6 +7,8 @@ from .models import Ipo
 
 @admin.register(Ipo)
 class IpoAdmin(admin.ModelAdmin):
+    """Admin for IPOs. The score fields are read only."""
+
     list_display = (
         "name",
         "category",

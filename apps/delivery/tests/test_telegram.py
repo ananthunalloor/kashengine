@@ -1,6 +1,5 @@
 """Tests for the Telegram client. They do not use the network."""
 
-# ruff: noqa: E501, S105  (the test data has long lines and a fake token)
 import json
 
 import httpx

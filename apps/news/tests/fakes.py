@@ -1,12 +1,16 @@
 """A stand-in for LLMClient, for tests."""
 
+from apps.llm.client import LLMClient
 
-class FakeLLM:
+
+class FakeLLM(LLMClient):
     """It answers like LLMClient.chat_json, without a server.
 
     answers:  a list. Each item is a dict (the answer of the model), or an exception to raise.
               When the list is empty, `default` is used.
     on_call:  a function that is called with the number of the call, before each answer.
+
+    It does not call the LLMClient constructor, so it makes no HTTP client.
     """
 
     def __init__(self, answers=None, model="fake-model", default=None, on_call=None):

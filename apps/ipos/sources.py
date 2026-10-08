@@ -1,24 +1,13 @@
-"""Read the IPO list from a source.
+"""Read the IPO list from a source (chittorgarh.com by default).
 
-READ THIS FIRST.
-- The fetch is OFF by default (IPO_FETCH_ENABLED=false). The default source is the IPO list report
-  of chittorgarh.com. The page of the report loads its table with JavaScript, so the HTML of the
-  page has no table. We read the JSON feed that the page itself uses
-  (webnodejs.chittorgarh.com). It is not a documented public API. It can change or stop at any
-  time. robots.txt of the host allows it. We found no written permission or ban for automated use,
-  and the site says "All rights reserved". Read their terms before you turn the fetch on. Use the
-  data for yourself only. Do not publish it.
-- We read one or two URLs, one or two times a day, and we obey robots.txt (PoliteFetcher).
-- The JSON feed gives dates, price band, and issue size. It does NOT give the GMP (grey market
-  premium), the subscription, or the listing result. Enter those with `update_ipo` or
-  `import_ipo_csv`. GMP is not official data. Treat it with care.
-- A source URL can have {month}, {year}, and {fy} (financial year, like 2026-27). We fill them in
-  for this month and for last month (see collect.expand_urls).
-- If the feed changes, the run saves nothing, logs a warning, and you can still enter IPOs with
-  `import_ipo_csv`, `update_ipo`, or the admin. A source that returns an HTML page is read with a
-  table parser that finds the columns by header name.
-- We tested the parser on sample data that has the fields of the feed. We could not test it on the
-  live service from the build server.
+The fetch is OFF by default (IPO_FETCH_ENABLED=false). The site loads its table with JavaScript,
+so we read the JSON feed that the page itself uses. That feed is not a documented public API and
+can change at any time. The site says "All rights reserved" and we found no written permission
+for automated use. Read the terms of the site before you turn the fetch on, and use the data for
+yourself only. We obey robots.txt and read only a few URLs a day (PoliteFetcher).
+
+The feed has no GMP, subscription, or listing result. GMP is unofficial data: treat it with care.
+This code was tested on sample data only, NOT against the live service.
 """
 
 import json
@@ -32,12 +21,13 @@ from urllib.parse import urljoin
 import httpx
 from lxml import html as lxml_html
 
-from apps.news.scraper import PoliteFetcher, RobotsDisallowed
+from apps.news.scraper import PoliteFetcher, RobotsDisallowedError
 
 logger = logging.getLogger(__name__)
 
 MAINBOARD = "mainboard"
 SME = "sme"
+HTTP_ERROR_STATUS = 400  # First HTTP status code that means an error.
 
 
 class IpoSourceError(Exception):
@@ -67,8 +57,6 @@ class IpoRecord:
     source_url: str = ""
 
 
-# --- Small parsers -------------------------------------------------------------------------
-
 DATE_FORMATS = (
     "%b %d, %Y",
     "%B %d, %Y",
@@ -95,7 +83,7 @@ def parse_date(text: str | None) -> date | None:
         return None
     for fmt in DATE_FORMATS:
         try:
-            return datetime.strptime(cleaned, fmt).date()
+            return datetime.strptime(cleaned, fmt).date()  # noqa: DTZ007  # date only, no time zone
         except ValueError:
             continue
     return None
@@ -113,6 +101,7 @@ def parse_numbers(text: str | None) -> list[Decimal]:
 
 
 def parse_number(text: str | None) -> Decimal | None:
+    """Return the first number in a text, or None if there is none."""
     numbers = parse_numbers(text)
     return numbers[0] if numbers else None
 
@@ -148,36 +137,40 @@ def clean_name(name: str) -> str:
     return name.strip()
 
 
-# --- The table -----------------------------------------------------------------------------
+# Header patterns, checked in order. The first match wins. "listing" headers are handled apart.
+_HEADER_PATTERNS = (
+    ("name", r"company|issuer|ipo name|^name"),
+    ("exchange", r"exchange|platform"),
+    ("issue_size", r"issue size|issue amount|^amount|^size"),
+    ("price", r"price band|issue price|^price"),
+    ("open", r"open"),
+    ("close", r"clos"),
+    ("lot", r"lot"),
+)
+
+
+def _listing_field(h: str) -> str | None:
+    """Say which field a header with "listing" in it means. Other listing headers are not used."""
+    if "gain" in h:
+        return "listing_gain"
+    if "date" in h:
+        return "listing_date"
+    return None  # For example "Listing Day Close".
 
 
 def _header_field(header: str) -> str | None:
     """Say which field a column header means. The order of the checks matters."""
     h = " ".join(header.lower().split())
-    if "listing" in h and "gain" in h:
-        return "listing_gain"
-    if "listing" in h and "date" in h:
-        return "listing_date"
     if "listing" in h:
-        return None  # For example "Listing Day Close". We do not use it.
-    if re.search(r"company|issuer|ipo name|^name", h):
-        return "name"
-    if re.search(r"exchange|platform", h):
-        return "exchange"
-    if re.search(r"issue size|issue amount|^amount|^size", h):
-        return "issue_size"
-    if re.search(r"price band|issue price|^price", h):
-        return "price"
-    if "open" in h:
-        return "open"
-    if "clos" in h:
-        return "close"
-    if "lot" in h:
-        return "lot"
+        return _listing_field(h)
+    for field, pattern in _HEADER_PATTERNS:
+        if re.search(pattern, h):
+            return field
     return None
 
 
 def _column_map(headers: list[str]) -> dict[str, int]:
+    """Map each known field to the index of its first column."""
     columns: dict[str, int] = {}
     for index, header in enumerate(headers):
         field = _header_field(header)
@@ -244,9 +237,6 @@ def parse_ipo_table(page: str, source_url: str = "") -> list[IpoRecord]:
             )
         return records
     return []
-
-
-# --- The JSON feed ------------------------------------------------------------------------
 
 
 def _first(row: dict, *names: str) -> str:
@@ -322,9 +312,6 @@ def parse_ipo_json(payload, source_url: str = "") -> list[IpoRecord]:
     return records
 
 
-# --- Fetching ------------------------------------------------------------------------------
-
-
 def parse_response(text: str, url: str, content_type: str = "") -> list[IpoRecord]:
     """Read a response as JSON (if it looks like JSON) or as an HTML page."""
     if "json" in content_type.lower() or text.lstrip().startswith(("{", "[")):
@@ -339,12 +326,12 @@ def fetch_records(url: str, fetcher: PoliteFetcher) -> list[IpoRecord]:
     """Download one URL and read the IPOs in it. Raise IpoSourceError if that does not work."""
     try:
         response = fetcher.get(url)
-    except RobotsDisallowed as exc:
+    except RobotsDisallowedError as exc:
         raise IpoSourceError(f"robots.txt does not allow {url}, or it could not be read") from exc
     except httpx.HTTPError as exc:
         raise IpoSourceError(f"{url}: {exc}") from exc
 
-    if response.status_code >= 400:
+    if response.status_code >= HTTP_ERROR_STATUS:
         raise IpoSourceError(f"{url}: HTTP {response.status_code}")
 
     records = parse_response(response.text, url, response.headers.get("content-type", ""))

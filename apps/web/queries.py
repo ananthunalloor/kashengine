@@ -34,9 +34,7 @@ VERDICT_FILTERS = {"good": "Likely good", "mixed": "Mixed", "weak": "Weak", "unk
 CATEGORY_FILTERS = {"mainboard": "Mainboard", "sme": "SME"}
 NEWS_WINDOW_HOURS = 36
 DASHBOARD_ITEMS = 4
-
-
-# --- Markets -------------------------------------------------------------------------------
+HOURS_BEFORE_DAYS = 48  # An age below this is shown in hours. A larger age is shown in days.
 
 
 def latest_quotes() -> list[dict]:
@@ -74,10 +72,8 @@ def outlook(prediction: Prediction | None) -> dict | None:
 
 
 def prediction_history(limit: int = 30) -> list[Prediction]:
+    """The newest predictions, newest first."""
     return list(Prediction.objects.all()[:limit])
-
-
-# --- Dashboard -----------------------------------------------------------------------------
 
 
 def _ipo_groups(today: date) -> dict:
@@ -95,6 +91,7 @@ def _ipo_groups(today: date) -> dict:
 
 
 def dashboard_data(now: datetime | None = None) -> dict:
+    """Collect everything the dashboard page shows."""
     now = now or timezone.now()
     today = today_ist(now)
     return {
@@ -108,14 +105,13 @@ def dashboard_data(now: datetime | None = None) -> dict:
     }
 
 
-# --- News ----------------------------------------------------------------------------------
-
-
 def news_sources() -> list[str]:
+    """The names of the news sources, sorted."""
     return list(NewsArticle.objects.order_by("source").values_list("source", flat=True).distinct())
 
 
 def news_queryset(filters: dict[str, str]):
+    """The news articles that match the filters."""
     articles = NewsArticle.objects.prefetch_related("companies")
     if filters["q"]:
         articles = articles.filter(
@@ -137,10 +133,8 @@ def news_queryset(filters: dict[str, str]):
     return articles
 
 
-# --- IPOs ----------------------------------------------------------------------------------
-
-
 def ipo_queryset(filters: dict[str, str]):
+    """The IPOs that match the filters."""
     ipos = Ipo.objects.all()
     tab = filters["status"] if filters["status"] in IPO_TABS else ""
     if tab == "":
@@ -169,10 +163,8 @@ def ipo_queryset(filters: dict[str, str]):
     return ipos
 
 
-# --- Companies -----------------------------------------------------------------------------
-
-
 def company_queryset(filters: dict[str, str]):
+    """The companies that match the search text."""
     companies = Company.objects.order_by("name")
     if filters["q"]:
         companies = companies.filter(
@@ -193,7 +185,7 @@ def _age(stamp: datetime | None, now: datetime) -> str:
     hours = (now - stamp).total_seconds() / 3600
     if hours < 1:
         return " (updated less than an hour ago)"
-    if hours < 48:
+    if hours < HOURS_BEFORE_DAYS:
         return f" (updated {int(hours)} hours ago)"
     return f" (updated {int(hours // 24)} days ago)"
 

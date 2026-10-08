@@ -3,7 +3,10 @@
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
+from django.utils import timezone
+
 from apps.markets.models import IndexQuote, Prediction
+from apps.news.models import NewsArticle
 
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -40,10 +43,6 @@ def prediction(day: date, direction: str = "up", confidence: float = 0.6, **kwar
 
 def article(number: int, score, relevance, published_at=None, fetched_at=None, scored=True):
     """Save a news article with a sentiment score."""
-    from django.utils import timezone
-
-    from apps.news.models import NewsArticle
-
     row = NewsArticle.objects.create(
         source="Test", title=f"Title {number}", url=f"https://t.test/{number}",
         published_at=published_at, sentiment_score=score, relevance=relevance,

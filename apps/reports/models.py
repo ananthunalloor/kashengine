@@ -1,3 +1,7 @@
+"""Models for the daily report."""
+
+from typing import ClassVar
+
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
@@ -27,7 +31,7 @@ class Report(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["-date"]
+        ordering: ClassVar[list[str]] = ["-date"]
 
     def __str__(self):
         return f"Report {self.date}"

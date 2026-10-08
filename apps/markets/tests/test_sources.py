@@ -13,7 +13,7 @@ from apps.markets.sources import Bar, QuoteError, fetch_bars
 def install_fake_yfinance(monkeypatch, frame=None, error=None):
     calls = []
 
-    class Ticker:
+    class FakeTicker:
         def __init__(self, symbol):
             self.symbol = symbol
 
@@ -23,8 +23,10 @@ def install_fake_yfinance(monkeypatch, frame=None, error=None):
                 raise error
             return frame
 
-    module = types.ModuleType("yfinance")
-    module.Ticker = Ticker
+    class FakeYFinance(types.ModuleType):
+        Ticker = FakeTicker
+
+    module = FakeYFinance("yfinance")
     monkeypatch.setitem(sys.modules, "yfinance", module)
     return calls
 

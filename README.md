@@ -94,8 +94,18 @@ The settings module is `config.settings.dev` or `config.settings.prod`.
 uv sync                         # install packages
 uv add <package>                # add a package
 uv add --group dev <package>    # add a dev package
-uv run ruff check --fix .       # lint
+uv run ruff check --fix .       # lint (rules: see [tool.ruff] in pyproject.toml)
 uv run ruff format .            # format
-uv run pytest                   # test
-uv run pre-commit install       # turn on commit hooks
+uv run ty check                 # type check
+uv run pytest                   # test (a warning fails the run)
+uv run pre-commit install       # turn on commit hooks (ruff, ruff format, ty)
 ```
+
+Code standards:
+
+- Docstrings use the Google style. Every public module, class, function, and method in `apps/`
+  (except tests) has one. The first line is a short summary that ends with a period.
+- A comment explains why the code does something. It does not repeat what the code does.
+- Fix the cause of a ruff or ty message. Use a `# noqa: CODE` or `# ty: ignore[rule]` comment only
+  when the code is correct, and always give the reason after it.
+- ruff and ty must report no errors. The commit hooks run both.

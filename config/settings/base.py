@@ -1,6 +1,7 @@
 """Common settings for all environments. Dev and prod import from this file."""
 
 from pathlib import Path
+from typing import Any
 
 import environ
 from celery.schedules import crontab
@@ -8,7 +9,7 @@ from celery.schedules import crontab
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 env = environ.Env()
-# In Docker, Compose sets the variables. For local runs, read .env.dev if it exists.
+# Docker Compose sets the variables. Local runs read .env.dev if it exists.
 environ.Env.read_env(BASE_DIR / ".env.dev", overwrite=False)
 
 SECRET_KEY = env("DJANGO_SECRET_KEY")
@@ -34,12 +35,11 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    # Every page needs a login, unless the view says @login_not_required (for example /health/).
+    # Every page needs a login, unless the view uses @login_not_required (for example /health/).
     "django.contrib.auth.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -78,12 +78,11 @@ TIME_ZONE = "Asia/Kolkata"
 USE_I18N = True
 USE_TZ = True
 
-# The web pages. There is one login for the whole site (create it with `createsuperuser`).
+# One login for the whole site. Create it with `createsuperuser`.
 LOGIN_URL = "web:login"
 LOGIN_REDIRECT_URL = "web:dashboard"
 LOGOUT_REDIRECT_URL = "web:login"
-# The Datastar script. The default is the CDN. To serve it from this site instead, save the file
-# as static/vendor/datastar.js and set DATASTAR_SRC=/static/vendor/datastar.js.
+# Datastar script URL. To serve it locally, use /static/vendor/datastar.js.
 DATASTAR_SRC = env(
     "DATASTAR_SRC",
     default="https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.4/bundles/datastar.js",
@@ -102,23 +101,22 @@ CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 
-# Local LLM (Ollama). All code reads these values through LLMClient.
+# Local LLM (Ollama).
 LLM_BASE_URL = env("LLM_BASE_URL", default="http://ollama:11434")
 LLM_MODEL = env("LLM_MODEL", default="llama3.2:3b")
-# A small model on a CPU can need a minute for one answer. Wait at most this long.
+# A small model on a CPU can need a minute for one answer.
 LLM_TIMEOUT_SECONDS = env.int("LLM_TIMEOUT_SECONDS", default=180)
 
 # News collection
-# Standard bot format (like Googlebot). It names our bot and gives a contact link.
-# Do not make it look like a browser. Change the link to your own site or repository.
+# The user agent names our bot and gives a contact link. Do not make it look like a browser.
 NEWS_USER_AGENT = env(
     "NEWS_USER_AGENT",
     default="Mozilla/5.0 (compatible; KashEngineBot/0.1; +https://github.com/ananthunalloor/kashengine)",
 )
-NEWS_REQUEST_TIMEOUT = env.int("NEWS_REQUEST_TIMEOUT", default=20)  # seconds
+NEWS_REQUEST_TIMEOUT = env.int("NEWS_REQUEST_TIMEOUT", default=20)  # Seconds.
 NEWS_FETCH_EVERY_HOURS = env.int("NEWS_FETCH_EVERY_HOURS", default=3)
 NEWS_SCRAPE_FULL_TEXT = env.bool("NEWS_SCRAPE_FULL_TEXT", default=True)
-NEWS_SCRAPE_DELAY_SECONDS = env.float("NEWS_SCRAPE_DELAY_SECONDS", default=3.0)  # per host
+NEWS_SCRAPE_DELAY_SECONDS = env.float("NEWS_SCRAPE_DELAY_SECONDS", default=3.0)  # Per host.
 NEWS_SCRAPE_BATCH_SIZE = env.int("NEWS_SCRAPE_BATCH_SIZE", default=50)
 NEWS_SCRAPE_MAX_AGE_HOURS = env.int("NEWS_SCRAPE_MAX_AGE_HOURS", default=48)
 
@@ -128,23 +126,22 @@ SCREENER_DELAY_SECONDS = env.float("SCREENER_DELAY_SECONDS", default=5.0)
 SCREENER_REFRESH_DAYS = env.int("SCREENER_REFRESH_DAYS", default=7)
 SCREENER_BATCH_SIZE = env.int("SCREENER_BATCH_SIZE", default=100)
 
-# Sentiment scoring with the local LLM
+# Sentiment scoring
 SENTIMENT_MAX_CHARS = env.int("SENTIMENT_MAX_CHARS", default=2000)  # Article text for the model.
 SENTIMENT_BATCH_SIZE = env.int("SENTIMENT_BATCH_SIZE", default=50)  # Articles for each run.
 SENTIMENT_MAX_AGE_HOURS = env.int("SENTIMENT_MAX_AGE_HOURS", default=48)
 SENTIMENT_MAX_ATTEMPTS = env.int("SENTIMENT_MAX_ATTEMPTS", default=3)
 
-# Market data and the prediction.
+# Market data and the prediction
 MARKET_FLAT_BAND_PCT = env.float("MARKET_FLAT_BAND_PCT", default=0.25)  # A day within this is flat.
-PREDICTION_NEWS_WEIGHT = env.float(
-    "PREDICTION_NEWS_WEIGHT", default=0.5
-)  # The rest is global cues.
+# The news share of the score. The rest is global cues.
+PREDICTION_NEWS_WEIGHT = env.float("PREDICTION_NEWS_WEIGHT", default=0.5)
 PREDICTION_THRESHOLD = env.float("PREDICTION_THRESHOLD", default=0.15)  # Score for up or down.
 PREDICTION_MIN_ARTICLES = env.int("PREDICTION_MIN_ARTICLES", default=5)
 
-# IPOs. The fetch is OFF by default. Read the note at the top of apps/ipos/sources.py first.
+# IPOs. The fetch is OFF by default (see the note in apps/ipos/sources.py).
 IPO_FETCH_ENABLED = env.bool("IPO_FETCH_ENABLED", default=False)
-# The URL can have {month}, {year}, and {fy}. We use this month and last month.
+# The URL can have {month}, {year}, and {fy}.
 IPO_SOURCE_URLS = env.list(
     "IPO_SOURCE_URLS",
     default=[
@@ -152,29 +149,26 @@ IPO_SOURCE_URLS = env.list(
         "?search=&v=1"
     ],
 )
-# The GMP and the subscription come from a live table. OFF by default. Read the note at the top of
-# apps/ipos/gmp.py first.
+# GMP and subscription come from a live table. OFF by default (see the note in apps/ipos/gmp.py).
 IPO_GMP_ENABLED = env.bool("IPO_GMP_ENABLED", default=False)
 IPO_GMP_URL = env("IPO_GMP_URL", default="https://www.investorgain.com/report/ipo-gmp-live/331/")
-# The listing price comes from Yahoo Finance (first day open). See apps/ipos/listing.py.
+# The listing price is the first day open from Yahoo Finance.
 IPO_LISTING_ENABLED = env.bool("IPO_LISTING_ENABLED", default=True)
-IPO_LISTING_CHECK_DAYS = env.int("IPO_LISTING_CHECK_DAYS", default=14)  # Look back this long.
-IPO_KEEP_DAYS = env.int("IPO_KEEP_DAYS", default=60)  # We skip new IPOs that opened before this.
+IPO_LISTING_CHECK_DAYS = env.int("IPO_LISTING_CHECK_DAYS", default=14)  # Days to look back.
+IPO_KEEP_DAYS = env.int("IPO_KEEP_DAYS", default=60)  # Skip new IPOs that opened earlier (days).
 IPO_METRIC_MAX_AGE_HOURS = env.int("IPO_METRIC_MAX_AGE_HOURS", default=72)  # GMP, subscription.
 IPO_NEWS_DAYS = env.int("IPO_NEWS_DAYS", default=14)
 IPO_GOOD_SCORE = env.float("IPO_GOOD_SCORE", default=0.3)  # A score from this up is "good".
 IPO_WEAK_SCORE = env.float("IPO_WEAK_SCORE", default=0.1)  # A score under this is "weak".
 IPO_GOOD_GAIN_PCT = env.float("IPO_GOOD_GAIN_PCT", default=10.0)  # A listing gain "did well".
 
-# Telegram. TELEGRAM_CHAT_IDS is a list of chat IDs (users, groups, or channels), separated by
-# commas. To find your chat ID: send a message to your bot, then run
-# `python manage.py telegram_check`.
+# Telegram. TELEGRAM_CHAT_IDS is a comma-separated list.
+# Find your chat ID with `manage.py telegram_check`.
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", default="")
 TELEGRAM_CHAT_IDS = env.list("TELEGRAM_CHAT_IDS", default=[])
 TELEGRAM_TIMEOUT_SECONDS = env.int("TELEGRAM_TIMEOUT_SECONDS", default=20)
 
-# Report time (IST). The report is sent on trading days (Monday to Friday).
-# A second run, 20 minutes later, sends only to the chats that did not get the report.
+# Report time (IST), on trading days. A retry 20 minutes later sends only to chats that missed it.
 REPORT_HOUR = env.int("REPORT_HOUR", default=7)
 REPORT_MINUTE = env.int("REPORT_MINUTE", default=30)
 REPORT_NEWS_ITEMS = env.int("REPORT_NEWS_ITEMS", default=3)  # For good news, and for bad news.
@@ -182,24 +176,23 @@ REPORT_NEWS_MIN_RELEVANCE = env.float("REPORT_NEWS_MIN_RELEVANCE", default=0.4)
 REPORT_IPO_ITEMS = env.int("REPORT_IPO_ITEMS", default=6)  # For each IPO list.
 REPORT_IPO_DAYS_AHEAD = env.int("REPORT_IPO_DAYS_AHEAD", default=7)
 
-# All times are IST. The daily report is sent at 07:30, after the prediction at 07:00.
+# All times are IST.
 CELERY_BEAT_SCHEDULE = {
     "fetch-news-feeds": {
         "task": "news.fetch_feeds",
         "schedule": crontab(minute=5, hour=f"*/{NEWS_FETCH_EVERY_HOURS}"),
     },
-    # Runs every day. A company is read again only when its data is older than
-    # SCREENER_REFRESH_DAYS, so each company is read about once a week.
+    # A company is read again only when its data is older than SCREENER_REFRESH_DAYS.
     "refresh-stale-companies": {
         "task": "companies.refresh_stale",
         "schedule": crontab(minute=30, hour=2),
     },
-    # Scores the articles that are not scored yet. It also starts after each news fetch.
+    # Also starts after each news fetch.
     "score-news": {
         "task": "news.score_articles",
         "schedule": crontab(minute=20),
     },
-    # Quotes before the prediction. This also checks the older predictions.
+    # Quotes before the prediction. Also checks the older predictions.
     "fetch-market-quotes-morning": {
         "task": "markets.fetch_quotes",
         "schedule": crontab(minute=45, hour=6),
@@ -208,13 +201,12 @@ CELERY_BEAT_SCHEDULE = {
         "task": "markets.predict",
         "schedule": crontab(minute=0, hour=7),
     },
-    # The market closes at 15:30. This gets the final quotes and checks today's prediction.
+    # The market closes at 15:30. Gets the final quotes and checks today's prediction.
     "fetch-market-quotes-evening": {
         "task": "markets.fetch_quotes",
         "schedule": crontab(minute=30, hour=17),
     },
-    # IPO list from the source (if IPO_FETCH_ENABLED), then the scores. The evening run gets the
-    # listing results.
+    # IPO list (if IPO_FETCH_ENABLED), then the scores. The evening run gets listing results.
     "collect-ipos-morning": {
         "task": "ipos.collect",
         "schedule": crontab(minute=15, hour=6),
@@ -223,18 +215,17 @@ CELERY_BEAT_SCHEDULE = {
         "task": "ipos.collect",
         "schedule": crontab(minute=45, hour=18),
     },
-    # GMP and subscription (if IPO_GMP_ENABLED), listing results, and the scores again.
+    # GMP and subscription (if IPO_GMP_ENABLED), listing results, and the scores.
     "refresh-ipo-metrics": {
         "task": "ipos.refresh_metrics",
         "schedule": crontab(minute=0, hour="7-19/2"),
     },
-    # Scores again after the news scoring, before the report at 07:30.
+    # After the news scoring, before the report.
     "score-ipos": {
         "task": "ipos.score",
         "schedule": crontab(minute=10, hour=7),
     },
-    # The daily report. It is built and sent on trading days. The second run sends again only
-    # to the chats that did not get it (a network problem, for example).
+    # The daily report, then the retry for the chats that did not get it.
     "send-daily-report": {
         "task": "delivery.send_daily_report",
         "schedule": crontab(minute=REPORT_MINUTE, hour=REPORT_HOUR, day_of_week="mon-fri"),
@@ -249,7 +240,7 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-LOGGING = {
+LOGGING: dict[str, Any] = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {

@@ -1,18 +1,24 @@
+"""Management command that checks the LLM server and its model."""
+
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.llm.client import LLMClient, LLMError
 
 
 class Command(BaseCommand):
+    """Check that the LLM server is up and has the model."""
+
     help = "Check that the LLM server is up and has the model. Use --pull to download the model."
 
     def add_arguments(self, parser):
+        """Add the --model and --pull options."""
         parser.add_argument("--model", help="Check this model, not LLM_MODEL.")
         parser.add_argument(
             "--pull", action="store_true", help="Download the model if it is missing."
         )
 
     def handle(self, *args, **options):
+        """Run the check, and pull the model when asked."""
         with LLMClient(model=options["model"]) as llm:
             self.stdout.write(f"Server: {llm.base_url}")
             self.stdout.write(f"Model:  {llm.model}")

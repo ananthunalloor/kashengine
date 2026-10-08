@@ -35,17 +35,92 @@ target-version = "py313"
 extend-exclude = ["**/migrations/*"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "SIM", "DJ", "S"]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "D",    # pydocstyle
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "A",    # flake8-builtins
+    "C4",   # flake8-comprehensions
+    "C90",  # mccabe complexity
+    "DJ",   # flake8-django
+    "DTZ",  # flake8-datetimez
+    "ERA",  # eradicate (commented-out code)
+    "G",    # flake8-logging-format
+    "INP",  # flake8-no-pep420 (missing __init__.py)
+    "LOG",  # flake8-logging
+    "PERF", # perflint
+    "PIE",  # flake8-pie
+    "PL",   # pylint
+    "PT",   # flake8-pytest-style
+    "PTH",  # flake8-use-pathlib
+    "RET",  # flake8-return
+    "RUF",  # ruff-specific rules
+    "S",    # flake8-bandit
+    "SIM",  # flake8-simplify
+    "SLF",  # flake8-self
+    "T20",  # flake8-print
+    "TC",   # flake8-type-checking
+    "TRY",  # tryceratops
+]
+ignore = [
+    "COM812",  # conflicts with the formatter
+    "ISC001",  # conflicts with the formatter
+    "TRY003",  # long messages in exceptions are fine here
+    "D104",    # package __init__.py files are empty
+    "D105",    # magic methods like __str__
+    "D106",    # Django's nested Meta class
+    "D107",    # __init__ is described in the class docstring
+]
+# The text of the pages and the reports uses real minus signs and dashes on purpose.
+allowed-confusables = ["−", "–", "—"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
+
+[tool.ruff.lint.pylint]
+max-args = 8
+max-positional-args = 6
 
 [tool.ruff.lint.per-file-ignores]
-"**/tests/**" = ["S101"]
-"tests/**" = ["S101"]
-"config/settings/dev.py" = ["S105"]
+"**/tests/**" = [
+    "S101",     # assert is how pytest works
+    "S105",     # fake passwords and tokens
+    "S106",
+    "D",        # tests are named after what they check
+    "PLR2004",  # expected values are literals
+    "ARG",      # fixtures and fakes take arguments that they do not use
+    "SLF001",   # tests read private names
+    "INP001",
+]
+"**/conftest.py" = ["D", "ARG"]
+"config/settings/*.py" = ["F403", "F405"]  # prod and dev import * from base
+"manage.py" = ["D"]
 
 [tool.ruff.format]
 quote-style = "double"
+docstring-code-format = true
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings.dev"
 python_files = ["test_*.py"]
 testpaths = ["apps", "tests"]
+addopts = "-ra --strict-markers --strict-config"
+filterwarnings = ["error"]
+
+[tool.ty.environment]
+python-version = "3.13"
+
+[tool.ty.src]
+exclude = ["**/migrations/**", "staticfiles/**", "frontend/**", ".venv/**"]
+
+[tool.ty.terminal]
+error-on-warning = true
+output-format = "concise"

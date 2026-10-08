@@ -1,3 +1,5 @@
+"""Admin for reports."""
+
 from django.contrib import admin
 
 from .models import Report
@@ -5,6 +7,8 @@ from .models import Report
 
 @admin.register(Report)
 class ReportAdmin(admin.ModelAdmin):
+    """Admin for Report."""
+
     list_display = ("date", "prediction", "confidence", "created_at")
     list_filter = ("prediction",)
     date_hierarchy = "date"

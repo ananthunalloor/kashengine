@@ -32,9 +32,6 @@ def test_classify_change_uses_the_setting_and_an_own_band(settings):
     assert classify_change(0.9, band=0.1) == "up"
 
 
-# --- evaluate_pending ----------------------------------------------------------------------
-
-
 @pytest.mark.django_db
 def test_a_final_quote_gives_a_correct_result():
     saved = prediction(MON, "up")
@@ -142,9 +139,6 @@ def test_a_second_run_does_not_change_the_result():
 
     assert evaluate_pending(now=ist(MON, 18)) == {"evaluated": 0, "void": 0, "waiting": 0}
     assert Prediction.objects.get().evaluated_at == ist(MON, 17)
-
-
-# --- accuracy_stats ------------------------------------------------------------------------
 
 
 def result(index: int, predicted: str, actual: str, confidence: float = 0.5) -> Prediction:

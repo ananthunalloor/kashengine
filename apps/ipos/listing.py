@@ -1,20 +1,16 @@
-"""Get the listing price of an IPO from the first trading day on Yahoo Finance.
+"""Get the IPO listing price from Yahoo Finance.
 
-READ THIS FIRST.
-- The price is the OPEN price of the first trading day. This is the price at which the IPO
-  starts to trade, so it is the listing price. We use it with the upper price band to compute the
-  listing gain. This is the same as the usual "listing gain" that sites show.
-- We need the exchange code of the IPO (NSE symbol or BSE code). The IPO list source gives it
-  after the listing (see sources.py). We try the NSE symbol first (SYMBOL.NS), then the BSE code
-  (CODE.BO).
-- yfinance is not an official Yahoo tool and it is for personal use only (see
-  apps/markets/sources.py). We save only the one open price of the first day.
-- This was NOT tested against the live service from the build server. If Yahoo gives nothing for a
-  new listing, the IPO stays without a listing price, we try again at the next run for
-  IPO_LISTING_CHECK_DAYS, and you can still enter the price with `update_ipo --listing-price`.
+The listing price is the open price of the first trading day. We try the NSE symbol (SYMBOL.NS)
+first, then the BSE code (CODE.BO).
+
+yfinance is not an official Yahoo tool and is for personal use only (see apps/markets/sources.py).
+This code was NOT tested against the live service. If Yahoo returns no price, the IPO stays
+without one and we try again until IPO_LISTING_CHECK_DAYS pass. You can also set the price with
+`update_ipo --listing-price`.
 """
 
 import logging
+import math
 from collections.abc import Callable
 from datetime import date, timedelta
 from decimal import Decimal
@@ -33,11 +29,12 @@ SEARCH_WINDOW_DAYS = 6  # We look for the first bar in this many days after the 
 
 
 def fetch_listing_open(symbol: str, listing_date: date) -> Decimal:
-    """The open price of the first trading day on or after listing_date.
+    """Return the open price of the first trading day on or after listing_date.
 
-    Raise QuoteError if there is no usable bar.
+    Raises:
+        QuoteError: If Yahoo has no usable price bar.
     """
-    import yfinance as yf  # Imported here: it is slow to import, and only this function needs it.
+    import yfinance as yf  # noqa: PLC0415  # slow import, only this function needs it
 
     try:
         frame = yf.Ticker(symbol).history(
@@ -57,13 +54,13 @@ def fetch_listing_open(symbol: str, listing_date: date) -> Decimal:
     for stamp, price in frame["Open"].items():
         if stamp.date() < listing_date:
             continue
-        if price == price and price > 0:  # price == price is False for NaN.
+        if not math.isnan(price) and price > 0:
             return Decimal(str(round(float(price), 2)))
     raise QuoteError(f"{symbol}: no valid open price")
 
 
 def yahoo_symbols(ipo: Ipo) -> list[str]:
-    """The Yahoo symbols to try for an IPO, the NSE one first."""
+    """Return the Yahoo symbols to try for an IPO, the NSE one first."""
     symbols = []
     if ipo.nse_symbol:
         symbols.append(f"{ipo.nse_symbol}.NS")
@@ -73,7 +70,7 @@ def yahoo_symbols(ipo: Ipo) -> list[str]:
 
 
 def listing_candidates(today: date):
-    """IPOs that listed lately and have no result yet."""
+    """Return the IPOs that listed lately and have no result yet."""
     oldest = today - timedelta(days=settings.IPO_LISTING_CHECK_DAYS)
     return Ipo.objects.filter(
         listing_price__isnull=True,
@@ -88,9 +85,10 @@ def fill_listing_results(
     today: date | None = None,
     fetch: Callable[[str, date], Decimal] | None = None,
 ) -> dict:
-    """Set the listing price and the gain of IPOs that have listed. Return counts.
+    """Set the listing price and the gain of IPOs that have listed.
 
-    {"filled": n, "waiting": n (no price yet), "no_code": n (no exchange code yet)}
+    Returns:
+        Counts with keys "filled", "waiting" (no price yet) and "no_code" (no exchange code).
     """
     today = today or today_ist()
     fetch = fetch or fetch_listing_open

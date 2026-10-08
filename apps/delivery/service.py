@@ -14,11 +14,12 @@ logger = logging.getLogger(__name__)
 ERROR_CHARS = 500
 
 
-class DeliveryNotConfigured(Exception):
+class DeliveryNotConfiguredError(Exception):
     """The bot token or the chat IDs are not set."""
 
 
 def configured_chat_ids() -> list[str]:
+    """Return the chat IDs from the settings, without blank values."""
     return [chat_id.strip() for chat_id in settings.TELEGRAM_CHAT_IDS if chat_id.strip()]
 
 
@@ -40,9 +41,9 @@ def deliver_report(
     """
     chat_ids = configured_chat_ids() if chat_ids is None else chat_ids
     if not settings.TELEGRAM_BOT_TOKEN and client is None:
-        raise DeliveryNotConfigured("TELEGRAM_BOT_TOKEN is not set.")
+        raise DeliveryNotConfiguredError("TELEGRAM_BOT_TOKEN is not set.")
     if not chat_ids:
-        raise DeliveryNotConfigured("TELEGRAM_CHAT_IDS is empty.")
+        raise DeliveryNotConfiguredError("TELEGRAM_CHAT_IDS is empty.")
 
     result: dict = {"sent": 0, "failed": 0, "skipped": 0, "errors": {}}
     own_client = client is None

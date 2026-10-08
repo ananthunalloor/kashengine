@@ -1,9 +1,13 @@
+"""Management command: refresh company data from Screener.in."""
+
 from django.core.management.base import BaseCommand
 
 from apps.companies.screener import refresh_stale
 
 
 class Command(BaseCommand):
+    """Refresh company data from Screener.in."""
+
     help = (
         "Refresh company data from Screener.in now. "
         "Read the note at the top of apps/companies/screener.py first. "
@@ -11,6 +15,7 @@ class Command(BaseCommand):
     )
 
     def add_arguments(self, parser):
+        """Add the symbols, --all and --limit arguments."""
         parser.add_argument(
             "symbols", nargs="*", help="Refresh only these symbols, for example INFY TCS."
         )
@@ -20,6 +25,7 @@ class Command(BaseCommand):
         parser.add_argument("--limit", type=int, help="Maximum number of companies.")
 
     def handle(self, *args, **options):
+        """Run the refresh and print the result."""
         stats = refresh_stale(
             limit=options["limit"],
             symbols=[s.upper() for s in options["symbols"]] or None,

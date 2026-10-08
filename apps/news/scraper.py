@@ -28,8 +28,12 @@ logger = logging.getLogger(__name__)
 # A page with less text than this is probably a paywall or an error page.
 MIN_TEXT_CHARS = 200
 
+HTTP_CLIENT_ERROR = 400  # First status code of the 4xx range.
+HTTP_TOO_MANY_REQUESTS = 429
+HTTP_SERVER_ERROR = 500  # First status code of the 5xx range.
 
-class RobotsDisallowed(Exception):
+
+class RobotsDisallowedError(Exception):
     """robots.txt does not allow this URL."""
 
 
@@ -40,7 +44,7 @@ def robots_agent_name(user_agent: str) -> str:
     "Mozilla/5.0 (compatible; KashEngineBot/0.1; +https://example.com)" -> "KashEngineBot"
     """
     match = re.search(r"compatible;\s*([A-Za-z0-9_-]+)", user_agent)
-    name = match.group(1) if match else user_agent.split("/")[0].strip()
+    name = match.group(1) if match else user_agent.split("/", maxsplit=1)[0].strip()
     return name or "*"
 
 
@@ -64,12 +68,14 @@ class PoliteFetcher:
         self._last_request: dict[str, float] = {}
 
     def get(self, url: str) -> httpx.Response:
-        """Fetch a URL. Raise RobotsDisallowed if robots.txt does not allow it."""
+        """Fetch a URL. Raise RobotsDisallowedError if robots.txt does not allow it."""
         parts = urlsplit(url)
         rules = self._rules(parts.scheme, parts.netloc)
         if not rules.can_fetch(self.agent, url):
-            raise RobotsDisallowed(url)
-        self._wait(parts.netloc, rules.crawl_delay(self.agent))
+            raise RobotsDisallowedError(url)
+        # The type stubs say crawl_delay gives a str. At run time it gives an int or None.
+        crawl_delay = rules.crawl_delay(self.agent)
+        self._wait(parts.netloc, float(crawl_delay) if crawl_delay is not None else None)
         return self.client.get(url)
 
     def _rules(self, scheme: str, host: str) -> RobotFileParser:
@@ -85,15 +91,16 @@ class PoliteFetcher:
             response = self.client.get(f"{origin}/robots.txt")
         except httpx.HTTPError as exc:
             logger.warning("Cannot read robots.txt for %s: %s. Skip this host.", host, exc)
-            rules.disallow_all = True
+            rules.disallow_all = True  # ty: ignore[unresolved-attribute]  # Missing in the stubs.
         else:
-            if response.status_code >= 500:
+            if response.status_code >= HTTP_SERVER_ERROR:
                 logger.warning(
                     "robots.txt for %s gave HTTP %s. Skip this host.", host, response.status_code
                 )
-                rules.disallow_all = True
-            elif response.status_code >= 400:
-                rules.allow_all = True  # No robots.txt file. Everything is allowed.
+                rules.disallow_all = True  # ty: ignore[unresolved-attribute]  # Missing in the stubs.
+            elif response.status_code >= HTTP_CLIENT_ERROR:
+                # No robots.txt file. Everything is allowed.
+                rules.allow_all = True  # ty: ignore[unresolved-attribute]  # Missing in the stubs.
             else:
                 rules.parse(response.text.splitlines())
         rules.modified()  # Without this, RobotFileParser refuses all URLs.
@@ -125,17 +132,17 @@ def _scrape_one(article: NewsArticle, fetcher: PoliteFetcher) -> str:
     """Scrape one article. Return "scraped", "blocked", "failed", or "retry"."""
     try:
         response = fetcher.get(article.url)
-    except RobotsDisallowed:
+    except RobotsDisallowedError:
         _mark_tried(article)
         return "blocked"
     except httpx.HTTPError as exc:
         logger.warning("Network error for %s: %s", article.url, exc)
         return "retry"
 
-    if response.status_code >= 500 or response.status_code == 429:
+    if response.status_code >= HTTP_SERVER_ERROR or response.status_code == HTTP_TOO_MANY_REQUESTS:
         logger.warning("HTTP %s for %s. Try again later.", response.status_code, article.url)
         return "retry"
-    if response.status_code >= 400:
+    if response.status_code >= HTTP_CLIENT_ERROR:
         logger.warning("HTTP %s for %s. Skip.", response.status_code, article.url)
         _mark_tried(article)
         return "failed"

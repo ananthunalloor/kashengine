@@ -1,3 +1,5 @@
+"""Management command: check the Telegram bot token and list the chat IDs."""
+
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
@@ -6,12 +8,15 @@ from apps.delivery.telegram import TelegramClient, TelegramError
 
 
 class Command(BaseCommand):
+    """Check the bot token and show the chats."""
+
     help = (
         "Check the bot token, and show the chat IDs of the chats that sent a message to the bot. "
         "Put the ID of your chat in TELEGRAM_CHAT_IDS."
     )
 
     def handle(self, *args, **options):
+        """Run the command."""
         if not settings.TELEGRAM_BOT_TOKEN:
             raise CommandError("TELEGRAM_BOT_TOKEN is not set. Get a token from @BotFather.")
         try:

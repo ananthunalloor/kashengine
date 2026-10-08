@@ -1,7 +1,9 @@
+"""Management command that compares LLM models on labelled headlines."""
+
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.llm.client import LLMClient, LLMUnavailable
+from apps.llm.client import LLMClient, LLMUnavailableError
 from apps.news.compare import ModelReport, evaluate_model, label_for, load_items
 
 
@@ -10,6 +12,8 @@ def _percent(value: float | None) -> str:
 
 
 class Command(BaseCommand):
+    """Run the same labelled headlines on one or more models and compare them."""
+
     help = (
         "Run the same labelled headlines on one or more LLM models and compare them. "
         "Example: compare_models llama3.2:3b llama3.1:8b. "
@@ -17,11 +21,13 @@ class Command(BaseCommand):
     )
 
     def add_arguments(self, parser):
+        """Add the models, --file, and --verbose arguments."""
         parser.add_argument("models", nargs="*", help="Model names. Default: LLM_MODEL.")
         parser.add_argument("--file", help="A CSV file with the columns label, title, summary.")
         parser.add_argument("--verbose", action="store_true", help="Show the score of each item.")
 
     def handle(self, *args, **options):
+        """Score the items with each model and print a table."""
         names = options["models"] or [settings.LLM_MODEL]
         try:
             items = load_items(options["file"])
@@ -34,7 +40,7 @@ class Command(BaseCommand):
             with LLMClient(model=name) as llm:
                 try:
                     reports.append(evaluate_model(llm, items))
-                except LLMUnavailable as exc:
+                except LLMUnavailableError as exc:
                     raise CommandError(str(exc)) from exc
 
         self.stdout.write("")

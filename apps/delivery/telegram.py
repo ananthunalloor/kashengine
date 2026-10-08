@@ -10,6 +10,7 @@
 
 import logging
 import time
+from http import HTTPStatus
 
 import httpx
 from django.conf import settings
@@ -63,26 +64,29 @@ def _fit(block: str, limit: int) -> list[str]:
     pieces: list[str] = []
     current = ""
     for line in block.split("\n"):
-        while len(line) > limit:  # A very long line.
-            cut = line.rfind(" ", 0, limit)
+        rest = line
+        while len(rest) > limit:  # A very long line.
+            cut = rest.rfind(" ", 0, limit)
             cut = cut if cut > 0 else limit
             if current:
                 pieces.append(current)
                 current = ""
-            pieces.append(line[:cut])
-            line = line[cut:].lstrip()
-        candidate = f"{current}\n{line}" if current else line
+            pieces.append(rest[:cut])
+            rest = rest[cut:].lstrip()
+        candidate = f"{current}\n{rest}" if current else rest
         if len(candidate) <= limit:
             current = candidate
         else:
             pieces.append(current)
-            current = line
+            current = rest
     if current:
         pieces.append(current)
     return pieces
 
 
 class TelegramClient:
+    """Client for the Telegram Bot API. Use it as a context manager to close the HTTP client."""
+
     def __init__(
         self,
         token: str | None = None,
@@ -98,6 +102,7 @@ class TelegramClient:
         self._sleep = sleep
 
     def close(self) -> None:
+        """Close the HTTP client, if this object created it."""
         if self._owns_client:
             self._client.close()
 
@@ -121,24 +126,25 @@ class TelegramClient:
             body = response.json()
         except ValueError:
             body = {}
-        if response.status_code == 200 and body.get("ok"):
+        if response.status_code == HTTPStatus.OK and body.get("ok"):
             return body.get("result")
 
         description = redact(str(body.get("description") or response.text[:200]), self.token)
-        if response.status_code == 429:
+        if response.status_code == HTTPStatus.TOO_MANY_REQUESTS:
             wait = int((body.get("parameters") or {}).get("retry_after") or 5)
             if not _retried and wait <= MAX_RETRY_WAIT_SECONDS:
                 logger.warning("Telegram asks us to wait %s seconds.", wait)
                 self._sleep(wait)
                 return self._call(method, payload, _retried=True)
             raise TelegramError(f"Telegram: too many requests, wait {wait} s", retryable=True)
-        if response.status_code >= 500:
+        if response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
             raise TelegramError(
                 f"Telegram error {response.status_code}: {description}", retryable=True
             )
         raise TelegramError(f"Telegram error {response.status_code}: {description}")
 
     def get_me(self) -> dict:
+        """Return the bot profile (Telegram getMe)."""
         return self._call("getMe")
 
     def get_chats(self) -> list[dict]:

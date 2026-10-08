@@ -4,7 +4,7 @@ import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from apps.llm.client import LLMInvalidOutput, LLMUnavailable
+from apps.llm.client import LLMInvalidOutputError, LLMUnavailableError
 from apps.news.compare import (
     EvalItem,
     ModelReport,
@@ -12,6 +12,7 @@ from apps.news.compare import (
     label_for,
     load_items,
 )
+from apps.news.management.commands import compare_models
 
 from .fakes import FakeLLM
 
@@ -58,7 +59,7 @@ ITEMS = [
 
 def test_evaluate_model_measures_accuracy_error_failures_and_time():
     llm = FakeLLM(
-        answers=[answer(0.8), answer(0.1), answer(0.6), LLMInvalidOutput("bad")], model="m1"
+        answers=[answer(0.8), answer(0.1), answer(0.6), LLMInvalidOutputError("bad")], model="m1"
     )
 
     report = evaluate_model(llm, ITEMS)
@@ -72,8 +73,8 @@ def test_evaluate_model_measures_accuracy_error_failures_and_time():
 
 
 def test_evaluate_model_does_not_hide_a_down_server():
-    with pytest.raises(LLMUnavailable):
-        evaluate_model(FakeLLM(default=LLMUnavailable("down")), ITEMS)
+    with pytest.raises(LLMUnavailableError):
+        evaluate_model(FakeLLM(default=LLMUnavailableError("down")), ITEMS)
 
 
 def test_agreement_between_two_models():
@@ -88,8 +89,6 @@ def test_agreement_between_two_models():
 
 @pytest.fixture
 def fake_models(monkeypatch):
-    from apps.news.management.commands import compare_models
-
     def factory(model=None):
         return FakeLLM(model=model, default=answer(0.9 if model == "big" else 0.0))
 
@@ -117,10 +116,8 @@ def test_compare_models_command_verbose_and_single_model(fake_models, capsys):
 
 
 def test_compare_models_command_turns_errors_into_command_errors(monkeypatch):
-    from apps.news.management.commands import compare_models
-
     monkeypatch.setattr(
-        compare_models, "LLMClient", lambda model=None: FakeLLM(default=LLMUnavailable("down"))
+        compare_models, "LLMClient", lambda model=None: FakeLLM(default=LLMUnavailableError("down"))
     )
     with pytest.raises(CommandError, match="down"):
         call_command("compare_models", "x")

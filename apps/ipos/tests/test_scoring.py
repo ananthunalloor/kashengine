@@ -1,5 +1,6 @@
 """Tests for the IPO score, the verdict, and the result numbers."""
 
+import itertools
 from datetime import timedelta
 from decimal import Decimal
 
@@ -29,9 +30,6 @@ D = Decimal
 GOOD_LIMIT, WEAK_LIMIT = 0.3, 0.1
 
 
-# --- The signals ---------------------------------------------------------------------------
-
-
 def test_gmp_signal_is_cut_to_one():
     assert gmp_signal(15) == 0.5
     assert gmp_signal(60) == 1.0
@@ -46,9 +44,6 @@ def test_subscription_signal_uses_a_log_scale():
     assert subscription_signal(50**0.5) == pytest.approx(0.5)
     assert subscription_signal(0.5) == pytest.approx(-0.1772, abs=1e-3)
     assert subscription_signal(0) == -1.0
-
-
-# --- The rule ------------------------------------------------------------------------------
 
 
 def run(*signals, notes=()):
@@ -97,15 +92,15 @@ def test_the_news_can_move_a_verdict_but_not_make_one():
     assert with_bad_news.verdict == MIXED
 
 
-# --- One IPO -------------------------------------------------------------------------------
+_article_numbers = itertools.count(1)
 
 
-def make_article(title: str, score=0.8, relevance=1.0, days_ago=1, number=[0]) -> NewsArticle:  # noqa: B006
-    number[0] += 1
+def make_article(title: str, score=0.8, relevance=1.0, days_ago=1) -> NewsArticle:
+    number = next(_article_numbers)
     article = NewsArticle.objects.create(
         source="Test",
         title=title,
-        url=f"https://t.test/{number[0]}",
+        url=f"https://t.test/{number}",
         sentiment_score=score,
         relevance=relevance,
         scored_at=NOW,
@@ -199,6 +194,7 @@ def test_news_that_names_the_ipo_is_a_signal():
     news = outcome.signals[1]
     assert news.value == pytest.approx(-0.9)
     assert news.strength == pytest.approx(1 / 3)
+    assert outcome.score is not None
     assert outcome.score < 0.3  # Bad news pulled the score down.
 
 
@@ -209,9 +205,6 @@ def test_news_matches_whole_names_only_and_ignores_short_names():
 
     assert news_signal(make_ipo("Acme Foods Limited"), NOW) is None
     assert news_signal(make_ipo("Om Limited", open_date=TODAY + timedelta(days=1)), NOW) is None
-
-
-# --- All the IPOs --------------------------------------------------------------------------
 
 
 @pytest.mark.django_db
@@ -269,9 +262,6 @@ def test_likely_good_ipos_lists_the_good_ones_best_first():
     names = [ipo.name for ipo in likely_good_ipos(TODAY)]
 
     assert names == ["A Better Ltd", "B Good Ltd"]
-
-
-# --- Results -------------------------------------------------------------------------------
 
 
 def listed(name, gain, verdict):

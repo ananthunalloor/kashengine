@@ -1,3 +1,5 @@
+"""Management command: set the numbers of one IPO by hand."""
+
 from decimal import Decimal, InvalidOperation
 
 from django.core.management.base import BaseCommand, CommandError
@@ -9,6 +11,7 @@ from apps.ipos.scoring import score_ipos
 
 
 def _decimal(value: str | None, option: str) -> Decimal | None:
+    """Read an option as a Decimal. Return None if it is not given. Raise CommandError if bad."""
     if value is None:
         return None
     try:
@@ -18,18 +21,22 @@ def _decimal(value: str | None, option: str) -> Decimal | None:
 
 
 class Command(BaseCommand):
+    """Set the GMP, subscription, or listing price of one IPO, then score it again."""
+
     help = (
         "Set the GMP, the subscription, or the listing price of one IPO. Then score it again. "
         'Example: update_ipo "Acme Foods" --gmp 40 --subscription 52.3'
     )
 
     def add_arguments(self, parser):
+        """Add the name and the number options."""
         parser.add_argument("name", help="Part of the IPO name. It must match one IPO.")
         parser.add_argument("--gmp", help="Grey market premium in rupees (can be negative).")
         parser.add_argument("--subscription", help="Total subscription, in times.")
         parser.add_argument("--listing-price", help="Price at the listing, in rupees.")
 
     def handle(self, *args, **options):
+        """Save the numbers and print the new verdict."""
         gmp = _decimal(options["gmp"], "gmp")
         subscription = _decimal(options["subscription"], "subscription")
         listing_price = _decimal(options["listing_price"], "listing-price")

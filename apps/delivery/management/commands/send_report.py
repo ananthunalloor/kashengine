@@ -1,19 +1,24 @@
+"""Management command: build the report and send it to Telegram."""
+
 from datetime import date
 
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.delivery.service import DeliveryNotConfigured, configured_chat_ids, deliver_report
+from apps.delivery.service import DeliveryNotConfiguredError, configured_chat_ids, deliver_report
 from apps.delivery.telegram import TelegramClient, TelegramError
 from apps.reports.builder import build_report
 
 
 class Command(BaseCommand):
+    """Build the daily report and send it."""
+
     help = (
         "Build the daily report (if it does not exist) and send it to the Telegram chats in "
         "TELEGRAM_CHAT_IDS. A chat that already got the report is skipped."
     )
 
     def add_arguments(self, parser):
+        """Add the command options."""
         parser.add_argument("--date", help="The date of the report, as YYYY-MM-DD. Default: today.")
         parser.add_argument(
             "--force", action="store_true", help="Send again, also to the chats that got it."
@@ -25,6 +30,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        """Run the command."""
         if options["test"]:
             self._send_test()
             return
@@ -40,7 +46,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Report {report.date}: {'built' if created else 'exists'}.")
         try:
             result = deliver_report(report, force=options["force"])
-        except DeliveryNotConfigured as exc:
+        except DeliveryNotConfiguredError as exc:
             raise CommandError(
                 f"{exc} Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_IDS in your .env file. "
                 "Run telegram_check to find your chat ID."

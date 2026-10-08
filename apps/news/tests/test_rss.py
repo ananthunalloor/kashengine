@@ -59,7 +59,7 @@ def test_parse_feed_reads_fields_and_skips_bad_items():
 
 
 def test_parse_feed_rejects_a_page_that_is_not_a_feed():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"Not a valid feed"):
         parse_feed(b"<html><body>Access denied</body></html>")
 
 

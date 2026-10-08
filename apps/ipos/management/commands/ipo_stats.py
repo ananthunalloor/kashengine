@@ -1,12 +1,17 @@
+"""Management command: show how good the IPO verdicts were."""
+
 from django.core.management.base import BaseCommand
 
 from apps.ipos.scoring import MIN_RESULTS_TO_TRUST, ipo_stats
 
 
 class Command(BaseCommand):
+    """Print the result of the verdicts against the baseline."""
+
     help = "Show how good the IPO verdicts were, and compare them with a simple baseline."
 
     def handle(self, *args, **options):
+        """Print the statistics."""
         stats = ipo_stats()
         self.stdout.write(
             f"Listed IPOs with a result: {stats['listed']}   "

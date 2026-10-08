@@ -1,3 +1,5 @@
+"""Admin for the markets app."""
+
 from django.contrib import admin
 
 from .models import IndexQuote, Prediction
@@ -5,6 +7,8 @@ from .models import IndexQuote, Prediction
 
 @admin.register(IndexQuote)
 class IndexQuoteAdmin(admin.ModelAdmin):
+    """Admin list for IndexQuote."""
+
     list_display = ("symbol", "day", "close", "change_pct", "updated_at")
     list_filter = ("symbol",)
     date_hierarchy = "day"
@@ -13,6 +17,8 @@ class IndexQuoteAdmin(admin.ModelAdmin):
 
 @admin.register(Prediction)
 class PredictionAdmin(admin.ModelAdmin):
+    """Admin list for Prediction."""
+
     list_display = (
         "target_date",
         "direction",

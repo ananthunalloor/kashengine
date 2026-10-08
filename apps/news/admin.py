@@ -1,3 +1,5 @@
+"""Admin for the news app."""
+
 from django.contrib import admin
 
 from .models import NewsArticle
@@ -5,6 +7,8 @@ from .models import NewsArticle
 
 @admin.register(NewsArticle)
 class NewsArticleAdmin(admin.ModelAdmin):
+    """Admin for news articles."""
+
     list_display = (
         "title",
         "source",
@@ -21,4 +25,5 @@ class NewsArticleAdmin(admin.ModelAdmin):
 
     @admin.display(boolean=True, description="Full text")
     def has_full_text(self, obj):
+        """Return True if the article has scraped full text."""
         return bool(obj.text)

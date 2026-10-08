@@ -14,6 +14,8 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Feed:
+    """One RSS feed of a news source."""
+
     source: str
     name: str
     url: str

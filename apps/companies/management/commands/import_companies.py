@@ -1,3 +1,5 @@
+"""Management command: add or update companies from a CSV file."""
+
 import csv
 from pathlib import Path
 
@@ -9,6 +11,8 @@ STARTER_FILE = Path(__file__).resolve().parents[2] / "data" / "starter_companies
 
 
 class Command(BaseCommand):
+    """Import companies from a CSV file."""
+
     help = (
         "Add or update companies from a CSV file. "
         "Columns: symbol, name, sector, aliases (aliases are separated by |). "
@@ -16,10 +20,12 @@ class Command(BaseCommand):
     )
 
     def add_arguments(self, parser):
+        """Add the file and --starter arguments."""
         parser.add_argument("file", nargs="?", help="Path of the CSV file.")
         parser.add_argument("--starter", action="store_true", help="Use the built-in starter list.")
 
     def handle(self, *args, **options):
+        """Read the CSV file and save each row as a Company."""
         if options["starter"]:
             path = STARTER_FILE
         elif options["file"]:

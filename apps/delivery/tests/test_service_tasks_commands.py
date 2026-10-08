@@ -1,6 +1,5 @@
 """Tests for the delivery service, the daily task, and the commands."""
 
-# ruff: noqa: S105  (the test token is fake)
 from datetime import date
 
 import pytest
@@ -11,8 +10,8 @@ from apps.delivery import service, tasks
 from apps.delivery.management.commands import send_report as send_report_command
 from apps.delivery.management.commands import telegram_check as telegram_check_command
 from apps.delivery.models import DeliveryLog
-from apps.delivery.service import DeliveryNotConfigured, deliver_report
-from apps.delivery.telegram import TelegramError
+from apps.delivery.service import DeliveryNotConfiguredError, deliver_report
+from apps.delivery.telegram import TelegramClient, TelegramError
 from apps.reports.models import Report
 
 pytestmark = pytest.mark.django_db
@@ -22,43 +21,40 @@ DAY = date(2026, 10, 6)  # A Tuesday.
 SATURDAY = date(2026, 10, 10)
 
 
-class FakeTelegram:
+class FakeTelegram(TelegramClient):
     """A stand-in for TelegramClient. A chat in `fail` raises the error that it is mapped to."""
 
-    def __init__(self, fail=None, token=TOKEN, chats=None):
+    def __init__(
+        self,
+        fail: dict[str, TelegramError] | None = None,
+        token: str = TOKEN,
+        chats: list[dict] | None = None,
+    ):
+        # No super().__init__(): it would make a real HTTP client.
         self.token = token
         self.fail = fail or {}
         self.sent: list[tuple[str, str]] = []
         self.chats = chats or []
 
-    def send_message(self, chat_id, text):
+    def send_message(self, chat_id: str, text: str) -> int:
         if chat_id in self.fail:
             raise self.fail[chat_id]
         self.sent.append((chat_id, text))
         return 1
 
-    def get_me(self):
+    def get_me(self) -> dict:
         return {"username": "kash_bot", "first_name": "Kash"}
 
-    def get_chats(self):
+    def get_chats(self) -> list[dict]:
         return self.chats
 
-    def close(self):
+    def close(self) -> None:
         pass
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc_info):
-        self.close()
 
 
 @pytest.fixture
 def report():
     return Report.objects.create(date=DAY, text="The report text.", prediction="up", confidence=0.6)
-
-
-# --- deliver_report ------------------------------------------------------------------------
 
 
 def test_deliver_report_sends_to_each_chat_and_logs_it(report):
@@ -124,12 +120,12 @@ def test_the_error_text_is_cut(report):
 def test_deliver_report_needs_a_token_and_chat_ids(report, settings):
     settings.TELEGRAM_BOT_TOKEN = ""
     settings.TELEGRAM_CHAT_IDS = ["1"]
-    with pytest.raises(DeliveryNotConfigured, match="TOKEN"):
+    with pytest.raises(DeliveryNotConfiguredError, match="TOKEN"):
         deliver_report(report)
 
     settings.TELEGRAM_BOT_TOKEN = TOKEN
     settings.TELEGRAM_CHAT_IDS = [" ", ""]
-    with pytest.raises(DeliveryNotConfigured, match="CHAT_IDS"):
+    with pytest.raises(DeliveryNotConfiguredError, match="CHAT_IDS"):
         deliver_report(report)
 
 
@@ -143,9 +139,6 @@ def test_deliver_report_uses_the_settings_and_makes_its_own_client(report, setti
 
     assert result["sent"] == 2
     assert [chat for chat, _ in telegram.sent] == ["7", "8"]
-
-
-# --- The task ------------------------------------------------------------------------------
 
 
 def test_the_task_skips_the_weekend(monkeypatch):
@@ -174,7 +167,7 @@ def test_the_task_still_builds_the_report_when_telegram_is_not_set(monkeypatch, 
     monkeypatch.setattr(tasks, "build_report", lambda day: (report, False))
 
     def not_configured(_report):
-        raise DeliveryNotConfigured("TELEGRAM_BOT_TOKEN is not set.")
+        raise DeliveryNotConfiguredError("TELEGRAM_BOT_TOKEN is not set.")
 
     monkeypatch.setattr(tasks, "deliver_report", not_configured)
 
@@ -202,9 +195,6 @@ def test_the_retry_run_does_not_send_twice(monkeypatch, settings):
     assert (second["sent"], second["skipped"], second["built"]) == (1, 1, False)
     assert Report.objects.count() == 1
     assert [chat for chat, _ in telegram.sent] == ["1", "2"]
-
-
-# --- Commands ------------------------------------------------------------------------------
 
 
 def test_build_report_command_shows_the_text(capsys):
@@ -322,7 +312,7 @@ def test_telegram_check_shows_the_bot_and_the_chats(monkeypatch, capsys, setting
 
 def test_telegram_check_tells_what_to_do_when_no_chat_wrote(monkeypatch, capsys, settings):
     settings.TELEGRAM_BOT_TOKEN = TOKEN
-    monkeypatch.setattr(telegram_check_command, "TelegramClient", lambda: FakeTelegram())
+    monkeypatch.setattr(telegram_check_command, "TelegramClient", FakeTelegram)
 
     call_command("telegram_check")
 
@@ -337,9 +327,9 @@ def test_telegram_check_errors(monkeypatch, settings):
     settings.TELEGRAM_BOT_TOKEN = TOKEN
 
     class Broken(FakeTelegram):
-        def get_me(self):
+        def get_me(self) -> dict:
             raise TelegramError("Telegram error 401: Unauthorized")
 
-    monkeypatch.setattr(telegram_check_command, "TelegramClient", lambda: Broken())
+    monkeypatch.setattr(telegram_check_command, "TelegramClient", Broken)
     with pytest.raises(CommandError, match="401"):
         call_command("telegram_check")

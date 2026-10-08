@@ -1,3 +1,5 @@
+"""Management command: score the IPOs and show the open ones."""
+
 from django.core.management.base import BaseCommand
 
 from apps.ipos.collect import refresh_statuses
@@ -6,9 +8,12 @@ from apps.ipos.scoring import score_ipos
 
 
 class Command(BaseCommand):
+    """Update the status, score the IPOs, and print a table of the open ones."""
+
     help = "Update the status of the IPOs, score them, and show the ones that are not listed."
 
     def handle(self, *args, **options):
+        """Score the IPOs and print the table."""
         refresh_statuses()
         stats = score_ipos()
         self.stdout.write("Scores: {scored} with a verdict, {unknown} without.".format(**stats))

@@ -19,6 +19,8 @@ from .sources import MAINBOARD, SME, IpoRecord, IpoSourceError, fetch_records, p
 
 logger = logging.getLogger(__name__)
 
+FY_START_MONTH = 4  # The Indian financial year starts in April.
+
 # Fields that a record can set. A value of None never replaces a value that we have.
 PLAIN_FIELDS = (
     "open_date",
@@ -38,7 +40,7 @@ PLAIN_FIELDS = (
 
 
 def compute_status(ipo: Ipo, today: date) -> str:
-    """The status that the dates give. We have no calendar of holidays, so the dates rule."""
+    """Return the status that the dates give. We have no holiday calendar, so the dates rule."""
     if ipo.listing_gain_pct is not None or ipo.listing_price is not None:
         return Ipo.Status.LISTED
     if ipo.listing_date and today >= ipo.listing_date:
@@ -51,7 +53,7 @@ def compute_status(ipo: Ipo, today: date) -> str:
 
 
 def listing_gain_from_price(ipo: Ipo) -> float | None:
-    """The gain at the listing, from the listing price and the upper price band."""
+    """Return the gain at the listing, from the listing price and the upper price band."""
     if ipo.listing_price is None or not ipo.price_band_high:
         return None
     return float((ipo.listing_price / ipo.price_band_high - 1) * 100)
@@ -148,8 +150,8 @@ def save_record(record: IpoRecord, today: date | None = None) -> str:
 
 
 def financial_year(day: date) -> str:
-    """The Indian financial year of a day, like "2026-27". It starts on 1 April."""
-    start = day.year if day.month >= 4 else day.year - 1
+    """Return the Indian financial year of a day, like "2026-27"."""
+    start = day.year if day.month >= FY_START_MONTH else day.year - 1
     return f"{start}-{(start + 1) % 100:02d}"
 
 
@@ -182,7 +184,8 @@ def collect_ipos(
 
     Return {"created", "updated", "unchanged", "skipped", "failed": {url: error text}}.
     """
-    stats = {"created": 0, "updated": 0, "unchanged": 0, "skipped": 0, "failed": {}}
+    counts = {"created": 0, "updated": 0, "unchanged": 0, "skipped": 0}
+    failed: dict[str, str] = {}
     today = today or today_ist()
     urls = expand_urls(settings.IPO_SOURCE_URLS if urls is None else urls, today)
 
@@ -200,18 +203,17 @@ def collect_ipos(
                 records = fetch_records(url, fetcher)
             except IpoSourceError as exc:
                 logger.warning("IPO source failed: %s", exc)
-                stats["failed"][url] = str(exc)
+                failed[url] = str(exc)
                 continue
             for record in records:
-                stats[save_record(record, today)] += 1
+                counts[save_record(record, today)] += 1
     finally:
         if client is not None:
             client.close()
+    stats = {**counts, "failed": failed}
     logger.info("IPO collection done: %s", stats)
     return stats
 
-
-# --- CSV -----------------------------------------------------------------------------------
 
 CSV_COLUMNS = (
     "name,open_date,close_date,listing_date,price_band_low,price_band_high,lot_size,"
@@ -220,6 +222,7 @@ CSV_COLUMNS = (
 
 
 def _decimal(value: str, column: str, line: int) -> Decimal | None:
+    """Read a number from a CSV cell. Return None for an empty cell. Raise ValueError if bad."""
     value = (value or "").strip().replace(",", "")
     if not value:
         return None
@@ -230,6 +233,7 @@ def _decimal(value: str, column: str, line: int) -> Decimal | None:
 
 
 def _date(value: str, column: str, line: int) -> date | None:
+    """Read a date from a CSV cell. Return None for an empty cell. Raise ValueError if bad."""
     value = (value or "").strip()
     if not value:
         return None
@@ -246,12 +250,12 @@ def read_csv(path: str | Path) -> list[IpoRecord]:
     Raise ValueError (with the line number) for a bad value. Nothing is saved then.
     """
     records = []
-    with open(path, newline="", encoding="utf-8-sig") as handle:
+    with Path(path).open(newline="", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
         if not reader.fieldnames or "name" not in [f.strip() for f in reader.fieldnames]:
             raise ValueError('The first line must name the columns, and "name" is required.')
-        for line, row in enumerate(reader, start=2):
-            row = {(k or "").strip(): (v or "").strip() for k, v in row.items()}
+        for line, raw_row in enumerate(reader, start=2):
+            row = {(k or "").strip(): (v or "").strip() for k, v in raw_row.items()}
             name = row.get("name", "")
             if not name:
                 continue

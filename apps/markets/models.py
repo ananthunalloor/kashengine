@@ -1,3 +1,7 @@
+"""Models for the markets app: index quotes and predictions."""
+
+from typing import ClassVar
+
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
@@ -22,8 +26,8 @@ class IndexQuote(models.Model):
     )
 
     class Meta:
-        ordering = ["symbol", "-day"]
-        constraints = [
+        ordering: ClassVar[list[str]] = ["symbol", "-day"]
+        constraints: ClassVar[list[models.BaseConstraint]] = [
             models.UniqueConstraint(fields=["symbol", "day"], name="unique_quote_symbol_day"),
         ]
 
@@ -68,7 +72,7 @@ class Prediction(models.Model):
     evaluated_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        ordering = ["-target_date"]
+        ordering: ClassVar[list[str]] = ["-target_date"]
 
     def __str__(self):
         return f"{self.target_date} {self.direction} ({self.confidence:.2f})"

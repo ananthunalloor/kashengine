@@ -1,3 +1,5 @@
+"""Management command: read the IPO list from the source pages."""
+
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
@@ -6,12 +8,15 @@ from apps.ipos.scoring import score_ipos
 
 
 class Command(BaseCommand):
+    """Read the IPO list now, then update the status and the scores."""
+
     help = (
         "Read the IPO list from the source pages now. Then update the status and the scores. "
         "Set IPO_FETCH_ENABLED=true first (read the note in apps/ipos/sources.py)."
     )
 
     def add_arguments(self, parser):
+        """Add the --force option."""
         parser.add_argument(
             "--force",
             action="store_true",
@@ -19,6 +24,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        """Run the collection and print the counts."""
         if settings.IPO_FETCH_ENABLED or options["force"]:
             stats = collect_ipos()
             self.stdout.write(

@@ -1,6 +1,5 @@
 """Tests for the daily report builder."""
 
-# ruff: noqa: E501, S105  (the test data has long lines and a fake token)
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -11,6 +10,7 @@ from apps.ipos.models import Ipo
 from apps.markets.models import Prediction
 from apps.markets.tests.helpers import ist, prediction, quote
 from apps.news.models import NewsArticle
+from apps.reports import builder
 from apps.reports.builder import (
     build_report,
     gather_ipos,
@@ -47,9 +47,6 @@ def story(number, score, relevance=0.9, title=None, **kwargs) -> NewsArticle:
 def ipo(name, **kwargs) -> Ipo:
     kwargs.setdefault("price_band_high", D("100"))
     return Ipo.objects.create(name=name, **kwargs)
-
-
-# --- News ----------------------------------------------------------------------------------
 
 
 def test_news_picks_the_strongest_good_and_bad_stories():
@@ -112,9 +109,6 @@ def test_news_item_has_the_reason_the_companies_and_a_short_title():
     assert item["url"] == "https://t.test/1"
 
 
-# --- IPOs ----------------------------------------------------------------------------------
-
-
 def test_ipos_are_grouped_and_the_verdict_is_shown():
     ipo("Open Ltd", open_date=DAY - timedelta(days=1), close_date=DAY + timedelta(days=1),
         status="open", gmp=D("20"), verdict="good", score=0.7)  # fmt: skip
@@ -139,9 +133,6 @@ def test_ipo_lists_are_cut_to_the_limit():
         ipo(f"Open {n} Ltd", open_date=DAY, close_date=DAY + timedelta(days=2))
 
     assert len(gather_ipos(DAY, limit=4)["open_now"]) == 4
-
-
-# --- Prediction, last result, track record -------------------------------------------------
 
 
 def test_gather_prediction_orders_the_cues_by_their_effect_on_the_score():
@@ -199,6 +190,7 @@ def test_last_result_is_the_newest_one_and_not_too_old():
 
     last = gather_last_result(DAY)
 
+    assert last is not None
     assert last["target_date"] == "2026-10-05"
     assert last["correct"] is True
 
@@ -212,9 +204,6 @@ def test_track_record_numbers():
 
     assert (record["total"], record["correct"], record["accuracy"]) == (2, 1, 0.5)
     assert record["enough_results"] is False
-
-
-# --- The text ------------------------------------------------------------------------------
 
 
 def make_data(**overrides) -> dict:
@@ -244,7 +233,7 @@ def make_data(**overrides) -> dict:
             "accuracy": 7 / 12,
             "baseline_accuracy": 0.5,
             "enough_results": False,
-        },  # fmt: skip
+        },
         "news": {
             "since": "x",
             "articles": 20,
@@ -270,7 +259,7 @@ def make_data(**overrides) -> dict:
                     "url": "https://t.test/2",
                 }
             ],
-        },  # fmt: skip
+        },
         "ipos": {
             "open_now": [
                 {
@@ -293,7 +282,7 @@ def make_data(**overrides) -> dict:
             "likely_good": [{"name": "Acme Foods", "score": 0.7}],
             "without_verdict": 2,
             "days_ahead": 7,
-        },  # fmt: skip
+        },
     }
     data.update(overrides)
     return data
@@ -351,9 +340,6 @@ def test_render_text_says_what_is_missing():
     assert "Last result" not in text
     assert "No scored news. The news or the LLM service may be down." in text
     assert "No IPO is open, listing, or coming in the next 7 days." in text
-
-
-# --- Saving --------------------------------------------------------------------------------
 
 
 def test_build_report_saves_the_text_the_prediction_and_the_data():
@@ -428,8 +414,6 @@ def test_build_report_scores_the_ipos_first_so_the_gmp_is_current():
 
 
 def test_build_report_still_works_when_the_ipo_scoring_fails(monkeypatch):
-    from apps.reports import builder
-
     def broken(now):
         raise RuntimeError("boom")
 

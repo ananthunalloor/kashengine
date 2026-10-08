@@ -10,11 +10,11 @@ Each global cue has:
 - scale: the move in percent that counts as a full signal. A move of this size gives 1.0.
   A bigger move is cut to 1.0, so one big move cannot decide alone.
 
-THE WEIGHTS AND THE SCALES ARE OUR FIRST GUESS. They are not fitted to data. Change them only
+The weights and the scales are a first guess. They are not fitted to data. Change them only
 when the accuracy numbers (python manage.py prediction_stats) give a reason.
 
-The symbols are Yahoo Finance symbols. We could not test them on the live service when we wrote
-this. A symbol that fails is logged and skipped. The prediction then uses the other cues.
+The symbols are Yahoo Finance symbols. We did not test them against the live service. A symbol
+that fails is logged and skipped. The prediction then uses the other cues.
 """
 
 from dataclasses import dataclass
@@ -22,6 +22,8 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Instrument:
+    """A symbol that we download, with its weight and scale in the prediction."""
+
     symbol: str
     name: str
     weight: float = 0.0

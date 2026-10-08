@@ -2,26 +2,26 @@
 
 The rule is simple on purpose. It uses three signals. Each one goes from -1 (bad) to 1 (good).
 
-1. GMP (grey market premium). The GMP in percent of the upper price band. 30% or more is the
-   full signal. The GMP is NOT official data. It is a rumour price from a private market. We use
-   it only when it is fresh (IPO_METRIC_MAX_AGE_HOURS).
-2. Subscription. How many times the issue was bought, on a log scale: 1x is 0, 50x or more is 1,
-   under 1x is negative. We use it only when the subscription is final: after the close, or on
-   the last day. Early in the issue the number is always low.
-3. News. The average sentiment (see apps/news/sentiment.py) of the news of the last
+1. GMP (grey market premium): the GMP in percent of the upper price band. 30% or more is the
+   full signal. GMP is unofficial data (a rumour price from a private market), so we use it only
+   when it is fresh (IPO_METRIC_MAX_AGE_HOURS).
+2. Subscription: how many times the issue was bought, on a log scale. 1x is 0, 50x or more is 1,
+   and under 1x is negative. We use it only when it is final (after the close), because early
+   numbers are always low.
+3. News: the average sentiment (see apps/news/sentiment.py) of the news of the last
    IPO_NEWS_DAYS that names the IPO. It counts less when there are fewer than 3 articles.
 
 Score = the weighted average of the signals that we have (GMP 0.45, subscription 0.40, news 0.15).
-We give a verdict only when we have the GMP or the subscription. The news alone is too thin.
+We give a verdict only when we have the GMP or the subscription. News alone is too thin.
     good     score >= IPO_GOOD_SCORE (default 0.3)
     weak     score <  IPO_WEAK_SCORE (default 0.1)
     mixed    in between
     unknown  no GMP and no subscription that we can use
 
-THE WEIGHTS AND THE LIMITS ARE OUR FIRST GUESS. They are not fitted to data. A GMP of about 9%
+The weights and the limits are a first guess. They are NOT fitted to data. A GMP of about 9%
 gives a score of 0.3, and "did well" means a listing gain of IPO_GOOD_GAIN_PCT (default 10%).
-Check the rule with `python manage.py ipo_stats` after some IPOs have listed. IPOs are few:
-20 results are the least to say anything.
+Check the rule with `python manage.py ipo_stats` after some IPOs have listed. At least 20 results
+are needed to say anything.
 """
 
 import logging
@@ -29,6 +29,7 @@ import math
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
+from typing import Any
 
 from django.conf import settings
 from django.utils import timezone
@@ -57,61 +58,62 @@ UNKNOWN = Ipo.Verdict.UNKNOWN.value
 
 
 def _clip(value: float) -> float:
+    """Limit a value to the range from -1 to 1."""
     return max(-1.0, min(1.0, value))
 
 
 def _is_fresh(stamp: datetime | None, now: datetime) -> bool:
+    """Return True if the time is not older than IPO_METRIC_MAX_AGE_HOURS."""
     return stamp is not None and now - stamp <= timedelta(hours=settings.IPO_METRIC_MAX_AGE_HOURS)
 
 
-# --- The signals ---------------------------------------------------------------------------
-
-
 def gmp_signal(pct: float) -> float:
+    """Return the GMP signal, from -1 to 1, for a GMP in percent of the price."""
     return _clip(pct / GMP_FULL_PCT)
 
 
 def subscription_signal(times: float) -> float:
+    """Return the subscription signal, from -1 to 1, for a subscription in times."""
     if times <= 0:
         return -1.0
     return _clip(math.log10(times) / math.log10(SUBSCRIPTION_FULL_TIMES))
 
 
 def subscription_is_final(ipo: Ipo, today: date) -> bool:
-    """The number is final after the close, and on the last day (the evening number)."""
+    """Return True if the subscription number is final: on or after the close date."""
     if ipo.close_date is None:
         return False
     return today >= ipo.close_date
 
 
 def news_signal(ipo: Ipo, now: datetime) -> tuple[float, int] | None:
-    """The average news sentiment for the IPO, as (score, articles). None if no article names it."""
+    """Return the average news sentiment of an IPO as (score, articles), or None if no news."""
     key = normalize_name(ipo.name)
     if len(key) < MIN_NAME_CHARS:
         return None
     since = now - timedelta(days=settings.IPO_NEWS_DAYS)
     pattern = re.compile(rf"(?<![\w&]){re.escape(key)}(?![\w&])", re.IGNORECASE)
 
-    pairs = []
     candidates = NewsArticle.objects.filter(
         scored_at__isnull=False, sentiment_score__isnull=False, relevance__gte=MIN_RELEVANCE
     ).filter(fetched_at__gte=since)
     # The first word is a cheap filter in the database. The pattern checks the whole name.
     first_word = key.split()[0]
-    for article in candidates.filter(title__icontains=first_word):
-        if pattern.search(normalize_text(f"{article.title} {article.summary}")):
-            pairs.append((article.sentiment_score, article.relevance))
+    pairs = [
+        (article.sentiment_score, article.relevance)
+        for article in candidates.filter(title__icontains=first_word)
+        if pattern.search(normalize_text(f"{article.title} {article.summary}"))
+    ]
     if not pairs:
         return None
     total = sum(weight for _, weight in pairs)
     return sum(score * weight for score, weight in pairs) / total, len(pairs)
 
 
-# --- The rule ------------------------------------------------------------------------------
-
-
 @dataclass
 class Signal:
+    """One signal that goes into the score."""
+
     name: str
     value: float  # The raw number: GMP in percent, subscription in times, or news sentiment.
     signal: float  # From -1 to 1.
@@ -120,6 +122,8 @@ class Signal:
 
 @dataclass
 class Outcome:
+    """The result of scoring one IPO."""
+
     verdict: str
     score: float | None
     coverage: float
@@ -190,6 +194,7 @@ def score_ipo(ipo: Ipo, now: datetime | None = None) -> Outcome:
 
 
 def _inputs(outcome: Outcome, now: datetime) -> dict:
+    """Return the numbers behind a score, as a dict to save in the score_inputs field."""
     return {
         "scored_at": now.isoformat(),
         "coverage": outcome.coverage,
@@ -208,7 +213,7 @@ def _inputs(outcome: Outcome, now: datetime) -> dict:
 
 
 def scorable_ipos(today: date):
-    """The IPOs to score: not listed, and not too old."""
+    """Return the IPOs to score: not listed, and not too old."""
     oldest = today - timedelta(days=RECENT_SCORING_DAYS)
     return (
         Ipo.objects.exclude(status=Ipo.Status.LISTED)
@@ -237,7 +242,7 @@ def score_ipos(now: datetime | None = None) -> dict:
 
 
 def likely_good_ipos(today: date | None = None):
-    """The IPOs that are open or coming up, with the verdict "good". The best score is first."""
+    """Return the open or coming IPOs with the verdict "good". The best score is first."""
     today = today or today_ist()
     return (
         scorable_ipos(today)
@@ -247,10 +252,8 @@ def likely_good_ipos(today: date | None = None):
     )
 
 
-# --- Results -------------------------------------------------------------------------------
-
-
 def _did_well(gain: float) -> bool:
+    """Return True if a listing gain is at least IPO_GOOD_GAIN_PCT."""
     return gain >= settings.IPO_GOOD_GAIN_PCT
 
 
@@ -264,7 +267,7 @@ def ipo_stats() -> dict:
     all_gains = list(listed.values_list("listing_gain_pct", flat=True))
     judged = listed.exclude(verdict__in=[UNKNOWN, ""])
 
-    by_verdict = {}
+    by_verdict: dict[str, dict[str, Any]] = {}
     for verdict in (GOOD, MIXED, WEAK):
         gains = list(judged.filter(verdict=verdict).values_list("listing_gain_pct", flat=True))
         by_verdict[verdict] = {

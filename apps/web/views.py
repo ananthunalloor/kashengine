@@ -21,9 +21,12 @@ from .datastar import is_datastar, querystring, read_filters, read_page, signals
 NEWS_FILTERS = ("q", "sentiment", "source", "page")
 IPO_FILTERS = ("q", "status", "verdict", "category", "page")
 COMPANY_FILTERS = ("q", "page")
+DELIVERY_LOG_ROWS = 50  # How many log rows the delivery page shows.
 
 
 class Login(LoginView):
+    """The login page."""
+
     template_name = "registration/login.html"
     redirect_authenticated_user = True
 
@@ -50,20 +53,20 @@ def _filter_view(request, template, partial, names, build_queryset, extra=None):
     return render(request, partial if is_datastar(request) else template, context)
 
 
-# --- Pages ---------------------------------------------------------------------------------
-
-
 def dashboard(request):
+    """The home page: today's outlook, news, IPOs, and quotes."""
     return render(request, "web/dashboard.html", queries.dashboard_data())
 
 
 def report_list(request):
+    """The list of daily reports."""
     filters = read_filters(request, ("page",))
     page = _page(request, Report.objects.all(), filters)
     return render(request, "web/report_list.html", {"page": page})
 
 
 def report_detail(request, day: date):
+    """One daily report, with its delivery log."""
     report = get_object_or_404(Report, date=day)
     context = {
         "report": report,
@@ -76,6 +79,7 @@ def report_detail(request, day: date):
 
 
 def news_list(request):
+    """The news list with filters."""
     return _filter_view(
         request,
         "web/news.html",
@@ -90,6 +94,7 @@ def news_list(request):
 
 
 def ipo_list(request):
+    """The IPO list with filters."""
     return _filter_view(
         request,
         "web/ipos.html",
@@ -105,6 +110,7 @@ def ipo_list(request):
 
 
 def ipo_detail(request, pk: int):
+    """One IPO with its facts and score signals."""
     ipo = get_object_or_404(Ipo, pk=pk)
     inputs = ipo.score_inputs or {}
     context = {
@@ -117,6 +123,7 @@ def ipo_detail(request, pk: int):
 
 
 def markets(request):
+    """The markets page: prediction history, accuracy, and quotes."""
     context = {
         "stats": accuracy_stats(),
         "history": queries.prediction_history(),
@@ -126,6 +133,7 @@ def markets(request):
 
 
 def company_list(request):
+    """The company list with a search filter."""
     return _filter_view(
         request,
         "web/companies.html",
@@ -136,8 +144,9 @@ def company_list(request):
 
 
 def delivery(request):
+    """The delivery page: the last send attempts."""
     context = {
-        "logs": DeliveryLog.objects.select_related("report")[:50],
+        "logs": DeliveryLog.objects.select_related("report")[:DELIVERY_LOG_ROWS],
         "chat_count": len(configured_chat_ids()),
         "today": today_ist(),
     }

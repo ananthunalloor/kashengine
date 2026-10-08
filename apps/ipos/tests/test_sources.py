@@ -1,5 +1,6 @@
 """Tests for the IPO page parser. They do not use the network."""
 
+import json
 from datetime import date
 from decimal import Decimal
 
@@ -128,9 +129,6 @@ def test_a_page_without_the_table_gives_no_records(page):
     assert parse_ipo_table(page) == []
 
 
-# --- Fetching ------------------------------------------------------------------------------
-
-
 def make_fetcher(handler) -> PoliteFetcher:
     client = httpx.Client(transport=httpx.MockTransport(handler))
     return PoliteFetcher(
@@ -156,7 +154,7 @@ def test_fetch_records_reads_the_page():
 def test_fetch_records_obeys_robots_txt():
     fetcher = make_fetcher(site(robots="User-agent: *\nDisallow: /list/"))
 
-    with pytest.raises(IpoSourceError, match="robots.txt"):
+    with pytest.raises(IpoSourceError, match=r"robots\.txt"):
         fetch_records("https://src.test/list/", fetcher)
 
 
@@ -176,8 +174,6 @@ def test_fetch_records_reports_network_errors():
     with pytest.raises(IpoSourceError, match="down"):
         fetch_records("https://src.test/list/", make_fetcher(handler))
 
-
-# --- The JSON feed -------------------------------------------------------------------------
 
 FEED = {
     "msg": 0,
@@ -265,8 +261,6 @@ def test_parse_ipo_json_finds_the_rows_in_other_shapes_and_ignores_bad_data():
 
 
 def test_parse_response_picks_json_or_html():
-    import json
-
     assert len(parse_response(json.dumps(FEED), "u", "application/json")) == 3
     assert len(parse_response(json.dumps(FEED), "u", "text/plain")) == 3  # It looks like JSON.
     assert len(parse_response(PAGE, "u", "text/html")) == 2
@@ -275,8 +269,6 @@ def test_parse_response_picks_json_or_html():
 
 
 def test_fetch_records_reads_a_json_feed():
-    import json
-
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/robots.txt":
             return httpx.Response(200, text="User-agent: *\nAllow: /")
@@ -290,8 +282,6 @@ def test_fetch_records_reads_a_json_feed():
 
 
 def test_fetch_records_reports_an_empty_feed():
-    import json
-
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/robots.txt":
             return httpx.Response(404)

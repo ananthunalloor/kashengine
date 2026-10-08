@@ -1,3 +1,5 @@
+"""Management command: save IPOs from a CSV file."""
+
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.ipos.collect import CSV_COLUMNS, import_csv, refresh_statuses
@@ -5,15 +7,19 @@ from apps.ipos.scoring import score_ipos
 
 
 class Command(BaseCommand):
+    """Import IPOs from a CSV file, then update the status and the scores."""
+
     help = (
         "Save IPOs from a CSV file. Use it for the GMP and the subscription, or when the fetch "
         f"is off. Columns: {CSV_COLUMNS}. Only 'name' is required. An empty cell changes nothing."
     )
 
     def add_arguments(self, parser):
+        """Add the path argument."""
         parser.add_argument("path", help="The CSV file.")
 
     def handle(self, *args, **options):
+        """Import the file and print the counts."""
         try:
             stats = import_csv(options["path"])
         except (OSError, ValueError) as exc:

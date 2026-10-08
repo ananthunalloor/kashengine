@@ -1,3 +1,7 @@
+"""Models for the news app."""
+
+from typing import ClassVar
+
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
@@ -51,7 +55,7 @@ class NewsArticle(models.Model):
     )
 
     class Meta:
-        ordering = ["-published_at", "-fetched_at"]
+        ordering: ClassVar[list[str]] = ["-published_at", "-fetched_at"]
 
     def __str__(self):
         return self.title

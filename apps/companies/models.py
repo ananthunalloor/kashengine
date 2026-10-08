@@ -1,3 +1,7 @@
+"""Models for the companies app."""
+
+from typing import ClassVar
+
 from django.db import models
 
 
@@ -24,7 +28,7 @@ class Company(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["name"]
+        ordering: ClassVar[list[str]] = ["name"]
         verbose_name_plural = "companies"
 
     def __str__(self):

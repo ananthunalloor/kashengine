@@ -1,3 +1,5 @@
+"""Management command: refresh the GMP, subscription, and listing results."""
+
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
@@ -9,6 +11,8 @@ from apps.markets.trading import today_ist
 
 
 class Command(BaseCommand):
+    """Run the GMP and listing steps now, then update the status and the scores."""
+
     help = (
         "Read the GMP and the subscription from the live table, and get the listing price of the "
         "IPOs that listed lately. Then update the status and the scores. Use this to test the "
@@ -16,6 +20,7 @@ class Command(BaseCommand):
     )
 
     def add_arguments(self, parser):
+        """Add the --force and --save-page options."""
         parser.add_argument(
             "--force",
             action="store_true",
@@ -28,6 +33,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        """Run the steps and print what each one did."""
         force = options["force"]
 
         if settings.IPO_GMP_ENABLED or force:

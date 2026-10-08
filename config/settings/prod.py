@@ -1,7 +1,7 @@
 """Production settings."""
 
-from .base import *  # noqa: F403
-from .base import BASE_DIR, LOGGING, env
+from .base import *
+from .base import BASE_DIR, LOGGING, MIDDLEWARE, env
 
 DEBUG = False
 
@@ -19,6 +19,13 @@ CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[])
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 
+# Serve the static files from the app. WhiteNoise follows SecurityMiddleware.
+MIDDLEWARE = [
+    MIDDLEWARE[0],
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    *MIDDLEWARE[1:],
+]
+
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
@@ -34,5 +41,5 @@ LOGGING["handlers"]["file"] = {
     "backupCount": 5,
     "formatter": "standard",
 }
-LOGGING["root"]["handlers"] = ["console", "file"]  # ty: ignore[invalid-assignment]
-LOGGING["root"]["level"] = "INFO"  # ty: ignore[invalid-assignment]
+LOGGING["root"]["handlers"] = ["console", "file"]
+LOGGING["root"]["level"] = "INFO"

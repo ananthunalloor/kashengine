@@ -10,13 +10,13 @@ The rule is simple on purpose. It has three steps.
 3. Score = the weighted average of the two. PREDICTION_NEWS_WEIGHT is the weight of the news.
    Score >= PREDICTION_THRESHOLD is "up". Score <= -PREDICTION_THRESHOLD is "down". Else "flat".
 
-CONFIDENCE IS NOT A PROBABILITY. It is a number from 0 to 1 that grows when the score is far from
-the threshold, when the news and the global score agree, and when we have more data. It was not
-fitted to data. Do not trust the prediction before `prediction_stats` shows that it beats the
-simple baseline (always guess the most common result) over many days.
+Confidence is not a probability. It is a number from 0 to 1 that grows when the score is far
+from the threshold, when the news and the global score agree, and when we have more data. It is
+not fitted to data. Do not trust the prediction before `prediction_stats` shows that it beats the
+baseline (always guess the most common result) over many days.
 
-Make the prediction in the morning, before the market opens (the schedule does this at 07:00).
-If you make it later, the quotes of the same day can already be in the database.
+Make the prediction in the morning, before the market opens. A later run can see quotes of the
+same day.
 """
 
 import logging
@@ -42,13 +42,13 @@ FLAT = Prediction.Direction.FLAT.value
 MIN_RELEVANCE = 0.2  # Articles with less relevance are not used.
 MAX_CUE_AGE_DAYS = 4  # A cue that is older than this is not used. It covers a long weekend.
 STRONG_SCORE = 0.6  # A score of this size gives the full strength.
-
-
-# --- News ----------------------------------------------------------------------------------
+MIN_DISAGREE_SIGNAL = 0.1  # Two scores disagree only when both are stronger than this.
 
 
 @dataclass(frozen=True)
 class NewsSignal:
+    """The news score and the number of articles behind it."""
+
     score: float | None  # None when there are no scored articles.
     articles: int
 
@@ -75,11 +75,10 @@ def news_signal(since: datetime) -> NewsSignal:
     return NewsSignal(score, len(pairs))
 
 
-# --- Global cues ---------------------------------------------------------------------------
-
-
 @dataclass(frozen=True)
 class CueReading:
+    """The latest reading of one global cue."""
+
     symbol: str
     name: str
     change_pct: float
@@ -89,6 +88,7 @@ class CueReading:
 
 
 def cue_signal(change_pct: float, scale: float) -> float:
+    """Return the change divided by the scale, cut to the range -1 to 1."""
     return max(-1.0, min(1.0, change_pct / scale))
 
 
@@ -130,11 +130,10 @@ def global_score(readings: list[CueReading]) -> float | None:
     return sum(r.weight * r.signal for r in readings) / total_weight
 
 
-# --- The rule ------------------------------------------------------------------------------
-
-
 @dataclass(frozen=True)
 class Outcome:
+    """The result of the rule: direction, confidence and the numbers behind them."""
+
     direction: str
     confidence: float
     score: float
@@ -142,6 +141,65 @@ class Outcome:
     global_score: float | None
     coverage: float  # From 0 to 1. How much of the data that the rule wants is there.
     notes: list[str] = field(default_factory=list)
+
+
+def _news_part(news: NewsSignal, news_weight: float, min_articles: int, notes: list[str]) -> float:
+    """Return the weight of the news in the score. It is lower when there are few articles."""
+    if news.score is None:
+        notes.append("No scored news articles.")
+        return 0.0
+    if news.articles < min_articles:
+        notes.append(
+            f"Only {news.articles} scored articles (we want {min_articles}). The news counts less."
+        )
+    return news_weight * min(1.0, news.articles / max(min_articles, 1))
+
+
+def _global_part(
+    g_score: float | None, readings: list[CueReading], news_weight: float, notes: list[str]
+) -> float:
+    """Return the weight of the global cues in the score. It is lower when cues are missing."""
+    if g_score is None:
+        notes.append("No global cues.")
+        return 0.0
+    if len(readings) < len(GLOBAL_CUES):
+        notes.append(f"Only {len(readings)} of {len(GLOBAL_CUES)} global cues are available.")
+    used = sum(abs(r.weight) for r in readings)
+    return (1 - news_weight) * used / TOTAL_CUE_WEIGHT
+
+
+def _direction(score: float, threshold: float) -> str:
+    """Return UP, DOWN or FLAT for a score."""
+    if score >= threshold:
+        return UP
+    if score <= -threshold:
+        return DOWN
+    return FLAT
+
+
+def _base_confidence(
+    direction: str,
+    score: float,
+    threshold: float,
+    n_score: float | None,
+    g_score: float | None,
+    notes: list[str],
+) -> float:
+    """Return the confidence before the coverage factor. Lower it when the two scores disagree."""
+    if direction == FLAT:
+        # The nearer the score is to zero, the more it looks like a flat day.
+        return 0.30 + 0.20 * (1 - abs(score) / threshold)
+    base = 0.40 + 0.40 * min(1.0, abs(score) / STRONG_SCORE)
+    disagree = (
+        n_score is not None
+        and g_score is not None
+        and n_score * g_score < 0
+        and min(abs(n_score), abs(g_score)) > MIN_DISAGREE_SIGNAL
+    )
+    if disagree:
+        base -= 0.10
+        notes.append("The news and the global cues point in different directions.")
+    return base
 
 
 def decide(
@@ -157,59 +215,18 @@ def decide(
     n_score = news.score
     g_score = global_score(readings)
 
-    news_part = 0.0
-    if n_score is None:
-        notes.append("No scored news articles.")
-    else:
-        news_part = news_weight * min(1.0, news.articles / max(min_articles, 1))
-        if news.articles < min_articles:
-            notes.append(
-                f"Only {news.articles} scored articles (we want {min_articles}). "
-                "The news counts less."
-            )
-
-    global_part = 0.0
-    if g_score is None:
-        notes.append("No global cues.")
-    else:
-        used = sum(abs(r.weight) for r in readings)
-        global_part = (1 - news_weight) * used / TOTAL_CUE_WEIGHT
-        if len(readings) < len(GLOBAL_CUES):
-            notes.append(f"Only {len(readings)} of {len(GLOBAL_CUES)} global cues are available.")
-
+    news_part = _news_part(news, news_weight, min_articles, notes)
+    global_part = _global_part(g_score, readings, news_weight, notes)
     coverage = news_part + global_part
     if coverage <= 0:
         return Outcome(FLAT, 0.1, 0.0, n_score, g_score, 0.0, notes)
 
     score = (news_part * (n_score or 0.0) + global_part * (g_score or 0.0)) / coverage
-
-    if score >= threshold:
-        direction = UP
-    elif score <= -threshold:
-        direction = DOWN
-    else:
-        direction = FLAT
-
-    if direction == FLAT:
-        # The nearer the score is to zero, the more it looks like a flat day.
-        base = 0.30 + 0.20 * (1 - abs(score) / threshold)
-    else:
-        base = 0.40 + 0.40 * min(1.0, abs(score) / STRONG_SCORE)
-        disagree = (
-            n_score is not None
-            and g_score is not None
-            and n_score * g_score < 0
-            and min(abs(n_score), abs(g_score)) > 0.1
-        )
-        if disagree:
-            base -= 0.10
-            notes.append("The news and the global cues point in different directions.")
+    direction = _direction(score, threshold)
+    base = _base_confidence(direction, score, threshold, n_score, g_score, notes)
 
     confidence = round(max(0.05, min(0.9, base * (0.7 + 0.3 * coverage))), 2)
     return Outcome(direction, confidence, round(score, 4), n_score, g_score, coverage, notes)
-
-
-# --- Saving --------------------------------------------------------------------------------
 
 
 def make_prediction(

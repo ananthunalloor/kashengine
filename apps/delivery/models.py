@@ -1,3 +1,7 @@
+"""Models for the delivery log."""
+
+from typing import ClassVar
+
 from django.db import models
 
 
@@ -26,7 +30,7 @@ class DeliveryLog(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering: ClassVar[list[str]] = ["-created_at"]
 
     def __str__(self):
         return f"{self.channel} {self.status} {self.created_at:%Y-%m-%d %H:%M}"

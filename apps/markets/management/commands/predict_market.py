@@ -1,3 +1,5 @@
+"""Management command: make the Nifty 50 prediction."""
+
 from datetime import date
 
 from django.core.management.base import BaseCommand, CommandError
@@ -6,12 +8,15 @@ from apps.markets.prediction import make_prediction
 
 
 class Command(BaseCommand):
+    """Make the prediction for the next trading day."""
+
     help = (
         "Make the Nifty 50 prediction for the next trading day (today, if it is a trading day). "
         "Download the quotes first (fetch_quotes) and score the news (score_news)."
     )
 
     def add_arguments(self, parser):
+        """Add the --date and --force arguments."""
         parser.add_argument("--date", help="The day to predict, as YYYY-MM-DD.")
         parser.add_argument(
             "--force",
@@ -20,6 +25,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        """Make the prediction and print it with its inputs."""
         target = None
         if options["date"]:
             try:

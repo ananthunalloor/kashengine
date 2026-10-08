@@ -7,7 +7,7 @@ import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from apps.llm.client import LLMClient, LLMInvalidOutput, LLMUnavailable
+from apps.llm.client import LLMClient, LLMInvalidOutputError, LLMUnavailableError
 
 
 def chat_reply(content: str) -> httpx.Response:
@@ -103,7 +103,7 @@ def test_an_answer_that_is_not_an_object_is_not_valid():
 def test_two_invalid_answers_raise_an_error_and_there_is_no_third_try():
     server = Server(chat_reply("not json"), chat_reply("still not json"))
 
-    with pytest.raises(LLMInvalidOutput):
+    with pytest.raises(LLMInvalidOutputError):
         make_llm(server).chat_json("s", "u")
 
     assert len(server.requests) == 2
@@ -112,7 +112,7 @@ def test_two_invalid_answers_raise_an_error_and_there_is_no_third_try():
 def test_a_missing_model_raises_unavailable_with_the_fix_and_is_not_retried():
     server = Server(httpx.Response(404, json={"error": "model 'test-model' not found"}))
 
-    with pytest.raises(LLMUnavailable, match="llm_check --pull"):
+    with pytest.raises(LLMUnavailableError, match="llm_check --pull"):
         make_llm(server).chat_json("s", "u")
 
     assert len(server.requests) == 1
@@ -128,7 +128,7 @@ def test_a_missing_model_raises_unavailable_with_the_fix_and_is_not_retried():
     ],
 )
 def test_server_problems_raise_unavailable(reply):
-    with pytest.raises(LLMUnavailable):
+    with pytest.raises(LLMUnavailableError):
         make_llm(Server(reply)).chat_json("s", "u")
 
 
@@ -147,7 +147,7 @@ def test_list_models_and_has_model():
 
 
 def test_list_models_raises_unavailable_when_the_server_is_down():
-    with pytest.raises(LLMUnavailable):
+    with pytest.raises(LLMUnavailableError):
         make_llm(Server(httpx.ConnectError("down"))).list_models()
 
 
@@ -157,11 +157,8 @@ def test_pull_model_asks_the_server_and_reports_errors():
     assert json.loads(server.requests[0].content) == {"model": "test-model", "stream": False}
     assert str(server.requests[0].url) == "http://llm.test/api/pull"
 
-    with pytest.raises(LLMUnavailable):
+    with pytest.raises(LLMUnavailableError):
         make_llm(Server(httpx.Response(500, text="no space"))).pull_model()
-
-
-# --- llm_check -----------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -199,7 +196,7 @@ def test_llm_check_pulls_the_model_with_the_pull_option(fake_server, capsys):
 
 def test_llm_check_turns_a_server_error_into_a_command_error(monkeypatch):
     def list_models(self):
-        raise LLMUnavailable("server is down")
+        raise LLMUnavailableError("server is down")
 
     monkeypatch.setattr(LLMClient, "list_models", list_models)
     with pytest.raises(CommandError, match="server is down"):

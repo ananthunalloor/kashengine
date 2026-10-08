@@ -6,7 +6,8 @@ import pytest
 from django.core.management import call_command
 from django.utils import timezone
 
-from apps.llm.client import LLMInvalidOutput, LLMUnavailable
+from apps.llm.client import LLMInvalidOutputError, LLMUnavailableError
+from apps.news.management.commands import score_news
 from apps.news.models import NewsArticle
 from apps.news.sentiment import SCHEMA, build_user_prompt, clean_result, score_pending
 
@@ -24,9 +25,6 @@ def make_article(number: int = 1, hours_ago: float = 0, **kwargs) -> NewsArticle
             fetched_at=timezone.now() - timedelta(hours=hours_ago)
         )
     return article
-
-
-# --- Checking the answer -------------------------------------------------------------------
 
 
 def test_clean_result_accepts_a_good_answer():
@@ -55,7 +53,7 @@ def test_clean_result_accepts_numbers_in_strings_and_whole_numbers():
     ],
 )
 def test_clean_result_rejects_a_bad_answer(bad):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"must be"):
         clean_result(bad)
 
 
@@ -69,9 +67,6 @@ def test_the_reason_is_cleaned_and_cut():
 
 def test_the_schema_asks_for_all_three_keys():
     assert set(SCHEMA["required"]) == {"score", "relevance", "reason"}
-
-
-# --- The prompt ----------------------------------------------------------------------------
 
 
 def test_prompt_has_the_title_and_source_inside_news_tags():
@@ -103,9 +98,6 @@ def test_the_article_cannot_close_our_tag():
     assert prompt.count("</news>") == 1
 
 
-# --- Scoring -------------------------------------------------------------------------------
-
-
 @pytest.mark.django_db
 def test_score_pending_saves_the_score_and_uses_the_full_text():
     article = make_article(text="The full article text.", summary="A summary.")
@@ -126,7 +118,7 @@ def test_score_pending_saves_the_score_and_uses_the_full_text():
 def test_an_invalid_answer_counts_a_try_and_the_article_is_dropped_after_the_last_try(settings):
     settings.SENTIMENT_MAX_ATTEMPTS = 3
     article = make_article()
-    llm = FakeLLM(default=LLMInvalidOutput("no json"))
+    llm = FakeLLM(default=LLMInvalidOutputError("no json"))
 
     for expected in (1, 2, 3):
         stats = score_pending(llm=llm)
@@ -142,7 +134,7 @@ def test_an_invalid_answer_counts_a_try_and_the_article_is_dropped_after_the_las
 @pytest.mark.django_db
 def test_when_the_server_is_down_the_run_stops_and_no_try_is_counted():
     articles = [make_article(n, hours_ago=n) for n in (1, 2, 3)]
-    llm = FakeLLM(default=LLMUnavailable("down"))
+    llm = FakeLLM(default=LLMUnavailableError("down"))
 
     stats = score_pending(llm=llm)
 
@@ -157,7 +149,7 @@ def test_when_the_server_is_down_the_run_stops_and_no_try_is_counted():
 def test_some_articles_can_fail_while_others_are_scored():
     make_article(1, hours_ago=1)
     make_article(2, hours_ago=2)
-    llm = FakeLLM(answers=[LLMInvalidOutput("bad"), GOOD])
+    llm = FakeLLM(answers=[LLMInvalidOutputError("bad"), GOOD])
 
     stats = score_pending(llm=llm)
 
@@ -219,8 +211,6 @@ def test_an_article_that_another_task_scored_in_the_meantime_is_skipped():
 
 @pytest.mark.django_db
 def test_score_news_command(monkeypatch, capsys):
-    from apps.news.management.commands import score_news
-
     make_article()
     monkeypatch.setattr(score_news, "LLMClient", lambda model=None: FakeLLM(default=GOOD))
 
@@ -231,11 +221,9 @@ def test_score_news_command(monkeypatch, capsys):
 
 @pytest.mark.django_db
 def test_score_news_command_tells_what_to_do_when_the_server_is_down(monkeypatch, capsys):
-    from apps.news.management.commands import score_news
-
     make_article()
     monkeypatch.setattr(
-        score_news, "LLMClient", lambda model=None: FakeLLM(default=LLMUnavailable("down"))
+        score_news, "LLMClient", lambda model=None: FakeLLM(default=LLMUnavailableError("down"))
     )
 
     call_command("score_news")

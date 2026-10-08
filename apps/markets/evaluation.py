@@ -31,6 +31,7 @@ MIN_RESULTS_TO_TRUST = 30
 
 
 def classify_change(change_pct: float, band: float | None = None) -> str:
+    """Return UP, DOWN or FLAT for a change in percent. The default band is MARKET_FLAT_BAND_PCT."""
     band = settings.MARKET_FLAT_BAND_PCT if band is None else band
     if change_pct > band:
         return UP
@@ -76,11 +77,12 @@ def evaluate_pending(now: datetime | None = None) -> dict:
 
 
 def _count(queryset) -> dict:
+    """Return the number of rows, and how many of them are correct."""
     return {"n": queryset.count(), "correct": queryset.filter(correct=True).count()}
 
 
 def accuracy_stats() -> dict:
-    """How good were the predictions? Compare with the baseline: always guess the common result."""
+    """Return the accuracy numbers, with a baseline that always guesses the common result."""
     results = Prediction.objects.filter(correct__isnull=False)
     total = results.count()
     right = results.filter(correct=True).count()

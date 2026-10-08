@@ -34,9 +34,9 @@ PAGES = [
 
 @pytest.fixture
 def user(db):
-    return get_user_model().objects.create_user(  # ty: ignore[unresolved-attribute]
+    return get_user_model().objects.create_user(  # ty: ignore[unresolved-attribute]  # Django manager
         "anan",
-        password="pass-123-word",  # noqa: S106
+        password="pass-123-word",
     )
 
 
@@ -55,9 +55,6 @@ def article(title, score=None, source="Mint", **kwargs) -> NewsArticle:
         kwargs.setdefault("scored_at", timezone.now())
         kwargs.setdefault("sentiment_reason", f"Reason for {title}")
     return NewsArticle.objects.create(title=title, source=source, **kwargs)
-
-
-# --- Login ---------------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("name", PAGES)
@@ -104,9 +101,6 @@ def test_every_page_works_with_no_data(client_in, name):
 
     assert response.status_code == 200
     assert 'aria-current="page"' in response.text or name == "web:dashboard"
-
-
-# --- Dashboard -----------------------------------------------------------------------------
 
 
 def make_prediction(day=date(2026, 10, 8), direction="up", confidence=0.52, **kwargs):
@@ -212,9 +206,6 @@ def test_the_dashboard_shows_stories_and_ipos(client_in):
     assert f"Closes {(today + timedelta(days=2)):%-d %b}" in text
 
 
-# --- Reports -------------------------------------------------------------------------------
-
-
 def test_the_report_list_and_detail(client_in):
     first = Report.objects.create(
         date=date(2026, 10, 6), text="Old report", prediction="down", confidence=0.3
@@ -252,9 +243,6 @@ def test_the_report_text_is_escaped(client_in):
     assert "&lt;script&gt;" in text
 
 
-# --- News ----------------------------------------------------------------------------------
-
-
 def test_news_filters_by_search_score_and_source(client_in):
     article("Bank profits jump", 0.7, source="Mint")
     article("Bank fraud found", -0.6, source="Hindu")
@@ -271,12 +259,18 @@ def test_news_filters_by_search_score_and_source(client_in):
     search = client_in.get(url, {"q": "holiday"}).text
 
     assert "4 articles" in everything
-    assert "Bank profits jump" in positive and "Bank fraud" not in positive
-    assert "Bank fraud found" in negative and "Bank profits" not in negative
-    assert "Bank holiday notice" in neutral and "Bank profits" not in neutral
-    assert "Waiting for a score" in unscored and "Bank holiday" not in unscored
-    assert "Bank fraud found" in hindu and "Bank profits" not in hindu
-    assert "1 article" in search and "Bank holiday notice" in search
+    assert "Bank profits jump" in positive
+    assert "Bank fraud" not in positive
+    assert "Bank fraud found" in negative
+    assert "Bank profits" not in negative
+    assert "Bank holiday notice" in neutral
+    assert "Bank profits" not in neutral
+    assert "Waiting for a score" in unscored
+    assert "Bank holiday" not in unscored
+    assert "Bank fraud found" in hindu
+    assert "Bank profits" not in hindu
+    assert "1 article" in search
+    assert "Bank holiday notice" in search
 
 
 def test_a_datastar_request_gets_only_the_list(client_in):
@@ -316,7 +310,8 @@ def test_news_pages(client_in, settings):
     last = client_in.get(url, {"page": 3}).text
     beyond = client_in.get(url, {"page": 99}).text  # A page too far gives the last page.
 
-    assert "Story number 0" in first and "Story number 2" not in first
+    assert "Story number 0" in first
+    assert "Story number 2" not in first
     assert "Page 1 of 3" in first
     assert "Story number 4" in last
     assert "Story number 4" in beyond
@@ -330,9 +325,6 @@ def test_news_text_is_escaped(client_in):
 
     assert "<b>Bold</b>" not in text
     assert "<img src=x" not in text
-
-
-# --- IPOs ----------------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -390,12 +382,17 @@ def test_the_ipo_tabs_and_filters(client_in, ipos):
     good = client_in.get(url, {"status": "all", "verdict": "good"}).text
     search = client_in.get(url, {"status": "all", "q": "steel"}).text
 
-    assert "Done Steel" in listed and "Open Foods" not in listed
+    assert "Done Steel" in listed
+    assert "Open Foods" not in listed
     assert "+20.0%" in listed  # The listing gain.
     assert "3 IPOs" in everything
-    assert "Soon Tools" in sme and "Open Foods" not in sme
-    assert "Soon Tools" in unknown and "Open Foods" not in unknown
-    assert "Open Foods" in good and "Done Steel" in good and "Soon Tools" not in good
+    assert "Soon Tools" in sme
+    assert "Open Foods" not in sme
+    assert "Soon Tools" in unknown
+    assert "Open Foods" not in unknown
+    assert "Open Foods" in good
+    assert "Done Steel" in good
+    assert "Soon Tools" not in good
     assert "1 IPO" in search
 
 
@@ -412,7 +409,8 @@ def test_a_datastar_request_for_ipos_gets_only_the_list(client_in, ipos):
 def test_an_unknown_status_filter_falls_back_to_active(client_in, ipos):
     text = client_in.get(reverse("web:ipos"), {"status": "nonsense"}).text
 
-    assert "Open Foods" in text and "Done Steel" not in text
+    assert "Open Foods" in text
+    assert "Done Steel" not in text
 
 
 def test_the_ipo_detail_page(client_in, ipos):
@@ -431,7 +429,8 @@ def test_the_ipo_detail_page(client_in, ipos):
     text = client_in.get(reverse("web:ipo", args=[ipo.pk])).text
 
     assert "Open Foods Limited" in text
-    assert "+20.0%" in text and "12.5x" in text
+    assert "+20.0%" in text
+    assert "12.5x" in text
     assert "No subscription number." in text
     assert "updated 5 hours ago" in text
     assert "₹100" in text
@@ -444,9 +443,6 @@ def test_the_detail_page_of_an_ipo_without_a_score(client_in):
 
     assert "There is no usable signal yet." in text
     assert client_in.get(reverse("web:ipo", args=[999999])).status_code == 404
-
-
-# --- Markets, companies, delivery ----------------------------------------------------------
 
 
 def test_the_markets_page_shows_history_and_the_result(client_in):
@@ -469,8 +465,11 @@ def test_the_markets_page_shows_history_and_the_result(client_in):
 
     text = client_in.get(reverse("web:markets")).text
 
-    assert "of <span" in text and "(<span" in text  # The numbers are in their own tags.
-    assert "Right" in text and "Wrong" in text and "Waiting" in text
+    assert "of <span" in text  # The numbers are in their own tags.
+    assert "(<span" in text
+    assert "Right" in text
+    assert "Wrong" in text
+    assert "Waiting" in text
     assert text.index("Thu 8 Oct") < text.index("Tue 6 Oct")
 
 
@@ -513,4 +512,5 @@ def test_the_delivery_page(client_in, settings):
     assert "2 Telegram chats" in text
     assert "bot was blocked" in text
     assert "Test" in text  # A log without a report is a test message.
-    assert "111" not in text and "222" not in text  # We do not show chat IDs.
+    assert "111" not in text  # We do not show chat IDs.
+    assert "222" not in text

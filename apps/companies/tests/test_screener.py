@@ -109,9 +109,6 @@ def test_a_changed_layout_raises_an_error():
         parse_company_page("<html><body><h1>Access denied</h1></body></html>")
 
 
-# --- Refresh -------------------------------------------------------------------------------
-
-
 class Site:
     """A fake Screener.in. It records the paths that were requested."""
 
@@ -170,7 +167,8 @@ def test_refresh_saves_the_data(enabled):
     assert company.screener_data["source"] == "screener.in"
     assert company.sector == "Energy"
     assert company.last_updated is not None
-    assert sleeps and all(4.0 < wait <= 5.0 for wait in sleeps)  # SCREENER_DELAY_SECONDS is 5.
+    assert sleeps
+    assert all(4.0 < wait <= 5.0 for wait in sleeps)  # SCREENER_DELAY_SECONDS is 5.
 
 
 @pytest.mark.django_db

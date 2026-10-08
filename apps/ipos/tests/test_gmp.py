@@ -60,9 +60,6 @@ PAGE = """
 LATER = NOW + timedelta(hours=2)
 
 
-# --- Small parsers -------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
@@ -117,9 +114,6 @@ def test_clean_gmp_name():
     assert clean_gmp_name("Acme Foods") == "Acme Foods"
 
 
-# --- The table -----------------------------------------------------------------------------
-
-
 def test_parse_gmp_table_reads_the_rows_by_column_name():
     rows = parse_gmp_table(PAGE, NOW)
 
@@ -153,9 +147,6 @@ def test_a_page_without_the_table_names_the_columns_that_it_found():
 def test_a_page_without_any_table_is_an_error(page):
     with pytest.raises(GmpSourceError):
         parse_gmp_table(page, NOW)
-
-
-# --- Saving --------------------------------------------------------------------------------
 
 
 def test_apply_gmp_rows_sets_the_values_and_the_source_time():
@@ -255,9 +246,6 @@ def test_a_short_name_is_not_matched_by_its_start():
     assert apply_gmp_rows(rows, NOW).matched == 0
 
 
-# --- Fetching ------------------------------------------------------------------------------
-
-
 def make_fetcher(handler) -> PoliteFetcher:
     client = httpx.Client(transport=httpx.MockTransport(handler))
     return PoliteFetcher(client, delay=0, user_agent="KashEngineBot/0.1", sleep=lambda _: None)
@@ -294,7 +282,7 @@ def test_update_gmp_obeys_robots_txt():
             return httpx.Response(200, text="User-agent: *\nDisallow: /\n")
         pytest.fail("must not fetch the page")
 
-    with pytest.raises(GmpSourceError, match="robots.txt"):
+    with pytest.raises(GmpSourceError, match=r"robots\.txt"):
         update_gmp(make_fetcher(handler), "https://gmp.test/live", NOW)
 
 
@@ -321,7 +309,6 @@ def test_update_gmp_uses_the_url_from_the_settings(settings):
     assert "https://gmp.test/from-settings" in seen
 
 
-# --- The real page -------------------------------------------------------------------------
 # apps/ipos/tests/data/gmp_page_sample.html is the table of the live page, cut to 6 rows. It was
 # saved on 7 Oct 2026 with `refresh_ipo_data --save-page`.
 

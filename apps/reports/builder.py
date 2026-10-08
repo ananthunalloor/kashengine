@@ -1,17 +1,13 @@
 """Build the daily report from the data in the database.
 
-The report has four parts:
-1. The Nifty 50 outlook for the day (the prediction, the global cues, the last result, and the
-   track record).
-2. The news: the strongest good stories and bad stories since the last market close.
-3. The IPOs: open now, listing today, coming up, and the ones that are likely to do well.
-4. A short warning that this is not advice.
+The report has four parts: the Nifty 50 outlook, the news, the IPOs, and a short warning that
+this is not advice.
 
-The builder only reads the database. It does not call the LLM and it does not use the network.
-So it works also when the LLM server or Yahoo is down. It says what is missing.
+The builder only reads the database. It does not call the LLM and it does not use the network,
+so it works when the LLM server or Yahoo is down. It says what is missing.
 
-The text is plain text, so Telegram can never refuse it because of a bad mark-up, and an email
-can use it later. `Report.data` keeps the numbers and the lists for the web page (Phase 8).
+The text is plain text, so Telegram cannot refuse it because of bad mark-up. `Report.data`
+keeps the numbers and the lists for the web page.
 """
 
 import logging
@@ -43,6 +39,8 @@ VERDICTS = {
 }
 STORY_MIN_SCORE = 0.2  # A story with a smaller score is neutral. We do not show it.
 LAST_RESULT_MAX_AGE_DAYS = 7
+WEAK_BELOW = 0.4  # Confidence below this is a weak signal.
+MODERATE_BELOW = 0.6  # Confidence below this (and not weak) is a moderate signal.
 TITLE_CHARS = 110
 REASON_CHARS = 140
 
@@ -57,14 +55,11 @@ def _day(value: date) -> str:
 
 
 def _strength(confidence: float) -> str:
-    if confidence < 0.4:
+    if confidence < WEAK_BELOW:
         return "weak"
-    if confidence < 0.6:
+    if confidence < MODERATE_BELOW:
         return "moderate"
     return "strong"
-
-
-# --- Gathering the data --------------------------------------------------------------------
 
 
 def gather_prediction(prediction: Prediction) -> dict:
@@ -108,6 +103,7 @@ def gather_last_result(today: date) -> dict | None:
 
 
 def gather_track_record() -> dict:
+    """The accuracy of the past predictions."""
     stats = accuracy_stats()
     return {
         "total": stats["total"],
@@ -207,6 +203,7 @@ def gather_ipos(today: date, limit: int | None = None, days_ahead: int | None = 
 
 
 def gather(day: date, prediction: Prediction) -> dict:
+    """Collect all the data for the report of one day."""
     return {
         "date": day.isoformat(),
         "prediction": gather_prediction(prediction),
@@ -215,9 +212,6 @@ def gather(day: date, prediction: Prediction) -> dict:
         "news": gather_news(news_window_start(prediction.target_date)),
         "ipos": gather_ipos(day),
     }
-
-
-# --- The text ------------------------------------------------------------------------------
 
 
 def _price(item: dict) -> str:
@@ -363,9 +357,6 @@ def render_text(data: dict) -> str:
         ["This is an automated summary for information. It is not investment advice."],
     ]
     return "\n\n".join("\n".join(section) for section in sections)
-
-
-# --- Saving --------------------------------------------------------------------------------
 
 
 def _refresh_ipos(day: date, now: datetime) -> None:

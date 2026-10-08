@@ -1,18 +1,24 @@
+"""Management command: show the accuracy of the predictions."""
+
 from django.core.management.base import BaseCommand
 
 from apps.markets.evaluation import MIN_RESULTS_TO_TRUST, accuracy_stats
 
 
 def _share(part: dict) -> str:
+    """Format a {"n", "correct"} count as "correct/n (percent)"."""
     if not part["n"]:
         return "no results"
     return f"{part['correct']}/{part['n']} ({part['correct'] / part['n'] * 100:.0f}%)"
 
 
 class Command(BaseCommand):
+    """Show the accuracy of the predictions."""
+
     help = "Show how good the predictions were, and compare them with a simple baseline."
 
     def handle(self, *args, **options):
+        """Print the accuracy numbers and the baseline."""
         stats = accuracy_stats()
         self.stdout.write(
             f"Results: {stats['total']}   Waiting: {stats['pending']}   Void: {stats['void']}"

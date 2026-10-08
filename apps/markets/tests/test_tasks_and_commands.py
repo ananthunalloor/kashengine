@@ -51,9 +51,6 @@ def test_the_predict_task_makes_the_prediction_on_a_trading_day(monkeypatch):
     }
 
 
-# --- Commands ------------------------------------------------------------------------------
-
-
 @pytest.mark.django_db
 def test_fetch_quotes_command_shows_the_failed_symbols(monkeypatch, capsys):
     monkeypatch.setattr(

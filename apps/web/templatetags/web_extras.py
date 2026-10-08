@@ -66,11 +66,13 @@ def tone(value):
 
 @register.filter
 def arrow(direction):
+    """The arrow sign for a direction (up, down, flat)."""
     return ARROWS.get(direction, "")
 
 
 @register.filter
 def direction_word(direction):
+    """The word for a direction (up, down, flat)."""
     return DIRECTION_WORDS.get(direction, "")
 
 
@@ -99,4 +101,5 @@ def times(value):
 
 @register.filter
 def get_item(mapping, key):
+    """Return mapping[key], or None if the key or the mapping is missing."""
     return mapping.get(key) if hasattr(mapping, "get") else None

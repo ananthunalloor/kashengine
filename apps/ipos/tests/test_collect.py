@@ -1,10 +1,13 @@
 """Tests for saving IPOs, the status, and the CSV import."""
 
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
+from pathlib import Path
+from typing import TYPE_CHECKING, cast
 
 import pytest
 
+import apps.ipos
 from apps.ipos import collect
 from apps.ipos.collect import (
     CSV_COLUMNS,
@@ -23,6 +26,9 @@ from apps.ipos.sources import IpoRecord, IpoSourceError
 
 from .helpers import NOW, TODAY, make_ipo
 
+if TYPE_CHECKING:
+    from apps.news.scraper import PoliteFetcher
+
 pytestmark = pytest.mark.django_db
 
 D = Decimal
@@ -31,9 +37,6 @@ D = Decimal
 def record(name="Acme Foods Limited", **kwargs) -> IpoRecord:
     kwargs.setdefault("open_date", TODAY)
     return IpoRecord(name=name, **kwargs)
-
-
-# --- Status --------------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -83,9 +86,6 @@ def test_refresh_statuses_changes_status_and_fills_in_the_gain():
     assert (opened.status, listed.status, upcoming.status) == ("open", "listed", "upcoming")
     assert listed.listing_gain_pct == pytest.approx(25.0)
     assert refresh_statuses(TODAY) == 0  # A second run changes nothing.
-
-
-# --- Saving a record -----------------------------------------------------------------------
 
 
 def test_save_record_creates_an_ipo_with_the_status():
@@ -195,9 +195,6 @@ def test_the_same_gmp_entered_again_confirms_it():
     assert Ipo.objects.get().gmp_updated_at > first
 
 
-# --- The model -----------------------------------------------------------------------------
-
-
 def test_the_model_sets_the_time_when_the_gmp_changes_in_the_admin():
     ipo = make_ipo()
     assert ipo.gmp_updated_at is None
@@ -224,9 +221,6 @@ def test_gmp_pct_needs_a_gmp_and_a_price():
     assert Ipo(gmp=D("-5"), price_band_high=D("100")).gmp_pct == -5.0
 
 
-# --- Collecting from the source ------------------------------------------------------------
-
-
 def test_collect_ipos_saves_records_and_reports_failed_pages(monkeypatch):
     def fake_fetch(url, fetcher):
         if "bad" in url:
@@ -236,15 +230,15 @@ def test_collect_ipos_saves_records_and_reports_failed_pages(monkeypatch):
     monkeypatch.setattr(collect, "fetch_records", fake_fetch)
 
     stats = collect_ipos(
-        fetcher=object(), urls=["https://a.test/good", "https://a.test/bad"], today=TODAY
+        fetcher=cast("PoliteFetcher", object()),
+        urls=["https://a.test/good", "https://a.test/bad"],
+        today=TODAY,
     )
 
     assert (stats["created"], stats["skipped"]) == (1, 1)
     assert list(stats["failed"]) == ["https://a.test/bad"]
     assert "HTTP 503" in stats["failed"]["https://a.test/bad"]
 
-
-# --- CSV -----------------------------------------------------------------------------------
 
 CSV = f"""{CSV_COLUMNS}
 Acme Foods Limited,2026-10-05,2026-10-07,2026-10-12,95,100,150,"1,200.5",mainboard,12,,,,https://x.test/a
@@ -267,6 +261,7 @@ def test_read_csv_reads_all_the_columns(tmp_path):
     assert first.subscription_times is None
     assert second.category == "sme"
     assert second.subscription_times == D("2.5")
+    assert second.open_date is not None
     assert second.open_date.isoformat() == "2026-10-06"
 
 
@@ -294,7 +289,7 @@ def test_import_csv_saves_everything_or_nothing(tmp_path):
 
     bad = tmp_path / "bad.csv"
     bad.write_text("name,gmp\nNew One Ltd,5\nBad Ltd,xyz\n", encoding="utf-8")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"Line 3: gmp is not a number"):
         import_csv(bad, TODAY)
     assert Ipo.objects.count() == 2  # "New One Ltd" was not saved.
 
@@ -304,10 +299,6 @@ def test_the_now_helper_is_in_india_time():
 
 
 def test_the_example_csv_file_is_valid():
-    from pathlib import Path
-
-    import apps.ipos
-
     path = Path(apps.ipos.__file__).parent / "data" / "ipos_example.csv"
 
     records = read_csv(path)
@@ -319,12 +310,7 @@ def test_the_example_csv_file_is_valid():
     ]
 
 
-# --- Source URLs ---------------------------------------------------------------------------
-
-
 def test_financial_year():
-    from datetime import date
-
     assert financial_year(date(2026, 10, 5)) == "2026-27"
     assert financial_year(date(2026, 4, 1)) == "2026-27"
     assert financial_year(date(2027, 3, 31)) == "2026-27"
@@ -332,8 +318,6 @@ def test_financial_year():
 
 
 def test_expand_urls_fills_in_this_month_and_last_month():
-    from datetime import date
-
     url = "https://f.test/data/{month}/{year}/{fy}"
 
     assert expand_urls([url], date(2026, 10, 5)) == [
@@ -348,8 +332,6 @@ def test_expand_urls_fills_in_this_month_and_last_month():
 
 
 def test_expand_urls_keeps_a_plain_url_once():
-    from datetime import date
-
     plain = "https://f.test/list"
 
     assert expand_urls([plain, plain, "https://f.test/other"], date(2026, 10, 5)) == [
@@ -367,6 +349,10 @@ def test_collect_ipos_reads_the_url_for_each_month(monkeypatch):
 
     monkeypatch.setattr(collect, "fetch_records", fake_fetch)
 
-    collect_ipos(fetcher=object(), urls=["https://f.test/{month}-{year}"], today=TODAY)
+    collect_ipos(
+        fetcher=cast("PoliteFetcher", object()),
+        urls=["https://f.test/{month}-{year}"],
+        today=TODAY,
+    )
 
     assert seen == ["https://f.test/10-2026", "https://f.test/9-2026"]

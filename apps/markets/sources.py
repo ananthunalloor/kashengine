@@ -1,13 +1,10 @@
 """Download daily prices from Yahoo Finance with the yfinance package.
 
-READ THIS. yfinance is not an official Yahoo tool. Its own disclaimer says that it "uses Yahoo's
-publicly available APIs, and is intended for research and educational purposes", and that
-"the Yahoo! finance API is intended for personal use only". Check the Yahoo terms of use for
-your case. We save only the daily close and the change in percent. Do not send the raw prices
-to other people. The daily report shows only the change in percent.
+Legal note: yfinance is not an official Yahoo tool. It uses Yahoo's public APIs "for research and
+educational purposes" and "for personal use only". Check the Yahoo terms of use for your case.
+We save only the daily close and the change in percent. Do not share the raw prices.
 
-yfinance can also break when Yahoo changes something. Then the quotes fail, the log shows the
-reason, and the prediction uses the data that it has.
+yfinance can break when Yahoo changes something. Then the quotes fail and the log shows why.
 """
 
 import logging
@@ -23,6 +20,8 @@ class QuoteError(Exception):
 
 @dataclass(frozen=True)
 class Bar:
+    """The close price of one trading day."""
+
     day: date  # The local date of the exchange.
     close: float
 
@@ -32,7 +31,7 @@ def fetch_bars(symbol: str, period: str = "1mo") -> list[Bar]:
 
     The last bar can be from the middle of a session. The real close replaces it at the next run.
     """
-    import yfinance as yf  # Imported here: it is slow to import, and only this function needs it.
+    import yfinance as yf  # noqa: PLC0415  # Slow to import, and only this function needs it.
 
     try:
         frame = yf.Ticker(symbol).history(

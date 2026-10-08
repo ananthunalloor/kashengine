@@ -1,7 +1,8 @@
-"""One client for the local LLM (Ollama). All code that needs the LLM uses this class.
+"""Client for the local LLM server (Ollama).
 
-The server URL and the model come from the settings LLM_BASE_URL and LLM_MODEL.
-You can give another model for one client, to compare models.
+All code that needs the LLM uses `LLMClient`. The server URL and the model come from the
+settings `LLM_BASE_URL` and `LLM_MODEL`. You can give another model to one client, to compare
+models.
 """
 
 import json
@@ -13,20 +14,41 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+HTTP_NOT_FOUND = 404
+HTTP_CLIENT_ERROR = 400  # First status code of the 4xx and 5xx error range.
+MAX_ATTEMPTS = 2  # The first try and one retry.
+ERROR_TEXT_LIMIT = 200  # Characters of a server error body that we put in a message.
+
 
 class LLMError(Exception):
     """Base class for LLM errors."""
 
 
-class LLMUnavailable(LLMError):
+class LLMUnavailableError(LLMError):
     """The server cannot be reached, or it has no such model. Do not try more requests now."""
 
 
-class LLMInvalidOutput(LLMError):
+class LLMInvalidOutputError(LLMError):
     """The model answered, but not with valid JSON in the right format (even after a retry)."""
 
 
+def _parse_object(content: str) -> dict:
+    """Parse `content` as JSON and check that it is an object.
+
+    Raises:
+        ValueError: The text is not valid JSON.
+        TypeError: The JSON is not an object.
+    """
+    data = json.loads(content)
+    if not isinstance(data, dict):
+        msg = "The answer must be a JSON object."
+        raise TypeError(msg)
+    return data
+
+
 class LLMClient:
+    """Client for one model on the LLM server."""
+
     def __init__(
         self,
         model: str | None = None,
@@ -44,6 +66,7 @@ class LLMClient:
         self.last_attempts = 0
 
     def close(self) -> None:
+        """Close the HTTP client, if this object created it."""
         if self._own_client:
             self._http.close()
 
@@ -53,17 +76,25 @@ class LLMClient:
     def __exit__(self, *exc_info):
         self.close()
 
-    # --- Chat ---------------------------------------------------------------------------
-
     def chat_json(self, system: str, user: str, schema: dict | None = None, validate=None) -> dict:
         """Ask the model a question and get a JSON object back.
 
-        schema:   a JSON schema. Ollama forces the output to follow it.
-                  Without it, we ask for "json".
-        validate: a function that takes the parsed data and returns the clean data. It raises
-                  ValueError if the data is not good.
-        If the answer is not valid, we ask one more time and tell the model what was wrong.
-        Raise LLMInvalidOutput if the second answer is also not valid.
+        If the answer is not valid, ask one more time and tell the model what was wrong.
+
+        Args:
+            system: The system prompt.
+            user: The user prompt.
+            schema: A JSON schema. Ollama forces the output to follow it. Without it, we ask
+                for "json".
+            validate: A function that takes the parsed data and returns the clean data. It
+                raises ValueError if the data is not good.
+
+        Returns:
+            The parsed (and validated) JSON object.
+
+        Raises:
+            LLMInvalidOutputError: The second answer is also not valid.
+            LLMUnavailableError: The server cannot be reached or has no such model.
         """
         messages = [
             {"role": "system", "content": system},
@@ -71,13 +102,11 @@ class LLMClient:
         ]
         started = time.monotonic()
         error = ""
-        for attempt in (1, 2):
+        for attempt in range(1, MAX_ATTEMPTS + 1):
             self.last_attempts = attempt
             content = self._chat(messages, schema)
             try:
-                data = json.loads(content)
-                if not isinstance(data, dict):
-                    raise ValueError("The answer must be a JSON object.")
+                data = _parse_object(content)
                 result = validate(data) if validate else data
             except (ValueError, TypeError) as exc:  # json.JSONDecodeError is a ValueError.
                 error = str(exc)
@@ -94,7 +123,7 @@ class LLMClient:
             self.last_seconds = time.monotonic() - started
             return result
         self.last_seconds = time.monotonic() - started
-        raise LLMInvalidOutput(error)
+        raise LLMInvalidOutputError(error)
 
     def _chat(self, messages: list[dict], schema: dict | None) -> str:
         payload = {
@@ -107,32 +136,40 @@ class LLMClient:
         try:
             response = self._http.post(f"{self.base_url}/api/chat", json=payload)
         except httpx.HTTPError as exc:
-            raise LLMUnavailable(f"Cannot reach the LLM server at {self.base_url}: {exc}") from exc
-        if response.status_code == 404:
-            raise LLMUnavailable(
+            msg = f"Cannot reach the LLM server at {self.base_url}: {exc}"
+            raise LLMUnavailableError(msg) from exc
+        if response.status_code == HTTP_NOT_FOUND:
+            raise LLMUnavailableError(
                 f"The model '{self.model}' is not on the server. "
                 f"Run: python manage.py llm_check --pull (or: ollama pull {self.model})"
             )
-        if response.status_code >= 400:
-            raise LLMUnavailable(f"LLM server error {response.status_code}: {response.text[:200]}")
+        if response.status_code >= HTTP_CLIENT_ERROR:
+            msg = f"LLM server error {response.status_code}: {response.text[:ERROR_TEXT_LIMIT]}"
+            raise LLMUnavailableError(msg)
         try:
             return response.json()["message"]["content"]
         except (ValueError, KeyError, TypeError) as exc:
-            raise LLMUnavailable(f"Unexpected answer from the LLM server: {exc}") from exc
-
-    # --- Server checks ------------------------------------------------------------------
+            raise LLMUnavailableError(f"Unexpected answer from the LLM server: {exc}") from exc
 
     def list_models(self) -> list[str]:
-        """Return the names of the models on the server. Raise LLMUnavailable if it is down."""
+        """Return the names of the models on the server.
+
+        Raises:
+            LLMUnavailableError: The server is down or gives a bad answer.
+        """
         try:
             response = self._http.get(f"{self.base_url}/api/tags")
             response.raise_for_status()
             return [item["name"] for item in response.json().get("models", [])]
         except (httpx.HTTPError, ValueError, KeyError) as exc:
-            raise LLMUnavailable(f"Cannot read the model list from {self.base_url}: {exc}") from exc
+            msg = f"Cannot read the model list from {self.base_url}: {exc}"
+            raise LLMUnavailableError(msg) from exc
 
     def has_model(self) -> bool:
-        """True if our model is on the server. "llama3.2" also matches "llama3.2:latest"."""
+        """Return True if our model is on the server.
+
+        A name without a tag, such as "llama3.2", also matches "llama3.2:latest".
+        """
         wanted = self.model if ":" in self.model else f"{self.model}:latest"
         return wanted in self.list_models()
 
@@ -146,4 +183,4 @@ class LLMClient:
             )
             response.raise_for_status()
         except httpx.HTTPError as exc:
-            raise LLMUnavailable(f"Cannot pull '{self.model}': {exc}") from exc
+            raise LLMUnavailableError(f"Cannot pull '{self.model}': {exc}") from exc

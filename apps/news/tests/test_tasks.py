@@ -2,9 +2,9 @@
 
 from django.conf import settings
 
-from apps.delivery import tasks as delivery_tasks  # noqa: F401  (registers the tasks)
-from apps.ipos import tasks as ipo_tasks  # noqa: F401  (registers the tasks)
-from apps.markets import tasks as market_tasks  # noqa: F401  (registers the tasks)
+from apps.delivery import tasks as delivery_tasks  # noqa: F401  # Import registers the tasks.
+from apps.ipos import tasks as ipo_tasks  # noqa: F401  # Import registers the tasks.
+from apps.markets import tasks as market_tasks  # noqa: F401  # Import registers the tasks.
 from apps.news import tasks
 from config.celery import app
 

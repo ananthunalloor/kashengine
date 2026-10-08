@@ -26,9 +26,6 @@ def open_ipo(name="Acme Foods Limited", **kwargs) -> Ipo:
     return Ipo.objects.create(name=name, **kwargs)
 
 
-# --- Tasks ---------------------------------------------------------------------------------
-
-
 def test_the_collect_task_does_not_fetch_when_the_fetch_is_off(monkeypatch, settings):
     settings.IPO_FETCH_ENABLED = False
     monkeypatch.setattr(tasks, "collect_ipos", lambda: pytest.fail("must not fetch"))
@@ -61,9 +58,6 @@ def test_the_score_task_updates_the_status_and_scores():
     assert tasks.score() == {"scored": 1, "unknown": 0}
 
 
-# --- collect_ipos --------------------------------------------------------------------------
-
-
 def test_collect_command_when_the_fetch_is_off(capsys, settings):
     settings.IPO_FETCH_ENABLED = False
 
@@ -94,9 +88,6 @@ def test_collect_command_shows_failed_pages(monkeypatch, capsys):
     assert "Failed: u: boom" in out
 
 
-# --- import_ipo_csv ------------------------------------------------------------------------
-
-
 def test_import_csv_command(tmp_path, capsys):
     path = tmp_path / "ipos.csv"
     today = today_ist().isoformat()
@@ -119,9 +110,6 @@ def test_import_csv_command_turns_errors_into_command_errors(tmp_path):
         call_command("import_ipo_csv", str(bad))
     with pytest.raises(CommandError):
         call_command("import_ipo_csv", str(tmp_path / "missing.csv"))
-
-
-# --- update_ipo ----------------------------------------------------------------------------
 
 
 def test_update_ipo_sets_the_gmp_and_shows_the_verdict(capsys):
@@ -175,9 +163,6 @@ def test_update_ipo_errors():
         call_command("update_ipo", "nothing", "--gmp", "1")
     with pytest.raises(CommandError, match="must be a number"):
         call_command("update_ipo", "foods", "--gmp", "lots")
-
-
-# --- score_ipos and ipo_stats --------------------------------------------------------------
 
 
 def test_score_ipos_command_shows_a_table(capsys):
