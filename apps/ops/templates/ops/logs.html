@@ -1,0 +1,44 @@
+{% extends "ops/base.html" %}
+{% block title %}Logs · Kash Engine{% endblock %}
+{% block ops %}
+<h1 class="font-serif text-3xl font-semibold">Logs</h1>
+<p class="mt-1 max-w-prose text-muted">The newest lines of the application log (web, worker, and beat). Tokens and passwords are hidden.</p>
+
+<form method="get" action="{% url 'ops:logs' %}" class="mt-6 grid gap-3 sm:grid-cols-[auto_1fr_1fr_auto_auto]"
+      data-signals="{{ signals }}" data-indicator:fetching>
+  <div>
+    <label for="level" class="block text-sm font-medium">Level</label>
+    <select id="level" name="level" data-bind:level data-on:change="@get('{% url 'ops:logs' %}')" class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+      <option value="">All</option>
+      {% for name in levels %}<option value="{{ name }}" {% if filters.level == name %}selected{% endif %}>{{ name }} and above</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="logger" class="block text-sm font-medium">Logger</label>
+    <input id="logger" name="logger" type="search" value="{{ filters.logger }}" data-bind:logger placeholder="apps.news" autocomplete="off"
+           data-on:input__debounce.300ms="@get('{% url 'ops:logs' %}')" class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+  </div>
+  <div>
+    <label for="q" class="block text-sm font-medium">Search</label>
+    <input id="q" name="q" type="search" value="{{ filters.q }}" data-bind:q autocomplete="off"
+           data-on:input__debounce.300ms="@get('{% url 'ops:logs' %}')" class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+  </div>
+  <div>
+    <label for="limit" class="block text-sm font-medium">Lines</label>
+    <select id="limit" name="limit" data-bind:limit data-on:change="@get('{% url 'ops:logs' %}')" class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+      <option value="100" {% if filters.limit == "100" %}selected{% endif %}>100</option>
+      <option value="200" {% if filters.limit == "200" or not filters.limit %}selected{% endif %}>200</option>
+      <option value="500" {% if filters.limit == "500" %}selected{% endif %}>500</option>
+      <option value="1000" {% if filters.limit == "1000" %}selected{% endif %}>1000</option>
+    </select>
+  </div>
+  <div class="self-end">
+    <label class="flex items-center gap-2 py-2 text-sm"><input type="checkbox" name="live" value="true" data-bind:live data-on:change="@get('{% url 'ops:logs' %}')" {% if live %}checked{% endif %}> Live</label>
+  </div>
+  <noscript><button type="submit" class="rounded-md bg-accent px-3 py-2 text-paper">Apply</button></noscript>
+</form>
+
+<div class="mt-6" data-attr:aria-busy="$fetching ? 'true' : 'false'">
+  {% include "ops/_log_panel.html" %}
+</div>
+{% endblock %}

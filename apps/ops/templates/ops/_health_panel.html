@@ -1,0 +1,51 @@
+{% load ops_extras %}
+<div id="health-panel" class="mt-6" data-on-interval__duration.15s="@get('{% url 'ops:overview' %}')">
+  <p class="rounded-md px-4 py-3 text-sm font-medium {{ overall|status_class }}" role="status">
+    {% if overall == "ok" %}All checks are OK.{% elif overall == "warn" %}Some checks show a warning.{% elif overall == "fail" %}At least one check shows a problem.{% else %}There is not enough data to judge yet.{% endif %}
+    <span class="font-normal">Checked at {{ checked_at|date:"H:i:s" }}.</span>
+  </p>
+
+  {% for group, checks in groups %}
+  <h2 class="mt-8 text-xl font-semibold">{{ group }}</h2>
+  <ul class="mt-3 grid gap-3 sm:grid-cols-2">
+    {% for check in checks %}
+    <li class="rounded-md border border-rule bg-card p-4">
+      <div class="flex items-center justify-between gap-3">
+        <h3 class="font-medium">{{ check.name }}</h3>
+        <span class="rounded px-2 py-0.5 text-xs font-medium {{ check.status|status_class }}">{{ check.status|status_text }}</span>
+      </div>
+      <p class="mt-1 text-sm">{{ check.summary }}</p>
+      {% if check.detail %}<p class="mt-1 text-sm text-muted">{{ check.detail }}</p>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endfor %}
+
+  <div class="mt-10 grid gap-8 lg:grid-cols-2">
+    <section aria-labelledby="running-h">
+      <h2 id="running-h" class="text-xl font-semibold">Waiting or running</h2>
+      {% if running %}
+      <ul class="mt-3 divide-y divide-rule border-y border-rule text-sm">
+        {% for run in running %}
+        <li class="flex items-center justify-between gap-3 py-2"><a href="{% url 'ops:run' run.pk %}">{{ run.label }}</a><span class="rounded px-2 py-0.5 text-xs font-medium {{ run.status|status_class }}">{{ run.get_status_display }}</span></li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="mt-3 text-sm text-muted">Nothing runs now.</p>{% endif %}
+    </section>
+    <section aria-labelledby="logins-h">
+      <h2 id="logins-h" class="text-xl font-semibold">Failed logins (24 h)</h2>
+      {% if failed_logins %}
+      <ul class="mt-3 divide-y divide-rule border-y border-rule text-sm">
+        {% for row in failed_logins %}
+        <li class="flex items-center justify-between gap-3 py-2"><span class="num">{{ row.ip_address|default:"unknown address" }}</span><span class="rounded px-2 py-0.5 text-xs font-medium {% if row.suspicious %}bg-loss-soft text-loss{% else %}bg-flat-soft text-muted{% endif %}">{{ row.count }}</span></li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="mt-3 text-sm text-muted">No failed login.</p>{% endif %}
+      <p class="mt-2 text-sm text-muted">{{ session_count }} user{{ session_count|pluralize }} logged in now. <a href="{% url 'ops:logins' %}">All logins</a></p>
+    </section>
+  </div>
+
+  <h2 class="mt-10 text-xl font-semibold">Recent runs</h2>
+  <div class="mt-3">{% include "ops/_runs_table.html" with runs=recent_runs %}</div>
+  <p class="mt-2 text-sm"><a href="{% url 'ops:runs' %}">All runs</a> · <a href="{% url 'ops:jobs' %}">Start a job</a></p>
+</div>

@@ -1,0 +1,47 @@
+{% extends "ops/base.html" %}
+{% load ops_extras %}
+{% block title %}Jobs · Kash Engine{% endblock %}
+{% block ops %}
+<h1 class="font-serif text-3xl font-semibold">Jobs</h1>
+<p class="mt-1 max-w-prose text-muted">Every scheduled task and the checks that you can start by hand. Times are in IST. The numbers are from the last 7 days.{% if not request.user.is_superuser %} Only a superuser can start a job.{% endif %}</p>
+
+{% for group, rows in groups.items %}
+<h2 class="mt-8 text-xl font-semibold">{{ group }}</h2>
+<ul class="mt-3 divide-y divide-rule border-y border-rule">
+  {% for row in rows %}
+  <li class="grid gap-3 py-4 md:grid-cols-[1fr_16rem_auto]">
+    <div>
+      <h3 class="font-medium">{{ row.job.label }}</h3>
+      <p class="mt-0.5 text-sm text-muted">{{ row.job.description }}</p>
+      <p class="mt-1 text-xs text-muted"><code>{{ row.job.run_label }}</code></p>
+    </div>
+    <dl class="text-sm">
+      {% if row.schedules %}
+      <div class="flex justify-between gap-3"><dt class="text-muted">Schedule</dt><dd class="num text-right">{% for cron in row.schedules %}<code>{{ cron }}</code>{% if not forloop.last %}<br>{% endif %}{% endfor %}</dd></div>
+      <div class="flex justify-between gap-3"><dt class="text-muted">Next run</dt><dd class="num">{{ row.next_run|date:"D j M, H:i" }} ({{ row.next_run|until }})</dd></div>
+      {% else %}
+      <div class="flex justify-between gap-3"><dt class="text-muted">Schedule</dt><dd>By hand only</dd></div>
+      {% endif %}
+      <div class="flex justify-between gap-3"><dt class="text-muted">Last run</dt><dd>{% if row.last %}<a href="{% url 'ops:run' row.last.pk %}">{{ row.last.created_at|ago }}</a> <span class="rounded px-1.5 py-0.5 text-xs {{ row.last.status|status_class }}">{{ row.last.get_status_display }}</span>{% else %}never{% endif %}</dd></div>
+      {% if row.stats %}
+      <div class="flex justify-between gap-3"><dt class="text-muted">7 days</dt><dd class="num">{{ row.stats.runs }} run{{ row.stats.runs|pluralize }}{% if row.stats.success_rate is not None %}, {{ row.stats.success_rate }}% done{% endif %}, avg {{ row.stats.avg_ms|duration }}</dd></div>
+      {% endif %}
+    </dl>
+    {% if request.user.is_superuser %}
+    <form method="post" action="{% url 'ops:job_run' row.job.key %}" class="flex flex-col items-start gap-2 md:items-end">
+      {% csrf_token %}
+      {% if row.job.confirm %}
+      <label class="flex max-w-[14rem] items-start gap-2 text-xs"><input type="checkbox" name="confirm" value="yes" class="mt-0.5"><span>{{ row.job.confirm }}</span></label>
+      {% endif %}
+      {% if row.active %}
+      <a href="{% url 'ops:run' row.active.pk %}" class="rounded-md bg-flat-soft px-3 py-2 text-sm no-underline">{{ row.active.get_status_display }}…</a>
+      {% else %}
+      <button type="submit" class="rounded-md bg-accent px-3 py-2 text-sm text-paper">Run now</button>
+      {% endif %}
+    </form>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endfor %}
+{% endblock %}

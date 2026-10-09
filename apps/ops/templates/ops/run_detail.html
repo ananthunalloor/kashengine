@@ -1,0 +1,6 @@
+{% extends "ops/base.html" %}
+{% block title %}{{ run.label }} · Kash Engine{% endblock %}
+{% block ops %}
+<p class="text-sm"><a href="{% url 'ops:runs' %}">← All runs</a></p>
+{% include "ops/_run_panel.html" %}
+{% endblock %}

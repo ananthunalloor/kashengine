@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "apps.delivery",
     "apps.llm",
     "apps.markets",
+    "apps.ops",
     "apps.web",
 ]
 
@@ -58,6 +59,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.web.context.web_settings",
+                "apps.ops.context.ops_nav",
             ],
         },
     },
@@ -176,6 +178,13 @@ REPORT_NEWS_MIN_RELEVANCE = env.float("REPORT_NEWS_MIN_RELEVANCE", default=0.4)
 REPORT_IPO_ITEMS = env.int("REPORT_IPO_ITEMS", default=6)  # For each IPO list.
 REPORT_IPO_DAYS_AHEAD = env.int("REPORT_IPO_DAYS_AHEAD", default=7)
 
+# Ops pages (/ops/, staff only).
+LOG_DIR = BASE_DIR / "logs"
+LOG_FILE = LOG_DIR / "app.log"
+OPS_RETENTION_DAYS = env.int("OPS_RETENTION_DAYS", default=90)  # Task runs and login events.
+OPS_LOG_TAIL_BYTES = env.int("OPS_LOG_TAIL_BYTES", default=1_000_000)  # How much log to read.
+OPS_PAGE_SIZE = env.int("OPS_PAGE_SIZE", default=50)
+
 # All times are IST.
 CELERY_BEAT_SCHEDULE = {
     "fetch-news-feeds": {
@@ -225,6 +234,11 @@ CELERY_BEAT_SCHEDULE = {
         "task": "ipos.score",
         "schedule": crontab(minute=10, hour=7),
     },
+    # Deletes old task runs and login events (OPS_RETENTION_DAYS).
+    "prune-ops-history": {
+        "task": "ops.prune",
+        "schedule": crontab(minute=40, hour=3),
+    },
     # The daily report, then the retry for the chats that did not get it.
     "send-daily-report": {
         "task": "delivery.send_daily_report",
@@ -251,8 +265,16 @@ LOGGING: dict[str, Any] = {
     },
     "root": {"handlers": ["console"], "level": "INFO"},
     # These libraries write many debug lines. Dev sets the root level to DEBUG.
+    # httpx logs the full URL of each request. For Telegram the URL contains the bot token.
     "loggers": {
         name: {"level": "WARNING"}
-        for name in ("trafilatura", "htmldate", "courlan", "httpcore", "charset_normalizer")
+        for name in (
+            "trafilatura",
+            "htmldate",
+            "courlan",
+            "httpx",
+            "httpcore",
+            "charset_normalizer",
+        )
     },
 }

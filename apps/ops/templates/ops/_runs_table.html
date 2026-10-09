@@ -1,0 +1,26 @@
+{% load ops_extras %}
+{# Needs: runs (a list of TaskRun). #}
+<div class="overflow-x-auto">
+  <table class="w-full min-w-[34rem] text-sm">
+    <thead class="text-left text-muted"><tr>
+      <th scope="col" class="py-2 pr-4 font-normal">Job</th>
+      <th scope="col" class="py-2 pr-4 font-normal">Started</th>
+      <th scope="col" class="py-2 pr-4 font-normal">Time</th>
+      <th scope="col" class="py-2 pr-4 font-normal">By</th>
+      <th scope="col" class="py-2 font-normal">Result</th>
+    </tr></thead>
+    <tbody class="divide-y divide-rule border-y border-rule">
+      {% for run in runs %}
+      <tr>
+        <td class="py-2 pr-4"><a href="{% url 'ops:run' run.pk %}">{{ run.label }}</a></td>
+        <td class="num py-2 pr-4">{{ run.started_at|default:run.created_at|date:"j M, H:i:s" }}</td>
+        <td class="num py-2 pr-4">{{ run.duration_ms|duration }}</td>
+        <td class="py-2 pr-4">{% if run.trigger == "manual" %}{{ run.triggered_by|default:"admin" }}{% else %}<span class="text-muted">auto</span>{% endif %}</td>
+        <td class="py-2"><span class="rounded px-2 py-0.5 text-xs font-medium {{ run.status|status_class }}">{{ run.get_status_display }}</span></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="py-3 text-muted">No runs yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

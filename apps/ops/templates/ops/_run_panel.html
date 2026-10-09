@@ -1,0 +1,23 @@
+{% load ops_extras %}
+<div id="run-panel" class="mt-4"{% if run.is_active %} data-on-interval__duration.3s="@get('{% url 'ops:run' run.pk %}')"{% endif %}>
+  <h1 class="font-serif text-3xl font-semibold">{{ run.label }}</h1>
+  <p class="mt-2"><span class="rounded px-2 py-0.5 text-sm font-medium {{ run.status|status_class }}">{{ run.get_status_display }}</span>
+    {% if run.is_active %}<span class="ml-2 text-sm text-muted">This page refreshes by itself. <a href="{% url 'ops:run' run.pk %}">Refresh now</a></span>{% endif %}</p>
+  {% if run.status == "pending" %}<p class="mt-2 text-sm text-warn">The job waits for a worker. If this does not change, check that a worker is running (see Overview).</p>{% endif %}
+
+  <dl class="mt-6 grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+    <div><dt class="text-muted">Queued</dt><dd class="num">{{ run.created_at|date:"j M Y, H:i:s" }}</dd></div>
+    <div><dt class="text-muted">Started</dt><dd class="num">{{ run.started_at|date:"j M Y, H:i:s"|default:"–" }}</dd></div>
+    <div><dt class="text-muted">Finished</dt><dd class="num">{{ run.finished_at|date:"j M Y, H:i:s"|default:"–" }}</dd></div>
+    <div><dt class="text-muted">Time</dt><dd class="num">{{ run.duration_ms|duration }}</dd></div>
+    <div><dt class="text-muted">Started by</dt><dd>{% if run.trigger == "manual" %}{{ run.triggered_by|default:"an admin (deleted)" }}{% else %}Schedule or another task{% endif %}</dd></div>
+    <div><dt class="text-muted">Worker</dt><dd>{{ run.worker|default:"–" }}</dd></div>
+    <div><dt class="text-muted">Task</dt><dd><code>{{ run.task_name }}</code></dd></div>
+    <div><dt class="text-muted">Task ID</dt><dd class="break-all"><code>{{ run.task_id }}</code></dd></div>
+    {% if run.args %}<div><dt class="text-muted">Arguments</dt><dd><code>{{ run.args }}</code></dd></div>{% endif %}
+  </dl>
+
+  {% if run.error %}<h2 class="mt-8 text-xl font-semibold text-loss">Error</h2><pre class="report-text mt-2 overflow-x-auto rounded-md border border-rule bg-card p-4">{{ run.error }}</pre>{% endif %}
+  {% if run.result %}<h2 class="mt-8 text-xl font-semibold">Result</h2><pre class="report-text mt-2 overflow-x-auto rounded-md border border-rule bg-card p-4">{{ run.result }}</pre>{% endif %}
+  {% if run.output %}<h2 class="mt-8 text-xl font-semibold">Output</h2><pre class="report-text mt-2 overflow-x-auto rounded-md border border-rule bg-card p-4">{{ run.output }}</pre>{% endif %}
+</div>

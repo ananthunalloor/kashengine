@@ -1,0 +1,7 @@
+{% extends "ops/base.html" %}
+{% block title %}Ops · Kash Engine{% endblock %}
+{% block ops %}
+<h1 class="font-serif text-3xl font-semibold">System health</h1>
+<p class="mt-1 text-muted">The numbers on this page refresh every 15 seconds. <a href="?refresh=1">Check again now</a>.</p>
+{% include "ops/_health_panel.html" %}
+{% endblock %}

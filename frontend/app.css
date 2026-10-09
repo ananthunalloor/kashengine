@@ -3,6 +3,8 @@
 /* Where Tailwind looks for class names. */
 @source "../apps/web/templates";
 @source "../apps/web/templatetags";
+@source "../apps/ops/templates";
+@source "../apps/ops/templatetags";
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
@@ -22,6 +24,8 @@
   --color-gain-soft: var(--gain-soft);
   --color-loss-soft: var(--loss-soft);
   --color-flat-soft: var(--flat-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
 }
 
 :root {
@@ -36,6 +40,8 @@
   --gain-soft: #dcf0e5;
   --loss-soft: #f6dedb;
   --flat-soft: #e3e6f0;
+  --warn: #8a5a00;
+  --warn-soft: #fbecc8;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -51,6 +57,8 @@
     --gain-soft: #17382b;
     --loss-soft: #43201f;
     --flat-soft: #262d4a;
+    --warn: #f0c060;
+    --warn-soft: #3d2f0f;
   }
 }
 
@@ -66,6 +74,8 @@
   --gain-soft: #17382b;
   --loss-soft: #43201f;
   --flat-soft: #262d4a;
+  --warn: #f0c060;
+  --warn-soft: #3d2f0f;
 }
 
 @layer base {

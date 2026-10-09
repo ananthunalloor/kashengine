@@ -1,0 +1,34 @@
+{% extends "ops/base.html" %}
+{% block title %}Runs · Kash Engine{% endblock %}
+{% block ops %}
+<h1 class="font-serif text-3xl font-semibold">Runs</h1>
+<p class="mt-1 text-muted">Every run of a task or a command, with its time and its result. Old runs are deleted after {{ OPS_RETENTION_DAYS }} days.</p>
+
+<form method="get" class="mt-6 grid gap-3 sm:grid-cols-[1fr_auto_auto_auto]">
+  <div>
+    <label for="label" class="block text-sm font-medium">Job</label>
+    <select id="label" name="label" class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+      <option value="">All</option>
+      {% for name in labels %}<option value="{{ name }}" {% if filters.label == name %}selected{% endif %}>{{ name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="status" class="block text-sm font-medium">Result</label>
+    <select id="status" name="status" class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+      <option value="">All</option>
+      {% for value, label in statuses %}<option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="trigger" class="block text-sm font-medium">Started by</label>
+    <select id="trigger" name="trigger" class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+      <option value="">All</option>
+      {% for value, label in triggers %}<option value="{{ value }}" {% if filters.trigger == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="self-end"><button type="submit" class="rounded-md bg-accent px-3 py-2 text-paper">Apply</button></div>
+</form>
+
+<div class="mt-6">{% include "ops/_runs_table.html" with runs=page %}</div>
+{% include "ops/_pager.html" %}
+{% endblock %}

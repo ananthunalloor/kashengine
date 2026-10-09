@@ -1,7 +1,7 @@
 """Production settings."""
 
 from .base import *
-from .base import BASE_DIR, LOGGING, MIDDLEWARE, env
+from .base import LOG_DIR, LOG_FILE, LOGGING, MIDDLEWARE, env
 
 DEBUG = False
 
@@ -35,11 +35,10 @@ STORAGES = {
 }
 
 # Log to a file in prod. The folder is a Docker volume.
-LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 LOGGING["handlers"]["file"] = {
     "class": "logging.handlers.RotatingFileHandler",
-    "filename": LOG_DIR / "app.log",
+    "filename": LOG_FILE,
     "maxBytes": 10 * 1024 * 1024,
     "backupCount": 5,
     "formatter": "standard",

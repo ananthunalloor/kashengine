@@ -97,6 +97,12 @@ def test_caddyfile_has_the_security_settings():
         assert needle in text, f"The Caddyfile is missing: {needle}"
 
 
+def test_caddyfile_limits_the_ops_pages_like_the_admin_site():
+    text = (ROOT / "deploy" / "caddy" / "Caddyfile").read_text()
+    assert "path /admin /admin/* /ops /ops/*" in text
+    assert "not remote_ip {$ADMIN_ALLOWED_IPS" in text
+
+
 # The tests below read the merged files, as Docker Compose sees them. They need the docker CLI
 # (no Docker daemon). They are skipped when it is missing.
 

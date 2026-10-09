@@ -1,0 +1,53 @@
+{% extends "ops/base.html" %}
+{% load ops_extras %}
+{% block title %}Logins · Kash Engine{% endblock %}
+{% block ops %}
+<h1 class="font-serif text-3xl font-semibold">Logins</h1>
+<p class="mt-1 text-muted">Every login, logout, and failed login. The password of a failed login is never saved.</p>
+
+{% if failed_by_address %}
+<h2 class="mt-8 text-xl font-semibold">Failed logins by address (24 h)</h2>
+<ul class="mt-3 divide-y divide-rule border-y border-rule text-sm">
+  {% for row in failed_by_address %}
+  <li class="flex items-center justify-between gap-3 py-2"><a href="?q={{ row.ip_address|urlencode }}&kind=failed">{{ row.ip_address|default:"unknown address" }}</a><span class="rounded px-2 py-0.5 text-xs font-medium {% if row.suspicious %}bg-loss-soft text-loss{% else %}bg-flat-soft text-muted{% endif %}">{{ row.count }} failed</span></li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<form method="get" class="mt-8 grid gap-3 sm:grid-cols-[1fr_auto_auto_auto]">
+  <div>
+    <label for="q" class="block text-sm font-medium">User or address</label>
+    <input id="q" name="q" type="search" value="{{ filters.q }}" class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+  </div>
+  <div>
+    <label for="kind" class="block text-sm font-medium">Type</label>
+    <select id="kind" name="kind" class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+      <option value="">All</option>
+      {% for value, label in kinds %}<option value="{{ value }}" {% if filters.kind == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="hours" class="block text-sm font-medium">Time</label>
+    <select id="hours" name="hours" class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+      {% for value, label in hours_choices.items %}<option value="{{ value }}" {% if filters.hours == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="self-end"><button type="submit" class="rounded-md bg-accent px-3 py-2 text-paper">Apply</button></div>
+</form>
+
+<div class="mt-6 overflow-x-auto"><table class="w-full min-w-[34rem] text-sm">
+  <thead class="text-left text-muted"><tr><th scope="col" class="py-2 pr-4 font-normal">Time</th><th scope="col" class="py-2 pr-4 font-normal">Type</th><th scope="col" class="py-2 pr-4 font-normal">User</th><th scope="col" class="py-2 pr-4 font-normal">Address</th><th scope="col" class="py-2 font-normal">Browser</th></tr></thead>
+  <tbody class="divide-y divide-rule border-y border-rule">
+    {% for e in page %}
+    <tr>
+      <td class="num py-2 pr-4">{{ e.created_at|date:"j M, H:i:s" }}</td>
+      <td class="py-2 pr-4"><span class="rounded px-2 py-0.5 text-xs font-medium {{ e.kind|status_class }}">{{ e.get_kind_display }}</span></td>
+      <td class="py-2 pr-4">{% if e.user %}<a href="{% url 'ops:user' e.user.pk %}">{{ e.username }}</a>{% else %}{{ e.username|default:"–" }}{% endif %}</td>
+      <td class="num py-2 pr-4">{{ e.ip_address|default:"–" }}</td>
+      <td class="py-2" title="{{ e.user_agent }}">{{ e.user_agent|short_agent }}</td>
+    </tr>
+    {% empty %}<tr><td colspan="5" class="py-3 text-muted">No event matches.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% include "ops/_pager.html" %}
+{% endblock %}

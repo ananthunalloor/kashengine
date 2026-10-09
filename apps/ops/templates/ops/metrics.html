@@ -1,0 +1,92 @@
+{% extends "ops/base.html" %}
+{% load ops_extras web_extras %}
+{% block title %}Metrics · Kash Engine{% endblock %}
+{% block ops %}
+<h1 class="font-serif text-3xl font-semibold">Metrics</h1>
+<p class="mt-1 text-muted">Numbers from the host, the queue, the database, the jobs, and the data. They are read when you open the page.</p>
+
+<h2 class="mt-8 text-xl font-semibold">Host</h2>
+<dl class="mt-3 grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+  <div><dt class="text-muted">CPU cores</dt><dd class="num font-medium">{{ host.cpu_count|default:"–" }}</dd></div>
+  <div><dt class="text-muted">Load (1, 5, 15 min)</dt><dd class="num font-medium">{% if host.load %}{{ host.load.0 }}, {{ host.load.1 }}, {{ host.load.2 }}{% else %}–{% endif %}</dd></div>
+  <div><dt class="text-muted">Memory free</dt><dd class="num font-medium">{{ host.memory_available|bytes_text }} of {{ host.memory_total|bytes_text }}</dd></div>
+  <div><dt class="text-muted">Disk free</dt><dd class="num font-medium">{{ host.disk_free|bytes_text }} of {{ host.disk_total|bytes_text }}</dd></div>
+  <div><dt class="text-muted">Host up for</dt><dd class="num font-medium">{{ host.host_uptime_seconds|span }}</dd></div>
+  <div><dt class="text-muted">Web process up for</dt><dd class="num font-medium">{{ host.process_uptime_seconds|span }}</dd></div>
+  <div><dt class="text-muted">Python</dt><dd class="num font-medium">{{ host.python }}</dd></div>
+  <div><dt class="text-muted">Django</dt><dd class="num font-medium">{{ host.django }}</dd></div>
+</dl>
+
+<h2 class="mt-10 text-xl font-semibold">Queue and workers</h2>
+<div class="mt-3 grid gap-8 lg:grid-cols-2">
+  <div>
+    <h3 class="font-medium">Redis</h3>
+    {% if redis %}
+    <dl class="mt-2 grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
+      <div><dt class="text-muted">Waiting tasks</dt><dd class="num font-medium">{{ redis.queue_length }}</dd></div>
+      <div><dt class="text-muted">Memory</dt><dd class="num font-medium">{{ redis.memory }}</dd></div>
+      <div><dt class="text-muted">Clients</dt><dd class="num font-medium">{{ redis.clients }}</dd></div>
+      <div><dt class="text-muted">Up for</dt><dd class="num font-medium">{{ redis.uptime_seconds|span }}</dd></div>
+    </dl>
+    {% else %}<p class="mt-2 text-sm text-loss">Redis does not answer.</p>{% endif %}
+  </div>
+  <div>
+    <h3 class="font-medium">Workers</h3>
+    {% if workers %}
+    <table class="mt-2 w-full text-sm"><tbody class="divide-y divide-rule border-y border-rule">
+      {% for w in workers %}<tr><td class="py-1.5 pr-3">{{ w.name }}</td><td class="num py-1.5 pr-3">{{ w.active }} running</td><td class="num py-1.5">{{ w.reserved }} reserved</td></tr>{% endfor %}
+    </tbody></table>
+    {% else %}<p class="mt-2 text-sm text-loss">No worker answers.</p>{% endif %}
+  </div>
+</div>
+
+<h2 class="mt-10 text-xl font-semibold">Jobs (7 days)</h2>
+<div class="mt-3 overflow-x-auto">
+  <table class="w-full min-w-[34rem] text-sm">
+    <thead class="text-left text-muted"><tr>
+      <th scope="col" class="py-2 pr-4 font-normal">Job</th><th scope="col" class="py-2 pr-4 font-normal">Runs</th><th scope="col" class="py-2 pr-4 font-normal">Done</th><th scope="col" class="py-2 pr-4 font-normal">Failed</th><th scope="col" class="py-2 pr-4 font-normal">Average</th><th scope="col" class="py-2 pr-4 font-normal">Longest</th><th scope="col" class="py-2 font-normal">Last start</th>
+    </tr></thead>
+    <tbody class="divide-y divide-rule border-y border-rule">
+      {% for t in tasks %}
+      <tr>
+        <td class="py-2 pr-4"><a href="{% url 'ops:runs' %}?label={{ t.label|urlencode }}">{{ t.label }}</a></td>
+        <td class="num py-2 pr-4">{{ t.runs }}</td>
+        <td class="num py-2 pr-4">{% if t.success_rate is not None %}{{ t.success_rate }}%{% else %}–{% endif %}</td>
+        <td class="num py-2 pr-4 {% if t.failed %}text-loss{% endif %}">{{ t.failed }}</td>
+        <td class="num py-2 pr-4">{{ t.avg_ms|duration }}</td>
+        <td class="num py-2 pr-4">{{ t.max_ms|duration }}</td>
+        <td class="num py-2">{{ t.last_started|ago }}</td>
+      </tr>
+      {% empty %}<tr><td colspan="7" class="py-3 text-muted">No runs in the last 7 days.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2 class="mt-10 text-xl font-semibold">Last 14 days</h2>
+<div class="mt-3 grid gap-6 sm:grid-cols-2">
+  {% for chart in charts %}
+  <figure class="rounded-md border border-rule bg-card p-4">
+    <figcaption class="text-sm font-medium">{{ chart.title }}{% if chart.note %}<span class="font-normal text-muted"> · {{ chart.note }}</span>{% endif %}</figcaption>
+    <div class="mt-2">{% bar_chart chart.title chart.labels chart.values chart.alerts %}</div>
+    <p class="num mt-1 flex justify-between text-xs text-muted"><span>{{ chart.labels.0 }}</span><span>{{ chart.labels|last }}</span></p>
+  </figure>
+  {% endfor %}
+</div>
+
+<h2 class="mt-10 text-xl font-semibold">Sentiment scoring</h2>
+<dl class="mt-3 grid gap-x-8 gap-y-3 text-sm sm:grid-cols-4">
+  <div><dt class="text-muted">Model</dt><dd class="font-medium">{{ llm.model }}</dd></div>
+  <div><dt class="text-muted">Scored (24 h)</dt><dd class="num font-medium">{{ llm.scored_24h }}</dd></div>
+  <div><dt class="text-muted">Waiting</dt><dd class="num font-medium">{{ llm.waiting }}</dd></div>
+  <div><dt class="text-muted">Gave up</dt><dd class="num font-medium">{{ llm.gave_up }}</dd></div>
+</dl>
+
+<h2 class="mt-10 text-xl font-semibold">Prediction accuracy</h2>
+<p class="mt-2 text-sm">Right on <span class="num font-medium">{{ accuracy.correct }}</span> of <span class="num font-medium">{{ accuracy.total }}</span> days ({{ accuracy.accuracy|percent }}). A guess of the most common result would give {{ accuracy.baseline_accuracy|percent }}. {{ accuracy.pending }} wait for a result.</p>
+
+<h2 class="mt-10 text-xl font-semibold">Database</h2>
+<p class="mt-2 text-sm text-muted">Size: <span class="num font-medium text-ink">{{ db_size }}</span></p>
+<table class="mt-3 w-full max-w-md text-sm"><tbody class="divide-y divide-rule border-y border-rule">
+  {% for name, count in tables %}<tr><td class="py-1.5 pr-4">{{ name }}</td><td class="num py-1.5 text-right">{{ count }}</td></tr>{% endfor %}
+</tbody></table>
+{% endblock %}

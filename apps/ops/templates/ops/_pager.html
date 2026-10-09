@@ -1,0 +1,8 @@
+{# Needs: page (a Django page), qs (the filters as a query string). Plain links, no JavaScript. #}
+{% if page.paginator.num_pages > 1 %}
+<nav aria-label="Pages" class="mt-6 flex items-center justify-between text-sm">
+  <div>{% if page.has_previous %}<a href="?{% if qs %}{{ qs }}&{% endif %}page={{ page.previous_page_number }}">Newer</a>{% endif %}</div>
+  <p class="text-muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</p>
+  <div>{% if page.has_next %}<a href="?{% if qs %}{{ qs }}&{% endif %}page={{ page.next_page_number }}">Older</a>{% endif %}</div>
+</nav>
+{% endif %}

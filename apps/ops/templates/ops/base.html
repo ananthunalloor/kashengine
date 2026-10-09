@@ -1,0 +1,18 @@
+{% extends "web/base.html" %}
+{% load ops_extras %}
+{% block content %}
+<nav aria-label="Ops" class="-mt-2 mb-6 flex flex-wrap gap-x-4 gap-y-1 border-b border-rule pb-3 text-sm">
+  {% for key, label, url in ops_sections %}
+  <a href="{{ url }}" class="no-underline hover:text-ink {% if section == key %}font-semibold text-ink{% else %}text-muted{% endif %}"{% if section == key %} aria-current="page"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</nav>
+{% if messages %}
+<ul class="mb-6 space-y-2" role="status">
+  {% for message in messages %}
+  <li class="rounded-md px-3 py-2 text-sm {% if message.level_tag == 'error' %}bg-loss-soft text-loss{% elif message.level_tag == 'warning' %}bg-warn-soft text-warn{% else %}bg-gain-soft text-gain{% endif %}">{{ message }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% block ops %}{% endblock %}
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ datastar_src }}"></script>{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "ops/base.html" %}
+{% load ops_extras %}
+{% block title %}Users · Kash Engine{% endblock %}
+{% block ops %}
+<h1 class="font-serif text-3xl font-semibold">Users</h1>
+<p class="mt-1 text-muted">Everyone who can log in, with the last login and the open sessions.</p>
+
+<form method="get" class="mt-6 flex max-w-md gap-3">
+  <div class="grow">
+    <label for="q" class="block text-sm font-medium">Search</label>
+    <input id="q" name="q" type="search" value="{{ filters.q }}" placeholder="Name or email" class="mt-1 w-full rounded-md border border-rule bg-card px-3 py-2">
+  </div>
+  <div class="self-end"><button type="submit" class="rounded-md bg-accent px-3 py-2 text-paper">Search</button></div>
+</form>
+
+<div class="mt-6 overflow-x-auto">
+  <table class="w-full min-w-[36rem] text-sm">
+    <thead class="text-left text-muted"><tr>
+      <th scope="col" class="py-2 pr-4 font-normal">User</th><th scope="col" class="py-2 pr-4 font-normal">Role</th><th scope="col" class="py-2 pr-4 font-normal">Last login</th><th scope="col" class="py-2 pr-4 font-normal">Logins</th><th scope="col" class="py-2 pr-4 font-normal">Failed (24 h)</th><th scope="col" class="py-2 pr-4 font-normal">Sessions</th><th scope="col" class="py-2 font-normal">State</th>
+    </tr></thead>
+    <tbody class="divide-y divide-rule border-y border-rule">
+      {% for row in rows %}
+      <tr>
+        <td class="py-2 pr-4"><a href="{% url 'ops:user' row.user.pk %}">{{ row.user.username }}</a>{% if row.user.email %}<span class="block text-xs text-muted">{{ row.user.email }}</span>{% endif %}</td>
+        <td class="py-2 pr-4">{% if row.user.is_superuser %}Superuser{% elif row.user.is_staff %}Staff{% else %}User{% endif %}</td>
+        <td class="num py-2 pr-4">{% if row.user.last_login %}{{ row.user.last_login|date:"j M, H:i" }} <span class="text-muted">({{ row.user.last_login|ago }})</span>{% else %}never{% endif %}</td>
+        <td class="num py-2 pr-4">{{ row.user.login_count }}</td>
+        <td class="num py-2 pr-4 {% if row.user.failed_24h %}text-loss{% endif %}">{{ row.user.failed_24h }}</td>
+        <td class="num py-2 pr-4">{{ row.sessions }}</td>
+        <td class="py-2"><span class="rounded px-2 py-0.5 text-xs font-medium {% if row.user.is_active %}bg-gain-soft text-gain{% else %}bg-loss-soft text-loss{% endif %}">{% if row.user.is_active %}On{% else %}Off{% endif %}</span></td>
+      </tr>
+      {% empty %}<tr><td colspan="7" class="py-3 text-muted">No user matches.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
