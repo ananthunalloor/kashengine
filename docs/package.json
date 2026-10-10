@@ -1,0 +1,28 @@
+{
+  "name": "kashengine-docs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Self-hosted developer documentation for Kash Engine",
+  "scripts": {
+    "api:generate": "node scripts/run_api_reference.js",
+    "api:check": "node scripts/run_api_reference.js --check",
+    "prestart": "npm run api:generate",
+    "start": "docusaurus start --host 0.0.0.0",
+    "prebuild": "npm run api:generate",
+    "build": "docusaurus build",
+    "serve": "docusaurus serve --host 0.0.0.0 --port 8080",
+    "clear": "docusaurus clear"
+  },
+  "dependencies": {
+    "@docusaurus/core": "3.10.2",
+    "@docusaurus/preset-classic": "3.10.2",
+    "@mdx-js/react": "3.1.1",
+    "clsx": "2.1.1",
+    "prism-react-renderer": "2.4.1",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "engines": {
+    "node": ">=20.0"
+  }
+}

@@ -40,6 +40,14 @@ services:
 
   # The env_file for web, worker, and beat is set per environment.
   # Reverse proxy. Dev and prod use the same image, the same Caddyfile, and the same hardening.
+  # Static Docusaurus site. Caddy exposes it under /docs/; do not publish a host port.
+  docs:
+    build:
+      context: .
+      dockerfile: docs/Dockerfile
+      args:
+        DOCS_URL: "https://${SITE_ADDRESS:-localhost}"
+    restart: unless-stopped
   caddy:
     image: caddy:2-alpine
     volumes:
@@ -65,6 +73,8 @@ services:
       web:
         condition: service_healthy
 
+      docs:
+        condition: service_healthy
   # No service in this file publishes a port. Dev publishes ports on 127.0.0.1 in
   # docker-compose.override.yml. Prod publishes only Caddy (80 and 443) in docker-compose.prod.yml.
   web:

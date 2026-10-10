@@ -235,3 +235,7 @@ Code standards:
 - Fix the cause of a ruff or ty message. Use a `# noqa: CODE` or `# ty: ignore[rule]` comment only
   when the code is correct, and always give the reason after it.
 - ruff and ty must report no errors. The commit hooks run both.
+
+## Developer documentation
+
+The self-hosted Docusaurus site is available at `/docs/` after you start the stack. Its source content is in [`docs/docs/`](docs/docs/index.md).

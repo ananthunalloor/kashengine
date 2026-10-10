@@ -57,6 +57,13 @@ services:
       - edge
       - proxy
 
+  docs:
+    <<: *hardened
+    read_only: true
+    tmpfs:
+      - /tmp
+    networks:
+      - proxy
   web:
     <<: *app-runtime
     command: >

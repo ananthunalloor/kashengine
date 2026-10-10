@@ -12,3 +12,9 @@ media/
 *.patch
 frontend/node_modules
 deploy/
+
+# Docusaurus local build artifacts
+docs/node_modules/
+docs/build/
+docs/.docusaurus/
+docs/docs/reference/generated/

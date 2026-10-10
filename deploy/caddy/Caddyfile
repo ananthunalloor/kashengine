@@ -31,7 +31,14 @@
 	# Django already sends HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy and
 	# Cross-Origin-Opener-Policy (see config/settings/prod.py). Caddy adds the headers that
 	# Django does not send.
-	header {
+	@docs_path path /docs /docs/*
+	header @docs_path {
+		{$CSP_HEADER:Content-Security-Policy} "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		Cross-Origin-Resource-Policy same-origin
+	}
+	@application_path not path /docs /docs/*
+	header @application_path {
 		{$CSP_HEADER:Content-Security-Policy} "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
 		Cross-Origin-Resource-Policy same-origin
@@ -56,8 +63,18 @@
 
 	# Caddy replaces any X-Forwarded-* header from the client, so the app can trust
 	# X-Forwarded-Proto (SECURE_PROXY_SSL_HEADER).
-	reverse_proxy web:8000 {
-		header_down -Server
+	# Redirect the prefix root so Docusaurus assets stay beneath /docs/.
+	@docs_root path /docs
+	redir @docs_root /docs/ 308
+	handle_path /docs/* {
+		reverse_proxy docs:8080 {
+			header_down -Server
+		}
+	}
+	handle {
+		reverse_proxy web:8000 {
+			header_down -Server
+		}
 	}
 }
 
