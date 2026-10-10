@@ -1,0 +1,9 @@
+{% extends "web/base.html" %}
+{% block title %}Not on your account · Kash Engine{% endblock %}
+{% block content %}
+<section class="rounded-lg border border-rule bg-card p-6 sm:p-8">
+  <h1 class="font-serif text-3xl font-semibold">Not on your account</h1>
+  <p class="mt-2 max-w-prose text-muted">{{ feature.label }} is not on for your account. See the <a href="{% url 'web:account' %}">Account</a> page to learn what you have, or ask the admin.</p>
+  <p class="mt-4 text-sm"><a href="{% url 'web:dashboard' %}">Back to Today</a></p>
+</section>
+{% endblock %}

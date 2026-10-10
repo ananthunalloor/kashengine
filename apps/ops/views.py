@@ -12,7 +12,7 @@ from apps.markets.evaluation import accuracy_stats
 from apps.siteconfig import conf
 from apps.web.datastar import is_datastar, querystring, read_filters, read_page, signals_json
 
-from . import audit, configview, health, jobs, logs, metrics, schedule, users
+from . import audit, configview, health, jobs, logs, metrics, schedule, users, views_access
 from .models import AuditEvent, LoginEvent, TaskRun
 from .permissions import staff_required, superuser_post_required
 
@@ -183,8 +183,9 @@ def user_list(request: HttpRequest) -> HttpResponse:
     sessions: dict[int, int] = {}
     for session in users.active_sessions():
         sessions[session.user_id] = sessions.get(session.user_id, 0) + 1
+    now = timezone.now()
     rows = [
-        {"user": user, "sessions": sessions.get(user.pk, 0)}
+        {"user": user, "sessions": sessions.get(user.pk, 0), **views_access.summary(user, now)}
         for user in users.users_with_stats(filters["q"])
     ]
     context = {"rows": rows, "filters": filters, "section": "users"}
@@ -207,6 +208,7 @@ def user_detail(request: HttpRequest, pk: int) -> HttpResponse:
         "ops_actions": AuditEvent.objects.filter(actor=user)[:15],
         "runs": TaskRun.objects.filter(triggered_by=user)[:10],
         "section": "users",
+        **views_access.panel(user),
     }
     return render(request, "ops/user_detail.html", context)
 

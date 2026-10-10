@@ -149,7 +149,8 @@ The Ops pages are for admins. They are at `/ops/`. A user with the "staff" flag 
 | Runs | The history of all runs (automatic and manual) with the status, the time, the worker, the result, the error, and the text that a command printed. |
 | Logs | The end of the log file, newest first. Filter by level, logger, and text. Tokens and passwords are hidden. |
 | Metrics | Charts for the last 14 days, the size of the tables and the database, host and Redis numbers, workers, the scoring queue, and the prediction accuracy. |
-| Users | All users with their last login, login count, failed logins, and active sessions. A superuser can end sessions and turn users off or on. |
+| Users | All users with their last login, login count, failed logins, active sessions, subscription, and removed features. A superuser can end sessions, turn users off or on, remove features, and give or end a subscription. |
+| Subscriptions | Every user with the state of the trial or subscription (trial, active, ended, none, staff). Filter by state. |
 | Logins | Logins, logouts, and failed logins with the address and the browser. It marks addresses with many failed logins. |
 | Audit | What admins did on the Ops pages. |
 | Settings | Change the settings by group (Telegram, report, LLM, news, sentiment, markets, IPOs, companies, login security, web). Superuser only. See "Settings on the dashboard". |
@@ -167,6 +168,20 @@ How it works:
 - The `httpx` logger is now at WARNING level. At INFO level it wrote the full Telegram URL, which contains the bot token.
 - The IP address of a login comes from `X-Forwarded-For`. Caddy sets this header, and the web container has no other way in.
 - `ADMIN_ALLOWED_IPS` limits `/ops/` in the same way as `/admin/`.
+
+## Features and subscriptions
+
+Each part of the web app is a **feature**: Daily reports, News, IPOs, Markets and outlook, Companies, and Delivery. The list is in `apps/access/features.py`.
+
+- **Default:** every user has all features.
+- **Remove a feature:** an admin unticks it for one user on Ops > Users > (the user). The menu item, the page, and the matching part of the Today page disappear for that user. A removed feature gives a "Not on your account" page (403). The change works at once.
+- **Subscription:** a new user gets a trial (default 7 days). An admin can give a paid period, a gift, or a new trial (days to add, or an end date), and can end it at once. Days are added to the current end, or to today if it ended. Each change goes in the history of the user and in the audit trail.
+- **The lock rule:** the setting "Require a subscription" (Ops > Settings > Subscription) is **off by default**. While it is off, nobody is locked out, and the trial is only recorded. When it is on, a user with no active trial or subscription sees only the Account page and can log out. Staff and superusers are never blocked.
+- **Existing users:** the migration gives each user from before this feature a gift that does not end, so turning the rule on does not lock them out. An admin can end or change it per user.
+- **Settings:** the trial days, the length of one paid period, the price, the currency, the notice days, and the text for a locked user are all on Ops > Settings > Subscription. The price is shown on the Account page only. **There is no payment step yet.** An admin gives the subscription by hand.
+- **Account page:** `/account/` shows the subscription, the end date, and which features the user has. Every user can open it, also after the subscription ended. A notice shows in every page when the end is near.
+- **Safe by design:** the check is in a middleware that looks at the URL name. A test fails if a new web page has no rule (`apps/access/tests/test_coverage.py`). A page that is not a feature must go on the open list on purpose.
+- **Order of the rules:** staff pass. Then the subscription rule. Then the removed features.
 
 ## Settings on the dashboard
 

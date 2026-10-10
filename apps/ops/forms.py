@@ -4,6 +4,7 @@ from typing import ClassVar, cast
 
 from django import forms
 
+from apps.access.models import Subscription
 from apps.markets.models import Instrument
 from apps.news.models import NewsFeed
 from apps.siteconfig import registry
@@ -181,4 +182,40 @@ class InstrumentForm(forms.ModelForm):
             raise forms.ValidationError("The target index must stay the target.")
         if existing == Instrument.Kind.TARGET and not cleaned.get("enabled", True):
             raise forms.ValidationError("The target index cannot be turned off.")
+        return cleaned
+
+
+class SubscriptionGiveForm(forms.Form):
+    """Give or change the subscription of a user. Use the days or an end date, not both."""
+
+    kind = forms.ChoiceField(
+        choices=Subscription.Kind.choices,
+        initial=Subscription.Kind.PAID,
+        widget=forms.Select(attrs={"class": INPUT}),
+    )
+    days = forms.IntegerField(
+        required=False,
+        min_value=1,
+        max_value=3650,
+        label="Days to add",
+        widget=forms.NumberInput(attrs={"class": INPUT, "inputmode": "numeric"}),
+    )
+    ends_on = forms.DateField(
+        required=False,
+        label="Or: ends at the end of",
+        widget=forms.DateInput(attrs={"class": INPUT, "type": "date"}),
+    )
+    note = forms.CharField(
+        required=False,
+        max_length=200,
+        widget=forms.TextInput(attrs={"class": INPUT, "placeholder": "For example: paid by UPI"}),
+    )
+
+    def clean(self) -> dict:
+        """Exactly one of the days and the end date."""
+        cleaned = super().clean() or {}
+        has_days = cleaned.get("days") is not None
+        has_date = cleaned.get("ends_on") is not None
+        if has_days == has_date and not self.errors:
+            raise forms.ValidationError("Enter the number of days, or an end date. Not both.")
         return cleaned

@@ -2,7 +2,7 @@
 
 from django.urls import path
 
-from . import views, views_settings
+from . import views, views_access, views_settings
 
 app_name = "ops"
 
@@ -18,6 +18,18 @@ urlpatterns = [
     path("users/<int:pk>/", views.user_detail, name="user"),
     path("users/<int:pk>/sessions/end/", views.user_end_sessions, name="user_end_sessions"),
     path("users/<int:pk>/active/", views.user_set_active, name="user_set_active"),
+    path("users/<int:pk>/access/", views_access.user_access_save, name="user_access"),
+    path(
+        "users/<int:pk>/subscription/give/",
+        views_access.user_subscription_give,
+        name="user_subscription_give",
+    ),
+    path(
+        "users/<int:pk>/subscription/end/",
+        views_access.user_subscription_end,
+        name="user_subscription_end",
+    ),
+    path("subscriptions/", views_access.subscription_list, name="subscriptions"),
     path("logins/", views.login_list, name="logins"),
     path("logins/unlock/", views.lockout_unlock, name="lockout_unlock"),
     path("audit/", views.audit_list, name="audit"),

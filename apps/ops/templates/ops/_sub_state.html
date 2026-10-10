@@ -1,0 +1,6 @@
+{# One cell: the state of a subscription. Needs `row` with state, sub, days_left. #}
+{% if row.state == "staff" %}<span class="text-muted">Staff</span>
+{% elif row.state == "trial" %}<span class="rounded bg-warn-soft px-2 py-0.5 text-xs font-medium text-warn">Trial</span> <span class="num text-muted">{{ row.days_left }} d</span>
+{% elif row.state == "active" %}<span class="rounded bg-gain-soft px-2 py-0.5 text-xs font-medium text-gain">{{ row.sub.get_kind_display }}</span> <span class="num text-muted">{% if row.days_left is None %}no end{% else %}{{ row.days_left }} d{% endif %}</span>
+{% elif row.state == "expired" %}<span class="rounded bg-loss-soft px-2 py-0.5 text-xs font-medium text-loss">Ended</span> <span class="num text-muted">{{ row.sub.ends_at|date:"j M" }}</span>
+{% else %}<span class="text-muted">None</span>{% endif %}

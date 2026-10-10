@@ -48,9 +48,13 @@ def users_with_stats(search: str = "") -> QuerySet:
         .annotate(n=Count("id"))
         .values("n")
     )
-    users = user_model.objects.annotate(
-        login_count=Count("login_events", filter=Q(login_events__kind=LoginEvent.Kind.LOGIN)),
-        failed_24h=Coalesce(Subquery(failed, output_field=IntegerField()), 0),
+    users = (
+        user_model.objects.select_related("subscription")
+        .prefetch_related("feature_blocks")
+        .annotate(
+            login_count=Count("login_events", filter=Q(login_events__kind=LoginEvent.Kind.LOGIN)),
+            failed_24h=Coalesce(Subquery(failed, output_field=IntegerField()), 0),
+        )
     )
     if search.strip():
         term = search.strip()[:100]

@@ -3,7 +3,15 @@
 {% block title %}Today · Kash Engine{% endblock %}
 {% block content %}
 
+{% if not features %}
+<section class="rounded-lg border border-rule bg-card p-6 sm:p-8">
+  <h1 class="font-serif text-3xl font-semibold">Welcome</h1>
+  <p class="mt-2 max-w-prose text-muted">No feature is on for your account. See the <a href="{% url 'web:account' %}">Account</a> page.</p>
+</section>
+{% endif %}
+
 {# The outlook. This is the one big element of the page. #}
+{% if "markets" in features %}
 {% if outlook %}
 {% with p=outlook.prediction %}
 <section aria-labelledby="outlook-title" class="rounded-lg border border-rule bg-card p-6 sm:p-8">
@@ -66,8 +74,10 @@
   {% else %}There are no results yet to check the prediction against.{% endif %}
   <a href="{% url 'web:markets' %}">See the history</a>.
 </p>
+{% endif %}
 
 <div class="mt-10 grid gap-10 md:grid-cols-2">
+  {% if "news" in features %}
   <section aria-labelledby="news-title">
     <h2 id="news-title" class="font-serif text-2xl font-semibold">Stories that move the market</h2>
     <p class="mt-1 text-sm text-muted">The last 36 hours. {{ news.articles }} scored article{{ news.articles|pluralize }}, {{ news.positive }} good and {{ news.negative }} bad.</p>
@@ -85,7 +95,9 @@
     {% endif %}
     <p class="mt-3 text-sm"><a href="{% url 'web:news' %}">All news</a></p>
   </section>
+  {% endif %}
 
+  {% if "ipos" in features %}
   <section aria-labelledby="ipo-title">
     <h2 id="ipo-title" class="font-serif text-2xl font-semibold">IPOs</h2>
     {% if ipos.likely_good %}
@@ -105,16 +117,17 @@
     {% endif %}
     <p class="mt-3 text-sm"><a href="{% url 'web:ipos' %}">All IPOs</a></p>
   </section>
+  {% endif %}
 </div>
 
-{% if quotes %}
+{% if quotes and "markets" in features %}
 <section class="mt-10" aria-labelledby="quotes-title">
   <h2 id="quotes-title" class="font-serif text-2xl font-semibold">Last close</h2>
   {% include "web/_quotes.html" %}
 </section>
 {% endif %}
 
-{% if report %}
+{% if report and "reports" in features %}
 <p class="mt-10 text-sm text-muted">The latest report is from {{ report.date|date:"j F Y" }}. <a href="{% url 'web:report' report.date %}">Read it</a>.</p>
 {% endif %}
 {% endblock %}

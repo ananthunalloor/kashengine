@@ -37,4 +37,5 @@ urlpatterns = [
     path("markets/", views.markets, name="markets"),
     path("companies/", views.company_list, name="companies"),
     path("delivery/", views.delivery, name="delivery"),
+    path("account/", views.account, name="account"),
 ]

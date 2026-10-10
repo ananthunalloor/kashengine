@@ -1,0 +1,31 @@
+{% extends "ops/base.html" %}
+{% block title %}Subscriptions · Kash Engine{% endblock %}
+{% block ops %}
+<h1 class="font-serif text-3xl font-semibold">Subscriptions</h1>
+<p class="mt-1 max-w-prose text-muted">Every user with the state of the trial or subscription. To give, change, or end one, open the user. Staff are never blocked. The lock rule is in Settings > Subscription.</p>
+
+<nav aria-label="Filter" class="mt-6 flex flex-wrap gap-2 text-sm">
+  <a href="{% url 'ops:subscriptions' %}" class="rounded-md border px-3 py-1.5 no-underline {% if not chosen %}border-accent text-ink{% else %}border-rule text-muted{% endif %}">All</a>
+  {% for key, label, count in counts %}
+  <a href="?state={{ key }}" class="rounded-md border px-3 py-1.5 no-underline {% if chosen == key %}border-accent text-ink{% else %}border-rule text-muted{% endif %}">{{ label }} <span class="num">{{ count }}</span></a>
+  {% endfor %}
+</nav>
+
+<div class="mt-6 overflow-x-auto">
+  <table class="w-full min-w-[36rem] text-sm">
+    <thead class="text-left text-muted"><tr>
+      <th scope="col" class="py-2 pr-4 font-normal">User</th><th scope="col" class="py-2 pr-4 font-normal">Subscription</th><th scope="col" class="py-2 pr-4 font-normal">Ends</th><th scope="col" class="py-2 font-normal">Features removed</th>
+    </tr></thead>
+    <tbody class="divide-y divide-rule border-y border-rule">
+      {% for row in rows %}
+      <tr>
+        <td class="py-2 pr-4"><a href="{% url 'ops:user' row.user.pk %}">{{ row.user.username }}</a></td>
+        <td class="py-2 pr-4">{% include "ops/_sub_state.html" %}</td>
+        <td class="num py-2 pr-4">{% if row.sub and row.sub.ends_at %}{{ row.sub.ends_at|date:"j M Y, H:i" }}{% else %}–{% endif %}</td>
+        <td class="num py-2">{{ row.removed }}</td>
+      </tr>
+      {% empty %}<tr><td colspan="4" class="py-3 text-muted">No user in this state.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

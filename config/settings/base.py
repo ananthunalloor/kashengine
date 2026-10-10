@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     "axes",
     "config.beat.BeatConfig",
     "apps.siteconfig",
+    "apps.access",
     "apps.news",
     "apps.companies",
     "apps.ipos",
@@ -44,6 +45,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     # Every page needs a login, unless the view uses @login_not_required (for example /health/).
     "django.contrib.auth.middleware.LoginRequiredMiddleware",
+    # After the login check: the feature and subscription rules of the web pages.
+    "apps.access.middleware.AccessMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Axes must be the last one. It shows the page for a locked-out address.
@@ -94,6 +97,19 @@ DATASTAR_SRC = env(
     default="https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.4/bundles/datastar.js",
 )
 WEB_PAGE_SIZE = env.int("WEB_PAGE_SIZE", default=25)
+
+# Subscriptions. These are the first values. An admin changes them on Ops > Settings.
+# While SUBSCRIPTIONS_REQUIRED is false, nobody is locked out. The features of each user are
+# always checked.
+SUBSCRIPTIONS_REQUIRED = env.bool("SUBSCRIPTIONS_REQUIRED", default=False)
+SUBSCRIPTION_TRIAL_DAYS = env.int("SUBSCRIPTION_TRIAL_DAYS", default=7)  # A new user's trial.
+SUBSCRIPTION_PERIOD_DAYS = env.int("SUBSCRIPTION_PERIOD_DAYS", default=30)  # One paid month.
+SUBSCRIPTION_PRICE = env.float("SUBSCRIPTION_PRICE", default=0.0)  # Per month. 0 hides it.
+SUBSCRIPTION_CURRENCY = env("SUBSCRIPTION_CURRENCY", default="INR")
+SUBSCRIPTION_NOTICE_DAYS = env.int("SUBSCRIPTION_NOTICE_DAYS", default=3)
+SUBSCRIPTION_CONTACT_TEXT = env(
+    "SUBSCRIPTION_CONTACT_TEXT", default="Ask the admin to turn on your subscription."
+)
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"

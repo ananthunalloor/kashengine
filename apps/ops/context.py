@@ -9,6 +9,7 @@ SECTIONS = (
     ("logs", "Logs", "ops:logs"),
     ("metrics", "Metrics", "ops:metrics"),
     ("users", "Users", "ops:users"),
+    ("subscriptions", "Subscriptions", "ops:subscriptions"),
     ("logins", "Logins", "ops:logins"),
     ("audit", "Audit", "ops:audit"),
     ("settings", "Settings", "ops:settings"),

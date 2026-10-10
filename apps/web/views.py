@@ -7,6 +7,8 @@ from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 
+from apps.access import features
+from apps.access.middleware import access_for
 from apps.delivery.models import DeliveryLog
 from apps.delivery.service import configured_chat_ids
 from apps.ipos.models import Ipo
@@ -151,3 +153,32 @@ def delivery(request):
         "today": today_ist(),
     }
     return render(request, "web/delivery.html", context)
+
+
+def account(request):
+    """The account page: the subscription, and which features the user has.
+
+    Every signed-in user can open it, also after the subscription has ended.
+    """
+    access = access_for(request)
+    sub = access.subscription
+    rows = [
+        {
+            "feature": feature,
+            "allowed": access.can(feature.key),
+            "removed": feature.key in access.blocked,
+        }
+        for feature in features.FEATURES
+    ]
+    context = {
+        "access": access,
+        "sub": sub,
+        "days_left": sub.days_left(access.now) if sub else None,
+        "rows": rows,
+        "required": conf.SUBSCRIPTIONS_REQUIRED,
+        "price": conf.SUBSCRIPTION_PRICE,
+        "currency": conf.SUBSCRIPTION_CURRENCY,
+        "period_days": conf.SUBSCRIPTION_PERIOD_DAYS,
+        "contact": conf.SUBSCRIPTION_CONTACT_TEXT,
+    }
+    return render(request, "web/account.html", context)
