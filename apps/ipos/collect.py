@@ -6,13 +6,13 @@ from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
-from django.conf import settings
 from django.utils import timezone
 
 from apps.companies.matching import normalize_name
 from apps.markets.trading import today_ist
 from apps.news.client import make_client
 from apps.news.scraper import PoliteFetcher
+from apps.siteconfig import conf
 
 from .models import Ipo
 from .sources import MAINBOARD, SME, IpoRecord, IpoSourceError, fetch_records, parse_date
@@ -112,7 +112,7 @@ def save_record(record: IpoRecord, today: date | None = None) -> str:
     ipo = find_existing(record)
 
     if ipo is None:
-        oldest = today - timedelta(days=settings.IPO_KEEP_DAYS)
+        oldest = today - timedelta(days=conf.IPO_KEEP_DAYS)
         if record.open_date and record.open_date < oldest:
             return "skipped"  # An old IPO. We have no score for it, so it is no use to us.
         ipo = Ipo(name=record.name, category=record.category or MAINBOARD)
@@ -187,15 +187,15 @@ def collect_ipos(
     counts = {"created": 0, "updated": 0, "unchanged": 0, "skipped": 0}
     failed: dict[str, str] = {}
     today = today or today_ist()
-    urls = expand_urls(settings.IPO_SOURCE_URLS if urls is None else urls, today)
+    urls = expand_urls(conf.IPO_SOURCE_URLS if urls is None else urls, today)
 
     client = None
     if fetcher is None:
         client = make_client()
         fetcher = PoliteFetcher(
             client,
-            delay=settings.NEWS_SCRAPE_DELAY_SECONDS,
-            user_agent=settings.NEWS_USER_AGENT,
+            delay=conf.NEWS_SCRAPE_DELAY_SECONDS,
+            user_agent=conf.NEWS_USER_AGENT,
         )
     try:
         for url in urls:

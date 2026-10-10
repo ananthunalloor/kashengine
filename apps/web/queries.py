@@ -8,7 +8,7 @@ from django.utils import timezone
 from apps.companies.models import Company
 from apps.ipos.models import Ipo
 from apps.markets.evaluation import accuracy_stats
-from apps.markets.instruments import ALL_INSTRUMENTS
+from apps.markets.instruments import all_instruments
 from apps.markets.models import IndexQuote, Prediction
 from apps.markets.trading import today_ist
 from apps.news.models import NewsArticle
@@ -40,7 +40,7 @@ HOURS_BEFORE_DAYS = 48  # An age below this is shown in hours. A larger age is s
 def latest_quotes() -> list[dict]:
     """The newest saved close of each instrument. Instruments without data are left out."""
     rows = []
-    for instrument in ALL_INSTRUMENTS:
+    for instrument in all_instruments():
         quote = IndexQuote.objects.filter(symbol=instrument.symbol).order_by("-day").first()
         if quote is not None:
             rows.append(

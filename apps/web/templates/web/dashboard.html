@@ -54,7 +54,7 @@
 {% else %}
 <section class="rounded-lg border border-rule bg-card p-6 sm:p-8">
   <h1 class="font-serif text-3xl font-semibold">No outlook yet</h1>
-  <p class="mt-2 max-w-prose text-muted">The prediction is made each morning before the report. To make one now, run <code>python manage.py predict_market</code>.</p>
+  <p class="mt-2 max-w-prose text-muted">The prediction is made each morning before the report.{% if request.user.is_staff %} Admins: to make one now, use the <a href="{% url 'ops:jobs' %}">Jobs</a> page.{% endif %}</p>
 </section>
 {% endif %}
 

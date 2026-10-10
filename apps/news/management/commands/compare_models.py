@@ -1,10 +1,10 @@
 """Management command that compares LLM models on labelled headlines."""
 
-from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.llm.client import LLMClient, LLMUnavailableError
 from apps.news.compare import ModelReport, evaluate_model, label_for, load_items
+from apps.siteconfig import conf
 
 
 def _percent(value: float | None) -> str:
@@ -28,7 +28,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Score the items with each model and print a table."""
-        names = options["models"] or [settings.LLM_MODEL]
+        names = options["models"] or [conf.LLM_MODEL]
         try:
             items = load_items(options["file"])
         except (OSError, ValueError) as exc:

@@ -2,9 +2,8 @@
 
 import logging
 
-from django.conf import settings
-
 from apps.reports.models import Report
+from apps.siteconfig import conf
 
 from .models import DeliveryLog
 from .telegram import TelegramClient, TelegramError, redact
@@ -20,7 +19,7 @@ class DeliveryNotConfiguredError(Exception):
 
 def configured_chat_ids() -> list[str]:
     """Return the chat IDs from the settings, without blank values."""
-    return [chat_id.strip() for chat_id in settings.TELEGRAM_CHAT_IDS if chat_id.strip()]
+    return [chat_id.strip() for chat_id in conf.TELEGRAM_CHAT_IDS if chat_id.strip()]
 
 
 def deliver_report(
@@ -40,7 +39,7 @@ def deliver_report(
     be shorter than one message, so this should be rare.
     """
     chat_ids = configured_chat_ids() if chat_ids is None else chat_ids
-    if not settings.TELEGRAM_BOT_TOKEN and client is None:
+    if not conf.TELEGRAM_BOT_TOKEN and client is None:
         raise DeliveryNotConfiguredError("TELEGRAM_BOT_TOKEN is not set.")
     if not chat_ids:
         raise DeliveryNotConfiguredError("TELEGRAM_CHAT_IDS is empty.")

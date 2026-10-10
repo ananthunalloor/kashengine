@@ -1,0 +1,9 @@
+{% extends "web/base.html" %}
+{% block title %}Too many tries · Kash Engine{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-md">
+  <h1 class="font-serif text-3xl font-semibold">Too many tries</h1>
+  <p class="mt-3 text-muted">There were too many failed logins from this address. {% if minutes %}Try again in about {{ minutes }} minute{{ minutes|pluralize }}.{% else %}Ask an admin to unlock the address.{% endif %}</p>
+  <p class="mt-4"><a href="{% url 'web:login' %}">Back to the login</a></p>
+</div>
+{% endblock %}

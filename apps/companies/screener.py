@@ -19,19 +19,18 @@ from datetime import timedelta
 from urllib.parse import quote
 
 import httpx
-from django.conf import settings
 from django.db.models import F, Q
 from django.utils import timezone
 from lxml import html as lxml_html
 
 from apps.news.client import make_client
 from apps.news.scraper import PoliteFetcher, RobotsDisallowedError
+from apps.siteconfig import conf
 
 from .models import Company
 
 logger = logging.getLogger(__name__)
 
-SCREENER_BASE = "https://www.screener.in"
 # Table name in our data -> the id of the section on the Screener.in page.
 TABLE_SECTIONS = {
     "quarters": "quarters",
@@ -155,7 +154,7 @@ def parse_company_page(page: str) -> dict:
 def fetch_company_page(symbol: str, fetcher: PoliteFetcher) -> tuple[str, str]:
     """Download the page of a company. Try the consolidated view first. Return (url, html)."""
     for suffix in ("consolidated/", ""):
-        url = f"{SCREENER_BASE}/company/{quote(symbol, safe='')}/{suffix}"
+        url = f"{conf.SCREENER_BASE_URL.rstrip('/')}/company/{quote(symbol, safe='')}/{suffix}"
         response = fetcher.get(url)  # Can raise RobotsDisallowedError or httpx.HTTPError.
         if response.status_code == HTTP_NOT_FOUND:
             continue
@@ -193,7 +192,7 @@ def _mark_checked(company: Company, status: str) -> None:
 
 def stale_companies(max_age_days: int | None = None):
     """Companies with no data, or data older than max_age_days. Never fetched first."""
-    days = settings.SCREENER_REFRESH_DAYS if max_age_days is None else max_age_days
+    days = conf.SCREENER_REFRESH_DAYS if max_age_days is None else max_age_days
     cutoff = timezone.now() - timedelta(days=days)
     return Company.objects.filter(
         Q(last_updated__isnull=True) | Q(last_updated__lt=cutoff)
@@ -214,7 +213,7 @@ def refresh_stale(
     force: refresh all companies (oldest data first), even if their data is new.
     """
     stats = {"refreshed": 0, "not_found": 0, "blocked": 0, "failed": 0, "stopped_early": False}
-    if not settings.SCREENER_ENABLED:
+    if not conf.SCREENER_ENABLED:
         return {**stats, "disabled": True}
 
     if symbols:
@@ -223,14 +222,14 @@ def refresh_stale(
         companies = Company.objects.order_by(F("last_updated").asc(nulls_first=True), "id")
     else:
         companies = stale_companies()
-    companies = companies[: limit or settings.SCREENER_BATCH_SIZE]
+    companies = companies[: limit or conf.SCREENER_BATCH_SIZE]
 
     own_client = client is None
     client = client or make_client()
     fetcher = PoliteFetcher(
         client,
-        delay=settings.SCREENER_DELAY_SECONDS,
-        user_agent=settings.NEWS_USER_AGENT,
+        delay=conf.SCREENER_DELAY_SECONDS,
+        user_agent=conf.NEWS_USER_AGENT,
         sleep=sleep,
         clock=clock,
     )

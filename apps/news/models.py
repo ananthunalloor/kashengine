@@ -59,3 +59,24 @@ class NewsArticle(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class NewsFeed(models.Model):
+    """One RSS feed. An admin can add, change, stop, or delete feeds on the Ops pages."""
+
+    source = models.CharField(max_length=100, help_text="The source name, for example Mint.")
+    name = models.CharField(max_length=100, help_text="The name of the feed, for example Markets.")
+    url = models.URLField(max_length=1000, unique=True)
+    enabled = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_fetched_at = models.DateTimeField(null=True, blank=True)
+    last_new_count = models.PositiveIntegerField(
+        default=0, help_text="New articles at the last run."
+    )
+    last_error = models.TextField(blank=True, help_text="Empty if the last run worked.")
+
+    class Meta:
+        ordering: ClassVar[list[str]] = ["source", "name"]
+
+    def __str__(self) -> str:
+        return f"{self.source} - {self.name}"

@@ -1,6 +1,7 @@
 """Tests for the Celery tasks and the schedule."""
 
-from django.conf import settings
+import pytest
+from django_celery_beat.models import PeriodicTask
 
 from apps.delivery import tasks as delivery_tasks  # noqa: F401  # Import registers the tasks.
 from apps.ipos import tasks as ipo_tasks  # noqa: F401  # Import registers the tasks.
@@ -9,6 +10,7 @@ from apps.news import tasks
 from config.celery import app
 
 
+@pytest.mark.django_db
 def test_tasks_are_registered_and_every_scheduled_task_exists():
     for name in (
         "news.fetch_feeds",
@@ -24,8 +26,11 @@ def test_tasks_are_registered_and_every_scheduled_task_exists():
         "delivery.send_daily_report",
     ):
         assert name in app.tasks
-    for entry in settings.CELERY_BEAT_SCHEDULE.values():
-        assert entry["task"] in app.tasks
+    # The first migration saved the schedule in the database.
+    scheduled = PeriodicTask.objects.filter(crontab__isnull=False)
+    assert scheduled.count() >= 13
+    for entry in scheduled.exclude(task__startswith="celery."):
+        assert entry.task in app.tasks
 
 
 def record(monkeypatch, started: list) -> None:

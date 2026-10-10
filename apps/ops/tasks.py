@@ -5,10 +5,11 @@ import logging
 from datetime import timedelta
 
 from celery import shared_task
-from django.conf import settings
 from django.contrib.sessions.models import Session
 from django.core.management import call_command
 from django.utils import timezone
+
+from apps.siteconfig import conf
 
 from .jobs import COMMAND_ALLOWLIST
 from .models import AuditEvent, LoginEvent, TaskRun
@@ -43,8 +44,8 @@ def run_command(self, command: str, args: list[str] | None = None) -> dict:
 def prune() -> dict:
     """Delete old history and mark lost runs as failed."""
     now = timezone.now()
-    keep_since = now - timedelta(days=settings.OPS_RETENTION_DAYS)
-    audit_since = now - timedelta(days=max(settings.OPS_RETENTION_DAYS, AUDIT_KEEP_DAYS))
+    keep_since = now - timedelta(days=conf.OPS_RETENTION_DAYS)
+    audit_since = now - timedelta(days=max(conf.OPS_RETENTION_DAYS, AUDIT_KEEP_DAYS))
 
     lost_pending = TaskRun.objects.filter(
         status=TaskRun.Status.PENDING, created_at__lt=now - PENDING_LOST_AFTER

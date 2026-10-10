@@ -2,7 +2,7 @@
 
 from django.urls import path
 
-from . import views
+from . import views, views_settings
 
 app_name = "ops"
 
@@ -19,6 +19,23 @@ urlpatterns = [
     path("users/<int:pk>/sessions/end/", views.user_end_sessions, name="user_end_sessions"),
     path("users/<int:pk>/active/", views.user_set_active, name="user_set_active"),
     path("logins/", views.login_list, name="logins"),
+    path("logins/unlock/", views.lockout_unlock, name="lockout_unlock"),
     path("audit/", views.audit_list, name="audit"),
     path("config/", views.config_view, name="config"),
+    path("settings/", views_settings.settings_index, name="settings"),
+    path("settings/<slug:group>/", views_settings.settings_group, name="settings_group"),
+    path("schedule/", views_settings.schedule_list, name="schedule"),
+    path("schedule/add/", views_settings.schedule_add, name="schedule_add"),
+    path("schedule/reset/", views_settings.schedule_reset, name="schedule_reset"),
+    path("schedule/<int:pk>/", views_settings.schedule_edit, name="schedule_edit"),
+    path("schedule/<int:pk>/toggle/", views_settings.schedule_toggle, name="schedule_toggle"),
+    path("schedule/<int:pk>/delete/", views_settings.schedule_delete, name="schedule_delete"),
+    path("feeds/", views_settings.feed_list, name="feeds"),
+    path("feeds/<int:pk>/toggle/", views_settings.feed_toggle, name="feed_toggle"),
+    path("feeds/<int:pk>/delete/", views_settings.feed_delete, name="feed_delete"),
+    path("instruments/", views_settings.instrument_list, name="instruments"),
+    path("instruments/<int:pk>/", views_settings.instrument_save, name="instrument_save"),
+    path(
+        "instruments/<int:pk>/delete/", views_settings.instrument_delete, name="instrument_delete"
+    ),
 ]

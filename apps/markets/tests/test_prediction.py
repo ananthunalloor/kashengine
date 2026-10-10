@@ -2,7 +2,7 @@
 
 import pytest
 
-from apps.markets.instruments import GLOBAL_CUES
+from apps.markets.instruments import global_cues
 from apps.markets.models import Prediction
 from apps.markets.prediction import (
     DOWN,
@@ -21,6 +21,8 @@ from apps.markets.prediction import (
 
 from .helpers import FRI, MON, NEXT_MON, PREV_FRI, SAT, TUE, TUE_AFTER, article, ist, quote
 
+pytestmark = pytest.mark.django_db  # The cues are in the database.
+
 CONFIG = {"news_weight": 0.5, "threshold": 0.15, "min_articles": 5}
 
 
@@ -30,7 +32,7 @@ def all_cues(good: float) -> list[CueReading]:
         CueReading(
             c.symbol, c.name, 0.0, FRI, c.weight, good if c.weight > 0 else -good
         )
-        for c in GLOBAL_CUES
+        for c in global_cues()
     ]  # fmt: skip
 
 
@@ -146,7 +148,6 @@ def test_confidence_stays_inside_its_limits():
     assert 0.05 <= run(0.0, 1, []).confidence <= 0.9
 
 
-@pytest.mark.django_db
 def test_news_signal_is_the_average_weighted_by_relevance():
     since = ist(FRI, 15, 30)
     article(1, 1.0, 1.0, published_at=ist(SAT, 8))
@@ -158,7 +159,6 @@ def test_news_signal_is_the_average_weighted_by_relevance():
     assert signal.score == pytest.approx((1.0 - 0.5) / 1.5)
 
 
-@pytest.mark.django_db
 def test_news_signal_ignores_old_unscored_and_not_relevant_articles():
     since = ist(FRI, 15, 30)
     article(1, 1.0, 1.0, published_at=ist(FRI, 14))  # Before the window.
@@ -172,7 +172,6 @@ def test_news_signal_ignores_old_unscored_and_not_relevant_articles():
     assert signal.articles == 0
 
 
-@pytest.mark.django_db
 def test_news_signal_uses_the_fetch_time_when_there_is_no_publish_time():
     since = ist(FRI, 15, 30)
     article(1, 0.4, 1.0, published_at=None, fetched_at=ist(SAT, 8))
@@ -190,7 +189,6 @@ def test_the_news_window_starts_at_the_last_close_before_the_target_day():
     assert news_window_start(NEXT_MON) == ist(FRI, 15, 30)
 
 
-@pytest.mark.django_db
 def test_read_cues_takes_the_latest_recent_quote_for_each_cue():
     quote("^GSPC", FRI, 1.0)
     quote("^GSPC", FRI.replace(day=8), -1.0)  # An older quote of the same symbol.
@@ -206,7 +204,6 @@ def test_read_cues_takes_the_latest_recent_quote_for_each_cue():
     assert readings["BZ=F"].weight < 0
 
 
-@pytest.mark.django_db
 def test_read_cues_skips_old_quotes_and_quotes_without_a_change():
     quote("^GSPC", PREV_FRI, 1.0)  # Ten days before the target. Too old.
     quote("^N225", FRI, None)
@@ -215,13 +212,12 @@ def test_read_cues_skips_old_quotes_and_quotes_without_a_change():
 
 
 def seed_good_data():
-    for cue in GLOBAL_CUES:
+    for cue in global_cues():
         quote(cue.symbol, FRI, 1.0 * (1 if cue.weight > 0 else -1) * cue.scale)
     for number in range(6):
         article(number, 0.8, 1.0, published_at=ist(SAT, 8))
 
 
-@pytest.mark.django_db
 def test_make_prediction_saves_the_result_and_all_the_inputs():
     seed_good_data()
 
@@ -235,20 +231,18 @@ def test_make_prediction_saves_the_result_and_all_the_inputs():
     assert prediction.global_score == pytest.approx(1.0)
     assert 0.05 <= prediction.confidence <= 0.9
     inputs = prediction.inputs
-    assert len(inputs["cues"]) == len(GLOBAL_CUES)
+    assert len(inputs["cues"]) == len(global_cues())
     assert inputs["settings"] == CONFIG
     assert inputs["news_window_start"] == ist(FRI, 15, 30).isoformat()
     assert inputs["coverage"] == pytest.approx(1.0)
 
 
-@pytest.mark.django_db
 def test_on_a_trading_day_the_target_is_today():
     prediction, _ = make_prediction(now=ist(MON, 7))
 
     assert prediction.target_date == MON
 
 
-@pytest.mark.django_db
 def test_make_prediction_without_data_saves_flat_with_notes():
     prediction, created = make_prediction(MON, now=ist(MON, 7))
 
@@ -260,7 +254,6 @@ def test_make_prediction_without_data_saves_flat_with_notes():
     assert prediction.inputs["notes"]
 
 
-@pytest.mark.django_db
 def test_a_second_run_does_not_change_the_prediction():
     seed_good_data()
     first, _ = make_prediction(NEXT_MON, now=ist(NEXT_MON, 7))
@@ -274,7 +267,6 @@ def test_a_second_run_does_not_change_the_prediction():
     assert Prediction.objects.count() == 1
 
 
-@pytest.mark.django_db
 def test_force_makes_it_again_until_the_result_is_known():
     seed_good_data()
     make_prediction(NEXT_MON, now=ist(NEXT_MON, 7))

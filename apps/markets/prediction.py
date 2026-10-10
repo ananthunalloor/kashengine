@@ -23,13 +23,13 @@ import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 
-from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
 
 from apps.news.models import NewsArticle
+from apps.siteconfig import conf
 
-from .instruments import GLOBAL_CUES, TOTAL_CUE_WEIGHT
+from .instruments import global_cues, total_cue_weight
 from .models import IndexQuote, Prediction
 from .trading import next_trading_day, previous_trading_day, session_close, today_ist
 
@@ -96,7 +96,7 @@ def read_cues(target_day: date) -> list[CueReading]:
     """The latest change of each global cue, for the cues that have a recent quote."""
     oldest = target_day - timedelta(days=MAX_CUE_AGE_DAYS)
     readings = []
-    for cue in GLOBAL_CUES:
+    for cue in global_cues():
         quote = (
             IndexQuote.objects.filter(
                 symbol=cue.symbol,
@@ -162,10 +162,11 @@ def _global_part(
     if g_score is None:
         notes.append("No global cues.")
         return 0.0
-    if len(readings) < len(GLOBAL_CUES):
-        notes.append(f"Only {len(readings)} of {len(GLOBAL_CUES)} global cues are available.")
+    cues = global_cues()
+    if len(readings) < len(cues):
+        notes.append(f"Only {len(readings)} of {len(cues)} global cues are available.")
     used = sum(abs(r.weight) for r in readings)
-    return (1 - news_weight) * used / TOTAL_CUE_WEIGHT
+    return (1 - news_weight) * used / total_cue_weight(cues)
 
 
 def _direction(score: float, threshold: float) -> str:
@@ -248,9 +249,9 @@ def make_prediction(
     news = news_signal(since)
     readings = read_cues(target)
     config = {
-        "news_weight": settings.PREDICTION_NEWS_WEIGHT,
-        "threshold": settings.PREDICTION_THRESHOLD,
-        "min_articles": settings.PREDICTION_MIN_ARTICLES,
+        "news_weight": conf.PREDICTION_NEWS_WEIGHT,
+        "threshold": conf.PREDICTION_THRESHOLD,
+        "min_articles": conf.PREDICTION_MIN_ARTICLES,
     }
     outcome = decide(news, readings, **config)
 

@@ -3,8 +3,7 @@
 {% block title %}Delivery · Kash Engine{% endblock %}
 {% block content %}
 <h1 class="font-serif text-3xl font-semibold">Delivery</h1>
-<p class="mt-1 text-muted">{% if chat_count %}The report goes to {{ chat_count }} Telegram chat{{ chat_count|pluralize }}.{% else %}No Telegram chat is set. Set <code>TELEGRAM_BOT_TOKEN</code> and <code>TELEGRAM_CHAT_IDS</code>, then run <code>python manage.py telegram_check</code>.{% endif %}
-  To send a test message, run <code>python manage.py send_report --test</code>.</p>
+<p class="mt-1 text-muted">{% if chat_count %}The report goes to {{ chat_count }} Telegram chat{{ chat_count|pluralize }}.{% elif request.user.is_staff %}No Telegram chat is set. Set the bot token and the chat IDs in <a href="{% url 'ops:settings_group' 'telegram' %}">Ops &gt; Settings &gt; Telegram</a>. You can send a test message there.{% else %}The daily report is not sent to Telegram yet.{% endif %}</p>
 
 {% if logs %}
 <div class="mt-6 overflow-x-auto">
@@ -16,7 +15,7 @@
         <td class="num py-2 pr-4">{{ log.created_at|date:"j M, H:i" }}</td>
         <td class="py-2 pr-4">{{ log.get_channel_display }}</td>
         <td class="py-2 pr-4">{% if log.report %}<a href="{% url 'web:report' log.report.date %}">{{ log.report.date|date:"j M" }}</a>{% else %}<span class="text-muted">Test</span>{% endif %}</td>
-        <td class="py-2"><span class="rounded px-2 py-0.5 text-xs font-medium {{ log.status|badge }}">{{ log.get_status_display }}</span>{% if log.error %}<span class="mt-1 block text-loss">{{ log.error }}</span>{% endif %}</td>
+        <td class="py-2"><span class="rounded px-2 py-0.5 text-xs font-medium {{ log.status|badge }}">{{ log.get_status_display }}</span>{% if log.error and request.user.is_staff %}<span class="mt-1 block text-loss">{{ log.error }}</span>{% endif %}</td>
       </tr>
       {% endfor %}
     </tbody>

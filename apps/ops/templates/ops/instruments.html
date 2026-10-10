@@ -1,0 +1,45 @@
+{% extends "ops/base.html" %}
+{% block title %}Instruments · Kash Engine{% endblock %}
+{% block ops %}
+<h1 class="font-serif text-3xl font-semibold">Instruments</h1>
+<p class="mt-1 max-w-prose text-muted">The symbols that we download (Yahoo Finance symbols). A <em>global cue</em> counts in the prediction. Its <em>weight</em> is how much it counts. A plus sign means "a rise is good for Indian stocks". A minus sign means "a rise is bad" (oil, the dollar, fear). Its <em>scale</em> is the move in percent that is a full signal. The numbers are a first guess. Change them only when the accuracy numbers (<a href="{% url 'ops:metrics' %}">Metrics</a>) give a reason.{% if not request.user.is_superuser %} Only a superuser can change them.{% endif %}</p>
+<p class="mt-2 text-sm text-muted">The weights of the active cues add up to <strong class="num">{{ weight_total }}</strong> (without signs). The prediction divides by this sum, so it does not need to be 1.</p>
+
+<ul class="mt-6 divide-y divide-rule border-y border-rule">
+  {% for row in rows %}
+  <li class="py-3">
+    {% if request.user.is_superuser %}
+    <form method="post" action="{% url 'ops:instrument_save' row.instrument.pk %}" class="grid items-end gap-3 sm:grid-cols-[8rem_1fr_9rem_6rem_6rem_auto_auto]" autocomplete="off">
+      {% csrf_token %}
+      <div><span class="text-xs text-muted">Symbol</span><p class="mt-1"><code>{{ row.instrument.symbol }}</code></p>{{ row.form.symbol.as_hidden }}</div>
+      <div><label class="text-xs text-muted" for="{{ row.form.name.id_for_label }}">Name</label>{{ row.form.name }}</div>
+      <div><label class="text-xs text-muted" for="{{ row.form.kind.id_for_label }}">Kind</label>{{ row.form.kind }}</div>
+      <div><label class="text-xs text-muted" for="{{ row.form.weight.id_for_label }}">Weight</label>{{ row.form.weight }}</div>
+      <div><label class="text-xs text-muted" for="{{ row.form.scale.id_for_label }}">Scale</label>{{ row.form.scale }}</div>
+      <label class="flex items-center gap-2 pb-2 text-sm">{{ row.form.enabled }} On</label>
+      <button type="submit" class="rounded-md bg-accent px-3 py-2 text-sm text-paper">Save</button>
+    </form>
+    {% if row.instrument.kind != "target" %}
+    <form method="post" action="{% url 'ops:instrument_delete' row.instrument.pk %}" class="mt-1" onsubmit="return confirm('Delete {{ row.instrument.name|escapejs }}? Old quotes stay.')">{% csrf_token %}<button type="submit" class="text-xs text-loss underline">Delete</button></form>
+    {% endif %}
+    {% else %}
+    <p class="text-sm"><span class="font-medium">{{ row.instrument.name }}</span> <code class="text-xs">{{ row.instrument.symbol }}</code> · {{ row.instrument.get_kind_display }}{% if row.instrument.kind == "cue" %} · weight {{ row.instrument.weight }}, scale {{ row.instrument.scale }}{% endif %} · {% if row.instrument.enabled %}on{% else %}off{% endif %}</p>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+
+{% if request.user.is_superuser %}
+<h2 class="mt-8 text-xl font-semibold">Add an instrument</h2>
+<form method="post" class="mt-3 grid max-w-4xl items-end gap-3 sm:grid-cols-[8rem_1fr_9rem_6rem_6rem_auto]" autocomplete="off">
+  {% csrf_token %}
+  {% if add_form.non_field_errors %}<p class="text-sm text-loss sm:col-span-6" role="alert">{{ add_form.non_field_errors|join:" " }}</p>{% endif %}
+  <div><label class="text-xs text-muted" for="{{ add_form.symbol.id_for_label }}">Symbol</label>{{ add_form.symbol }}{{ add_form.symbol.errors }}</div>
+  <div><label class="text-xs text-muted" for="{{ add_form.name.id_for_label }}">Name</label>{{ add_form.name }}{{ add_form.name.errors }}</div>
+  <div><label class="text-xs text-muted" for="{{ add_form.kind.id_for_label }}">Kind</label>{{ add_form.kind }}</div>
+  <div><label class="text-xs text-muted" for="{{ add_form.weight.id_for_label }}">Weight</label>{{ add_form.weight }}{{ add_form.weight.errors }}</div>
+  <div><label class="text-xs text-muted" for="{{ add_form.scale.id_for_label }}">Scale</label>{{ add_form.scale }}{{ add_form.scale.errors }}</div>
+  <button type="submit" class="rounded-md bg-accent px-3 py-2 text-sm text-paper">Add</button>
+</form>
+{% endif %}
+{% endblock %}

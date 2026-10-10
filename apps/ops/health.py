@@ -27,6 +27,7 @@ from apps.markets.models import IndexQuote, Prediction
 from apps.markets.trading import is_trading_day, market_tz, previous_trading_day, today_ist
 from apps.news.models import NewsArticle
 from apps.reports.models import Report
+from apps.siteconfig import conf
 
 from . import schedule
 from .models import TaskRun
@@ -51,8 +52,10 @@ SCORING_BACKLOG_AGE_HOURS = 6
 QUOTES_FAIL_AFTER_DAYS = 5
 QUOTES_EVENING_HOUR = 18  # IST. The evening run gets the final quotes at 17:30.
 HOURS_IN_TWO_DAYS = 48
-PREDICTION_EXPECTED_AFTER = (7, 30)  # IST. The prediction runs at 07:00.
-REPORT_EXPECTED_AFTER = (7, 50)  # IST. The report is sent at 07:30, and the retry at 07:50.
+PREDICTION_GRACE_MINUTES = (
+    30  # A prediction can be late. We warn this long after the last run time.
+)
+REPORT_GRACE_MINUTES = 10
 KB = 1024
 MIB = 1024 * 1024
 
@@ -183,16 +186,16 @@ def check_llm() -> Check:
             "llm",
             "LLM server (Ollama)",
             WARN,
-            f"Model {settings.LLM_MODEL} is missing",
+            f"Model {conf.LLM_MODEL} is missing",
             f"On the server: {', '.join(models) or 'no models'}",
             latency,
         )
-    return Check("llm", "LLM server (Ollama)", OK, f"{settings.LLM_MODEL} is ready", "", latency)
+    return Check("llm", "LLM server (Ollama)", OK, f"{conf.LLM_MODEL} is ready", "", latency)
 
 
 def check_telegram() -> Check:
     """Check the Telegram settings and the last delivery. It makes no request to Telegram."""
-    if not settings.TELEGRAM_BOT_TOKEN or not configured_chat_ids():
+    if not conf.TELEGRAM_BOT_TOKEN or not configured_chat_ids():
         return Check("telegram", "Telegram", WARN, "Not set up", "Set the token and the chat IDs.")
     last = DeliveryLog.objects.order_by("-created_at").first()
     if last is None:
@@ -272,7 +275,7 @@ def check_news_fresh() -> Check:
         return Check("news", "News", SKIP, "No articles yet")
     age = timezone.now() - latest
     summary = f"Newest article fetched {_age_text(age)}"
-    limit = timedelta(hours=2 * settings.NEWS_FETCH_EVERY_HOURS + 1)
+    limit = timedelta(hours=conf.NEWS_STALE_AFTER_HOURS)
     if age > timedelta(hours=NEWS_FAIL_AFTER_HOURS):
         return Check("news", "News", FAIL, summary)
     if age > limit:
@@ -285,11 +288,11 @@ def check_scoring_backlog() -> Check:
     cutoff = timezone.now() - timedelta(hours=SCORING_BACKLOG_AGE_HOURS)
     backlog = NewsArticle.objects.filter(
         scored_at__isnull=True,
-        sentiment_attempts__lt=settings.SENTIMENT_MAX_ATTEMPTS,
+        sentiment_attempts__lt=conf.SENTIMENT_MAX_ATTEMPTS,
         fetched_at__lt=cutoff,
     ).count()
     summary = f"{backlog} articles wait for a score"
-    if backlog > settings.SENTIMENT_BATCH_SIZE:
+    if backlog > conf.SENTIMENT_BATCH_SIZE:
         return Check("scoring", "Scoring backlog", WARN, summary, "Is the LLM server up?")
     return Check("scoring", "Scoring backlog", OK, summary)
 
@@ -310,33 +313,49 @@ def check_quotes_fresh() -> Check:
     return Check("quotes", "Market quotes", OK, summary)
 
 
-def _after(hour_minute: tuple[int, int]) -> bool:
+def _late(task_name: str, grace_minutes: int) -> bool | None:
+    """True if the task should have run today and its grace time is over.
+
+    None means that the task is not scheduled today. The times come from the schedule in the
+    database, so a change on the dashboard moves the check.
+    """
     now = timezone.now().astimezone(market_tz())
-    return (now.hour, now.minute) >= hour_minute
+    times = schedule.times_on(task_name, now.date())
+    if not times:
+        return None
+    hour, minute = times[-1]  # The last run of the day: a retry counts.
+    due = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    return now >= due + timedelta(minutes=grace_minutes)
 
 
 def check_prediction() -> Check:
-    """Check that today's prediction exists, on a trading day after 07:30."""
+    """Check that today's prediction exists, on a trading day after its scheduled time."""
     today = today_ist()
     exists = Prediction.objects.filter(target_date=today).exists()
     if not is_trading_day(today):
         return Check("prediction", "Prediction", OK, "Market closed today")
     if exists:
         return Check("prediction", "Prediction", OK, f"Made for {today}")
-    if _after(PREDICTION_EXPECTED_AFTER):
+    late = _late("markets.predict", PREDICTION_GRACE_MINUTES)
+    if late is None:
+        return Check("prediction", "Prediction", SKIP, "Not scheduled today")
+    if late:
         return Check("prediction", "Prediction", WARN, f"Missing for {today}")
     return Check("prediction", "Prediction", OK, "Not due yet")
 
 
 def check_report() -> Check:
-    """Check that today's report exists, on a trading day after 07:50."""
+    """Check that today's report exists, on a trading day after its scheduled time."""
     today = today_ist()
     exists = Report.objects.filter(date=today).exists()
     if not is_trading_day(today):
         return Check("report", "Daily report", OK, "Market closed today")
     if exists:
         return Check("report", "Daily report", OK, f"Built for {today}")
-    if _after(REPORT_EXPECTED_AFTER):
+    late = _late("delivery.send_daily_report", REPORT_GRACE_MINUTES)
+    if late is None:
+        return Check("report", "Daily report", SKIP, "Not scheduled today")
+    if late:
         return Check("report", "Daily report", WARN, f"Missing for {today}")
     return Check("report", "Daily report", OK, "Not due yet")
 

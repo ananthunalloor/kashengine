@@ -13,7 +13,6 @@ keeps the numbers and the lists for the web page.
 import logging
 from datetime import date, datetime, timedelta
 
-from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
 
@@ -25,6 +24,7 @@ from apps.markets.models import Prediction
 from apps.markets.prediction import make_prediction, news_window_start
 from apps.markets.trading import next_trading_day, today_ist
 from apps.news.models import NewsArticle
+from apps.siteconfig import conf
 
 from .models import Report
 
@@ -116,12 +116,12 @@ def gather_track_record() -> dict:
 
 def gather_news(since: datetime, limit: int | None = None) -> dict:
     """The strongest good and bad stories since a time. A story counts by |score| x relevance."""
-    limit = settings.REPORT_NEWS_ITEMS if limit is None else limit
+    limit = conf.REPORT_NEWS_ITEMS if limit is None else limit
     articles = (
         NewsArticle.objects.filter(
             scored_at__isnull=False,
             sentiment_score__isnull=False,
-            relevance__gte=settings.REPORT_NEWS_MIN_RELEVANCE,
+            relevance__gte=conf.REPORT_NEWS_MIN_RELEVANCE,
         )
         .filter(Q(published_at__gte=since) | Q(published_at__isnull=True, fetched_at__gte=since))
         .prefetch_related("companies")
@@ -180,8 +180,8 @@ def _ipo_item(ipo: Ipo) -> dict:
 
 def gather_ipos(today: date, limit: int | None = None, days_ahead: int | None = None) -> dict:
     """The IPOs that matter today."""
-    limit = settings.REPORT_IPO_ITEMS if limit is None else limit
-    days_ahead = settings.REPORT_IPO_DAYS_AHEAD if days_ahead is None else days_ahead
+    limit = conf.REPORT_IPO_ITEMS if limit is None else limit
+    days_ahead = conf.REPORT_IPO_DAYS_AHEAD if days_ahead is None else days_ahead
     ordering = ("close_date", "name")
 
     open_now = Ipo.objects.filter(open_date__lte=today, close_date__gte=today).order_by(*ordering)

@@ -4,16 +4,16 @@ We have no list of market holidays. A holiday counts as a trading day here. A pr
 holiday ends as "void" (see evaluation.py).
 """
 
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.utils import timezone
 
-MARKET_CLOSE = time(15, 30)
+from apps.siteconfig import conf
+from apps.siteconfig.registry import clean_clock
+
 FIRST_WEEKEND_WEEKDAY = 5  # datetime.weekday(): Monday is 0, Saturday is 5.
-# After the close, Yahoo needs a few minutes to show the final price.
-FINAL_BUFFER = timedelta(minutes=10)
 
 
 def market_tz() -> ZoneInfo:
@@ -48,4 +48,10 @@ def previous_trading_day(day: date) -> date:
 
 def session_close(day: date) -> datetime:
     """Return the close time of the market on a day."""
-    return datetime.combine(day, MARKET_CLOSE, tzinfo=market_tz())
+    close = clean_clock(conf.MARKET_CLOSE_TIME)
+    return datetime.combine(day, close, tzinfo=market_tz())
+
+
+def final_buffer() -> timedelta:
+    """How long after the close Yahoo needs to show the final price."""
+    return timedelta(minutes=conf.MARKET_FINAL_BUFFER_MINUTES)

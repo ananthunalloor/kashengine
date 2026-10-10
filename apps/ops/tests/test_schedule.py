@@ -1,8 +1,12 @@
-"""Read the beat schedule."""
+"""Read and change the beat schedule (it is in the database)."""
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
+
 from apps.ops import schedule
+
+pytestmark = pytest.mark.django_db
 
 
 def test_every_entry_has_a_cron_text():

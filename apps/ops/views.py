@@ -1,6 +1,5 @@
 """The Ops pages. Staff users can look. Superusers can also change things (POST requests)."""
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.models import LogEntry
 from django.contrib.auth import get_user_model
@@ -10,6 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from apps.markets.evaluation import accuracy_stats
+from apps.siteconfig import conf
 from apps.web.datastar import is_datastar, querystring, read_filters, read_page, signals_json
 
 from . import audit, configview, health, jobs, logs, metrics, schedule, users
@@ -28,7 +28,7 @@ LOGIN_HOURS = {"24": "Last 24 hours", "168": "Last 7 days", "720": "Last 30 days
 
 
 def _paginate(items, filters: dict[str, str]):
-    return Paginator(items, settings.OPS_PAGE_SIZE).get_page(read_page(filters))
+    return Paginator(items, conf.OPS_PAGE_SIZE).get_page(read_page(filters))
 
 
 @staff_required
@@ -121,7 +121,7 @@ def run_list(request: HttpRequest) -> HttpResponse:
         "qs": querystring(filters),
         "labels": TaskRun.objects.order_by("label").values_list("label", flat=True).distinct(),
         "statuses": RUN_STATUS_FILTERS,
-        "OPS_RETENTION_DAYS": settings.OPS_RETENTION_DAYS,
+        "OPS_RETENTION_DAYS": conf.OPS_RETENTION_DAYS,
         "triggers": RUN_TRIGGER_FILTERS,
         "section": "runs",
     }
@@ -267,6 +267,7 @@ def login_list(request: HttpRequest) -> HttpResponse:
         "kinds": LoginEvent.Kind.choices,
         "hours_choices": LOGIN_HOURS,
         "failed_by_address": users.failed_logins_by_address(),
+        "lockouts": users.lockouts(),
         "section": "logins",
     }
     return render(request, "ops/logins.html", context)
@@ -292,3 +293,15 @@ def config_view(request: HttpRequest) -> HttpResponse:
         "ops/config.html",
         {"sections": configview.sections(), "section": "config", "now": timezone.now()},
     )
+
+
+@superuser_post_required
+def lockout_unlock(request: HttpRequest) -> HttpResponse:
+    """Unlock an address that django-axes locked out."""
+    address = request.POST.get("ip_address", "").strip()
+    if not address:
+        raise Http404
+    count = users.unlock(address)
+    audit.record(request.user, "unlock address", address, f"{count} record(s) removed", request)
+    messages.success(request, f"{address} can try to log in again.")
+    return redirect("ops:logins")

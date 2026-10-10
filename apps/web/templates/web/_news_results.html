@@ -21,6 +21,6 @@
   </ul>
   {% url 'web:news' as list_url %}{% include "web/_pager.html" with page_url=list_url %}
   {% else %}
-  <p class="mt-4 text-muted">No article matches. Change the search, or clear the filters.{% if not filters.q and not filters.sentiment and not filters.source %} If the list is always empty, run <code>python manage.py fetch_news</code>.{% endif %}</p>
+  <p class="mt-4 text-muted">No article matches. Change the search, or clear the filters.{% if request.user.is_staff and not filters.q and not filters.sentiment and not filters.source %} Admins: if the list is always empty, check the <a href="{% url 'ops:feeds' %}">feeds</a> and start "Fetch news feeds" on the <a href="{% url 'ops:jobs' %}">Jobs</a> page.{% endif %}</p>
   {% endif %}
 </div>

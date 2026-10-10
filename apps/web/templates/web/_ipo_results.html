@@ -35,6 +35,6 @@
   </div>
   {% url 'web:ipos' as list_url %}{% include "web/_pager.html" with page_url=list_url %}
   {% else %}
-  <p class="mt-4 text-muted">No IPO matches. Change the filters.{% if not filters.q %} If the list is always empty, turn on <code>IPO_FETCH_ENABLED</code> and run <code>python manage.py collect_ipos</code>, or add IPOs with <code>import_ipo_csv</code>.{% endif %}</p>
+  <p class="mt-4 text-muted">No IPO matches. Change the filters.{% if request.user.is_staff and not filters.q %} Admins: if the list is always empty, turn on the IPO list in <a href="{% url 'ops:settings_group' 'ipos' %}">Ops &gt; Settings &gt; IPOs</a> and start "Collect IPOs" on the <a href="{% url 'ops:jobs' %}">Jobs</a> page.{% endif %}</p>
   {% endif %}
 </div>

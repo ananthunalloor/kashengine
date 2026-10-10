@@ -10,7 +10,8 @@ import logging
 import time
 
 import httpx
-from django.conf import settings
+
+from apps.siteconfig import conf
 
 logger = logging.getLogger(__name__)
 
@@ -56,9 +57,9 @@ class LLMClient:
         timeout: float | None = None,
         client: httpx.Client | None = None,
     ):
-        self.model = model or settings.LLM_MODEL
-        self.base_url = (base_url or settings.LLM_BASE_URL).rstrip("/")
-        self.timeout = timeout or settings.LLM_TIMEOUT_SECONDS
+        self.model = model or conf.LLM_MODEL
+        self.base_url = (base_url or conf.LLM_BASE_URL).rstrip("/")
+        self.timeout = timeout or conf.LLM_TIMEOUT_SECONDS
         self._own_client = client is None
         self._http = client or httpx.Client(timeout=self.timeout)
         # Details of the last chat_json call. The model comparison uses these.

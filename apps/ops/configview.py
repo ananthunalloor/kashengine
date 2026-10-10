@@ -5,6 +5,8 @@ from urllib.parse import urlsplit, urlunsplit
 
 from django.conf import settings
 
+from apps.siteconfig import conf, registry
+
 SECRET_NAME = re.compile(r"SECRET|TOKEN|PASSWORD|PASSWD|API_KEY|PRIVATE", re.IGNORECASE)
 URL_WITH_LOGIN = re.compile(r"^[a-z][a-z0-9+.-]*://[^/@\s]+@", re.IGNORECASE)
 
@@ -56,13 +58,18 @@ def database_summary() -> str:
     return f"{engine}, {host}, {config.get('NAME')}"
 
 
+def _effective(name: str) -> object:
+    """The value in use: the dashboard value if there is one, else the environment value."""
+    return conf.get(name) if name in registry.SPECS else getattr(settings, name)
+
+
 def sections() -> list[tuple[str, list[tuple[str, str]]]]:
     """The settings, in groups. Each item is (name, text)."""
     names = sorted(name for name in dir(settings) if name.isupper())
     result = []
     for title, prefixes in GROUPS:
         rows = [
-            (name, display_value(name, getattr(settings, name)))
+            (name, display_value(name, _effective(name)))
             for name in names
             if any(
                 name == prefix or (prefix.endswith("_") and name.startswith(prefix))

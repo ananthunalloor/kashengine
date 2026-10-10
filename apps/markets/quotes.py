@@ -4,7 +4,7 @@ import logging
 from collections.abc import Callable, Iterable
 from itertools import pairwise
 
-from .instruments import ALL_INSTRUMENTS, Instrument
+from .instruments import Instrument, all_instruments
 from .models import IndexQuote
 from .sources import Bar, QuoteError, fetch_bars
 
@@ -41,12 +41,13 @@ def save_bars(symbol: str, bars: list[Bar]) -> int:
 
 def fetch_quotes(
     source: Callable[[str], list[Bar]] = fetch_bars,
-    instruments: Iterable[Instrument] = ALL_INSTRUMENTS,
+    instruments: Iterable[Instrument] | None = None,
 ) -> dict:
     """Download all instruments. One symbol that fails does not stop the others.
 
     Return {"saved": <rows>, "failed": {<symbol>: <error text>}}.
     """
+    instruments = all_instruments() if instruments is None else instruments
     saved = 0
     failed: dict[str, str] = {}
     for instrument in instruments:

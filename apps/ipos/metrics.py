@@ -2,7 +2,7 @@
 
 import logging
 
-from django.conf import settings
+from apps.siteconfig import conf
 
 from .collect import refresh_statuses
 from .gmp import GmpSourceError, update_gmp
@@ -19,7 +19,7 @@ def refresh_metrics(force: bool = False) -> dict:
     """
     result: dict = {}
 
-    if settings.IPO_GMP_ENABLED or force:
+    if conf.IPO_GMP_ENABLED or force:
         try:
             result["gmp"] = update_gmp().as_dict()
         except GmpSourceError as exc:
@@ -28,7 +28,7 @@ def refresh_metrics(force: bool = False) -> dict:
     else:
         result["gmp"] = "disabled"
 
-    if settings.IPO_LISTING_ENABLED or force:
+    if conf.IPO_LISTING_ENABLED or force:
         try:
             result["listing"] = fill_listing_results()
         except Exception:  # A broken data library must not stop the scores.

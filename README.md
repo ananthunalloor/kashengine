@@ -152,19 +152,44 @@ The Ops pages are for admins. They are at `/ops/`. A user with the "staff" flag 
 | Users | All users with their last login, login count, failed logins, and active sessions. A superuser can end sessions and turn users off or on. |
 | Logins | Logins, logouts, and failed logins with the address and the browser. It marks addresses with many failed logins. |
 | Audit | What admins did on the Ops pages. |
-| Config | The settings that the server uses. Secrets show only "set (hidden)". |
+| Settings | Change the settings by group (Telegram, report, LLM, news, sentiment, markets, IPOs, companies, login security, web). Superuser only. See "Settings on the dashboard". |
+| Schedule | Change when each job runs by itself. Add, change, turn off, delete, or reset entries. |
+| Feeds | The news feeds, with the result of the last fetch. Add, turn off, or delete a feed. |
+| Instruments | The market symbols and the weights of the global cues in the prediction. |
+| Config | The values that the server uses now (a value saved on the dashboard wins). Secrets show only "set (hidden)". |
 
 How it works:
 
 - A Celery signal saves every task run in the database. A manual job makes its row first (status "Waiting"), then the worker updates it.
 - An admin cannot type a command. A job is a Celery task or a management command with fixed arguments (see `apps/ops/jobs.py`). A command runs in a worker. A job that waits or runs cannot start again. A job that needs a confirmation (it sends a message or replaces data) shows a check box.
-- The task `ops.prune` runs every day at 03:40 IST. It deletes task runs and login events older than `OPS_RETENTION_DAYS` (default 90), audit events older than a year, and expired sessions. It marks runs that were lost (a worker stopped) as failed.
+- The task `ops.prune` runs every day at 03:40 IST (the default time; change it on Ops > Schedule). It deletes task runs and login events older than `OPS_RETENTION_DAYS` (default 90), audit events older than a year, and expired sessions. It marks runs that were lost (a worker stopped) as failed.
 - The log file is `logs/app.log`. In dev, the server writes it when you run it outside the tests. In prod, web, worker, and beat share it in the `logs` volume. Set `DJANGO_LOG_TO_FILE=false` to turn it off in dev.
 - The `httpx` logger is now at WARNING level. At INFO level it wrote the full Telegram URL, which contains the bot token.
 - The IP address of a login comes from `X-Forwarded-For`. Caddy sets this header, and the web container has no other way in.
 - `ADMIN_ALLOWED_IPS` limits `/ops/` in the same way as `/admin/`.
 
-## Settings
+## Settings on the dashboard
+
+An admin changes the product behaviour on the dashboard. Nothing needs a restart or a new deploy.
+
+- **Order of values:** a value saved on the dashboard, then the environment variable, then the default in `config/settings/base.py`. The `.env` files give only the first values (a fallback). Each settings page shows the default and whether a value is saved. The box "Use the default" deletes the saved value.
+- **What is on the dashboard:** the Telegram bot token, the chat IDs and the API address; the report size; the LLM server, model, and timeouts; the news, sentiment, market, IPO, and company options; the market close time; the health-check limits; the login lockout limits; and the web page size. Also the schedule of the jobs, the news feeds, and the market instruments (symbols, weights, scales).
+- **The first start:** the database migrations save the default schedule, the 9 news feeds, and the 9 market instruments. After that, the dashboard owns them. "Reset to default" on Ops > Schedule puts the default schedule back.
+- **Speed:** each process keeps the values for 5 seconds. A change shows in all web, worker, and beat processes in a few seconds. The beat process uses the database scheduler (`django-celery-beat`) and sees schedule changes by itself.
+- **Secrets:** the Telegram bot token is saved encrypted (Fernet). The key comes from `SETTINGS_ENCRYPTION_KEY`, or from `DJANGO_SECRET_KEY` if you leave it empty. A saved secret is never shown again, never written to the audit trail, and never logged. The page shows only "Set" or "Not set". An empty field keeps the saved token. **If the key changes, the saved token cannot be read and shows as "Not set". Enter it again.** Set `SETTINGS_ENCRYPTION_KEY` to a separate value if you plan to rotate `DJANGO_SECRET_KEY`.
+- **Who can change it:** superusers only. Staff users can look. Each change goes in the audit trail (old value and new value, except for secrets).
+- **What stays in the environment:** the secret key, the database and Redis addresses, the host names, the security flags, and the log setting. A wrong value here can lock everyone out, so a page cannot change them.
+- **If the database cannot be read,** the server uses the environment values, so the pages and the health checks still work.
+
+### Login lockout (django-axes)
+
+After `LOGIN_FAILURE_LIMIT` failed logins (default 5) from one IP address, that address is locked for `LOGIN_COOLOFF_MINUTES` (default 30). With 0 minutes, it stays locked until a superuser unlocks it on Ops > Logins. A correct password does not work during a lockout. A good login resets the count. The address is the first value of `X-Forwarded-For` (Caddy sets it) or the connection address. Both limits are on Ops > Settings > Login security.
+
+### What normal users see
+
+Normal users never see a message about the config or the infrastructure (for example "No Telegram chat is set"). They see a short neutral text (for example, that there is no data yet). Staff users see the real hint and a link to the page where they fix it.
+
+## Settings files
 
 | File | Use |
 | --- | --- |
@@ -172,7 +197,7 @@ How it works:
 | `.env.prod.example` | Template for prod. Copy to `.env.prod` |
 | `.env.dev`, `.env.prod` | Real values. Not in Git |
 
-The settings module is `config.settings.dev` or `config.settings.prod`.
+The settings module is `config.settings.dev` or `config.settings.prod`. The variables `NEWS_FETCH_EVERY_HOURS`, `REPORT_HOUR`, and `REPORT_MINUTE` are gone. Use Ops > Schedule.
 
 ## Development tools
 

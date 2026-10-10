@@ -1,10 +1,10 @@
 """Management command: read the IPO list from the source pages."""
 
-from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from apps.ipos.collect import collect_ipos, refresh_statuses
 from apps.ipos.scoring import score_ipos
+from apps.siteconfig import conf
 
 
 class Command(BaseCommand):
@@ -25,7 +25,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Run the collection and print the counts."""
-        if settings.IPO_FETCH_ENABLED or options["force"]:
+        if conf.IPO_FETCH_ENABLED or options["force"]:
             stats = collect_ipos()
             self.stdout.write(
                 "IPOs: {created} new, {updated} updated, {unchanged} unchanged, "

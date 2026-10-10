@@ -19,7 +19,6 @@ from decimal import Decimal
 from pathlib import Path
 
 import httpx
-from django.conf import settings
 from django.utils import timezone
 from lxml import html as lxml_html
 
@@ -27,6 +26,7 @@ from apps.companies.matching import normalize_name
 from apps.markets.trading import market_tz
 from apps.news.client import make_client
 from apps.news.scraper import PoliteFetcher, RobotsDisallowedError
+from apps.siteconfig import conf
 
 from .models import Ipo
 from .sources import parse_number
@@ -312,14 +312,14 @@ def update_gmp(
     save_page_to: a file path. We write the page there. Use it to send a sample if the parser
     fails.
     """
-    url = url or settings.IPO_GMP_URL
+    url = url or conf.IPO_GMP_URL
     client = None
     if fetcher is None:
         client = make_client()
         fetcher = PoliteFetcher(
             client,
-            delay=settings.NEWS_SCRAPE_DELAY_SECONDS,
-            user_agent=settings.NEWS_USER_AGENT,
+            delay=conf.NEWS_SCRAPE_DELAY_SECONDS,
+            user_agent=conf.NEWS_USER_AGENT,
         )
     try:
         page = fetch_page(url, fetcher)

@@ -5,7 +5,10 @@ description = "Daily Indian market news report bot with sentiment and IPO scorin
 requires-python = ">=3.13"
 dependencies = [
     "celery>=5.6.3",
+    "cryptography>=50.0.2",
     "django>=6.1.1",
+    "django-axes>=8.3.1",
+    "django-celery-beat>=2.1.0",
     "django-environ>=0.14.0",
     "django-stubs>=6.1.1",
     "feedparser>=6.0.14",

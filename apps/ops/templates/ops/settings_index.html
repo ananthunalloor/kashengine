@@ -1,0 +1,24 @@
+{% extends "ops/base.html" %}
+{% block title %}Settings · Kash Engine{% endblock %}
+{% block ops %}
+<h1 class="font-serif text-3xl font-semibold">Settings</h1>
+<p class="mt-1 max-w-prose text-muted">The values here are saved in the database. A change is live in the web app at once, and in the worker and the scheduler within a few seconds. You do not restart anything. A value that you did not change comes from the environment (<code>.env.prod</code>) or from the default in the code.{% if not request.user.is_superuser %} Only a superuser can change a setting.{% endif %}</p>
+
+<ul class="mt-6 grid gap-4 sm:grid-cols-2">
+  {% for group in groups %}
+  <li class="rounded-md border border-rule bg-card p-4">
+    <h2 class="text-lg font-semibold"><a href="{% url 'ops:settings_group' group.key %}" class="no-underline">{{ group.title }}</a></h2>
+    <p class="mt-1 text-sm text-muted">{{ group.help }}</p>
+    <p class="mt-2 text-xs text-muted">{{ group.count }} setting{{ group.count|pluralize }}{% if group.saved %}, {{ group.saved }} changed on the dashboard{% endif %}</p>
+  </li>
+  {% endfor %}
+</ul>
+
+<p class="mt-6 text-sm">More controls: <a href="{% url 'ops:schedule' %}">Schedule</a> (when the jobs run), <a href="{% url 'ops:feeds' %}">Feeds</a> (news sources), <a href="{% url 'ops:instruments' %}">Instruments</a> (market symbols and weights).</p>
+
+<h2 class="mt-10 text-xl font-semibold">Only in the environment</h2>
+<p class="mt-1 max-w-prose text-sm text-muted">These values cannot change while the server runs. Change them in <code>.env.prod</code> and restart the services. Secrets show only if they are set.</p>
+<dl class="mt-3 divide-y divide-rule border-y border-rule text-sm">
+  {% for name, value in fixed %}<div class="grid gap-1 py-2 sm:grid-cols-[18rem_1fr]"><dt class="min-w-0 break-all"><code>{{ name }}</code></dt><dd class="min-w-0 break-all">{{ value }}</dd></div>{% endfor %}
+</dl>
+{% endblock %}

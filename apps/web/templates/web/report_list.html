@@ -21,6 +21,6 @@
 </nav>
 {% endif %}
 {% else %}
-<p class="mt-6 text-muted">There is no report yet. The report is built each trading day at the report time. To build one now, run <code>python manage.py build_report</code>.</p>
+<p class="mt-6 text-muted">There is no report yet. A report is built each trading day.{% if request.user.is_staff %} Admins: to build one now, use <a href="{% url 'ops:jobs' %}">Ops &gt; Jobs</a> ("Build the report again").{% endif %}</p>
 {% endif %}
 {% endblock %}

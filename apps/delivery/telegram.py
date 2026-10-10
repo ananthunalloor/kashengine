@@ -13,11 +13,11 @@ import time
 from http import HTTPStatus
 
 import httpx
-from django.conf import settings
+
+from apps.siteconfig import conf
 
 logger = logging.getLogger(__name__)
 
-API_URL = "https://api.telegram.org"
 MAX_MESSAGE_CHARS = 4096
 SAFE_MESSAGE_CHARS = 4000  # A little less than the limit.
 MAX_RETRY_WAIT_SECONDS = 30
@@ -94,11 +94,11 @@ class TelegramClient:
         timeout: float | None = None,
         sleep=time.sleep,
     ):
-        self.token = settings.TELEGRAM_BOT_TOKEN if token is None else token
+        self.token = conf.TELEGRAM_BOT_TOKEN if token is None else token
         if not self.token:
             raise TelegramError("TELEGRAM_BOT_TOKEN is not set.")
         self._owns_client = client is None
-        self._client = client or httpx.Client(timeout=timeout or settings.TELEGRAM_TIMEOUT_SECONDS)
+        self._client = client or httpx.Client(timeout=timeout or conf.TELEGRAM_TIMEOUT_SECONDS)
         self._sleep = sleep
 
     def close(self) -> None:
@@ -113,7 +113,7 @@ class TelegramClient:
         self.close()
 
     def _call(self, method: str, payload: dict | None = None, _retried: bool = False):
-        url = f"{API_URL}/bot{self.token}/{method}"
+        url = f"{conf.TELEGRAM_API_URL.rstrip('/')}/bot{self.token}/{method}"
         try:
             response = self._client.post(url, json=payload or {})
         except httpx.HTTPError as exc:

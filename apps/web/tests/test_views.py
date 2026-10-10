@@ -161,11 +161,27 @@ def test_the_dashboard_words_for_each_direction(client_in, direction, phrase):
     assert phrase in client_in.get(reverse("web:dashboard")).text
 
 
-def test_the_dashboard_without_a_prediction_says_what_to_do(client_in):
+def test_the_dashboard_without_a_prediction_shows_no_admin_hint_to_a_normal_user(client_in):
     text = client_in.get(reverse("web:dashboard")).text
 
     assert "No outlook yet" in text
-    assert "predict_market" in text
+    assert "predict_market" not in text
+    assert "Jobs" not in text
+    assert "Admins:" not in text
+
+
+def test_the_dashboard_without_a_prediction_points_an_admin_to_the_jobs_page(
+    client, django_user_model
+):
+    admin = django_user_model.objects.create_user(
+        "staffer", password="pw-staff-test-1", is_staff=True
+    )
+    client.force_login(admin)
+
+    text = client.get(reverse("web:dashboard")).text
+
+    assert "Admins:" in text
+    assert reverse("ops:jobs") in text
 
 
 def test_the_dashboard_shows_the_track_record_and_the_latest_report(client_in):
@@ -222,7 +238,7 @@ def test_the_report_list_and_detail(client_in):
 
     assert listing.index("7 October") < listing.index("6 October")  # The newest first.
     assert "Line one\nLine two" in detail
-    assert "Chat not found" in detail
+    assert "Chat not found" not in detail  # A normal user does not see delivery errors.
     assert reverse("web:report", args=[first.date]) in detail  # The link to the older report.
 
 
@@ -510,7 +526,44 @@ def test_the_delivery_page(client_in, settings):
     text = client_in.get(reverse("web:delivery")).text
 
     assert "2 Telegram chats" in text
-    assert "bot was blocked" in text
+    assert "bot was blocked" not in text  # A normal user does not see the error text.
+    assert "Failed" in text
     assert "Test" in text  # A log without a report is a test message.
     assert "111" not in text  # We do not show chat IDs.
     assert "222" not in text
+
+
+def test_a_staff_user_sees_the_delivery_errors(client, django_user_model):
+    admin = django_user_model.objects.create_user(
+        "staffer2", password="pw-staff-test-1", is_staff=True
+    )
+    client.force_login(admin)
+    DeliveryLog.objects.create(
+        channel="telegram", status="failed", recipient="222", error="Forbidden: bot was blocked"
+    )
+
+    assert "bot was blocked" in client.get(reverse("web:delivery")).text
+
+
+def test_the_delivery_page_hides_the_setup_hint_from_a_normal_user(client_in, settings):
+    settings.TELEGRAM_CHAT_IDS = []
+
+    text = client_in.get(reverse("web:delivery")).text
+
+    assert "TELEGRAM" not in text
+    assert "manage.py" not in text
+    assert "not sent to Telegram yet" in text
+
+
+def test_the_delivery_page_points_an_admin_to_the_telegram_settings(
+    client, django_user_model, settings
+):
+    settings.TELEGRAM_CHAT_IDS = []
+    admin = django_user_model.objects.create_user(
+        "staffer3", password="pw-staff-test-1", is_staff=True
+    )
+    client.force_login(admin)
+
+    text = client.get(reverse("web:delivery")).text
+
+    assert reverse("ops:settings_group", args=["telegram"]) in text

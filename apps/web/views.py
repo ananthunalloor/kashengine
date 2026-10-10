@@ -2,7 +2,6 @@
 
 from datetime import date
 
-from django.conf import settings
 from django.contrib.auth.views import LoginView, LogoutView
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, render
@@ -14,6 +13,7 @@ from apps.ipos.models import Ipo
 from apps.markets.evaluation import accuracy_stats
 from apps.markets.trading import today_ist
 from apps.reports.models import Report
+from apps.siteconfig import conf
 
 from . import queries
 from .datastar import is_datastar, querystring, read_filters, read_page, signals_json
@@ -36,7 +36,7 @@ class Logout(LogoutView):
 
 
 def _page(request, items, filters):
-    return Paginator(items, settings.WEB_PAGE_SIZE).get_page(read_page(filters))
+    return Paginator(items, conf.WEB_PAGE_SIZE).get_page(read_page(filters))
 
 
 def _filter_view(request, template, partial, names, build_queryset, extra=None):

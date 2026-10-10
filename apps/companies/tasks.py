@@ -3,7 +3,8 @@
 import logging
 
 from celery import shared_task
-from django.conf import settings
+
+from apps.siteconfig import conf
 
 from .matching import link_articles
 from .screener import refresh_stale
@@ -18,7 +19,7 @@ def refresh_stale_companies(limit: int | None = None) -> dict:
     The schedule runs this every day. Each company is read only once a week.
     Nothing happens until SCREENER_ENABLED is true.
     """
-    if not settings.SCREENER_ENABLED:
+    if not conf.SCREENER_ENABLED:
         logger.info("Screener.in refresh is off (SCREENER_ENABLED is false).")
         return {"disabled": True}
     result = refresh_stale(limit=limit)

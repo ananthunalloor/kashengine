@@ -1,6 +1,5 @@
 """Management command: refresh the GMP, subscription, and listing results."""
 
-from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from apps.ipos.collect import refresh_statuses
@@ -8,6 +7,7 @@ from apps.ipos.gmp import SAMPLE_SIZE, GmpSourceError, update_gmp
 from apps.ipos.listing import fill_listing_results, listing_candidates
 from apps.ipos.scoring import score_ipos
 from apps.markets.trading import today_ist
+from apps.siteconfig import conf
 
 
 class Command(BaseCommand):
@@ -36,8 +36,8 @@ class Command(BaseCommand):
         """Run the steps and print what each one did."""
         force = options["force"]
 
-        if settings.IPO_GMP_ENABLED or force:
-            self.stdout.write(f"GMP page: {settings.IPO_GMP_URL}")
+        if conf.IPO_GMP_ENABLED or force:
+            self.stdout.write(f"GMP page: {conf.IPO_GMP_URL}")
             try:
                 result = update_gmp(save_page_to=options["save_page"])
             except GmpSourceError as exc:
@@ -64,7 +64,7 @@ class Command(BaseCommand):
         else:
             self.stdout.write("The GMP fetch is off (IPO_GMP_ENABLED=false). Use --force to test.")
 
-        if settings.IPO_LISTING_ENABLED or force:
+        if conf.IPO_LISTING_ENABLED or force:
             today = today_ist()
             waiting = listing_candidates(today).count()
             stats = fill_listing_results(today)

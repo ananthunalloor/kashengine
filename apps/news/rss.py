@@ -7,11 +7,12 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import feedparser
 import httpx
+from django.utils import timezone
 from django.utils.html import strip_tags
 
 from .client import make_client
-from .feeds import FEEDS, Feed
-from .models import NewsArticle
+from .feeds import Feed
+from .models import NewsArticle, NewsFeed
 
 logger = logging.getLogger(__name__)
 
@@ -100,12 +101,29 @@ def fetch_feed(feed: Feed, client: httpx.Client) -> int:
     return save_articles(feed, parse_feed(response.content))
 
 
+def load_feeds() -> list[Feed]:
+    """The enabled feeds from the database."""
+    return [
+        Feed(row.source, row.name, row.url, pk=row.pk)
+        for row in NewsFeed.objects.filter(enabled=True)
+    ]
+
+
+def _record(feed: Feed, new: int, error: str = "") -> None:
+    """Save the result of the last run on the feed row, so the Ops pages can show it."""
+    if feed.pk is not None:
+        NewsFeed.objects.filter(pk=feed.pk).update(
+            last_fetched_at=timezone.now(), last_new_count=new, last_error=error[:500]
+        )
+
+
 def fetch_all_feeds(feeds: list[Feed] | None = None, client: httpx.Client | None = None) -> dict:
     """Fetch all enabled feeds. One feed that fails does not stop the others.
 
+    Without `feeds`, it uses the enabled feeds in the database.
     Return {"new": <total new articles>, "failed": {<feed label>: <error text>}}.
     """
-    feeds = [f for f in (FEEDS if feeds is None else feeds) if f.enabled]
+    feeds = load_feeds() if feeds is None else [f for f in feeds if f.enabled]
     own_client = client is None
     client = client or make_client()
     total_new = 0
@@ -118,7 +136,9 @@ def fetch_all_feeds(feeds: list[Feed] | None = None, client: httpx.Client | None
             except (httpx.HTTPError, ValueError) as exc:
                 logger.warning("Feed failed: %s: %s", label, exc)
                 failed[label] = str(exc)
+                _record(feed, 0, str(exc))
                 continue
+            _record(feed, new)
             logger.info("Feed ok: %s: %d new articles", label, new)
             total_new += new
     finally:

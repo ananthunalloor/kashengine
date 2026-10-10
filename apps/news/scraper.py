@@ -17,8 +17,9 @@ from urllib.robotparser import RobotFileParser
 
 import httpx
 import trafilatura
-from django.conf import settings
 from django.utils import timezone
+
+from apps.siteconfig import conf
 
 from .client import make_client
 from .models import NewsArticle
@@ -171,22 +172,22 @@ def scrape_pending(
 ) -> dict:
     """Scrape full text for new articles. Return the number of articles for each result."""
     stats = {"scraped": 0, "blocked": 0, "failed": 0, "retry": 0}
-    if not settings.NEWS_SCRAPE_FULL_TEXT:
+    if not conf.NEWS_SCRAPE_FULL_TEXT:
         return {**stats, "disabled": True}
 
-    cutoff = timezone.now() - timedelta(hours=settings.NEWS_SCRAPE_MAX_AGE_HOURS)
+    cutoff = timezone.now() - timedelta(hours=conf.NEWS_SCRAPE_MAX_AGE_HOURS)
     pending = NewsArticle.objects.filter(
         text_scraped_at__isnull=True,
         text="",
         fetched_at__gte=cutoff,
-    ).order_by("-fetched_at", "-id")[: limit or settings.NEWS_SCRAPE_BATCH_SIZE]
+    ).order_by("-fetched_at", "-id")[: limit or conf.NEWS_SCRAPE_BATCH_SIZE]
 
     own_client = client is None
     client = client or make_client()
     fetcher = PoliteFetcher(
         client,
-        delay=settings.NEWS_SCRAPE_DELAY_SECONDS,
-        user_agent=settings.NEWS_USER_AGENT,
+        delay=conf.NEWS_SCRAPE_DELAY_SECONDS,
+        user_agent=conf.NEWS_USER_AGENT,
         sleep=sleep,
         clock=clock,
     )

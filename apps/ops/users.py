@@ -3,11 +3,15 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
+from axes.models import AccessAttempt
+from axes.utils import reset as axes_reset
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session
 from django.db.models import Count, IntegerField, OuterRef, Q, QuerySet, Subquery
 from django.db.models.functions import Coalesce
 from django.utils import timezone
+
+from apps.siteconfig import axes_hooks, conf
 
 from .models import LoginEvent
 
@@ -145,3 +149,36 @@ def failed_logins_by_address(hours: int = FAILED_WINDOW_HOURS, limit: int = 10) 
         .order_by("-count")[:limit]
     )
     return [{**row, "suspicious": row["count"] >= SUSPICIOUS_FAILED_LOGINS} for row in rows]
+
+
+def lockouts() -> list[dict]:
+    """The addresses that are locked out now (django-axes), with the failed tries of each.
+
+    An address is locked when its failed logins reach the limit, and the lockout time is not over.
+    """
+    limit = conf.LOGIN_FAILURE_LIMIT
+    wait = axes_hooks.cooloff(None)
+    now = timezone.now()
+    by_address: dict[str, dict] = {}
+    for attempt in AccessAttempt.objects.order_by("attempt_time"):
+        row = by_address.setdefault(
+            attempt.ip_address or "unknown",
+            {"ip_address": attempt.ip_address, "failures": 0, "usernames": set(), "last": None},
+        )
+        row["failures"] += attempt.failures_since_start
+        row["usernames"].add(attempt.username or "")
+        row["last"] = attempt.attempt_time
+    locked = []
+    for row in by_address.values():
+        if row["failures"] < limit:
+            continue
+        until = row["last"] + wait if wait else None
+        if until is not None and until <= now:
+            continue
+        locked.append({**row, "usernames": sorted(row["usernames"]), "until": until})
+    return sorted(locked, key=lambda r: r["last"], reverse=True)
+
+
+def unlock(ip_address: str) -> int:
+    """Remove the failed tries of an address, so it can try again. Return how many."""
+    return axes_reset(ip=ip_address)

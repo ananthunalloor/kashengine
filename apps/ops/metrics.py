@@ -28,6 +28,7 @@ from apps.ipos.models import Ipo
 from apps.markets.models import IndexQuote, Prediction
 from apps.news.models import NewsArticle
 from apps.reports.models import Report
+from apps.siteconfig import conf
 
 from .health import KB, read_meminfo
 from .models import AuditEvent, LoginEvent, TaskRun
@@ -233,14 +234,14 @@ def llm_stats() -> dict:
     since = timezone.now() - timedelta(hours=24)
     scored = NewsArticle.objects.filter(scored_at__gte=since)
     waiting = NewsArticle.objects.filter(
-        scored_at__isnull=True, sentiment_attempts__lt=settings.SENTIMENT_MAX_ATTEMPTS
+        scored_at__isnull=True, sentiment_attempts__lt=conf.SENTIMENT_MAX_ATTEMPTS
     )
     return {
-        "model": settings.LLM_MODEL,
+        "model": conf.LLM_MODEL,
         "scored_24h": scored.count(),
         "waiting": waiting.count(),
         "gave_up": NewsArticle.objects.filter(
-            scored_at__isnull=True, sentiment_attempts__gte=settings.SENTIMENT_MAX_ATTEMPTS
+            scored_at__isnull=True, sentiment_attempts__gte=conf.SENTIMENT_MAX_ATTEMPTS
         ).count(),
     }
 

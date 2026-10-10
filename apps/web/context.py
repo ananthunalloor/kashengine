@@ -1,7 +1,8 @@
 """Template context for every page of the web app."""
 
-from django.conf import settings
 from django.urls import reverse
+
+from apps.siteconfig import conf
 
 # (label, url name, the url names that belong to the section)
 SECTIONS = (
@@ -27,4 +28,4 @@ def web_settings(request) -> dict:
     if user is not None and user.is_staff:
         in_ops = bool(match and match.namespace == "ops")
         nav.append({"label": "Ops", "url": reverse("ops:overview"), "active": in_ops})
-    return {"datastar_src": settings.DATASTAR_SRC, "nav": nav}
+    return {"datastar_src": conf.DATASTAR_SRC, "nav": nav}

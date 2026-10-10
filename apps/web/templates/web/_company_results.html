@@ -20,6 +20,6 @@
   </div>
   {% url 'web:companies' as list_url %}{% include "web/_pager.html" with page_url=list_url %}
   {% else %}
-  <p class="mt-4 text-muted">No company matches.{% if not filters.q %} Add companies with <code>python manage.py import_companies</code>.{% endif %}</p>
+  <p class="mt-4 text-muted">No company matches.{% if request.user.is_staff and not filters.q %} Admins: add companies with <code>python manage.py import_companies</code>.{% endif %}</p>
   {% endif %}
 </div>

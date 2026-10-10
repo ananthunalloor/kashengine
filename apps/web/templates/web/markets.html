@@ -50,7 +50,7 @@
     </table>
   </div>
   {% else %}
-  <p class="mt-3 text-muted">No prediction yet. Run <code>python manage.py predict_market</code>.</p>
+  <p class="mt-3 text-muted">No prediction yet.{% if request.user.is_staff %} Admins: start "Make the prediction" on the <a href="{% url 'ops:jobs' %}">Jobs</a> page.{% endif %}</p>
   {% endif %}
 </section>
 {% endblock %}

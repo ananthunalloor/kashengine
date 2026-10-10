@@ -2,7 +2,13 @@
 
 import pytest
 
-from apps.markets.instruments import ALL_INSTRUMENTS, GLOBAL_CUES, TOTAL_CUE_WEIGHT, Instrument
+from apps.markets.instruments import (
+    Instrument,
+    all_instruments,
+    global_cues,
+    target_symbol,
+    total_cue_weight,
+)
 from apps.markets.models import IndexQuote
 from apps.markets.quotes import fetch_quotes, save_bars
 from apps.markets.sources import Bar, QuoteError
@@ -13,9 +19,11 @@ pytestmark = pytest.mark.django_db
 
 
 def test_the_instrument_weights_add_up_to_one():
-    assert pytest.approx(1.0) == TOTAL_CUE_WEIGHT
-    assert len({i.symbol for i in ALL_INSTRUMENTS}) == len(ALL_INSTRUMENTS)
-    assert all(cue.scale > 0 for cue in GLOBAL_CUES)
+    """The instruments that the first migration saved."""
+    assert pytest.approx(1.0) == total_cue_weight(global_cues())
+    assert len({i.symbol for i in all_instruments()}) == len(all_instruments())
+    assert all(cue.scale > 0 for cue in global_cues())
+    assert target_symbol() == "^NSEI"
 
 
 def test_save_bars_saves_the_change_from_the_day_before():

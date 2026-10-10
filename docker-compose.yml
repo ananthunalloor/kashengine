@@ -82,8 +82,8 @@ services:
 
   beat:
     <<: *app
-    # The schedule file is in /tmp, because the app user can write there.
-    command: celery -A config beat -l info -s /tmp/celerybeat-schedule
+    # The schedule is in the database (django-celery-beat DatabaseScheduler, set in the settings).
+    command: celery -A config beat -l info
 
 volumes:
   postgres_data:

@@ -5,6 +5,22 @@
 <h1 class="font-serif text-3xl font-semibold">Logins</h1>
 <p class="mt-1 text-muted">Every login, logout, and failed login. The password of a failed login is never saved.</p>
 
+<h2 class="mt-8 text-xl font-semibold">Locked out now</h2>
+{% if lockouts %}
+<ul class="mt-3 divide-y divide-rule border-y border-rule text-sm">
+  {% for row in lockouts %}
+  <li class="flex flex-wrap items-center justify-between gap-3 py-2">
+    <span><code>{{ row.ip_address|default:"unknown address" }}</code> · {{ row.failures }} failed ({{ row.usernames|join:", "|default:"no user name" }}) · {% if row.until %}until {{ row.until|date:"H:i" }} ({{ row.until|until }}){% else %}until an admin unlocks it{% endif %}</span>
+    {% if request.user.is_superuser %}
+    <form method="post" action="{% url 'ops:lockout_unlock' %}">{% csrf_token %}<input type="hidden" name="ip_address" value="{{ row.ip_address }}"><button type="submit" class="rounded-md border border-rule px-3 py-1 text-sm">Unlock</button></form>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="mt-2 text-sm text-muted">No address is locked out. The limit and the lockout time are in <a href="{% url 'ops:settings_group' 'security' %}">Settings &gt; Login security</a>.</p>
+{% endif %}
+
 {% if failed_by_address %}
 <h2 class="mt-8 text-xl font-semibold">Failed logins by address (24 h)</h2>
 <ul class="mt-3 divide-y divide-rule border-y border-rule text-sm">

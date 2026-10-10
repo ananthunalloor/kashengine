@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any
 
 import environ
-from celery.schedules import crontab
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -23,6 +22,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "axes",
+    "config.beat.BeatConfig",
+    "apps.siteconfig",
     "apps.news",
     "apps.companies",
     "apps.ipos",
@@ -44,6 +46,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Axes must be the last one. It shows the page for a locked-out address.
+    "axes.middleware.AxesMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -116,7 +120,7 @@ NEWS_USER_AGENT = env(
     default="Mozilla/5.0 (compatible; KashEngineBot/0.1; +https://github.com/ananthunalloor/kashengine)",
 )
 NEWS_REQUEST_TIMEOUT = env.int("NEWS_REQUEST_TIMEOUT", default=20)  # Seconds.
-NEWS_FETCH_EVERY_HOURS = env.int("NEWS_FETCH_EVERY_HOURS", default=3)
+NEWS_STALE_AFTER_HOURS = env.int("NEWS_STALE_AFTER_HOURS", default=7)  # For the health check.
 NEWS_SCRAPE_FULL_TEXT = env.bool("NEWS_SCRAPE_FULL_TEXT", default=True)
 NEWS_SCRAPE_DELAY_SECONDS = env.float("NEWS_SCRAPE_DELAY_SECONDS", default=3.0)  # Per host.
 NEWS_SCRAPE_BATCH_SIZE = env.int("NEWS_SCRAPE_BATCH_SIZE", default=50)
@@ -124,6 +128,7 @@ NEWS_SCRAPE_MAX_AGE_HOURS = env.int("NEWS_SCRAPE_MAX_AGE_HOURS", default=48)
 
 # Company data from Screener.in.
 SCREENER_ENABLED = env.bool("SCREENER_ENABLED", default=False)
+SCREENER_BASE_URL = env("SCREENER_BASE_URL", default="https://www.screener.in")
 SCREENER_DELAY_SECONDS = env.float("SCREENER_DELAY_SECONDS", default=5.0)
 SCREENER_REFRESH_DAYS = env.int("SCREENER_REFRESH_DAYS", default=7)
 SCREENER_BATCH_SIZE = env.int("SCREENER_BATCH_SIZE", default=100)
@@ -135,6 +140,8 @@ SENTIMENT_MAX_AGE_HOURS = env.int("SENTIMENT_MAX_AGE_HOURS", default=48)
 SENTIMENT_MAX_ATTEMPTS = env.int("SENTIMENT_MAX_ATTEMPTS", default=3)
 
 # Market data and the prediction
+MARKET_CLOSE_TIME = env("MARKET_CLOSE_TIME", default="15:30")  # HH:MM, local time.
+MARKET_FINAL_BUFFER_MINUTES = env.int("MARKET_FINAL_BUFFER_MINUTES", default=10)  # Yahoo is late.
 MARKET_FLAT_BAND_PCT = env.float("MARKET_FLAT_BAND_PCT", default=0.25)  # A day within this is flat.
 # The news share of the score. The rest is global cues.
 PREDICTION_NEWS_WEIGHT = env.float("PREDICTION_NEWS_WEIGHT", default=0.5)
@@ -168,15 +175,34 @@ IPO_GOOD_GAIN_PCT = env.float("IPO_GOOD_GAIN_PCT", default=10.0)  # A listing ga
 # Find your chat ID with `manage.py telegram_check`.
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", default="")
 TELEGRAM_CHAT_IDS = env.list("TELEGRAM_CHAT_IDS", default=[])
+TELEGRAM_API_URL = env("TELEGRAM_API_URL", default="https://api.telegram.org")
 TELEGRAM_TIMEOUT_SECONDS = env.int("TELEGRAM_TIMEOUT_SECONDS", default=20)
 
-# Report time (IST), on trading days. A retry 20 minutes later sends only to chats that missed it.
-REPORT_HOUR = env.int("REPORT_HOUR", default=7)
-REPORT_MINUTE = env.int("REPORT_MINUTE", default=30)
+# The report time is a schedule entry (Ops > Schedule), not a setting.
 REPORT_NEWS_ITEMS = env.int("REPORT_NEWS_ITEMS", default=3)  # For good news, and for bad news.
 REPORT_NEWS_MIN_RELEVANCE = env.float("REPORT_NEWS_MIN_RELEVANCE", default=0.4)
 REPORT_IPO_ITEMS = env.int("REPORT_IPO_ITEMS", default=6)  # For each IPO list.
 REPORT_IPO_DAYS_AHEAD = env.int("REPORT_IPO_DAYS_AHEAD", default=7)
+
+# Settings that an admin can save on the dashboard are stored in the database (apps/siteconfig).
+# The values here (and the environment) are the defaults. Saved secrets are encrypted with this
+# key. If it is empty, the SECRET_KEY is used. If you change the key, enter the secrets again.
+SETTINGS_ENCRYPTION_KEY = env("SETTINGS_ENCRYPTION_KEY", default="")
+
+# Login lockout (django-axes). The limits can change on the dashboard (Settings > Login security).
+LOGIN_FAILURE_LIMIT = env.int("LOGIN_FAILURE_LIMIT", default=5)
+LOGIN_COOLOFF_MINUTES = env.int("LOGIN_COOLOFF_MINUTES", default=30)  # 0 = until an admin unlocks.
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",  # It must be the first.
+    "django.contrib.auth.backends.ModelBackend",
+]
+AXES_FAILURE_LIMIT = "apps.siteconfig.axes_hooks.failure_limit"
+AXES_COOLOFF_TIME = "apps.siteconfig.axes_hooks.cooloff"
+AXES_CLIENT_IP_CALLABLE = "apps.siteconfig.axes_hooks.client_ip"
+AXES_LOCKOUT_PARAMETERS = ["ip_address"]
+AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_CALLABLE = "apps.siteconfig.axes_hooks.lockout"
+AXES_ENABLE_ADMIN = False  # The Ops pages show the lockouts.
 
 # Ops pages (/ops/, staff only).
 LOG_DIR = BASE_DIR / "logs"
@@ -185,74 +211,9 @@ OPS_RETENTION_DAYS = env.int("OPS_RETENTION_DAYS", default=90)  # Task runs and 
 OPS_LOG_TAIL_BYTES = env.int("OPS_LOG_TAIL_BYTES", default=1_000_000)  # How much log to read.
 OPS_PAGE_SIZE = env.int("OPS_PAGE_SIZE", default=50)
 
-# All times are IST.
-CELERY_BEAT_SCHEDULE = {
-    "fetch-news-feeds": {
-        "task": "news.fetch_feeds",
-        "schedule": crontab(minute=5, hour=f"*/{NEWS_FETCH_EVERY_HOURS}"),
-    },
-    # A company is read again only when its data is older than SCREENER_REFRESH_DAYS.
-    "refresh-stale-companies": {
-        "task": "companies.refresh_stale",
-        "schedule": crontab(minute=30, hour=2),
-    },
-    # Also starts after each news fetch.
-    "score-news": {
-        "task": "news.score_articles",
-        "schedule": crontab(minute=20),
-    },
-    # Quotes before the prediction. Also checks the older predictions.
-    "fetch-market-quotes-morning": {
-        "task": "markets.fetch_quotes",
-        "schedule": crontab(minute=45, hour=6),
-    },
-    "predict-market": {
-        "task": "markets.predict",
-        "schedule": crontab(minute=0, hour=7),
-    },
-    # The market closes at 15:30. Gets the final quotes and checks today's prediction.
-    "fetch-market-quotes-evening": {
-        "task": "markets.fetch_quotes",
-        "schedule": crontab(minute=30, hour=17),
-    },
-    # IPO list (if IPO_FETCH_ENABLED), then the scores. The evening run gets listing results.
-    "collect-ipos-morning": {
-        "task": "ipos.collect",
-        "schedule": crontab(minute=15, hour=6),
-    },
-    "collect-ipos-evening": {
-        "task": "ipos.collect",
-        "schedule": crontab(minute=45, hour=18),
-    },
-    # GMP and subscription (if IPO_GMP_ENABLED), listing results, and the scores.
-    "refresh-ipo-metrics": {
-        "task": "ipos.refresh_metrics",
-        "schedule": crontab(minute=0, hour="7-19/2"),
-    },
-    # After the news scoring, before the report.
-    "score-ipos": {
-        "task": "ipos.score",
-        "schedule": crontab(minute=10, hour=7),
-    },
-    # Deletes old task runs and login events (OPS_RETENTION_DAYS).
-    "prune-ops-history": {
-        "task": "ops.prune",
-        "schedule": crontab(minute=40, hour=3),
-    },
-    # The daily report, then the retry for the chats that did not get it.
-    "send-daily-report": {
-        "task": "delivery.send_daily_report",
-        "schedule": crontab(minute=REPORT_MINUTE, hour=REPORT_HOUR, day_of_week="mon-fri"),
-    },
-    "send-daily-report-retry": {
-        "task": "delivery.send_daily_report",
-        "schedule": crontab(
-            minute=(REPORT_HOUR * 60 + REPORT_MINUTE + 20) % 60,
-            hour=((REPORT_HOUR * 60 + REPORT_MINUTE + 20) // 60) % 24,
-            day_of_week="mon-fri",
-        ),
-    },
-}
+# The schedule is in the database (django-celery-beat). Edit it on Ops > Schedule.
+# The first start saves the default entries (apps/ops/defaults.py). All times are IST.
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
 LOGGING: dict[str, Any] = {
     "version": 1,

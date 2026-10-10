@@ -19,10 +19,10 @@ import re
 from dataclasses import dataclass
 from datetime import timedelta
 
-from django.conf import settings
 from django.utils import timezone
 
 from apps.llm.client import LLMClient, LLMInvalidOutputError, LLMUnavailableError
+from apps.siteconfig import conf
 
 from .models import NewsArticle
 
@@ -108,7 +108,7 @@ def build_user_prompt(
     title: str, summary: str = "", text: str = "", source: str = "", max_chars: int | None = None
 ) -> str:
     """Make the message for the model. The full text is used when we have it."""
-    limit = settings.SENTIMENT_MAX_CHARS if max_chars is None else max_chars
+    limit = conf.SENTIMENT_MAX_CHARS if max_chars is None else max_chars
     body = _strip_tags(text or summary)[:limit]
     lines = []
     if source:
@@ -139,10 +139,10 @@ def score_article(article: NewsArticle, llm: LLMClient) -> Sentiment:
 
 def pending_articles():
     """Articles that need a score: not scored, not too old, and not failed too many times."""
-    cutoff = timezone.now() - timedelta(hours=settings.SENTIMENT_MAX_AGE_HOURS)
+    cutoff = timezone.now() - timedelta(hours=conf.SENTIMENT_MAX_AGE_HOURS)
     return NewsArticle.objects.filter(
         scored_at__isnull=True,
-        sentiment_attempts__lt=settings.SENTIMENT_MAX_ATTEMPTS,
+        sentiment_attempts__lt=conf.SENTIMENT_MAX_ATTEMPTS,
         fetched_at__gte=cutoff,
     ).order_by("-fetched_at", "-id")  # The newest first, in case there is a backlog.
 
@@ -155,7 +155,7 @@ def score_pending(limit: int | None = None, llm: LLMClient | None = None) -> dic
       the article is not at fault.
     """
     stats = {"scored": 0, "failed": 0, "stopped": False}
-    articles = list(pending_articles()[: limit or settings.SENTIMENT_BATCH_SIZE])
+    articles = list(pending_articles()[: limit or conf.SENTIMENT_BATCH_SIZE])
     if not articles:
         return stats
 

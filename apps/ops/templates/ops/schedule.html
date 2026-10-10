@@ -1,0 +1,51 @@
+{% extends "ops/base.html" %}
+{% load ops_extras %}
+{% block title %}Schedule · Kash Engine{% endblock %}
+{% block ops %}
+<h1 class="font-serif text-3xl font-semibold">Schedule</h1>
+<p class="mt-1 max-w-prose text-muted">When the jobs run by themselves. The times are in IST. The scheduler reads this list from the database, so a change is live in a few seconds.{% if not request.user.is_superuser %} Only a superuser can change it.{% endif %}</p>
+
+{% if request.user.is_superuser %}
+<p class="mt-4"><a href="{% url 'ops:schedule_add' %}" class="inline-block rounded-md bg-accent px-3 py-2 text-sm text-paper no-underline">Add an entry</a></p>
+{% endif %}
+
+<div class="mt-6 overflow-x-auto">
+  <table class="w-full min-w-[44rem] text-sm">
+    <thead class="text-left text-muted"><tr><th class="py-2 pr-3 font-normal">Entry</th><th class="py-2 pr-3 font-normal">Schedule</th><th class="py-2 pr-3 font-normal">Next run</th><th class="py-2 pr-3 font-normal">Last run</th><th class="py-2 font-normal">{% if request.user.is_superuser %}Actions{% else %}State{% endif %}</th></tr></thead>
+    <tbody class="divide-y divide-rule border-y border-rule">
+      {% for row in rows %}
+      <tr class="align-top">
+        <td class="py-2 pr-3"><span class="font-medium">{{ row.entry.name }}</span><br><span class="text-xs text-muted">{{ row.label }}</span></td>
+        <td class="py-2 pr-3"><code>{{ row.entry.cron_text }}</code></td>
+        <td class="py-2 pr-3 num">{% if row.next_run %}{{ row.next_run|date:"D j M, H:i" }}<br><span class="text-xs text-muted">{{ row.next_run|until }}</span>{% else %}<span class="rounded px-1.5 py-0.5 text-xs bg-flat-soft text-muted">Off</span>{% endif %}</td>
+        <td class="py-2 pr-3">{% if row.last %}<a href="{% url 'ops:run' row.last.pk %}">{{ row.last.created_at|ago }}</a> <span class="rounded px-1.5 py-0.5 text-xs {{ row.last.status|status_class }}">{{ row.last.get_status_display }}</span>{% else %}never{% endif %}</td>
+        <td class="py-2">
+          {% if request.user.is_superuser %}
+          <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'ops:schedule_edit' row.entry.pk %}" class="text-sm">Edit</a>
+            <form method="post" action="{% url 'ops:schedule_toggle' row.entry.pk %}">{% csrf_token %}<button type="submit" class="text-sm text-accent underline">{% if row.entry.enabled %}Turn off{% else %}Turn on{% endif %}</button></form>
+            <form method="post" action="{% url 'ops:schedule_delete' row.entry.pk %}" onsubmit="return confirm('Delete {{ row.entry.name|escapejs }}?')">{% csrf_token %}<button type="submit" class="text-sm text-loss underline">Delete</button></form>
+          </div>
+          {% else %}{% if row.entry.enabled %}On{% else %}Off{% endif %}{% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="py-4 text-muted">The schedule is empty. No job runs by itself.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="mt-8 max-w-prose text-sm text-muted">
+  <h2 class="text-base font-semibold text-ink">How to read a schedule</h2>
+  <p class="mt-1">Five fields: <code>minute hour day-of-month month day-of-week</code>. A star means "every". <code>*/3</code> means every third. <code>7-19/2</code> means every second hour from 7 to 19. <code>mon-fri</code> means Monday to Friday. Example: <code>30 7 * * mon-fri</code> is 07:30 on weekdays.</p>
+</div>
+
+{% if request.user.is_superuser %}
+<form method="post" action="{% url 'ops:schedule_reset' %}" class="mt-8 flex flex-wrap items-center gap-3 text-sm">
+  {% csrf_token %}
+  <label class="flex items-center gap-2"><input type="checkbox" name="confirm" value="yes"> Replace my schedule with the default schedule</label>
+  <button type="submit" class="rounded-md border border-rule px-3 py-1.5">Reset to default</button>
+</form>
+{% endif %}
+{% endblock %}

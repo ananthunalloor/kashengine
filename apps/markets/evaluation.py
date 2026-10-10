@@ -15,13 +15,14 @@ accuracy.
 import logging
 from datetime import datetime
 
-from django.conf import settings
 from django.utils import timezone
 
-from .instruments import TARGET_SYMBOL
+from apps.siteconfig import conf
+
+from .instruments import target_symbol
 from .models import IndexQuote, Prediction
 from .prediction import DOWN, FLAT, UP
-from .trading import FINAL_BUFFER, session_close, today_ist
+from .trading import final_buffer, session_close, today_ist
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ MIN_RESULTS_TO_TRUST = 30
 
 def classify_change(change_pct: float, band: float | None = None) -> str:
     """Return UP, DOWN or FLAT for a change in percent. The default band is MARKET_FLAT_BAND_PCT."""
-    band = settings.MARKET_FLAT_BAND_PCT if band is None else band
+    band = conf.MARKET_FLAT_BAND_PCT if band is None else band
     if change_pct > band:
         return UP
     if change_pct < -band:
@@ -44,13 +45,14 @@ def evaluate_pending(now: datetime | None = None) -> dict:
     """Check the predictions that have no result yet. Safe to run many times."""
     now = now or timezone.now()
     stats = {"evaluated": 0, "void": 0, "waiting": 0}
+    symbol = target_symbol()
     pending = Prediction.objects.filter(
         evaluated_at__isnull=True, target_date__lte=today_ist(now)
     ).order_by("target_date")
 
     for prediction in pending:
-        quote = IndexQuote.objects.filter(symbol=TARGET_SYMBOL, day=prediction.target_date).first()
-        final_after = session_close(prediction.target_date) + FINAL_BUFFER
+        quote = IndexQuote.objects.filter(symbol=symbol, day=prediction.target_date).first()
+        final_after = session_close(prediction.target_date) + final_buffer()
 
         if quote and quote.change_pct is not None and quote.updated_at >= final_after:
             actual = classify_change(quote.change_pct)
@@ -64,9 +66,7 @@ def evaluate_pending(now: datetime | None = None) -> dict:
             stats["evaluated"] += 1
         elif (
             quote is None
-            and IndexQuote.objects.filter(
-                symbol=TARGET_SYMBOL, day__gt=prediction.target_date
-            ).exists()
+            and IndexQuote.objects.filter(symbol=symbol, day__gt=prediction.target_date).exists()
         ):
             prediction.evaluated_at = now  # No result. "correct" stays empty.
             prediction.save(update_fields=["evaluated_at"])

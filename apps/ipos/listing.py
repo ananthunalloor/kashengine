@@ -15,10 +15,9 @@ from collections.abc import Callable
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.conf import settings
-
 from apps.markets.sources import QuoteError
 from apps.markets.trading import today_ist
+from apps.siteconfig import conf
 
 from .collect import compute_status, listing_gain_from_price
 from .models import Ipo
@@ -71,7 +70,7 @@ def yahoo_symbols(ipo: Ipo) -> list[str]:
 
 def listing_candidates(today: date):
     """Return the IPOs that listed lately and have no result yet."""
-    oldest = today - timedelta(days=settings.IPO_LISTING_CHECK_DAYS)
+    oldest = today - timedelta(days=conf.IPO_LISTING_CHECK_DAYS)
     return Ipo.objects.filter(
         listing_price__isnull=True,
         listing_gain_pct__isnull=True,

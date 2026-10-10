@@ -3,9 +3,9 @@
 import logging
 
 from celery import shared_task
-from django.conf import settings
 
 from apps.companies.tasks import link_news
+from apps.siteconfig import conf
 
 from .rss import fetch_all_feeds
 from .scraper import scrape_pending
@@ -27,7 +27,7 @@ def fetch_feeds() -> dict:
     )
     if result["new"]:
         link_news.delay()  # Link the new articles to the companies that they name.
-        if settings.NEWS_SCRAPE_FULL_TEXT:
+        if conf.NEWS_SCRAPE_FULL_TEXT:
             scrape_articles.delay()  # This task starts the scoring when it is done.
         else:
             score_articles.delay()

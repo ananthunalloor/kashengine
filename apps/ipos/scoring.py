@@ -31,12 +31,12 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from django.conf import settings
 from django.utils import timezone
 
 from apps.companies.matching import normalize_name, normalize_text
 from apps.markets.trading import today_ist
 from apps.news.models import NewsArticle
+from apps.siteconfig import conf
 
 from .models import Ipo
 
@@ -64,7 +64,7 @@ def _clip(value: float) -> float:
 
 def _is_fresh(stamp: datetime | None, now: datetime) -> bool:
     """Return True if the time is not older than IPO_METRIC_MAX_AGE_HOURS."""
-    return stamp is not None and now - stamp <= timedelta(hours=settings.IPO_METRIC_MAX_AGE_HOURS)
+    return stamp is not None and now - stamp <= timedelta(hours=conf.IPO_METRIC_MAX_AGE_HOURS)
 
 
 def gmp_signal(pct: float) -> float:
@@ -91,7 +91,7 @@ def news_signal(ipo: Ipo, now: datetime) -> tuple[float, int] | None:
     key = normalize_name(ipo.name)
     if len(key) < MIN_NAME_CHARS:
         return None
-    since = now - timedelta(days=settings.IPO_NEWS_DAYS)
+    since = now - timedelta(days=conf.IPO_NEWS_DAYS)
     pattern = re.compile(rf"(?<![\w&]){re.escape(key)}(?![\w&])", re.IGNORECASE)
 
     candidates = NewsArticle.objects.filter(
@@ -190,7 +190,7 @@ def score_ipo(ipo: Ipo, now: datetime | None = None) -> Outcome:
             )
         )
 
-    return decide(signals, notes, settings.IPO_GOOD_SCORE, settings.IPO_WEAK_SCORE)
+    return decide(signals, notes, conf.IPO_GOOD_SCORE, conf.IPO_WEAK_SCORE)
 
 
 def _inputs(outcome: Outcome, now: datetime) -> dict:
@@ -208,7 +208,7 @@ def _inputs(outcome: Outcome, now: datetime) -> dict:
             for s in outcome.signals
         ],
         "notes": outcome.notes,
-        "settings": {"good": settings.IPO_GOOD_SCORE, "weak": settings.IPO_WEAK_SCORE},
+        "settings": {"good": conf.IPO_GOOD_SCORE, "weak": conf.IPO_WEAK_SCORE},
     }
 
 
@@ -254,7 +254,7 @@ def likely_good_ipos(today: date | None = None):
 
 def _did_well(gain: float) -> bool:
     """Return True if a listing gain is at least IPO_GOOD_GAIN_PCT."""
-    return gain >= settings.IPO_GOOD_GAIN_PCT
+    return gain >= conf.IPO_GOOD_GAIN_PCT
 
 
 def ipo_stats() -> dict:

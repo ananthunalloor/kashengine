@@ -10,6 +10,8 @@ from pathlib import Path
 
 from django.conf import settings
 
+from apps.siteconfig import conf
+
 LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 LEVEL_RANK = {name: rank for rank, name in enumerate(LEVELS)}
 DEFAULT_LIMIT = 200
@@ -114,7 +116,7 @@ def query(
     if not path.is_file():
         return LogView([], exists=False, size_bytes=0, matched=0, path=str(path))
 
-    entries = parse(read_tail_lines(path, settings.OPS_LOG_TAIL_BYTES))
+    entries = parse(read_tail_lines(path, conf.OPS_LOG_TAIL_BYTES))
     minimum = LEVEL_RANK.get(clean_level(level), -1)
     logger_name = logger_name.strip().lower()[:MAX_FILTER_CHARS]
     text = text.strip().lower()[:MAX_FILTER_CHARS]

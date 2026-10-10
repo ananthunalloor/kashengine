@@ -3,7 +3,8 @@
 import logging
 
 from celery import shared_task
-from django.conf import settings
+
+from apps.siteconfig import conf
 
 from .collect import collect_ipos, refresh_statuses
 from .metrics import refresh_metrics
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 def collect() -> dict:
     """Read the IPO list (only if IPO_FETCH_ENABLED). Then refresh the numbers and the scores."""
     result: dict = {"fetch": "disabled"}
-    if settings.IPO_FETCH_ENABLED:
+    if conf.IPO_FETCH_ENABLED:
         result["fetch"] = collect_ipos()
     result.update(refresh_metrics())
     logger.info("IPO task done: %s", result)

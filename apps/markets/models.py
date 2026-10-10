@@ -76,3 +76,46 @@ class Prediction(models.Model):
 
     def __str__(self):
         return f"{self.target_date} {self.direction} ({self.confidence:.2f})"
+
+
+class Instrument(models.Model):
+    """A symbol that we download, with its weight and scale in the prediction.
+
+    Kinds:
+    - target: the index that we predict (Nifty 50). There is exactly one.
+    - index: another index that we download and show.
+    - cue: a global cue. It counts in the prediction with its weight.
+
+    The weight is how much a cue counts. The sign is the direction: a plus sign means "a rise is
+    good for Indian stocks", a minus sign means "a rise is bad" (oil, the dollar, fear). The scale
+    is the move in percent that counts as a full signal. A bigger move is cut to 1.0.
+    The numbers are a first guess. Change them only when the accuracy numbers give a reason.
+    The symbols are Yahoo Finance symbols. A symbol that fails is logged and skipped.
+    """
+
+    class Kind(models.TextChoices):
+        TARGET = "target", "Target index"
+        INDEX = "index", "Index"
+        CUE = "cue", "Global cue"
+
+    symbol = models.CharField(max_length=20, unique=True, help_text="The Yahoo Finance symbol.")
+    name = models.CharField(max_length=60)
+    kind = models.CharField(max_length=10, choices=Kind.choices, default=Kind.CUE)
+    weight = models.FloatField(
+        default=0.0, help_text="For a cue: from -1 to 1. Not used for others."
+    )
+    scale = models.FloatField(
+        default=1.0, help_text="For a cue: the move in % that is a full signal."
+    )
+    enabled = models.BooleanField(default=True)
+
+    class Meta:
+        ordering: ClassVar[list[str]] = ["id"]
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            models.UniqueConstraint(
+                fields=["kind"], condition=models.Q(kind="target"), name="one_target_instrument"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.symbol})"

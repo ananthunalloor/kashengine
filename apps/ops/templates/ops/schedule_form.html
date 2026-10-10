@@ -1,0 +1,34 @@
+{% extends "ops/base.html" %}
+{% block title %}{% if entry %}Edit {{ entry.name }}{% else %}Add an entry{% endif %} · Schedule · Kash Engine{% endblock %}
+{% block ops %}
+<p class="text-sm"><a href="{% url 'ops:schedule' %}">Schedule</a></p>
+<h1 class="mt-2 font-serif text-3xl font-semibold">{% if entry %}Edit {{ entry.name }}{% else %}Add an entry{% endif %}</h1>
+{% if not request.user.is_superuser %}<p class="mt-1 text-muted">Only a superuser can change the schedule.</p>{% endif %}
+
+<form method="post" class="mt-6 max-w-2xl space-y-4" autocomplete="off">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<p class="rounded-md bg-loss-soft px-3 py-2 text-sm text-loss" role="alert">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+  <div><label for="{{ form.name.id_for_label }}" class="font-medium">Name</label>{{ form.name }}{{ form.name.errors }}</div>
+  <div><label for="{{ form.task.id_for_label }}" class="font-medium">Job</label>{{ form.task }}{{ form.task.errors }}</div>
+  <div class="grid grid-cols-2 gap-4 sm:grid-cols-5">
+    <div><label for="{{ form.minute.id_for_label }}" class="text-sm font-medium">Minute</label>{{ form.minute }}{{ form.minute.errors }}</div>
+    <div><label for="{{ form.hour.id_for_label }}" class="text-sm font-medium">Hour</label>{{ form.hour }}{{ form.hour.errors }}</div>
+    <div><label for="{{ form.day_of_month.id_for_label }}" class="text-sm font-medium">Day of month</label>{{ form.day_of_month }}{{ form.day_of_month.errors }}</div>
+    <div><label for="{{ form.month.id_for_label }}" class="text-sm font-medium">Month</label>{{ form.month }}{{ form.month.errors }}</div>
+    <div><label for="{{ form.day_of_week.id_for_label }}" class="text-sm font-medium">Day of week</label>{{ form.day_of_week }}{{ form.day_of_week.errors }}</div>
+  </div>
+  <p class="text-xs text-muted">IST. A star means every. Examples: <code>*/15</code>, <code>7-19/2</code>, <code>mon-fri</code>, <code>1,15</code>.</p>
+  <label class="flex items-center gap-2 text-sm">{{ form.enabled }} <span>On</span></label>
+
+  {% if upcoming %}
+  <div class="rounded-md border border-rule bg-card p-3 text-sm">
+    <p class="font-medium">The next runs</p>
+    <ul class="mt-1 num text-muted">{% for moment in upcoming %}<li>{{ moment|date:"D j M Y, H:i" }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  {% if request.user.is_superuser %}
+  <p><button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm text-paper">Save</button></p>
+  {% endif %}
+</form>
+{% endblock %}

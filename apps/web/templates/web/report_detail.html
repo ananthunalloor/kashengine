@@ -20,7 +20,7 @@
     <li class="flex flex-wrap items-center justify-between gap-2 py-2">
       <span>{{ d.get_channel_display }}, {{ d.created_at|date:"j M, H:i" }}</span>
       <span class="rounded px-2 py-0.5 text-xs font-medium {{ d.status|badge }}">{{ d.get_status_display }}</span>
-      {% if d.error %}<span class="w-full text-loss">{{ d.error }}</span>{% endif %}
+      {% if d.error and request.user.is_staff %}<span class="w-full text-loss">{{ d.error }}</span>{% endif %}
     </li>
     {% endfor %}
   </ul>

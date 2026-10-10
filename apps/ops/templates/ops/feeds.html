@@ -1,0 +1,42 @@
+{% extends "ops/base.html" %}
+{% load ops_extras %}
+{% block title %}Feeds · Kash Engine{% endblock %}
+{% block ops %}
+<h1 class="font-serif text-3xl font-semibold">News feeds</h1>
+<p class="mt-1 max-w-prose text-muted">The RSS feeds that the news job reads. A feed that fails is logged and skipped. The other feeds still run.{% if not request.user.is_superuser %} Only a superuser can change them.{% endif %}</p>
+
+<div class="mt-6 overflow-x-auto">
+  <table class="w-full min-w-[40rem] text-sm">
+    <thead class="text-left text-muted"><tr><th class="py-2 pr-3 font-normal">Feed</th><th class="py-2 pr-3 font-normal">Last run</th><th class="py-2 pr-3 font-normal">New</th><th class="py-2 pr-3 font-normal">State</th>{% if request.user.is_superuser %}<th class="py-2 font-normal">Actions</th>{% endif %}</tr></thead>
+    <tbody class="divide-y divide-rule border-y border-rule">
+      {% for feed in feeds %}
+      <tr class="align-top">
+        <td class="py-2 pr-3"><span class="font-medium">{{ feed.source }} · {{ feed.name }}</span><br><span class="break-all text-xs text-muted">{{ feed.url }}</span></td>
+        <td class="py-2 pr-3">{% if feed.last_fetched_at %}{{ feed.last_fetched_at|ago }}{% else %}never{% endif %}{% if feed.last_error %}<br><span class="text-xs text-loss">{{ feed.last_error|truncatechars:120 }}</span>{% endif %}</td>
+        <td class="py-2 pr-3 num">{{ feed.last_new_count }}</td>
+        <td class="py-2 pr-3">{% if feed.enabled %}<span class="rounded px-1.5 py-0.5 text-xs bg-gain-soft text-gain">On</span>{% else %}<span class="rounded px-1.5 py-0.5 text-xs bg-flat-soft text-muted">Off</span>{% endif %}</td>
+        {% if request.user.is_superuser %}
+        <td class="py-2"><div class="flex flex-wrap items-center gap-3">
+          <form method="post" action="{% url 'ops:feed_toggle' feed.pk %}">{% csrf_token %}<button type="submit" class="text-sm text-accent underline">{% if feed.enabled %}Turn off{% else %}Turn on{% endif %}</button></form>
+          <form method="post" action="{% url 'ops:feed_delete' feed.pk %}" onsubmit="return confirm('Delete this feed?')">{% csrf_token %}<button type="submit" class="text-sm text-loss underline">Delete</button></form>
+        </div></td>
+        {% endif %}
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="py-4 text-muted">No feed. The news job has nothing to read.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if request.user.is_superuser %}
+<h2 class="mt-8 text-xl font-semibold">Add a feed</h2>
+<form method="post" class="mt-3 grid max-w-3xl gap-4 sm:grid-cols-3" autocomplete="off">
+  {% csrf_token %}
+  <div><label for="{{ form.source.id_for_label }}" class="text-sm font-medium">Source</label>{{ form.source }}{{ form.source.errors }}</div>
+  <div><label for="{{ form.name.id_for_label }}" class="text-sm font-medium">Name</label>{{ form.name }}{{ form.name.errors }}</div>
+  <div class="sm:col-span-3"><label for="{{ form.url.id_for_label }}" class="text-sm font-medium">Address (URL)</label>{{ form.url }}{{ form.url.errors }}</div>
+  <p class="sm:col-span-3"><button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm text-paper">Add</button></p>
+</form>
+{% endif %}
+{% endblock %}
