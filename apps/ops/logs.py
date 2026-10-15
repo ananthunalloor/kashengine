@@ -31,6 +31,8 @@ SECRET_PATTERNS = (
         r"\1\2<hidden>",
     ),
     (re.compile(r"(?i)\bBearer\s+\S+"), "Bearer <hidden>"),
+    # An API token of Kash Engine: ke_<8 hex>_<48 hex>.
+    (re.compile(r"\bke_[0-9a-f]{8}_[0-9a-f]{48}\b"), "ke_<hidden>"),
     (re.compile(r"(?i)(sessionid|csrftoken)=\S+"), r"\1=<hidden>"),
 )
 

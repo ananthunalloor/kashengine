@@ -1,4 +1,15 @@
-"""Database model for IPOs."""
+"""Database model for IPOs.
+
+The app has one model, `Ipo`. Several parts of the app write to it:
+
+- `apps/ipos/collect.py` and the `collect_ipos`, `import_ipo_csv` and `update_ipo` commands
+  save the list data and the manual entries.
+- `apps/ipos/gmp.py` saves the GMP and the subscription.
+- `apps/ipos/listing.py` saves the listing price.
+- `apps/ipos/scoring.py` saves the score and the verdict.
+
+The daily report (`apps/reports`) and the web pages (`apps/web`) only read the model.
+"""
 
 from typing import ClassVar
 
@@ -7,13 +18,34 @@ from django.utils import timezone
 
 
 class Ipo(models.Model):
-    """An IPO, from announcement to listing."""
+    """An IPO (initial public offer), from announcement to listing.
+
+    One row is one IPO. The pair (`name`, `open_date`) is unique. An IPO that changes its dates
+    keeps its row, because `apps/ipos/collect.py` matches a record by the normalized company name.
+
+    Key rules:
+
+    - `status` follows the dates. `refresh_statuses` and `save_record` set it. It is not a user
+      input.
+    - `gmp_updated_at` and `subscription_updated_at` say how fresh the numbers are. The score
+      ignores a number that is older than `IPO_METRIC_MAX_AGE_HOURS`. `Ipo.save` keeps these
+      times in step with the values.
+    - `listing_price` and `listing_gain_pct` are the result. They are empty before the listing.
+    - `score`, `verdict`, `scored_at` and `score_inputs` belong to `apps/ipos/scoring.py`.
+      The admin shows them as read only.
+    - `company` is an optional link to `apps.companies.Company`. The link becomes empty if the
+      company is deleted.
+    """
 
     class Category(models.TextChoices):
+        """The market segment of an IPO."""
+
         MAINBOARD = "mainboard", "Mainboard"
         SME = "sme", "SME"
 
     class Status(models.TextChoices):
+        """The stage of an IPO. The dates decide it (see `compute_status`)."""
+
         UPCOMING = "upcoming", "Upcoming"
         OPEN = "open", "Open"
         CLOSED = "closed", "Closed"
@@ -80,6 +112,8 @@ class Ipo(models.Model):
 
     # Set by the scoring step (apps/ipos/scoring.py).
     class Verdict(models.TextChoices):
+        """The outcome of the scoring rule. `UNKNOWN` means that there was not enough data."""
+
         GOOD = "good", "Likely to do well"
         MIXED = "mixed", "Mixed"
         WEAK = "weak", "Unlikely to do well"
@@ -112,10 +146,33 @@ class Ipo(models.Model):
         ]
 
     def __str__(self):
+        """Return the name of the IPO."""
         return self.name
 
     def save(self, *args, **kwargs):
-        """Set the time of the GMP and of the subscription when their values change."""
+        """Save the IPO and set the time of the GMP and of the subscription when they change.
+
+        The method compares the new `gmp` and `subscription_times` with the saved row. If a
+        value is new or different, and the caller did not also change its time field, the time
+        field becomes now. For a new row, the time becomes now when it is empty. A value of
+        `None` never sets a time.
+
+        If the caller sets the time field itself (for example to the time that a source
+        gives), the method keeps that time.
+
+        Args:
+            args: Positional arguments for `Model.save`.
+            kwargs: Keyword arguments for `Model.save`. If `update_fields` is given, the
+                method adds the time fields that it changed to that list.
+
+        Side effects:
+            Runs one extra query to read the saved row when the object has a primary key.
+            Writes the row.
+
+        Note:
+            The method compares the values in memory. It does this also when `update_fields`
+            does not list the value field. `updated_at` is not added to `update_fields`.
+        """
         old = (
             type(self)
             .objects.filter(pk=self.pk)
@@ -148,7 +205,11 @@ class Ipo(models.Model):
 
     @property
     def gmp_pct(self) -> float | None:
-        """The GMP in percent of the upper price band."""
+        """Return the GMP in percent of the upper price band.
+
+        The value is `None` when there is no GMP, or when the upper price band is empty or zero.
+        A negative GMP gives a negative percent.
+        """
         if self.gmp is None or not self.price_band_high:
             return None
         return float(self.gmp / self.price_band_high * 100)

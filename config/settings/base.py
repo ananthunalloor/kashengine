@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "config.beat.BeatConfig",
     "apps.siteconfig",
     "apps.access",
+    "apps.api",
     "apps.news",
     "apps.companies",
     "apps.ipos",
@@ -47,6 +48,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.LoginRequiredMiddleware",
     # After the login check: the feature and subscription rules of the web pages.
     "apps.access.middleware.AccessMiddleware",
+    # The /api/ paths: the API switch, version and rate-limit headers, ETag.
+    "apps.api.middleware.ApiMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Axes must be the last one. It shows the page for a locked-out address.
@@ -110,6 +113,20 @@ SUBSCRIPTION_NOTICE_DAYS = env.int("SUBSCRIPTION_NOTICE_DAYS", default=3)
 SUBSCRIPTION_CONTACT_TEXT = env(
     "SUBSCRIPTION_CONTACT_TEXT", default="Ask the admin to turn on your subscription."
 )
+
+# REST API (/api/v1/). These are the first values. An admin changes them on Ops > Settings.
+API_ENABLED = env.bool("API_ENABLED", default=True)
+API_DOCS_ENABLED = env.bool("API_DOCS_ENABLED", default=True)  # The Swagger UI page.
+API_RATE_LIMIT_PER_MINUTE = env.int("API_RATE_LIMIT_PER_MINUTE", default=60)  # Per token or user.
+API_AUTH_FAIL_LIMIT_PER_MINUTE = env.int("API_AUTH_FAIL_LIMIT_PER_MINUTE", default=10)  # Per IP.
+API_PAGE_SIZE = env.int("API_PAGE_SIZE", default=25)
+API_PAGE_SIZE_MAX = env.int("API_PAGE_SIZE_MAX", default=100)
+API_TOKEN_MAX_PER_USER = env.int("API_TOKEN_MAX_PER_USER", default=5)  # Active tokens.
+API_TOKEN_EXPIRY_DAYS = env.int("API_TOKEN_EXPIRY_DAYS", default=90)  # 0 = no expiry.
+
+# The cache holds the API rate-limit counters. A local-memory cache is correct for one process
+# (dev and tests). Prod uses Redis, so all Gunicorn workers share the counters (prod.py).
+CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"

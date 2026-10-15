@@ -1,4 +1,11 @@
-"""Models for the markets app: index quotes and predictions."""
+"""Models for the markets app: index quotes, predictions and instruments.
+
+`IndexQuote` holds one daily close for each symbol. `quotes.py` writes it. `Prediction` holds the
+prediction for one trading day and, later, the real result. `prediction.py` creates it and
+`evaluation.py` fills in the result. `Instrument` is the list of symbols to download, with the
+weight and scale of each global cue. Admins edit `Instrument` on the Ops pages. The web pages, the
+reports and the Ops health checks read all three models.
+"""
 
 from typing import ClassVar
 
@@ -7,7 +14,15 @@ from django.db import models
 
 
 class IndexQuote(models.Model):
-    """The close of one day for an index or a global cue (from Yahoo Finance)."""
+    """The close of one day for one symbol (an index or a global cue), from Yahoo Finance.
+
+    There is at most one row for each (symbol, day) pair. The database enforces this with the
+    constraint `unique_quote_symbol_day`. `quotes.save_bars` writes the rows with an upsert, so a
+    later download replaces the close and the change of an existing row.
+
+    `updated_at` has a rule for readers. The evaluation code treats a row as final only when
+    `updated_at` is later than the close of the market for that day.
+    """
 
     symbol = models.CharField(
         max_length=20, help_text="The Yahoo Finance symbol, for example ^NSEI."
@@ -32,13 +47,27 @@ class IndexQuote(models.Model):
         ]
 
     def __str__(self):
+        """Return the symbol, the day and the close, for example `^NSEI 2026-01-05 22000`."""
         return f"{self.symbol} {self.day} {self.close:g}"
 
 
 class Prediction(models.Model):
-    """The prediction for one trading day (Nifty 50), and later the real result."""
+    """The prediction for one trading day (Nifty 50), and later the real result.
+
+    There is one row for each target day (`target_date` is unique). `prediction.make_prediction`
+    creates the row with the direction, the confidence and the numbers behind them. After the
+    market closes, `evaluation.evaluate_pending` fills in the real result fields
+    (`actual_change_pct`, `actual_direction`, `correct`, `evaluated_at`).
+
+    Result states:
+    - Not evaluated: `evaluated_at` is empty.
+    - Evaluated with a result: `correct` is True or False.
+    - Void: `evaluated_at` is set and `correct` is empty. The market had no session that day.
+    """
 
     class Direction(models.TextChoices):
+        """The three possible directions of a day: up, down or flat."""
+
         UP = "up", "Up"
         DOWN = "down", "Down"
         FLAT = "flat", "Flat"
@@ -75,11 +104,15 @@ class Prediction(models.Model):
         ordering: ClassVar[list[str]] = ["-target_date"]
 
     def __str__(self):
+        """Return the target date, the direction and the confidence."""
         return f"{self.target_date} {self.direction} ({self.confidence:.2f})"
 
 
 class Instrument(models.Model):
     """A symbol that we download, with its weight and scale in the prediction.
+
+    `instruments.py` reads the rows and converts them to plain `Instrument` values. A database
+    constraint (`one_target_instrument`) allows at most one row of kind `target`.
 
     Kinds:
     - target: the index that we predict (Nifty 50). There is exactly one.
@@ -94,6 +127,8 @@ class Instrument(models.Model):
     """
 
     class Kind(models.TextChoices):
+        """The role of an instrument: target index, other index or global cue."""
+
         TARGET = "target", "Target index"
         INDEX = "index", "Index"
         CUE = "cue", "Global cue"
@@ -118,4 +153,5 @@ class Instrument(models.Model):
         ]
 
     def __str__(self) -> str:
+        """Return the name and the symbol, for example `Nifty 50 (^NSEI)`."""
         return f"{self.name} ({self.symbol})"

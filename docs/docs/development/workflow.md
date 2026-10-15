@@ -1,0 +1,97 @@
+---
+title: Development workflow
+sidebar_label: Workflow
+description: Where code belongs, the checklist for a change, migrations, API changes, and patch delivery.
+---
+
+# Development workflow
+
+## Put the code in the app that owns the data
+
+A rule goes next to the data that it governs. News parsing is in `news`. The market prediction is
+in `markets`. The IPO score is in `ipos`. The validation of settings is in `siteconfig`. The
+operator controls are in `ops`. A low-level app does not import a web view.
+
+A request is thin:
+
+1. A view checks access and the input.
+2. A form or a service checks the rules of the domain.
+3. A service or a model changes the data.
+4. A Celery task does the work that takes long.
+5. A template shows the result. It does not compute a decision.
+
+## Checklist for a change
+
+- Find the model, service, task, view, template, setting and tests that the change touches.
+- Write the expected behavior first.
+- Check the input at the boundary. Use a database constraint for a rule that must hold when two
+  requests come at the same time.
+- Put an external call behind a small function that a test can replace. Set a timeout. Handle
+  each provider error.
+- Write the docstrings ([standard](./docstring-standard.md)).
+- Write tests: valid input, invalid input, limits, and failure.
+- If you add a setting, decide where it belongs:
+  - A value that an operator may change goes in `apps/siteconfig/registry.py`, and code reads it
+    with `conf`.
+  - A value that decides how the process starts stays in the environment. Add it to
+    `.env.example` and `.env.prod.example`.
+- If an Ops action sends a message or replaces data, use the confirmation text of the job and the
+  superuser check.
+- If you add a Celery task, give it a `name` and a `soft_time_limit`. If a user may start it,
+  add it to the job list in `apps/ops/jobs.py`. If it runs on a schedule, add it to
+  `apps/ops/defaults.py` and write a migration for existing databases.
+- Run the checks and read the diff.
+
+## Checks
+
+```bash
+uv run ruff check .
+uv run ruff format --check .
+uv run ty check
+uv run python manage.py makemigrations --check --dry-run
+uv run pytest
+cd docs && npm run reference:check && npm run build
+```
+
+[Pre-commit](https://pre-commit.com) runs Ruff, the file checks and `ty` before each commit.
+CI (`.github/workflows/ci.yml`) runs all the checks above for each pull request.
+
+## Database migrations
+
+- Change the model, then run `makemigrations`. Read the migration.
+- Do not edit a migration that is already in `main`.
+- A migration that adds first data must be safe to run once on a new database.
+- Before you deploy, take a [backup](../operations/backups-and-recovery.md) and decide how you
+  will go back or go forward if the migration fails.
+
+## Change the HTTP API
+
+The API is a contract. Inside `v1` you may only add things. See
+[Versioning](../api/versioning.md).
+
+1. Change the router in `apps/api/v1/` and the schemas in `apps/api/v1/schemas.py`. Describe
+   every field with `Field(description=...)`. Write the docstring of the endpoint for the API
+   user.
+2. Export the OpenAPI file:
+
+   ```bash
+   uv run python manage.py export_openapi --output docs/openapi/v1.json
+   ```
+
+3. Run the tests. `apps/api/tests/test_openapi.py` fails when the file is old, when an operation
+   has no summary or description, and when a response field has no description.
+4. Raise the minor number in `apps/api/versions.py` and write the change in the
+   [changelog](../api/changelog.md).
+5. CI runs `docs/scripts/openapi_compat.py` against the file on `main`. A breaking change fails.
+
+## Patch delivery
+
+To share work as a patch file, make it from a known base commit:
+
+```bash
+git format-patch origin/main..HEAD -o patches/
+git apply --check patches/*.patch      # on the other checkout
+git am patches/*.patch
+```
+
+Tell the receiver the base commit. Do not put unrelated changes in one patch.

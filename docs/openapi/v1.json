@@ -1,0 +1,3567 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Kash Engine API",
+    "version": "1.0.0",
+    "description": "Read-only access to the Kash Engine data: daily reports, scored news, IPOs, the market\nprediction, companies and the delivery log.\n\n## Authentication\n\nSend a token in the `Authorization` header:\n\n    Authorization: Bearer ke_<prefix>_<secret>\n\nMake a token on the **Account** page of the web app. The secret is shown once. A signed-in\nbrowser session also works (this is how the Swagger page calls the API).\n\n## Access rules\n\nThe API follows the same rules as the web app. A user needs the feature of an endpoint, and\nneeds an active subscription if the site requires one.\n\n## Errors\n\nErrors use `application/problem+json` (RFC 9457). Branch on the `code` member.\n\n## Limits\n\nEach token has a request limit for each minute. The headers `RateLimit-Limit`,\n`RateLimit-Remaining` and `RateLimit-Reset` show the state. A client over the limit gets `429`\nand `Retry-After`.\n\n## Versions\n\nThe version is in the path. Inside `v1` changes only add things. The `API-Version` header gives\nthe full version of the contract.\n"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "operationId": "get_health",
+        "summary": "Check that the API answers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        },
+        "description": "Return `ok` and the version of the API contract. It needs no sign-in.\n\nUse it for a simple uptime check. It does not test the database.",
+        "tags": [
+          "Service"
+        ]
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "operationId": "get_me",
+        "summary": "Get the caller, the subscription and the features",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Return who is calling, the subscription state and the features that the caller may use.\n\nEvery signed-in user may call this endpoint, also a user whose subscription ended. It is the\nbest first call to check that a token works.",
+        "tags": [
+          "Account"
+        ],
+        "security": [
+          {
+            "BearerToken": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/reports": {
+      "get": {
+        "operationId": "list_reports",
+        "summary": "List daily reports",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 500,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The most rows to return. The default and the largest value are server settings (default 25, largest 100 unless an admin changed them).",
+              "title": "Limit"
+            },
+            "required": false,
+            "description": "The most rows to return. The default and the largest value are server settings (default 25, largest 100 unless an admin changed them)."
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "description": "How many rows to skip. Use it to read the next page.",
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "How many rows to skip. Use it to read the next page."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "List the daily reports, newest first.\n\nThere is one report for each date. The list has no report text. Read one report to get it.\n\n**Required feature:** `reports`.",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "BearerToken": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/reports/{day}": {
+      "get": {
+        "operationId": "get_report",
+        "summary": "Get one daily report",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "day",
+            "schema": {
+              "format": "date",
+              "title": "Day",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Return the report of one date, with its full text and its data.\n\nThe `day` is a date like `2026-10-07`. The answer is `404` if no report exists for it.\n\n**Required feature:** `reports`.",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "BearerToken": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/news": {
+      "get": {
+        "operationId": "list_news",
+        "summary": "List news articles",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 500,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The most rows to return. The default and the largest value are server settings (default 25, largest 100 unless an admin changed them).",
+              "title": "Limit"
+            },
+            "required": false,
+            "description": "The most rows to return. The default and the largest value are server settings (default 25, largest 100 unless an admin changed them)."
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "description": "How many rows to skip. Use it to read the next page.",
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "How many rows to skip. Use it to read the next page."
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Text in the title or the summary.",
+              "title": "Q"
+            },
+            "required": false,
+            "description": "Text in the title or the summary."
+          },
+          {
+            "in": "query",
+            "name": "sentiment",
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "positive",
+                    "negative",
+                    "neutral",
+                    "unscored"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only articles with this sentiment. `unscored` means not scored yet.",
+              "title": "Sentiment"
+            },
+            "required": false,
+            "description": "Only articles with this sentiment. `unscored` means not scored yet."
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The exact source name, for example Mint.",
+              "title": "Source"
+            },
+            "required": false,
+            "description": "The exact source name, for example Mint."
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only articles published at or after this time (ISO 8601).",
+              "title": "Since"
+            },
+            "required": false,
+            "description": "Only articles published at or after this time (ISO 8601)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "List scored news articles, newest first.\n\nAn article carries the sentiment from the local language model and the companies that the\nmatcher found in it. The full article text is never part of the API.\n\n**Required feature:** `news`.",
+        "tags": [
+          "News"
+        ],
+        "security": [
+          {
+            "BearerToken": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ipos": {
+      "get": {
+        "operationId": "list_ipos",
+        "summary": "List IPOs",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 500,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The most rows to return. The default and the largest value are server settings (default 25, largest 100 unless an admin changed them).",
+              "title": "Limit"
+            },
+            "required": false,
+            "description": "The most rows to return. The default and the largest value are server settings (default 25, largest 100 unless an admin changed them)."
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "description": "How many rows to skip. Use it to read the next page.",
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "How many rows to skip. Use it to read the next page."
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Text in the name.",
+              "title": "Q"
+            },
+            "required": false,
+            "description": "Text in the name."
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "default": "all",
+              "description": "`active` means open and upcoming first, then closed, without listed IPOs. `all` is the default.",
+              "enum": [
+                "active",
+                "open",
+                "upcoming",
+                "closed",
+                "listed",
+                "all"
+              ],
+              "title": "Status",
+              "type": "string"
+            },
+            "required": false,
+            "description": "`active` means open and upcoming first, then closed, without listed IPOs. `all` is the default."
+          },
+          {
+            "in": "query",
+            "name": "verdict",
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "good",
+                    "mixed",
+                    "weak",
+                    "unknown"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only IPOs with this verdict.",
+              "title": "Verdict"
+            },
+            "required": false,
+            "description": "Only IPOs with this verdict."
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "mainboard",
+                    "sme"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Mainboard or SME.",
+              "title": "Category"
+            },
+            "required": false,
+            "description": "Mainboard or SME."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IpoPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "List IPOs with their dates, price band, GMP, subscription and score.\n\nThe score and the verdict come from the scoring step. An IPO without enough data has the\nverdict `unknown`. This is an analysis aid and not investment advice.\n\n**Required feature:** `ipos`.",
+        "tags": [
+          "IPOs"
+        ],
+        "security": [
+          {
+            "BearerToken": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ipos/{ipo_id}": {
+      "get": {
+        "operationId": "get_ipo",
+        "summary": "Get one IPO",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ipo_id",
+            "schema": {
+              "title": "Ipo Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IpoDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Return one IPO with the inputs of its score.\n\n`signals` lists each input that the score used. `notes` says why an input was left out.\nThe answer is `404` if the IPO does not exist.\n\n**Required feature:** `ipos`.",
+        "tags": [
+          "IPOs"
+        ],
+        "security": [
+          {
+            "BearerToken": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/markets/outlook": {
+      "get": {
+        "operationId": "get_outlook",
+        "summary": "Get the newest market prediction",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Outlook"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Return the newest prediction for the target index (Nifty 50).\n\n`confidence` shows how strong the signal is. It is not a probability. Compare it with the\nnumbers of `/markets/accuracy`. The answer is `404` before the first prediction exists.\n\n**Required feature:** `markets`.",
+        "tags": [
+          "Markets"
+        ],
+        "security": [
+          {
+            "BearerToken": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/markets/predictions": {
+      "get": {
+        "operationId": "list_predictions",
+        "summary": "List past predictions",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 500,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The most rows to return. The default and the largest value are server settings (default 25, largest 100 unless an admin changed them).",
+              "title": "Limit"
+            },
+            "required": false,
+            "description": "The most rows to return. The default and the largest value are server settings (default 25, largest 100 unless an admin changed them)."
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "description": "How many rows to skip. Use it to read the next page.",
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "How many rows to skip. Use it to read the next page."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "List predictions, newest target date first, with the real result when it is known.\n\n**Required feature:** `markets`.",
+        "tags": [
+          "Markets"
+        ],
+        "security": [
+          {
+            "BearerToken": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/markets/accuracy": {
+      "get": {
+        "operationId": "get_accuracy",
+        "summary": "Get the accuracy of the predictions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Accuracy"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Return how often the predictions were right, and the baseline to compare with.\n\nThe baseline always guesses the most common real direction. A useful model must beat it.\nTrust the numbers only when `enough_results` is true.\n\n**Required feature:** `markets`.",
+        "tags": [
+          "Markets"
+        ],
+        "security": [
+          {
+            "BearerToken": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/markets/quotes": {
+      "get": {
+        "operationId": "list_quotes",
+        "summary": "List the newest quotes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Quote"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Return the newest saved close of each enabled instrument.\n\nAn instrument with no saved quote is left out. The list is short, so it has no paging.\n\n**Required feature:** `markets`.",
+        "tags": [
+          "Markets"
+        ],
+        "security": [
+          {
+            "BearerToken": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/companies": {
+      "get": {
+        "operationId": "list_companies",
+        "summary": "List companies",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 500,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The most rows to return. The default and the largest value are server settings (default 25, largest 100 unless an admin changed them).",
+              "title": "Limit"
+            },
+            "required": false,
+            "description": "The most rows to return. The default and the largest value are server settings (default 25, largest 100 unless an admin changed them)."
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "description": "How many rows to skip. Use it to read the next page.",
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "How many rows to skip. Use it to read the next page."
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Text in the name, symbol or sector.",
+              "title": "Q"
+            },
+            "required": false,
+            "description": "Text in the name, symbol or sector."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "List the companies that the news matcher knows, sorted by name.\n\nThe Screener.in data is not part of the answer. `last_updated` shows when it was fetched.\n\n**Required feature:** `companies`.",
+        "tags": [
+          "Companies"
+        ],
+        "security": [
+          {
+            "BearerToken": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/delivery/logs": {
+      "get": {
+        "operationId": "list_delivery_logs",
+        "summary": "List report delivery attempts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 500,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The most rows to return. The default and the largest value are server settings (default 25, largest 100 unless an admin changed them).",
+              "title": "Limit"
+            },
+            "required": false,
+            "description": "The most rows to return. The default and the largest value are server settings (default 25, largest 100 unless an admin changed them)."
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "description": "How many rows to skip. Use it to read the next page.",
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "How many rows to skip. Use it to read the next page."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "List the attempts to send a report, newest first.\n\nThe recipient is masked. The error text is only for staff users, because it can name an\ninternal setting. Other users see the status only.\n\n**Required feature:** `delivery`.",
+        "tags": [
+          "Delivery"
+        ],
+        "security": [
+          {
+            "BearerToken": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Health": {
+        "description": "The state of the API.",
+        "properties": {
+          "status": {
+            "const": "ok",
+            "description": "Always `ok` when the API answers.",
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "description": "The full version of the API contract, for example 1.0.0.",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "version"
+        ],
+        "title": "Health",
+        "type": "object"
+      },
+      "Me": {
+        "description": "The caller, the subscription, and the features of the account.",
+        "properties": {
+          "id": {
+            "description": "The user id.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "username": {
+            "description": "The user name.",
+            "title": "Username",
+            "type": "string"
+          },
+          "is_staff": {
+            "description": "True for a staff or superuser account.",
+            "title": "Is Staff",
+            "type": "boolean"
+          },
+          "subscription_required": {
+            "description": "True if an admin turned on the rule that a user needs a subscription.",
+            "title": "Subscription Required",
+            "type": "boolean"
+          },
+          "subscription": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubscriptionInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The subscription row. Empty if the user has none."
+          },
+          "features": {
+            "description": "The feature keys that the caller may use now.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Features",
+            "type": "array"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TokenInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set when the request used a bearer token. Empty for a session."
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "is_staff",
+          "subscription_required",
+          "features"
+        ],
+        "title": "Me",
+        "type": "object"
+      },
+      "SubscriptionInfo": {
+        "description": "The subscription of the caller.",
+        "properties": {
+          "kind": {
+            "description": "How the subscription started.",
+            "enum": [
+              "trial",
+              "paid",
+              "gift"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "state": {
+            "description": "`staff` means: staff and superusers need no subscription.",
+            "enum": [
+              "trial",
+              "active",
+              "expired",
+              "none",
+              "staff"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "started_at": {
+            "description": "When the subscription started.",
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Empty means the subscription does not end.",
+            "title": "Ends At"
+          },
+          "days_left": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whole days to the end. Empty if no end.",
+            "title": "Days Left"
+          }
+        },
+        "required": [
+          "kind",
+          "state",
+          "started_at"
+        ],
+        "title": "SubscriptionInfo",
+        "type": "object"
+      },
+      "TokenInfo": {
+        "description": "The token that made the request. It never holds the secret.",
+        "properties": {
+          "name": {
+            "description": "The label that the owner chose.",
+            "title": "Name",
+            "type": "string"
+          },
+          "prefix": {
+            "description": "The eight public characters of the token.",
+            "title": "Prefix",
+            "type": "string"
+          },
+          "created_at": {
+            "description": "When the token was made.",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Empty means the token does not expire.",
+            "title": "Expires At"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the token was last used. The server updates it at most once a minute.",
+            "title": "Last Used At"
+          }
+        },
+        "required": [
+          "name",
+          "prefix",
+          "created_at"
+        ],
+        "title": "TokenInfo",
+        "type": "object"
+      },
+      "FieldError": {
+        "description": "One wrong parameter in a `validation_error`.",
+        "properties": {
+          "field": {
+            "description": "The name of the parameter.",
+            "title": "Field",
+            "type": "string"
+          },
+          "message": {
+            "description": "What is wrong.",
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "description": "A short machine-readable reason, for example `int_parsing`.",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "message",
+          "type"
+        ],
+        "title": "FieldError",
+        "type": "object"
+      },
+      "Problem": {
+        "description": "An error answer (RFC 9457). The content type is `application/problem+json`.",
+        "properties": {
+          "type": {
+            "description": "A link to the explanation of the code.",
+            "title": "Type",
+            "type": "string"
+          },
+          "title": {
+            "description": "The HTTP status text.",
+            "title": "Title",
+            "type": "string"
+          },
+          "status": {
+            "description": "The HTTP status code.",
+            "title": "Status",
+            "type": "integer"
+          },
+          "detail": {
+            "description": "What went wrong in this case. Safe to show to a user.",
+            "title": "Detail",
+            "type": "string"
+          },
+          "instance": {
+            "description": "The path of the request.",
+            "title": "Instance",
+            "type": "string"
+          },
+          "code": {
+            "description": "A stable code. Branch on this value, not on `detail`.",
+            "title": "Code",
+            "type": "string"
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FieldError"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The wrong parameters. Only for `validation_error`.",
+            "title": "Errors"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "instance",
+          "code"
+        ],
+        "title": "Problem",
+        "type": "object"
+      },
+      "PageParams": {
+        "description": "The paging parameters. List filters extend this class.",
+        "properties": {
+          "limit": {
+            "anyOf": [
+              {
+                "maximum": 500,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The most rows to return. The default and the largest value are server settings (default 25, largest 100 unless an admin changed them).",
+            "title": "Limit"
+          },
+          "offset": {
+            "default": 0,
+            "description": "How many rows to skip. Use it to read the next page.",
+            "maximum": 1000000,
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "title": "PageParams",
+        "type": "object"
+      },
+      "ReportPage": {
+        "description": "A page of reports.",
+        "properties": {
+          "items": {
+            "description": "The rows of this page.",
+            "items": {
+              "$ref": "#/components/schemas/ReportSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "count": {
+            "description": "The number of rows in all pages, with the filters applied.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "limit": {
+            "description": "The page size that the server used.",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "description": "The number of rows that the server skipped.",
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "count",
+          "limit",
+          "offset"
+        ],
+        "title": "ReportPage",
+        "type": "object"
+      },
+      "ReportSummary": {
+        "description": "One daily report, without its text.",
+        "properties": {
+          "date": {
+            "description": "The date of the report. There is one report for each date.",
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "prediction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "up",
+                  "down",
+                  "flat"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The predicted market direction.",
+            "title": "Prediction"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Signal strength, 0 to 1.",
+            "title": "Confidence"
+          },
+          "created_at": {
+            "description": "When the server saved the report.",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "created_at"
+        ],
+        "title": "ReportSummary",
+        "type": "object"
+      },
+      "ReportDetail": {
+        "description": "One daily report with its text and data.",
+        "properties": {
+          "date": {
+            "description": "The date of the report. There is one report for each date.",
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "prediction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "up",
+                  "down",
+                  "flat"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The predicted market direction.",
+            "title": "Prediction"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Signal strength, 0 to 1.",
+            "title": "Confidence"
+          },
+          "created_at": {
+            "description": "When the server saved the report.",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "text": {
+            "description": "The full report text that is sent on Telegram.",
+            "title": "Text",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": true,
+            "description": "The numbers and lists behind the text. The keys can grow. Do not depend on a key that is not in the developer guide.",
+            "title": "Data",
+            "type": "object"
+          }
+        },
+        "required": [
+          "date",
+          "created_at",
+          "text",
+          "data"
+        ],
+        "title": "ReportDetail",
+        "type": "object"
+      },
+      "NewsFilters": {
+        "description": "Filters for the news list. All filters are optional and they combine with AND.",
+        "properties": {
+          "limit": {
+            "anyOf": [
+              {
+                "maximum": 500,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The most rows to return. The default and the largest value are server settings (default 25, largest 100 unless an admin changed them).",
+            "title": "Limit"
+          },
+          "offset": {
+            "default": 0,
+            "description": "How many rows to skip. Use it to read the next page.",
+            "maximum": 1000000,
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "q": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Text in the title or the summary.",
+            "title": "Q"
+          },
+          "sentiment": {
+            "anyOf": [
+              {
+                "enum": [
+                  "positive",
+                  "negative",
+                  "neutral",
+                  "unscored"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only articles with this sentiment. `unscored` means not scored yet.",
+            "title": "Sentiment"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The exact source name, for example Mint.",
+            "title": "Source"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only articles published at or after this time (ISO 8601).",
+            "title": "Since"
+          }
+        },
+        "title": "NewsFilters",
+        "type": "object"
+      },
+      "CompanyRef": {
+        "description": "A company that is named in an article.",
+        "properties": {
+          "symbol": {
+            "description": "The NSE symbol of the company.",
+            "title": "Symbol",
+            "type": "string"
+          },
+          "name": {
+            "description": "The company name.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "name"
+        ],
+        "title": "CompanyRef",
+        "type": "object"
+      },
+      "NewsItem": {
+        "description": "One scored news article. The full text is not part of the API.",
+        "properties": {
+          "id": {
+            "description": "The article id.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "source": {
+            "description": "The source name, for example Moneycontrol.",
+            "title": "Source",
+            "type": "string"
+          },
+          "title": {
+            "description": "The headline.",
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "description": "The link to the article on the site of the source.",
+            "title": "Url",
+            "type": "string"
+          },
+          "summary": {
+            "description": "The short text from the RSS feed.",
+            "title": "Summary",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the source published the article. Empty if the feed gave no date.",
+            "title": "Published At"
+          },
+          "sentiment": {
+            "description": "`unscored` until the model has scored the article. A score of at least 0.2 is `positive`, at most -0.2 is `negative`, and the rest is `neutral`.",
+            "enum": [
+              "positive",
+              "negative",
+              "neutral",
+              "unscored"
+            ],
+            "title": "Sentiment",
+            "type": "string"
+          },
+          "sentiment_score": {
+            "anyOf": [
+              {
+                "maximum": 1,
+                "minimum": -1,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "From -1 (very negative) to 1 (very positive). Empty until scored.",
+            "title": "Sentiment Score"
+          },
+          "sentiment_reason": {
+            "default": "",
+            "description": "The reason that the model gave for the score. Empty until scored.",
+            "title": "Sentiment Reason",
+            "type": "string"
+          },
+          "relevance": {
+            "anyOf": [
+              {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How much the article matters to the Indian market.",
+            "title": "Relevance"
+          },
+          "scored_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the model scored the article. Empty means not scored yet.",
+            "title": "Scored At"
+          },
+          "companies": {
+            "description": "The companies that the server found in the article.",
+            "items": {
+              "$ref": "#/components/schemas/CompanyRef"
+            },
+            "title": "Companies",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "title",
+          "url",
+          "summary",
+          "sentiment",
+          "companies"
+        ],
+        "title": "NewsItem",
+        "type": "object"
+      },
+      "NewsPage": {
+        "description": "A page of news articles.",
+        "properties": {
+          "items": {
+            "description": "The rows of this page.",
+            "items": {
+              "$ref": "#/components/schemas/NewsItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "count": {
+            "description": "The number of rows in all pages, with the filters applied.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "limit": {
+            "description": "The page size that the server used.",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "description": "The number of rows that the server skipped.",
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "count",
+          "limit",
+          "offset"
+        ],
+        "title": "NewsPage",
+        "type": "object"
+      },
+      "IpoFilters": {
+        "description": "Filters for the IPO list. All filters are optional and they combine with AND.",
+        "properties": {
+          "limit": {
+            "anyOf": [
+              {
+                "maximum": 500,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The most rows to return. The default and the largest value are server settings (default 25, largest 100 unless an admin changed them).",
+            "title": "Limit"
+          },
+          "offset": {
+            "default": 0,
+            "description": "How many rows to skip. Use it to read the next page.",
+            "maximum": 1000000,
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "q": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Text in the name.",
+            "title": "Q"
+          },
+          "status": {
+            "default": "all",
+            "description": "`active` means open and upcoming first, then closed, without listed IPOs. `all` is the default.",
+            "enum": [
+              "active",
+              "open",
+              "upcoming",
+              "closed",
+              "listed",
+              "all"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "verdict": {
+            "anyOf": [
+              {
+                "enum": [
+                  "good",
+                  "mixed",
+                  "weak",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only IPOs with this verdict.",
+            "title": "Verdict"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "enum": [
+                  "mainboard",
+                  "sme"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Mainboard or SME.",
+            "title": "Category"
+          }
+        },
+        "title": "IpoFilters",
+        "type": "object"
+      },
+      "IpoItem": {
+        "description": "One IPO with its dates, price, GMP, subscription and score.",
+        "properties": {
+          "id": {
+            "description": "The IPO id.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "description": "The name of the issue.",
+            "title": "Name",
+            "type": "string"
+          },
+          "category": {
+            "description": "`mainboard` or `sme`.",
+            "enum": [
+              "mainboard",
+              "sme"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "status": {
+            "description": "`upcoming`, `open`, `closed` or `listed`.",
+            "enum": [
+              "upcoming",
+              "open",
+              "closed",
+              "listed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "open_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The first day of the bid. Empty if not known.",
+            "title": "Open Date"
+          },
+          "close_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last day of the bid. Empty if not known.",
+            "title": "Close Date"
+          },
+          "listing_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day of the listing. Empty if not known.",
+            "title": "Listing Date"
+          },
+          "price_band_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rupees.",
+            "title": "Price Band Low"
+          },
+          "price_band_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rupees.",
+            "title": "Price Band High"
+          },
+          "lot_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The number of shares in one lot.",
+            "title": "Lot Size"
+          },
+          "issue_size_cr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Crore rupees.",
+            "title": "Issue Size Cr"
+          },
+          "gmp": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Grey market premium, rupees.",
+            "title": "Gmp"
+          },
+          "gmp_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "GMP in percent of the upper price band.",
+            "title": "Gmp Pct"
+          },
+          "gmp_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the GMP was last set or confirmed.",
+            "title": "Gmp Updated At"
+          },
+          "subscription_times": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Total subscription, in times.",
+            "title": "Subscription Times"
+          },
+          "subscription_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the subscription was last set or confirmed.",
+            "title": "Subscription Updated At"
+          },
+          "listing_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rupees. Set after the listing.",
+            "title": "Listing Price"
+          },
+          "listing_gain_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Percent. Set after the listing.",
+            "title": "Listing Gain Pct"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "maximum": 1,
+                "minimum": -1,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The score of the IPO, from -1 (weak) to 1 (good). Empty until scored.",
+            "title": "Score"
+          },
+          "verdict": {
+            "anyOf": [
+              {
+                "enum": [
+                  "good",
+                  "mixed",
+                  "weak",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Empty until the IPO is scored.",
+            "title": "Verdict"
+          },
+          "scored_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the IPO was scored.",
+            "title": "Scored At"
+          },
+          "nse_symbol": {
+            "default": "",
+            "description": "The NSE symbol after the listing. Empty before.",
+            "title": "Nse Symbol",
+            "type": "string"
+          },
+          "company": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompanyRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The company row that matches the IPO. Empty if there is none."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "category",
+          "status"
+        ],
+        "title": "IpoItem",
+        "type": "object"
+      },
+      "IpoPage": {
+        "description": "A page of IPOs.",
+        "properties": {
+          "items": {
+            "description": "The rows of this page.",
+            "items": {
+              "$ref": "#/components/schemas/IpoItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "count": {
+            "description": "The number of rows in all pages, with the filters applied.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "limit": {
+            "description": "The page size that the server used.",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "description": "The number of rows that the server skipped.",
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "count",
+          "limit",
+          "offset"
+        ],
+        "title": "IpoPage",
+        "type": "object"
+      },
+      "IpoDetail": {
+        "description": "One IPO with the inputs of its score.",
+        "properties": {
+          "id": {
+            "description": "The IPO id.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "description": "The name of the issue.",
+            "title": "Name",
+            "type": "string"
+          },
+          "category": {
+            "description": "`mainboard` or `sme`.",
+            "enum": [
+              "mainboard",
+              "sme"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "status": {
+            "description": "`upcoming`, `open`, `closed` or `listed`.",
+            "enum": [
+              "upcoming",
+              "open",
+              "closed",
+              "listed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "open_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The first day of the bid. Empty if not known.",
+            "title": "Open Date"
+          },
+          "close_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last day of the bid. Empty if not known.",
+            "title": "Close Date"
+          },
+          "listing_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day of the listing. Empty if not known.",
+            "title": "Listing Date"
+          },
+          "price_band_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rupees.",
+            "title": "Price Band Low"
+          },
+          "price_band_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rupees.",
+            "title": "Price Band High"
+          },
+          "lot_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The number of shares in one lot.",
+            "title": "Lot Size"
+          },
+          "issue_size_cr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Crore rupees.",
+            "title": "Issue Size Cr"
+          },
+          "gmp": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Grey market premium, rupees.",
+            "title": "Gmp"
+          },
+          "gmp_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "GMP in percent of the upper price band.",
+            "title": "Gmp Pct"
+          },
+          "gmp_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the GMP was last set or confirmed.",
+            "title": "Gmp Updated At"
+          },
+          "subscription_times": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Total subscription, in times.",
+            "title": "Subscription Times"
+          },
+          "subscription_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the subscription was last set or confirmed.",
+            "title": "Subscription Updated At"
+          },
+          "listing_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rupees. Set after the listing.",
+            "title": "Listing Price"
+          },
+          "listing_gain_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Percent. Set after the listing.",
+            "title": "Listing Gain Pct"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "maximum": 1,
+                "minimum": -1,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The score of the IPO, from -1 (weak) to 1 (good). Empty until scored.",
+            "title": "Score"
+          },
+          "verdict": {
+            "anyOf": [
+              {
+                "enum": [
+                  "good",
+                  "mixed",
+                  "weak",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Empty until the IPO is scored.",
+            "title": "Verdict"
+          },
+          "scored_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the IPO was scored.",
+            "title": "Scored At"
+          },
+          "nse_symbol": {
+            "default": "",
+            "description": "The NSE symbol after the listing. Empty before.",
+            "title": "Nse Symbol",
+            "type": "string"
+          },
+          "company": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompanyRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The company row that matches the IPO. Empty if there is none."
+          },
+          "signals": {
+            "description": "The inputs of the score. Empty until the IPO is scored.",
+            "items": {
+              "$ref": "#/components/schemas/IpoSignal"
+            },
+            "title": "Signals",
+            "type": "array"
+          },
+          "notes": {
+            "description": "Why an input was not used.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "source_url": {
+            "default": "",
+            "description": "The page that the data came from. Empty if not known.",
+            "title": "Source Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "category",
+          "status",
+          "signals",
+          "notes"
+        ],
+        "title": "IpoDetail",
+        "type": "object"
+      },
+      "IpoSignal": {
+        "description": "One input of the IPO score.",
+        "properties": {
+          "name": {
+            "description": "`gmp`, `subscription` or `news`.",
+            "title": "Name",
+            "type": "string"
+          },
+          "value": {
+            "description": "The raw number: GMP percent, subscription times, ...",
+            "title": "Value",
+            "type": "number"
+          },
+          "signal": {
+            "description": "The value on the scale -1 (bad) to 1 (good).",
+            "maximum": 1,
+            "minimum": -1,
+            "title": "Signal",
+            "type": "number"
+          },
+          "strength": {
+            "description": "How much we trust the input, 0 to 1.",
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Strength",
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "value",
+          "signal",
+          "strength"
+        ],
+        "title": "IpoSignal",
+        "type": "object"
+      },
+      "Cue": {
+        "description": "One global cue and its part in a prediction.",
+        "properties": {
+          "symbol": {
+            "description": "The Yahoo Finance symbol, for example `^GSPC`.",
+            "title": "Symbol",
+            "type": "string"
+          },
+          "name": {
+            "description": "The display name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "change_pct": {
+            "description": "The change from the close of the day before, in percent.",
+            "title": "Change Pct",
+            "type": "number"
+          },
+          "as_of": {
+            "description": "The trading day of the quote, `YYYY-MM-DD`.",
+            "title": "As Of",
+            "type": "string"
+          },
+          "weight": {
+            "description": "From -1 to 1. A minus sign means a rise is bad news.",
+            "title": "Weight",
+            "type": "number"
+          },
+          "signal": {
+            "description": "The change on the scale -1 to 1.",
+            "title": "Signal",
+            "type": "number"
+          }
+        },
+        "required": [
+          "symbol",
+          "name",
+          "change_pct",
+          "as_of",
+          "weight",
+          "signal"
+        ],
+        "title": "Cue",
+        "type": "object"
+      },
+      "Outlook": {
+        "description": "The newest prediction with its strength label and its biggest inputs.",
+        "properties": {
+          "target_date": {
+            "description": "The trading day that the prediction is for.",
+            "format": "date",
+            "title": "Target Date",
+            "type": "string"
+          },
+          "direction": {
+            "description": "The predicted direction.",
+            "enum": [
+              "up",
+              "down",
+              "flat"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "confidence": {
+            "description": "How strong the signal is. It is not a probability.",
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "score": {
+            "description": "From -1 (down) to 1 (up).",
+            "maximum": 1,
+            "minimum": -1,
+            "title": "Score",
+            "type": "number"
+          },
+          "news_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The part of the score from news. Empty if no news was used.",
+            "title": "News Score"
+          },
+          "global_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The part of the score from global markets. Empty if no cue was used.",
+            "title": "Global Score"
+          },
+          "news_articles": {
+            "description": "The number of articles in the news score.",
+            "title": "News Articles",
+            "type": "integer"
+          },
+          "created_at": {
+            "description": "When the server made the prediction.",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "actual_direction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "up",
+                  "down",
+                  "flat"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Empty until the result is known.",
+            "title": "Actual Direction"
+          },
+          "actual_change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The real change of the index, in percent. Empty until the result is known.",
+            "title": "Actual Change Pct"
+          },
+          "correct": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Empty means no result yet, or no trading session on that day.",
+            "title": "Correct"
+          },
+          "evaluated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the server compared the prediction with the result.",
+            "title": "Evaluated At"
+          },
+          "strength": {
+            "description": "A label for `confidence`: `weak`, `moderate` or `strong`.",
+            "enum": [
+              "weak",
+              "moderate",
+              "strong"
+            ],
+            "title": "Strength",
+            "type": "string"
+          },
+          "cues": {
+            "description": "The five inputs with the biggest effect.",
+            "items": {
+              "$ref": "#/components/schemas/Cue"
+            },
+            "title": "Cues",
+            "type": "array"
+          },
+          "notes": {
+            "description": "Facts that reduce trust, for example missing cues.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "target_date",
+          "direction",
+          "confidence",
+          "score",
+          "news_articles",
+          "created_at",
+          "strength",
+          "cues",
+          "notes"
+        ],
+        "title": "Outlook",
+        "type": "object"
+      },
+      "PredictionItem": {
+        "description": "The prediction for one trading day, and later the real result.",
+        "properties": {
+          "target_date": {
+            "description": "The trading day that the prediction is for.",
+            "format": "date",
+            "title": "Target Date",
+            "type": "string"
+          },
+          "direction": {
+            "description": "The predicted direction.",
+            "enum": [
+              "up",
+              "down",
+              "flat"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "confidence": {
+            "description": "How strong the signal is. It is not a probability.",
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "score": {
+            "description": "From -1 (down) to 1 (up).",
+            "maximum": 1,
+            "minimum": -1,
+            "title": "Score",
+            "type": "number"
+          },
+          "news_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The part of the score from news. Empty if no news was used.",
+            "title": "News Score"
+          },
+          "global_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The part of the score from global markets. Empty if no cue was used.",
+            "title": "Global Score"
+          },
+          "news_articles": {
+            "description": "The number of articles in the news score.",
+            "title": "News Articles",
+            "type": "integer"
+          },
+          "created_at": {
+            "description": "When the server made the prediction.",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "actual_direction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "up",
+                  "down",
+                  "flat"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Empty until the result is known.",
+            "title": "Actual Direction"
+          },
+          "actual_change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The real change of the index, in percent. Empty until the result is known.",
+            "title": "Actual Change Pct"
+          },
+          "correct": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Empty means no result yet, or no trading session on that day.",
+            "title": "Correct"
+          },
+          "evaluated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the server compared the prediction with the result.",
+            "title": "Evaluated At"
+          }
+        },
+        "required": [
+          "target_date",
+          "direction",
+          "confidence",
+          "score",
+          "news_articles",
+          "created_at"
+        ],
+        "title": "PredictionItem",
+        "type": "object"
+      },
+      "PredictionPage": {
+        "description": "A page of predictions, newest first.",
+        "properties": {
+          "items": {
+            "description": "The rows of this page.",
+            "items": {
+              "$ref": "#/components/schemas/PredictionItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "count": {
+            "description": "The number of rows in all pages, with the filters applied.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "limit": {
+            "description": "The page size that the server used.",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "description": "The number of rows that the server skipped.",
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "count",
+          "limit",
+          "offset"
+        ],
+        "title": "PredictionPage",
+        "type": "object"
+      },
+      "Accuracy": {
+        "description": "How good the predictions were. Compare `accuracy` with `baseline_accuracy`.",
+        "properties": {
+          "total": {
+            "description": "Predictions with a result.",
+            "title": "Total",
+            "type": "integer"
+          },
+          "correct": {
+            "description": "The number of predictions that were right.",
+            "title": "Correct",
+            "type": "integer"
+          },
+          "accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`correct / total`. Empty if no result.",
+            "title": "Accuracy"
+          },
+          "by_prediction": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Tally"
+            },
+            "description": "The result for each predicted direction. The keys are `up`, `down` and `flat`.",
+            "title": "By Prediction",
+            "type": "object"
+          },
+          "actual_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "How often each real direction happened.",
+            "title": "Actual Counts",
+            "type": "object"
+          },
+          "baseline_direction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The most common real direction. Always guessing it is the baseline.",
+            "title": "Baseline Direction"
+          },
+          "baseline_accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The accuracy of always guessing `baseline_direction`. Empty if no result.",
+            "title": "Baseline Accuracy"
+          },
+          "high_confidence": {
+            "$ref": "#/components/schemas/Tally"
+          },
+          "recent": {
+            "$ref": "#/components/schemas/Tally"
+          },
+          "void": {
+            "description": "Predictions for a day without a trading session.",
+            "title": "Void",
+            "type": "integer"
+          },
+          "pending": {
+            "description": "Predictions that wait for a result.",
+            "title": "Pending",
+            "type": "integer"
+          },
+          "enough_results": {
+            "description": "False while `total` is too small to trust.",
+            "title": "Enough Results",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "total",
+          "correct",
+          "by_prediction",
+          "actual_counts",
+          "high_confidence",
+          "recent",
+          "void",
+          "pending",
+          "enough_results"
+        ],
+        "title": "Accuracy",
+        "type": "object"
+      },
+      "Tally": {
+        "description": "A number of predictions and how many of them were right.",
+        "properties": {
+          "n": {
+            "description": "The number of predictions.",
+            "title": "N",
+            "type": "integer"
+          },
+          "correct": {
+            "description": "How many of them were right.",
+            "title": "Correct",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "n",
+          "correct"
+        ],
+        "title": "Tally",
+        "type": "object"
+      },
+      "Quote": {
+        "description": "The newest saved close of one instrument.",
+        "properties": {
+          "name": {
+            "description": "The display name of the instrument.",
+            "title": "Name",
+            "type": "string"
+          },
+          "day": {
+            "description": "The trading day of the close.",
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "close": {
+            "description": "The closing value.",
+            "title": "Close",
+            "type": "number"
+          },
+          "change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The change from the close of the day before, in percent. Empty if not known.",
+            "title": "Change Pct"
+          }
+        },
+        "required": [
+          "name",
+          "day",
+          "close"
+        ],
+        "title": "Quote",
+        "type": "object"
+      },
+      "CompanyFilters": {
+        "description": "Filters for the company list.",
+        "properties": {
+          "limit": {
+            "anyOf": [
+              {
+                "maximum": 500,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The most rows to return. The default and the largest value are server settings (default 25, largest 100 unless an admin changed them).",
+            "title": "Limit"
+          },
+          "offset": {
+            "default": 0,
+            "description": "How many rows to skip. Use it to read the next page.",
+            "maximum": 1000000,
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "q": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Text in the name, symbol or sector.",
+            "title": "Q"
+          }
+        },
+        "title": "CompanyFilters",
+        "type": "object"
+      },
+      "CompanyItem": {
+        "description": "One listed company.",
+        "properties": {
+          "symbol": {
+            "description": "The NSE symbol.",
+            "title": "Symbol",
+            "type": "string"
+          },
+          "name": {
+            "description": "The company name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "sector": {
+            "default": "",
+            "description": "The sector. Empty if not known.",
+            "title": "Sector",
+            "type": "string"
+          },
+          "aliases": {
+            "description": "Other names that the news matcher uses for this company.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "screener_url": {
+            "default": "",
+            "description": "The Screener.in page of the company. Empty if not known.",
+            "title": "Screener Url",
+            "type": "string"
+          },
+          "last_updated": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the Screener.in data was fetched. Empty means never.",
+            "title": "Last Updated"
+          }
+        },
+        "required": [
+          "symbol",
+          "name",
+          "aliases"
+        ],
+        "title": "CompanyItem",
+        "type": "object"
+      },
+      "CompanyPage": {
+        "description": "A page of companies.",
+        "properties": {
+          "items": {
+            "description": "The rows of this page.",
+            "items": {
+              "$ref": "#/components/schemas/CompanyItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "count": {
+            "description": "The number of rows in all pages, with the filters applied.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "limit": {
+            "description": "The page size that the server used.",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "description": "The number of rows that the server skipped.",
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "count",
+          "limit",
+          "offset"
+        ],
+        "title": "CompanyPage",
+        "type": "object"
+      },
+      "DeliveryItem": {
+        "description": "One try to send a report.",
+        "properties": {
+          "id": {
+            "description": "The log row id.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "report_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The date of the report that was sent. Empty if the report was deleted.",
+            "title": "Report Date"
+          },
+          "channel": {
+            "description": "The delivery channel.",
+            "enum": [
+              "telegram",
+              "email"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "status": {
+            "description": "`sent` or `failed`.",
+            "enum": [
+              "sent",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "recipient": {
+            "description": "Masked. Only the last four characters show.",
+            "title": "Recipient",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only staff see the error text.",
+            "title": "Error"
+          },
+          "created_at": {
+            "description": "When the server tried to send.",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "channel",
+          "status",
+          "recipient",
+          "created_at"
+        ],
+        "title": "DeliveryItem",
+        "type": "object"
+      },
+      "DeliveryPage": {
+        "description": "A page of delivery log rows, newest first.",
+        "properties": {
+          "items": {
+            "description": "The rows of this page.",
+            "items": {
+              "$ref": "#/components/schemas/DeliveryItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "count": {
+            "description": "The number of rows in all pages, with the filters applied.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "limit": {
+            "description": "The page size that the server used.",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "description": "The number of rows that the server skipped.",
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "count",
+          "limit",
+          "offset"
+        ],
+        "title": "DeliveryPage",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "BearerToken": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "SessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sessionid"
+      }
+    }
+  },
+  "servers": []
+}

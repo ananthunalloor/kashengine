@@ -1,12 +1,21 @@
 """Production settings."""
 
 from .base import *
-from .base import LOG_DIR, LOG_FILE, LOGGING, MIDDLEWARE, env
+from .base import CELERY_BROKER_URL, LOG_DIR, LOG_FILE, LOGGING, MIDDLEWARE, env
 
 DEBUG = False
 
 DATABASES = {
     "default": env.db("DATABASE_URL"),
+}
+
+# Redis cache for the API rate-limit counters. Database 1 keeps it apart from the Celery broker
+# (database 0 by default). Set CACHE_URL to use another address.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": env("CACHE_URL", default=CELERY_BROKER_URL.rsplit("/", 1)[0] + "/1"),
+    }
 }
 
 # Caddy ends TLS and sets X-Forwarded-Proto. The web container is on a private network, so only

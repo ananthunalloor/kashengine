@@ -1,4 +1,12 @@
-"""URL routes of the Ops pages."""
+"""URL routes of the Ops pages.
+
+`config/urls.py` includes this module under the prefix `ops/`. The namespace is `ops`, so a
+template uses names like `ops:jobs`. The routes map to the views in `views.py` (monitoring and
+user actions), `views_access.py` (feature permissions and subscriptions), and `views_settings.py`
+(settings, schedule, feeds, and instruments). The decorators in `permissions.py` set who can call
+each view. A page that only shows data needs a staff user. A page that changes data accepts only
+a POST request from a superuser. The login middleware sends an anonymous user to the login page.
+"""
 
 from django.urls import path
 
@@ -17,6 +25,7 @@ urlpatterns = [
     path("users/", views.user_list, name="users"),
     path("users/<int:pk>/", views.user_detail, name="user"),
     path("users/<int:pk>/sessions/end/", views.user_end_sessions, name="user_end_sessions"),
+    path("users/<int:pk>/tokens/revoke/", views.user_revoke_tokens, name="user_revoke_tokens"),
     path("users/<int:pk>/active/", views.user_set_active, name="user_set_active"),
     path("users/<int:pk>/access/", views_access.user_access_save, name="user_access"),
     path(

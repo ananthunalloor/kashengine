@@ -15,6 +15,7 @@ Early development. Phase 1 (project setup) is done. The features below are plann
 - Score and list upcoming IPOs
 - Send the daily report with Telegram (email later)
 - Show all data in a web UI (Django, Datastar, Tailwind)
+- Read the data with a versioned, read-only REST API (`/api/v1/`, with Swagger UI)
 
 ## Stack
 
@@ -229,9 +230,54 @@ uv run pre-commit install       # turn on commit hooks (ruff, ruff format, ty)
 
 Code standards:
 
-- Docstrings use the Google style. Every public module, class, function, and method in `apps/`
-  (except tests) has one. The first line is a short summary that ends with a period.
+- Docstrings use the Google style. Every module, class, function, and method in `apps/` and
+  `config/` (except tests and migrations) has one. The first line is a short summary that ends
+  with a period. Functions have `Args`, `Returns` and `Raises` sections. A CI check enforces this
+  for all new code (see the baseline in `docs/scripts/docstring_baseline.txt`).
 - A comment explains why the code does something. It does not repeat what the code does.
 - Fix the cause of a ruff or ty message. Use a `# noqa: CODE` or `# ty: ignore[rule]` comment only
   when the code is correct, and always give the reason after it.
 - ruff and ty must report no errors. The commit hooks run both.
+
+## REST API
+
+The app has a read-only REST API at `/api/v1/`. A signed-in user makes an API token on the
+Account page (the token is shown one time and the database keeps only its hash). Send it as
+`Authorization: Bearer <token>`.
+
+| Address | What |
+| --- | --- |
+| `/api/v1/docs` | Swagger UI (sign in first) |
+| `/api/v1/openapi.json` | The OpenAPI 3.1 file |
+| `/api/v1/health` | Health of the API (no sign-in) |
+| `docs/openapi/v1.json` | A copy of the OpenAPI file in the repository |
+
+Errors use `application/problem+json`. Inside `v1` the API can only add things. After a change
+to the API, export the file again and commit it:
+
+```bash
+uv run python manage.py export_openapi --api-version v1 --output docs/openapi/v1.json
+```
+
+A test fails if the file is old. A superuser can turn the API off and set the limits on
+Ops > Settings > REST API.
+
+## Developer documentation
+
+The self-hosted Docusaurus site is available at `/docs/` after you start the stack. It has the
+guides (architecture, API, domains, operations, development) and a generated reference of every
+HTTP endpoint, setting, scheduled job, task, command and Python function. Its source content is
+in [`docs/docs/`](docs/docs/index.md).
+
+To work on the site without Docker (Node.js 22 and Python 3.13):
+
+```bash
+cd docs
+npm ci
+npm start                  # http://localhost:3000/docs/
+npm run reference:check    # the docstring gate
+npm run build              # the production build, with link checks
+```
+
+The reference pages come from the source code. Git ignores them. `docs/docs/development/` explains
+the docstring standard, the tests and the review steps.

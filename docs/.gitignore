@@ -1,0 +1,10 @@
+node_modules/
+.docusaurus/
+build/
+
+# Made by `npm run reference:generate`.
+docs/reference/generated/
+static/openapi/
+
+__pycache__/
+*.py[cod]
