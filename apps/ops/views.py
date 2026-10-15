@@ -1,4 +1,26 @@
-"""The Ops pages. Staff users can look. Superusers can also change things (POST requests)."""
+"""The monitoring and user pages of the Ops area.
+
+Staff users can look at these pages. Only a superuser can change something, and only with a POST
+request. The decorators in `permissions.py` enforce this. `urls.py` maps each view to a path in
+the `ops` namespace. The feature permission and subscription views are in `views_access.py`. The
+settings, schedule, feed, and instrument views are in `views_settings.py`.
+
+The module has these groups of views:
+
+- Health and jobs: `overview`, `job_list`, `job_run`, `run_list`, `run_detail`.
+- Logs and metrics: `log_view`, `metric_view`, `config_view`.
+- Users and logins: `user_list`, `user_detail`, `user_end_sessions`, `user_set_active`,
+  `login_list`, `lockout_unlock`.
+- Audit trail: `audit_list`.
+
+The data comes from the helper modules `health`, `jobs`, `logs`, `metrics`, `schedule`, `users`,
+`audit`, and `configview`. Every view passes a `section` value in its template context. The menu
+in `context.py` uses it to mark the open page. A view that changes data writes one row to the
+audit trail with `audit.record` and then shows a message with `django.contrib.messages`.
+
+Settings: `OPS_PAGE_SIZE` (rows on a list page) and `OPS_RETENTION_DAYS` (shown on the run list)
+come from `apps.siteconfig.conf`.
+"""
 
 from django.contrib import messages
 from django.contrib.admin.models import LogEntry
@@ -8,6 +30,8 @@ from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from apps.api import tokens
+from apps.api.models import ApiToken
 from apps.markets.evaluation import accuracy_stats
 from apps.siteconfig import conf
 from apps.web.datastar import is_datastar, querystring, read_filters, read_page, signals_json
@@ -28,12 +52,40 @@ LOGIN_HOURS = {"24": "Last 24 hours", "168": "Last 7 days", "720": "Last 30 days
 
 
 def _paginate(items, filters: dict[str, str]):
+    """Return one page of a queryset or a list.
+
+    The page size is the setting `OPS_PAGE_SIZE`. The page number comes from the `page` filter.
+    A bad page number gives page 1. A number that is too large gives the last page.
+
+    Args:
+        items: A queryset or a list to split into pages.
+        filters: The filter values that `read_filters` made. The key `page` is optional.
+
+    Returns:
+        The Django `Page` object for the requested page.
+    """
     return Paginator(items, conf.OPS_PAGE_SIZE).get_page(read_page(filters))
 
 
 @staff_required
 def overview(request: HttpRequest) -> HttpResponse:
-    """The health of the system. A Datastar request gets only the live panel."""
+    """Show the health of the system and the latest task runs.
+
+    The view runs all health checks. The result is cached for a short time, so a quick reload
+    does not run the checks again. The query parameter `refresh=1` ignores the cache. A Datastar
+    request (the live refresh of the page) gets only the HTML of the health panel.
+
+    The context has the check results, the worst status, the time of the check, the runs that
+    wait or run now (newest first, at most `RECENT_RUNS`), the newest runs, the addresses with
+    the most failed logins in the last 24 hours (at most `RECENT_LOGINS`), and the number of
+    users that have an active session.
+
+    Args:
+        request: The HTTP request. The staff check already passed.
+
+    Returns:
+        The page `ops/overview.html`, or the panel `ops/_health_panel.html` for Datastar.
+    """
     refresh = request.GET.get("refresh") == "1"
     results = health.run_all(use_cache=not refresh)
     now = timezone.now()
@@ -54,7 +106,20 @@ def overview(request: HttpRequest) -> HttpResponse:
 
 
 def _job_rows() -> list[dict]:
-    """One row for each job: its last run, its schedule, and its numbers of the last 7 days."""
+    """Build one row for each job in the job list.
+
+    A row has the job, its last run, the run that is active now, the numbers of the last 7 days,
+    the cron lines of its schedule entries, and the time of its next run. Only a job of the kind
+    task can have schedule entries. A job of the kind command always has an empty schedule.
+
+    Returns:
+        A list of dictionaries in the order of `jobs.JOBS`. The keys are `job`, `last`, `active`,
+        `stats`, `schedules`, and `next_run`. `last`, `active`, `stats`, and `next_run` can be
+        `None`.
+
+    Note:
+        The function makes some database queries for each job. The list of jobs is short.
+    """
     stats = {row["label"]: row for row in metrics.task_stats(days=7)}
     now = timezone.now()
     rows = []
@@ -76,7 +141,17 @@ def _job_rows() -> list[dict]:
 
 @staff_required
 def job_list(request: HttpRequest) -> HttpResponse:
-    """All jobs with the time of the last run, the next run, and the run buttons."""
+    """Show all jobs in groups, with the last run, the next run, and the run buttons.
+
+    The jobs are grouped by the `group` field of the job. The groups keep the order of the first
+    appearance in `jobs.JOBS`.
+
+    Args:
+        request: The HTTP request. The staff check already passed.
+
+    Returns:
+        The page `ops/jobs.html`.
+    """
     grouped: dict[str, list[dict]] = {}
     for row in _job_rows():
         grouped.setdefault(row["job"].group, []).append(row)
@@ -85,7 +160,27 @@ def job_list(request: HttpRequest) -> HttpResponse:
 
 @superuser_post_required
 def job_run(request: HttpRequest, key: str) -> HttpResponse:
-    """Start a job. A job with a warning needs a confirmation."""
+    """Queue a job that an admin chose, then show its run page.
+
+    Only a job in the fixed list `jobs.JOBS_BY_KEY` can run. If the job has a `confirm` text, the
+    POST field `confirm` must be `yes`. If not, the view shows an error and starts nothing. If the
+    same job waits or runs, the view shows a warning. If the queue is down, the view shows an
+    error. In these cases the view goes back to the job list.
+
+    Args:
+        request: The POST request of a superuser.
+        key: The key of the job, from the URL.
+
+    Returns:
+        A redirect to the run page of the new run, or to the job list.
+
+    Raises:
+        Http404: If no job has this key.
+
+    Side effects:
+        `jobs.start_job` creates a `TaskRun` row, writes the audit event `run job`, and sends a
+        Celery task to the queue.
+    """
     job = jobs.JOBS_BY_KEY.get(key)
     if job is None:
         raise Http404
@@ -106,7 +201,18 @@ def job_run(request: HttpRequest, key: str) -> HttpResponse:
 
 @staff_required
 def run_list(request: HttpRequest) -> HttpResponse:
-    """The history of all runs, with filters."""
+    """Show the history of task runs, newest first, with filters and pages.
+
+    The filters are `label` (the exact label of a run), `status`, `trigger`, and `page`. A
+    `status` or `trigger` value that is not a valid choice is ignored. The page also shows the
+    setting `OPS_RETENTION_DAYS`, which tells how long the rows are kept.
+
+    Args:
+        request: The HTTP request. The staff check already passed.
+
+    Returns:
+        The page `ops/runs.html`.
+    """
     filters = read_filters(request, RUN_FILTERS)
     runs = TaskRun.objects.select_related("triggered_by")
     if filters["label"]:
@@ -130,7 +236,21 @@ def run_list(request: HttpRequest) -> HttpResponse:
 
 @staff_required
 def run_detail(request: HttpRequest, pk: int) -> HttpResponse:
-    """One run with its result, its error, and its output. It refreshes while the run is active."""
+    """Show one task run with its result, its error, and its output.
+
+    A Datastar request gets only the run panel. The page uses this to refresh itself while the
+    run is active.
+
+    Args:
+        request: The HTTP request. The staff check already passed.
+        pk: The primary key of the `TaskRun`, from the URL.
+
+    Returns:
+        The page `ops/run_detail.html`, or the panel `ops/_run_panel.html` for Datastar.
+
+    Note:
+        `get_object_or_404` gives a 404 response when the run does not exist.
+    """
     run = get_object_or_404(TaskRun.objects.select_related("triggered_by"), pk=pk)
     template = "ops/_run_panel.html" if is_datastar(request) else "ops/run_detail.html"
     return render(request, template, {"run": run, "section": "runs"})
@@ -138,7 +258,22 @@ def run_detail(request: HttpRequest, pk: int) -> HttpResponse:
 
 @staff_required
 def log_view(request: HttpRequest) -> HttpResponse:
-    """The log file, newest first, with filters. A Datastar request gets only the entries."""
+    """Show the entries of the log file, newest first, with filters.
+
+    The filters are `level` (the lowest level), `logger` (part of the logger name), `q` (part of
+    the message), `limit` (the number of entries), and `live` (the text `true` turns on the
+    automatic refresh). The view passes the filters to `logs.query`, which reads the end of the
+    log file. A Datastar request gets only the HTML of the log panel.
+
+    Args:
+        request: The HTTP request. The staff check already passed.
+
+    Returns:
+        The page `ops/logs.html`, or the panel `ops/_log_panel.html` for Datastar.
+
+    Security:
+        `logs.query` redacts the messages before they leave the log reader.
+    """
     filters = read_filters(request, LOG_FILTERS)
     view = logs.query(
         level=filters["level"],
@@ -160,7 +295,18 @@ def log_view(request: HttpRequest) -> HttpResponse:
 
 @staff_required
 def metric_view(request: HttpRequest) -> HttpResponse:
-    """Numbers about the host, the queue, the database, the jobs, and the data."""
+    """Show the numbers about the host, the queue, the database, the jobs, and the data.
+
+    The numbers are the task statistics of the last 7 days, the daily charts, the table row
+    counts, the database size, the host, Redis, the Celery workers, the LLM server, and the
+    prediction accuracy. The `metrics` module collects them.
+
+    Args:
+        request: The HTTP request. The staff check already passed.
+
+    Returns:
+        The page `ops/metrics.html`.
+    """
     context = {
         "tasks": metrics.task_stats(days=7),
         "charts": metrics.charts(),
@@ -178,7 +324,19 @@ def metric_view(request: HttpRequest) -> HttpResponse:
 
 @staff_required
 def user_list(request: HttpRequest) -> HttpResponse:
-    """All users with their last login, their login count, and their sessions."""
+    """Show all users with their login count, their sessions, and their access state.
+
+    The filter `q` searches the user name and the e-mail address. Each row has the user, the
+    number of active sessions, and the values of `views_access.summary` (state, subscription,
+    days left, and number of removed features). Staff and superusers come first, then the users
+    in order of user name.
+
+    Args:
+        request: The HTTP request. The staff check already passed.
+
+    Returns:
+        The page `ops/users.html`.
+    """
     filters = read_filters(request, USER_FILTERS)
     sessions: dict[int, int] = {}
     for session in users.active_sessions():
@@ -194,7 +352,24 @@ def user_list(request: HttpRequest) -> HttpResponse:
 
 @staff_required
 def user_detail(request: HttpRequest, pk: int) -> HttpResponse:
-    """One user: details, sessions, login events, and admin site actions."""
+    """Show one user: details, sessions, login events, actions, runs, and access.
+
+    The page shows the active sessions, the last 30 login events, the last 10 failed logins for
+    the user name, the last 15 actions in the Django admin, the last 15 actions on the Ops pages,
+    and the last 10 task runs that the user started. It also has the access panel from
+    `views_access.panel`. The context key `subject` is the user that the page is about. The key
+    `current_key` is the session key of the admin who looks at the page.
+
+    Args:
+        request: The HTTP request. The staff check already passed.
+        pk: The primary key of the user, from the URL.
+
+    Returns:
+        The page `ops/user_detail.html`.
+
+    Note:
+        `get_object_or_404` gives a 404 response when the user does not exist.
+    """
     user = get_object_or_404(get_user_model(), pk=pk)
     context = {
         "subject": user,
@@ -207,6 +382,7 @@ def user_detail(request: HttpRequest, pk: int) -> HttpResponse:
         "admin_actions": LogEntry.objects.filter(user=user).select_related("content_type")[:15],
         "ops_actions": AuditEvent.objects.filter(actor=user)[:15],
         "runs": TaskRun.objects.filter(triggered_by=user)[:10],
+        "api_tokens": ApiToken.objects.filter(user=user)[:20],
         "section": "users",
         **views_access.panel(user),
     }
@@ -215,7 +391,25 @@ def user_detail(request: HttpRequest, pk: int) -> HttpResponse:
 
 @superuser_post_required
 def user_end_sessions(request: HttpRequest, pk: int) -> HttpResponse:
-    """End one session (with `key`) or all sessions of a user."""
+    """End one session of a user, or all sessions of the user.
+
+    If the POST field `key` is set, the view ends that session. The session must belong to the
+    user. If `key` is empty, the view ends all sessions of the user. The session of the admin who
+    clicks is never ended. In that case the view shows an error message.
+
+    Args:
+        request: The POST request of a superuser.
+        pk: The primary key of the user, from the URL.
+
+    Returns:
+        A redirect to the user page.
+
+    Raises:
+        Http404: If `key` is not the key of an active session of this user.
+
+    Side effects:
+        Deletes `Session` rows and writes the audit event `end sessions`.
+    """
     user = get_object_or_404(get_user_model(), pk=pk)
     current = request.session.session_key or ""
     key = request.POST.get("key", "")
@@ -235,8 +429,56 @@ def user_end_sessions(request: HttpRequest, pk: int) -> HttpResponse:
 
 
 @superuser_post_required
+def user_revoke_tokens(request: HttpRequest, pk: int) -> HttpResponse:
+    """Revoke one API token (with `token`) or all active API tokens of a user.
+
+    Args:
+        request: A POST request. The optional field `token` holds the id of one token.
+        pk: The id of the user who owns the tokens.
+
+    Returns:
+        A redirect to the user page.
+
+    Raises:
+        Http404: If `token` is not a token of this user.
+    """
+    user = get_object_or_404(get_user_model(), pk=pk)
+    token_id = request.POST.get("token", "")
+    if token_id:
+        if not token_id.isdigit():
+            raise Http404
+        row = get_object_or_404(ApiToken, pk=int(token_id), user=user)
+        count = int(tokens.revoke(row))
+        detail = row.display
+    else:
+        count = tokens.revoke_all(user)
+        detail = f"{count} revoked"
+    if count:
+        audit.record(request.user, "revoke api tokens", user.get_username(), detail, request)
+    messages.success(request, f"Revoked {count} API token(s) of {user.get_username()}.")
+    return redirect("ops:user", pk=pk)
+
+
+@superuser_post_required
 def user_set_active(request: HttpRequest, pk: int) -> HttpResponse:
-    """Turn a user on or off. A user that is off cannot log in."""
+    """Turn a user on or off.
+
+    The POST field `active` must be `yes` to turn the user on. Any other value turns the user
+    off. A user that is off cannot log in. `users.set_user_active` also ends the sessions of that
+    user. It refuses to turn off the admin's own account or the last active superuser. The view
+    then shows the error message and changes nothing.
+
+    Args:
+        request: The POST request of a superuser.
+        pk: The primary key of the user, from the URL.
+
+    Returns:
+        A redirect to the user page.
+
+    Side effects:
+        Saves `is_active` of the user and writes the audit event `turn on user` or
+        `turn off user`.
+    """
     user = get_object_or_404(get_user_model(), pk=pk)
     active = request.POST.get("active") == "yes"
     try:
@@ -258,7 +500,19 @@ def user_set_active(request: HttpRequest, pk: int) -> HttpResponse:
 
 @staff_required
 def login_list(request: HttpRequest) -> HttpResponse:
-    """All logins, logouts, and failed logins, with the addresses that fail most."""
+    """Show the login events, the failing addresses, and the locked addresses.
+
+    The filters are `kind` (login, logout, or failed), `q` (part of the user name, or the start
+    of an address), `hours` (one of the keys of `LOGIN_HOURS`, or empty for all), and `page`. The
+    page also lists the addresses with the most failed logins in the last 24 hours and the
+    addresses that django-axes locks now.
+
+    Args:
+        request: The HTTP request. The staff check already passed.
+
+    Returns:
+        The page `ops/logins.html`.
+    """
     filters = read_filters(request, LOGIN_FILTERS)
     hours = int(filters["hours"]) if filters["hours"] in LOGIN_HOURS and filters["hours"] else None
     events = users.login_events(filters["kind"], filters["q"], hours)
@@ -277,7 +531,15 @@ def login_list(request: HttpRequest) -> HttpResponse:
 
 @staff_required
 def audit_list(request: HttpRequest) -> HttpResponse:
-    """What admins did on the Ops pages."""
+    """Show the audit trail of the Ops pages, newest first, in pages.
+
+    Args:
+        request: The HTTP request. The staff check already passed. The query parameter `page`
+            selects the page.
+
+    Returns:
+        The page `ops/audit.html`.
+    """
     filters = read_filters(request, ("page",))
     context = {
         "page": _paginate(AuditEvent.objects.select_related("actor"), filters),
@@ -289,7 +551,17 @@ def audit_list(request: HttpRequest) -> HttpResponse:
 
 @staff_required
 def config_view(request: HttpRequest) -> HttpResponse:
-    """The settings, with the secrets hidden."""
+    """Show the read-only list of the settings, with the secrets hidden.
+
+    `configview.sections` builds the list. It shows only the text "set (hidden)" or "not set" for
+    a secret.
+
+    Args:
+        request: The HTTP request. The staff check already passed.
+
+    Returns:
+        The page `ops/config.html`.
+    """
     return render(
         request,
         "ops/config.html",
@@ -299,7 +571,24 @@ def config_view(request: HttpRequest) -> HttpResponse:
 
 @superuser_post_required
 def lockout_unlock(request: HttpRequest) -> HttpResponse:
-    """Unlock an address that django-axes locked out."""
+    """Unlock an address that django-axes locked out.
+
+    The view removes the failed tries of the address, so that the address can try to log in
+    again.
+
+    Args:
+        request: The POST request of a superuser. The field `ip_address` has the address.
+
+    Returns:
+        A redirect to the login list.
+
+    Raises:
+        Http404: If the field `ip_address` is missing or empty.
+
+    Side effects:
+        Deletes the django-axes records of the address and writes the audit event
+        `unlock address`.
+    """
     address = request.POST.get("ip_address", "").strip()
     if not address:
         raise Http404

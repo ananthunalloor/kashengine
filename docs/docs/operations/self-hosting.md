@@ -1,39 +1,75 @@
 ---
 title: Self-hosting and deployment
+sidebar_label: Self-hosting
+description: How to run Kash Engine and this documentation site in development and in production with Docker Compose.
 ---
 
 # Self-hosting and deployment
 
-The documentation site is part of the Compose deployment. Docusaurus builds static assets in a build stage. Nginx serves those assets on the private port `8080`. Caddy exposes them at `https://<SITE_ADDRESS>/docs/`. The docs container does not expose a host port and does not receive Django, database, Redis, or Telegram credentials.
+Docker Compose runs all services. Caddy is the only service that is open to the internet. The
+documentation site is one of the services (`docs`). Caddy shows it at `https://<SITE_ADDRESS>/docs/`.
+
+| Service | Job | Port inside Docker |
+| --- | --- | --- |
+| `caddy` | TLS, routing, headers | 80, 443 (published) |
+| `web` | Django (gunicorn in production, `runserver` in development) | 8000 |
+| `worker` | Celery worker | none |
+| `beat` | Celery Beat. The schedule is in the database. | none |
+| `db` | PostgreSQL 17 | 5432 |
+| `redis` | Celery broker and Django cache | 6379 |
+| `ollama` | Local LLM | 11434 |
+| `docs` | nginx with the static documentation site | 8080 |
+
+The `docs` service gets no Django, database, Redis or Telegram settings.
 
 ## Development
 
-After applying the Git patch, integrate it with the current checkout. This step is separate because the Compose and Caddy files can change independently of the documentation content.
+You need Docker and the Compose plugin.
 
 ```bash
-python docs/scripts/integrate_self_hosted_docs.py --check
-python docs/scripts/integrate_self_hosted_docs.py
 cp .env.example .env.dev
-docker compose config --quiet
 docker compose up --build
 ```
 
-The development override binds the Caddy ports to localhost. Open `https://localhost/docs/`. The app and docs use the same Caddy entry point so the same path routing and security policy can be checked locally. The browser can show a certificate warning because Caddy uses a local CA for `localhost`.
+Compose loads `docker-compose.override.yml` by itself. The override file:
 
-## Production setup
+- binds every port to `127.0.0.1`;
+- sets `SITE_ADDRESS=localhost`, so Caddy makes a certificate with its own CA (the browser shows a
+  warning the first time);
+- sets the CSP to report-only;
+- mounts the source tree and reloads `web`, `worker` and `beat` when a `.py` file changes.
 
-Use a Linux host with Docker Engine and the Compose plugin. The main application has a local LLM, so provision memory and disk according to the selected model. The README currently recommends 16 GB RAM or more for its production model; treat the actual model requirements as deployment-specific.
+Then:
 
-1. Configure DNS for the public hostname and permit inbound TCP 80/443 and UDP 443 if HTTP/3 is enabled.
-2. Create the production environment file and protect it:
+```bash
+docker compose exec web python manage.py createsuperuser
+docker compose exec ollama ollama pull llama3.2:3b
+```
+
+Open `https://localhost/` for the app and `https://localhost/docs/` for these docs.
+
+Rebuild only when `pyproject.toml` or `uv.lock` changes.
+
+## Production
+
+Use a Linux host with Docker Engine and the Compose plugin. The production model needs 16 GB of
+RAM or more. The size depends on the model that you choose.
+
+1. Point the DNS record of your domain to the server. Open TCP 80, TCP 443 and UDP 443.
+2. Make the environment file and protect it:
 
    ```bash
    cp .env.prod.example .env.prod
    chmod 600 .env.prod
    ```
 
-3. Set `SITE_ADDRESS`, `ACME_EMAIL`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, all required secrets, the database values, the Redis URL, and the LLM settings. Use real generated secrets. Do not commit `.env.prod`.
-4. Build and start the stack:
+3. Set real values for `SITE_ADDRESS`, `ACME_EMAIL`, `DJANGO_ALLOWED_HOSTS`,
+   `DJANGO_CSRF_TRUSTED_ORIGINS`, `DJANGO_SECRET_KEY`, `POSTGRES_PASSWORD` (and the same password
+   in `DATABASE_URL`), and `TELEGRAM_BOT_TOKEN`. Keep `localhost` in `DJANGO_ALLOWED_HOSTS`:
+   the Docker health check needs it. Set `ADMIN_ALLOWED_IPS` and `DOCS_ALLOWED_IPS`.
+   Do not commit `.env.prod`.
+4. Start the stack. The `--env-file` option is required, because Compose reads `SITE_ADDRESS`
+   and `ACME_EMAIL` from it:
 
    ```bash
    docker compose --env-file .env.prod \
@@ -41,7 +77,8 @@ Use a Linux host with Docker Engine and the Compose plugin. The main application
      up -d --build
    ```
 
-5. Create the application superuser and download the selected production model:
+   The production file does not use the development override.
+5. Make the first superuser and download the model:
 
    ```bash
    docker compose --env-file .env.prod \
@@ -53,25 +90,53 @@ Use a Linux host with Docker Engine and the Compose plugin. The main application
      exec ollama ollama pull llama3.1:8b
    ```
 
-6. Open `https://<SITE_ADDRESS>/docs/` and confirm that navigation, images, stylesheet and JavaScript assets load without 404s or CSP violations.
-7. Run the production Django deployment check with the required production environment and confirm that no actionable issues remain.
-8. Test login lockout, admin IP restrictions, report generation, Telegram delivery, worker health, Beat's next-run times, backup creation, and restoration before relying on the deployment.
+6. Run the Django deployment check with the production settings. It must show no issues:
 
-### Build-time site URL
+   ```bash
+   docker compose --env-file .env.prod \
+     -f docker-compose.yml -f docker-compose.prod.yml \
+     exec web python manage.py check --deploy
+   ```
 
-The Compose build passes `DOCS_URL` to Docusaurus. It is built as `https://${SITE_ADDRESS}` by default and uses `/docs/` as its base path. Keep the `baseUrl` and Caddy's `/docs/` path stripping in sync. If the documentation is moved to a separate hostname or root path, update the Docusaurus config, the build argument, Caddy routing, CSP policy, and deployment tests together.
+7. Open `https://<SITE_ADDRESS>/`, `https://<SITE_ADDRESS>/docs/` and
+   `https://<SITE_ADDRESS>/api/v1/docs`. Make sure that no file returns 404 and that the browser
+   console shows no CSP violation.
+8. Test the controls before you depend on the system: a login lockout, the
+   `ADMIN_ALLOWED_IPS` rule from a blocked address, a report, Telegram delivery, the next run
+   times on **Ops > Schedule**, a backup and a restore.
 
-### Updating only documentation
+On start, `web` runs `migrate` and `collectstatic`, then starts gunicorn with 3 workers.
 
-After updating documentation files or Python docstrings:
+To test the production stack on your own computer, set `SITE_ADDRESS=localhost`.
 
-```bash
-docker compose --env-file .env.prod \
-  -f docker-compose.yml -f docker-compose.prod.yml \
-  up -d --build docs caddy
-```
+## The documentation image
 
-Compose rebuilds the documentation image from the same source checkout. Caddy is included so it is restarted if its configuration changed. If the Caddy config did not change, a docs-only rebuild is sufficient:
+The image `docs/Dockerfile` has four stages:
+
+1. `reference` reads the Python source (it does not run project code) and `docs/openapi/v1.json`.
+   It writes the reference pages.
+2. `site` runs `npm ci` with the lock file and builds Docusaurus.
+3. `headers` reads the built pages and makes the Content-Security-Policy with the hash of each
+   inline script.
+4. `runtime` is nginx 1.28. It runs as the `nginx` user on port 8080 and serves the site from
+   `/usr/share/nginx/html/docs/`.
+
+The build needs the file `docs/openapi/v1.json` in the repository. After a change to the API,
+export it first and commit it. A test checks that the file is current (see
+[Documentation site](../development/documentation-site.md)).
+
+The site is built for the path `/docs/` (`baseUrl`). nginx serves it from the same path, and
+Caddy does **not** remove the prefix. If you change the path, change the Docusaurus `baseUrl`,
+`docs/nginx.conf`, the Caddy routes and the tests together.
+
+Build arguments (Compose passes them):
+
+| Argument | Default | Use |
+| --- | --- | --- |
+| `DOCS_URL` | `https://${SITE_ADDRESS}` | The public URL. Docusaurus uses it for canonical links. |
+| `DOCS_SOURCE_REF` | `main` | The Git ref in the source links of the Python reference pages. |
+
+### Update only the documentation
 
 ```bash
 docker compose --env-file .env.prod \
@@ -79,38 +144,72 @@ docker compose --env-file .env.prod \
   up -d --build docs
 ```
 
-Check service health and logs after a rebuild:
+Add `caddy` to the command if you changed `deploy/caddy/Caddyfile`. Caddy reads its files from the
+mounted folder, so restart it to load a new file.
+
+### Check after a deploy
 
 ```bash
 docker compose --env-file .env.prod \
   -f docker-compose.yml -f docker-compose.prod.yml ps
 
 docker compose --env-file .env.prod \
-  -f docker-compose.yml -f docker-compose.prod.yml logs --tail=100 docs caddy
+  -f docker-compose.yml -f docker-compose.prod.yml logs --tail=100 web docs caddy
 ```
 
-### Deploy rollback
+All services must be `healthy`. The health checks are:
 
-Keep the previously working image or previous Git revision available. If the site build fails, Compose should not replace the healthy running docs container with a successful new version. If the new static site loads incorrectly, roll back the docs source to the last known-good revision and rebuild the image. Do not roll back database migrations unless the migration explicitly supports reversal and the recovery plan accounts for writes made after deployment.
+| Service | Check |
+| --- | --- |
+| `web` | `GET http://localhost:8000/health/` returns `{"status": "ok"}` |
+| `docs` | `GET http://127.0.0.1:8080/healthz` returns `ok` |
+| `caddy` | `GET http://127.0.0.1:8081/healthz` (inside the container) |
+| `db` | `pg_isready` |
+| `redis` | `redis-cli ping` |
 
-## Edge and container constraints
+`caddy` starts only after `web` and `docs` are healthy.
 
-- Only Caddy publishes host ports.
-- The docs service belongs on `proxy` in production; do not attach it to `backend` or `egress` without a documented need.
-- Nginx runs as the unprivileged `nginx` user, listens on 8080, and writes temporary state under `/tmp`.
-- The final docs image serves static output only. Do not add an application runtime or secrets to it.
-- Do not mount the host source tree into the production docs container.
-- Keep Caddy's `caddy_data` volume. It stores TLS certificate state.
-- Logs are sent to stdout/stderr for Compose log rotation.
+### Roll back
 
-## Local build without Docker
+Keep the Git revision that worked. To roll back, check out that revision and run the `up -d --build`
+command again. If a build fails, Compose keeps the old container. Do not roll back a database
+migration unless the migration supports it and you have a plan for the data that was written
+after the deploy. Take a [backup](./backups-and-recovery.md) before each deploy that has a
+migration.
+
+## Volumes
+
+| Volume | Holds | Keep? |
+| --- | --- | --- |
+| `postgres_data` | The database | Yes. Back it up. |
+| `caddy_data` | TLS certificates and keys | Yes. Let's Encrypt limits new certificates. |
+| `caddy_config` | Caddy autosave | No |
+| `ollama_data` | Downloaded models | Optional. You can download them again. |
+| `logs` | `app.log` (10 MB, 5 files) | Optional |
+| `staticfiles` | The result of `collectstatic` | No. The `web` service makes it again. |
+
+## Notes
+
+- Docker changes the firewall rules itself. A tool such as `ufw` does not block a port that Docker
+  publishes. This is why only Caddy has published ports.
+- `ADMIN_ALLOWED_IPS` and `DOCS_ALLOWED_IPS` use the address that Caddy sees. With Docker and IPv6,
+  this can be the address of the Docker gateway. Test from an allowed and from a blocked address.
+- The API rate limit needs the Redis cache. In production, the cache URL is `CACHE_URL`. The
+  default is the `REDIS_URL` with database `1`.
+- Most settings are first values only. A superuser can change them on **Ops > Settings**. See
+  [Runtime configuration](./runtime-configuration.md).
+
+## Run the docs site without Docker
+
+You need Node.js 22 and Python 3.13.
 
 ```bash
 cd docs
-npm install
-npm run api:check
-npm run build
-npm run serve
+npm ci
+npm start             # development server at http://localhost:3000/docs/
+npm run build         # production build in docs/build
+npm run serve         # serve the build at http://localhost:8080/docs/
 ```
 
-The site is served at port 8080 by this package script, but the public production URL remains `/docs/` behind Caddy. Never bind the development server to an untrusted network.
+`npm start` and `npm run build` first make the reference pages (`npm run reference:generate`).
+Do not bind the development server to an untrusted network.

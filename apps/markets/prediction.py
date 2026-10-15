@@ -17,6 +17,12 @@ baseline (always guess the most common result) over many days.
 
 Make the prediction in the morning, before the market opens. A later run can see quotes of the
 same day.
+
+Callers: the Celery task `markets.predict`, the command `predict_market` and the report builder
+call `make_prediction`. The module reads `NewsArticle` rows (the scores come from the news app),
+`IndexQuote` rows, the instruments in `instruments.py` and the site settings
+`PREDICTION_NEWS_WEIGHT`, `PREDICTION_THRESHOLD` and `PREDICTION_MIN_ARTICLES`.
+`evaluation.py` imports the `UP`, `DOWN` and `FLAT` values.
 """
 
 import logging
@@ -47,19 +53,47 @@ MIN_DISAGREE_SIGNAL = 0.1  # Two scores disagree only when both are stronger tha
 
 @dataclass(frozen=True)
 class NewsSignal:
-    """The news score and the number of articles behind it."""
+    """The news score and the number of articles behind it.
+
+    Attributes:
+        score: The relevance-weighted average sentiment, from -1 to 1. `None` when there are no
+            usable articles.
+        articles: The number of articles that the score uses.
+    """
 
     score: float | None  # None when there are no scored articles.
     articles: int
 
 
 def news_window_start(target_day: date) -> datetime:
-    """The news window starts at the close of the trading day before the target day."""
+    """Return the start of the news window for a target day.
+
+    The window starts at the market close of the trading day before the target day. The news
+    that came after that close is the news that the market has not yet priced in.
+
+    Args:
+        target_day: The trading day that we predict.
+
+    Returns:
+        A timezone-aware datetime (IST) of that close.
+    """
     return session_close(previous_trading_day(target_day))
 
 
 def news_signal(since: datetime) -> NewsSignal:
-    """The average sentiment of the scored articles since a time, weighted by relevance."""
+    """Return the average sentiment of the scored articles since a time.
+
+    Each article counts as much as its relevance. The function uses only articles that have a
+    score (`scored_at` and `sentiment_score` are set) and a relevance of at least 0.2. The time
+    of an article is `published_at`. If it is empty, the function uses `fetched_at`.
+
+    Args:
+        since: The start of the window. It must be timezone-aware.
+
+    Returns:
+        A `NewsSignal`. If no article matches, or if the total relevance is zero, the score is
+        `None` and the number of articles is 0.
+    """
     rows = (
         NewsArticle.objects.filter(
             scored_at__isnull=False, sentiment_score__isnull=False, relevance__gte=MIN_RELEVANCE
@@ -77,7 +111,16 @@ def news_signal(since: datetime) -> NewsSignal:
 
 @dataclass(frozen=True)
 class CueReading:
-    """The latest reading of one global cue."""
+    """The latest reading of one global cue.
+
+    Attributes:
+        symbol: The Yahoo Finance symbol of the cue.
+        name: The display name of the cue.
+        change_pct: The change of the last close, in percent.
+        as_of: The day of that close.
+        weight: The weight of the cue, with its sign.
+        signal: The change divided by the scale of the cue, cut to the range -1 to 1.
+    """
 
     symbol: str
     name: str
@@ -88,12 +131,32 @@ class CueReading:
 
 
 def cue_signal(change_pct: float, scale: float) -> float:
-    """Return the change divided by the scale, cut to the range -1 to 1."""
+    """Return the change divided by the scale, cut to the range -1 to 1.
+
+    Args:
+        change_pct: The change of the cue, in percent.
+        scale: The move in percent that counts as a full signal. It must not be zero.
+
+    Returns:
+        A number from -1.0 to 1.0. A change that is bigger than the scale gives 1.0 or -1.0.
+    """
     return max(-1.0, min(1.0, change_pct / scale))
 
 
 def read_cues(target_day: date) -> list[CueReading]:
-    """The latest change of each global cue, for the cues that have a recent quote."""
+    """Read the latest change of each enabled global cue.
+
+    For each cue, the function takes the newest quote that has a change, on `target_day` or
+    earlier, and not older than 4 days (`MAX_CUE_AGE_DAYS`). The 4 days cover a long weekend. A
+    cue without such a quote is left out.
+
+    Args:
+        target_day: The trading day that we predict.
+
+    Returns:
+        A list of `CueReading` values, in the order of `global_cues()`. It is empty when no cue
+        has a recent quote.
+    """
     oldest = target_day - timedelta(days=MAX_CUE_AGE_DAYS)
     readings = []
     for cue in global_cues():
@@ -123,7 +186,17 @@ def read_cues(target_day: date) -> list[CueReading]:
 
 
 def global_score(readings: list[CueReading]) -> float | None:
-    """The weighted average of the cues, from -1 to 1. None if there are no cues."""
+    """Return the weighted average of the cue signals, from -1 to 1.
+
+    Each signal is multiplied by its weight (with its sign). The sum is divided by the sum of the
+    absolute weights of the cues that are present.
+
+    Args:
+        readings: The cue readings, for example from `read_cues`.
+
+    Returns:
+        The score, or `None` if the list is empty.
+    """
     if not readings:
         return None
     total_weight = sum(abs(r.weight) for r in readings)
@@ -132,7 +205,17 @@ def global_score(readings: list[CueReading]) -> float | None:
 
 @dataclass(frozen=True)
 class Outcome:
-    """The result of the rule: direction, confidence and the numbers behind them."""
+    """The result of the rule: direction, confidence and the numbers behind them.
+
+    Attributes:
+        direction: `UP`, `DOWN` or `FLAT`.
+        confidence: A number from 0.05 to 0.9. It is not a probability.
+        score: The final score, from -1 to 1.
+        news_score: The score of the news part, or `None` when there is no news score.
+        global_score: The score of the global part, or `None` when there are no cues.
+        coverage: A number from 0 to 1. How much of the wanted data is present.
+        notes: Short texts that say what is missing or in conflict. They go to `Prediction.inputs`.
+    """
 
     direction: str
     confidence: float
@@ -144,7 +227,22 @@ class Outcome:
 
 
 def _news_part(news: NewsSignal, news_weight: float, min_articles: int, notes: list[str]) -> float:
-    """Return the weight of the news in the score. It is lower when there are few articles."""
+    """Return the weight of the news in the score. It is lower when there are few articles.
+
+    The weight is `news_weight` times the share of the wanted articles that we have (at most 1).
+
+    Args:
+        news: The news signal.
+        news_weight: The full weight of the news, from 0 to 1.
+        min_articles: The number of articles that gives the full weight.
+        notes: A list that the function appends a text to when the news is missing or thin.
+
+    Returns:
+        The weight of the news part. It is 0.0 when there is no news score.
+
+    Side effects:
+        Appends to `notes`.
+    """
     if news.score is None:
         notes.append("No scored news articles.")
         return 0.0
@@ -158,7 +256,22 @@ def _news_part(news: NewsSignal, news_weight: float, min_articles: int, notes: l
 def _global_part(
     g_score: float | None, readings: list[CueReading], news_weight: float, notes: list[str]
 ) -> float:
-    """Return the weight of the global cues in the score. It is lower when cues are missing."""
+    """Return the weight of the global cues in the score. It is lower when cues are missing.
+
+    The weight is `1 - news_weight` times the share of the total cue weight that is present.
+
+    Args:
+        g_score: The global score. `None` means that there are no cues.
+        readings: The cue readings that are present.
+        news_weight: The full weight of the news, from 0 to 1.
+        notes: A list that the function appends a text to when cues are missing.
+
+    Returns:
+        The weight of the global part. It is 0.0 when `g_score` is `None`.
+
+    Side effects:
+        Appends to `notes`. Reads the enabled cues from the database.
+    """
     if g_score is None:
         notes.append("No global cues.")
         return 0.0
@@ -170,7 +283,16 @@ def _global_part(
 
 
 def _direction(score: float, threshold: float) -> str:
-    """Return UP, DOWN or FLAT for a score."""
+    """Return UP, DOWN or FLAT for a score.
+
+    Args:
+        score: The final score, from -1 to 1.
+        threshold: The score that is needed for UP (or minus it for DOWN).
+
+    Returns:
+        `UP` when the score is at or above the threshold, `DOWN` when it is at or below minus the
+        threshold, and `FLAT` for all other scores.
+    """
     if score >= threshold:
         return UP
     if score <= -threshold:
@@ -186,7 +308,27 @@ def _base_confidence(
     g_score: float | None,
     notes: list[str],
 ) -> float:
-    """Return the confidence before the coverage factor. Lower it when the two scores disagree."""
+    """Return the confidence before the coverage factor. Lower it when the two scores disagree.
+
+    For FLAT, the value is from 0.30 to 0.50. It is higher when the score is nearer to zero. For
+    UP and DOWN, the value is from 0.40 to 0.80. It is higher when the score is stronger. The
+    function takes 0.10 off when the news score and the global score have opposite signs and both
+    are stronger than 0.1.
+
+    Args:
+        direction: `UP`, `DOWN` or `FLAT`.
+        score: The final score.
+        threshold: The score that is needed for UP or DOWN.
+        n_score: The news score, or `None`.
+        g_score: The global score, or `None`.
+        notes: A list that the function appends a text to when the two scores disagree.
+
+    Returns:
+        The base confidence, before `decide` multiplies it by the coverage factor.
+
+    Side effects:
+        Appends to `notes`.
+    """
     if direction == FLAT:
         # The nearer the score is to zero, the more it looks like a flat day.
         return 0.30 + 0.20 * (1 - abs(score) / threshold)
@@ -211,7 +353,25 @@ def decide(
     threshold: float,
     min_articles: int,
 ) -> Outcome:
-    """Combine the news and the global cues into a direction and a confidence."""
+    """Combine the news and the global cues into a direction and a confidence.
+
+    This is the rule itself. It does not use the database for the news or the quotes, but
+    `global_cues` reads the enabled cues. The score is the weighted average of the news score and
+    the global score. The weights are lower when data is missing. The confidence is the base
+    confidence times `0.7 + 0.3 * coverage`, cut to the range 0.05 to 0.9, and rounded to 2
+    decimal places.
+
+    Args:
+        news: The news signal.
+        readings: The cue readings that are present.
+        news_weight: The full weight of the news, from 0 to 1. The rest is for the cues.
+        threshold: The score that is needed for UP or DOWN.
+        min_articles: The number of articles that gives the news its full weight.
+
+    Returns:
+        An `Outcome`. If there is no data at all (coverage is 0), the direction is `FLAT`, the
+        confidence is 0.1 and the score is 0.0.
+    """
     notes: list[str] = []
     n_score = news.score
     g_score = global_score(readings)
@@ -235,9 +395,29 @@ def make_prediction(
 ) -> tuple[Prediction, bool]:
     """Make and save the prediction for a trading day. Return (prediction, created).
 
-    - The target day is the next trading day, from today (IST) on. Today counts if it is one.
-    - If a prediction for the day exists, it is returned and not changed, so the report stays
-      the same all day. force=True makes it again, but only until the result is known.
+    The target day is the next trading day, from today (IST) on. Today counts if it is one. If a
+    prediction for the day exists, the function returns it and does not change it, so the report
+    stays the same all day. With `force`, the function makes it again, but only until the result
+    is known (`evaluated_at` is empty).
+
+    The function reads the news since `news_window_start`, reads the cues, and calls `decide` with
+    the site settings. It saves the direction, the confidence, the scores and an `inputs` dict
+    (the time, the window start, the cue readings, the coverage, the notes and the settings).
+
+    Args:
+        target_day: The day to predict. The default (None) is the next trading day from today
+            in IST. The function does not check that the day is a trading day.
+        now: The current time. It must be timezone-aware. The default (None) is the current
+            time. It goes in `inputs` as `made_at`.
+        force: True makes the prediction again when one exists and has no result yet.
+
+    Returns:
+        A tuple of the `Prediction` and a flag. The flag is True when the function made and
+        saved the prediction in this call. It is False when an existing prediction came back
+        without a change.
+
+    Side effects:
+        Creates or updates one row in the `Prediction` table. Writes a log line.
     """
     now = now or timezone.now()
     target = target_day or next_trading_day(today_ist(now))

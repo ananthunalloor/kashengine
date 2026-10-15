@@ -6,7 +6,7 @@
 # - Only Caddy publishes ports (80 and 443). No other service is reachable from outside.
 # - The networks keep the services apart:
 #     edge     Caddy only. It has the published ports and can reach the internet (for TLS).
-#     proxy    Caddy and web. No route to the internet.
+#     proxy    Caddy, web and docs. No route to the internet.
 #     backend  web, worker, beat, db, redis, ollama. No route to the internet.
 #     egress   worker, beat, ollama. Outbound only: news, quotes, Telegram, model downloads.
 # - Every container drops all Linux capabilities and cannot gain new ones.
@@ -46,17 +46,19 @@ services:
       - "80:80"
       - "443:443"
       - "443:443/udp" # HTTP/3
-    # Compose reads these values from .env.prod (use --env-file). Caddy gets only these four,
+    # Compose reads these values from .env.prod (use --env-file). Caddy gets only these five,
     # not the database password or the other secrets.
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:?Set SITE_ADDRESS in .env.prod (your domain name)}
       ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in .env.prod (an email address for certificate notices)}
       ADMIN_ALLOWED_IPS: ${ADMIN_ALLOWED_IPS:-0.0.0.0/0 ::/0}
+      DOCS_ALLOWED_IPS: ${DOCS_ALLOWED_IPS:-0.0.0.0/0 ::/0}
       CSP_HEADER: ${CSP_HEADER:-Content-Security-Policy}
     networks:
       - edge
       - proxy
 
+  # Static files only. No secrets, no database, no route to the internet.
   docs:
     <<: *hardened
     read_only: true
@@ -64,6 +66,7 @@ services:
       - /tmp
     networks:
       - proxy
+
   web:
     <<: *app-runtime
     command: >

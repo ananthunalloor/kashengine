@@ -1,0 +1,94 @@
+# Checks for each pull request and each push to main.
+# Python: format, lint, types, migrations, tests. Docs: docstring gate, API compatibility, build.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DJANGO_SECRET_KEY: ci-only-not-a-secret
+
+jobs:
+  python:
+    name: Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - name: Ruff lint
+        run: uv run ruff check .
+      - name: Ruff format
+        run: uv run ruff format --check .
+      - name: Types
+        run: uv run ty check
+      - name: Migrations are complete
+        run: uv run python manage.py makemigrations --check --dry-run
+      - name: Tests
+        run: uv run pytest -q
+
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+      - name: Install
+        working-directory: docs
+        run: npm ci --no-audit --no-fund
+      - name: Docstring gate
+        working-directory: docs
+        run: npm run reference:check
+      - name: API compatibility with main
+        run: |
+          if git cat-file -e origin/main:docs/openapi/v1.json 2>/dev/null; then
+            git show origin/main:docs/openapi/v1.json > "$RUNNER_TEMP/openapi-main.json"
+            python docs/scripts/openapi_compat.py "$RUNNER_TEMP/openapi-main.json" docs/openapi/v1.json
+          else
+            echo "main has no OpenAPI file yet. Nothing to compare."
+          fi
+      - name: Build the site
+        working-directory: docs
+        env:
+          DOCS_URL: https://docs.example.invalid
+        run: npm run build
+
+  images:
+    name: Docker config and docs image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compose files are valid
+        run: |
+          cp .env.example .env.dev
+          cp .env.prod.example .env.prod
+          docker compose config --quiet
+          docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml config --quiet
+      - name: Caddyfile is valid
+        run: |
+          docker run --rm -v "$PWD/deploy/caddy:/etc/caddy:ro" \
+            -e SITE_ADDRESS=localhost -e ACME_EMAIL=ci@localhost \
+            caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
+      - name: Build the docs image
+        run: docker build -f docs/Dockerfile -t kash-docs:ci .

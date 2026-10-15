@@ -3,6 +3,16 @@
 All code that needs the LLM uses `LLMClient`. The server URL and the model come from the
 settings `LLM_BASE_URL` and `LLM_MODEL`. You can give another model to one client, to compare
 models.
+
+Callers: `apps.news.sentiment` (scores articles), `apps.news.compare` (compares models),
+`apps.ops.health` (the LLM health check) and the commands `llm_check`, `score_news` and
+`compare_models`. The client reads the settings `LLM_BASE_URL`, `LLM_MODEL` and
+`LLM_TIMEOUT_SECONDS` through `apps.siteconfig.conf`. A value that an admin saved on the
+dashboard replaces the environment value.
+
+The client talks to the Ollama HTTP API only: `/api/chat`, `/api/tags` and `/api/pull`. It is
+not thread-safe, because it keeps the details of the last call in `last_seconds` and
+`last_attempts`. Make one client for each task run.
 """
 
 import json
@@ -22,19 +32,40 @@ ERROR_TEXT_LIMIT = 200  # Characters of a server error body that we put in a mes
 
 
 class LLMError(Exception):
-    """Base class for LLM errors."""
+    """Base class for all errors of the LLM client.
+
+    Catch this class to handle every LLM failure in one place.
+    """
 
 
 class LLMUnavailableError(LLMError):
-    """The server cannot be reached, or it has no such model. Do not try more requests now."""
+    """The server cannot be reached, or it has no such model. Do not try more requests now.
+
+    The client also raises this error for an HTTP error status and for a reply that does not have
+    the expected shape. The fault is not in one article, so callers stop the whole run and do not
+    count a failed try for the article.
+    """
 
 
 class LLMInvalidOutputError(LLMError):
-    """The model answered, but not with valid JSON in the right format (even after a retry)."""
+    """The model answered, but not with valid JSON in the right format (even after a retry).
+
+    The text of the error is the reason that the last answer was not valid. Callers count this as
+    a failed try for the item that they were scoring.
+    """
 
 
 def _parse_object(content: str) -> dict:
     """Parse `content` as JSON and check that it is an object.
+
+    `json.JSONDecodeError` is a subclass of `ValueError`, so `chat_json` catches both errors
+    together.
+
+    Args:
+        content: The text that the model sent back.
+
+    Returns:
+        The parsed JSON object.
 
     Raises:
         ValueError: The text is not valid JSON.
@@ -48,7 +79,13 @@ def _parse_object(content: str) -> dict:
 
 
 class LLMClient:
-    """Client for one model on the LLM server."""
+    """Client for one model on the LLM server.
+
+    One object is bound to one model and one server address. It can be used as a context manager.
+    The `with` block closes the HTTP client at the end, but only when this object created it.
+    Each `chat_json` call sets `last_attempts` (the number of requests sent) and `last_seconds`
+    (the time of the call). The model comparison reads `last_seconds`.
+    """
 
     def __init__(
         self,
@@ -57,6 +94,17 @@ class LLMClient:
         timeout: float | None = None,
         client: httpx.Client | None = None,
     ):
+        """Set up the client. Each argument that is empty falls back to a setting.
+
+        Args:
+            model: The model name. If empty, the client uses the setting `LLM_MODEL`.
+            base_url: The server address. If empty, the client uses `LLM_BASE_URL`. A slash at
+                the end is removed.
+            timeout: The time limit, in seconds, for one HTTP request. If empty or zero, the
+                client uses `LLM_TIMEOUT_SECONDS`. It is not used when `client` is given.
+            client: An HTTP client to use, for example a test client. If given, the caller owns
+                it and `close` does not close it.
+        """
         self.model = model or conf.LLM_MODEL
         self.base_url = (base_url or conf.LLM_BASE_URL).rstrip("/")
         self.timeout = timeout or conf.LLM_TIMEOUT_SECONDS
@@ -72,15 +120,20 @@ class LLMClient:
             self._http.close()
 
     def __enter__(self):
+        """Return this client, so it can be used in a `with` block."""
         return self
 
     def __exit__(self, *exc_info):
+        """Close the client when the `with` block ends. Errors are not hidden."""
         self.close()
 
     def chat_json(self, system: str, user: str, schema: dict | None = None, validate=None) -> dict:
         """Ask the model a question and get a JSON object back.
 
-        If the answer is not valid, ask one more time and tell the model what was wrong.
+        If the answer is not valid, ask one more time and tell the model what was wrong. The
+        client sends at most two requests (`MAX_ATTEMPTS`). An answer is not valid when it is not
+        JSON, when the JSON is not an object, or when `validate` raises `ValueError` or
+        `TypeError`. The temperature is 0, so the same input gives nearly the same answer.
 
         Args:
             system: The system prompt.
@@ -91,11 +144,16 @@ class LLMClient:
                 raises ValueError if the data is not good.
 
         Returns:
-            The parsed (and validated) JSON object.
+            The parsed JSON object. If `validate` is given, the return value of `validate`.
 
         Raises:
             LLMInvalidOutputError: The second answer is also not valid.
             LLMUnavailableError: The server cannot be reached or has no such model.
+
+        Side effects:
+            Sends one or two HTTP requests. Sets `last_attempts` on each try. Sets
+            `last_seconds` to the total time, also when the call fails because the answer is not
+            valid. When the server is not available, `last_seconds` keeps its old value.
         """
         messages = [
             {"role": "system", "content": system},
@@ -127,6 +185,19 @@ class LLMClient:
         raise LLMInvalidOutputError(error)
 
     def _chat(self, messages: list[dict], schema: dict | None) -> str:
+        """Send one chat request and return the text of the answer.
+
+        Args:
+            messages: The chat messages, each one a dict with `role` and `content`.
+            schema: A JSON schema for the answer. If empty, the request asks for "json".
+
+        Returns:
+            The `message.content` text of the server reply.
+
+        Raises:
+            LLMUnavailableError: The server cannot be reached, the model is not on the server
+                (HTTP 404), the status is 400 or more, or the reply has an unexpected shape.
+        """
         payload = {
             "model": self.model,
             "messages": messages,
@@ -155,6 +226,10 @@ class LLMClient:
     def list_models(self) -> list[str]:
         """Return the names of the models on the server.
 
+        Returns:
+            The model names, each with its tag, for example `llama3.2:latest`. The list is empty
+            when the server has no models.
+
         Raises:
             LLMUnavailableError: The server is down or gives a bad answer.
         """
@@ -169,13 +244,30 @@ class LLMClient:
     def has_model(self) -> bool:
         """Return True if our model is on the server.
 
-        A name without a tag, such as "llama3.2", also matches "llama3.2:latest".
+        A name without a tag, such as "llama3.2", also matches "llama3.2:latest". The check
+        calls `list_models`, so it sends one HTTP request.
+
+        Returns:
+            True if the model is on the server. False if it is not.
+
+        Raises:
+            LLMUnavailableError: The server is down or gives a bad answer.
         """
         wanted = self.model if ":" in self.model else f"{self.model}:latest"
         return wanted in self.list_models()
 
     def pull_model(self) -> None:
-        """Download our model to the server. This can take many minutes."""
+        """Download our model to the server. This can take many minutes.
+
+        The request has no time limit, because a pull of a large model is slow. The server
+        sends the reply when the download is complete.
+
+        Raises:
+            LLMUnavailableError: The request fails or the server sends an error status.
+
+        Side effects:
+            The server stores the model files on its disk.
+        """
         try:
             response = self._http.post(
                 f"{self.base_url}/api/pull",

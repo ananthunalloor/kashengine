@@ -1,40 +1,88 @@
 ---
-title: Runtime configuration and secrets
+title: Runtime settings and secrets
+sidebar_label: Runtime settings
+description: Which settings a superuser can change on the dashboard, their order of precedence, and how secrets are stored.
 ---
 
-# Runtime configuration and secrets
+# Runtime settings and secrets
 
-Runtime settings that are safe for the operator to change are registered in `apps/siteconfig/registry.py` and managed through the Ops dashboard. The registry defines the type, limits, group, and help text for each setting.
+The full list is in [Settings and environment variables](../reference/generated/system/settings.md).
+That page is generated from the registry, so it is always current.
 
-## Value precedence
+## Two kinds of values
 
-The effective value order is:
+| Kind | Where | Change |
+| --- | --- | --- |
+| **Dashboard setting** | `apps/siteconfig/registry.py` (a `Spec`: type, limits, group, help). | A superuser changes it on **Ops > Settings**. It takes effect in a few seconds with no restart. |
+| **Environment variable** | `.env.dev`, `.env.prod`, `config/settings/*.py`. | Change the file and restart the services. |
 
-1. A value saved in the database through Ops.
-2. The corresponding environment variable.
-3. The default in `config/settings/base.py` / the setting registry.
+Values that decide how the process starts stay in the environment: `DJANGO_SECRET_KEY`,
+`DATABASE_URL`, `REDIS_URL`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, the security
+flags and the log mode. The schedule, the news feeds and the market instruments are rows in the
+database, and have their own Ops pages.
 
-The settings layer caches effective values for five seconds. A dashboard edit therefore propagates to web, worker, and Beat processes without a restart after that short cache lifetime. If the database cannot be read, environment values provide the fallback.
+## Order of values
 
-Use the shared `conf` access layer (`conf.KEY`, `conf.get`, `conf.default`, `conf.is_saved`, `conf.overrides`, and `conf.invalidate`) rather than reading an overrideable setting directly from Django settings. Add a new setting to the registry with its validation, limits, group, description, default, and secret classification. Update `.env.example`, `.env.prod.example`, tests, and this page when a deployment variable changes.
+For a dashboard setting, the value is, in this order:
 
-## Which values belong in the registry?
+1. The value that a superuser saved on the dashboard (the database).
+2. The environment variable.
+3. The default in `config/settings/base.py`.
 
-Settings on the dashboard include Telegram, report sizing, LLM endpoint/model/timeouts, news, sentiment, market timing, IPOs, company refresh, health thresholds, login lockout limits, and web page size. The schedule, news feeds, and market instruments are separate database-managed records.
+Code reads a value with `conf`:
 
-Values that can prevent the service from starting or that define the deployment boundary remain environment configuration, for example Django's secret key, database and Redis URLs, allowed hosts, trusted CSRF origins, security flags, and logging mode. Do not move sensitive infrastructure values into a form without a clear reason and a reviewed permission model.
+```python
+from apps.siteconfig import conf
 
-## Secret lifecycle
+conf.LLM_MODEL  # the dashboard value, else the environment
+conf.get("LLM_MODEL")  # the same
+```
 
-Secret values are encrypted with Fernet. The encryption key is derived from `SETTINGS_ENCRYPTION_KEY`, or falls back to `DJANGO_SECRET_KEY` when the dedicated key is empty. A secret is not shown again after saving. An empty secret field keeps the saved secret. Audits record only that the secret changed.
+Each process (web, worker, beat) keeps the saved values in memory for 5 seconds
+(`CACHE_SECONDS`). A change is live at once in the process that saved it. The other processes see
+it in 5 seconds or less. If the database cannot answer, `conf` uses the environment values.
 
-Set a distinct `SETTINGS_ENCRYPTION_KEY` before rotating `DJANGO_SECRET_KEY`. If the encryption key changes, existing encrypted settings may become unreadable and the UI reports them as not set. In that situation, enter the secret again. Plan key rotation before the change and keep the key out of source control and logs.
+Do not read an overrideable setting from `django.conf.settings` in the application code.
 
-## Changing the registry safely
+## Validation
 
-1. Define the new `Spec` with a type, validation bounds, group, help text, default, and secret metadata as applicable.
-2. Use the central accessor in all consumers.
-3. Add tests for default, environment, database override, reset, invalid input, unchanged input, cache invalidation, and database failure behavior.
-4. Confirm that audit events redact secrets.
-5. Update the relevant Ops page and environment examples.
-6. Run type checking, linting, migration checks, and the full test suite.
+The form is built from the registry. Each type has rules:
+
+| Type | Rule |
+| --- | --- |
+| `int`, `float` | A number inside `minimum` and `maximum`. |
+| `bool` | On or off. |
+| `str` | A text. |
+| `url`, `urls` | `http` or `https` with a host. |
+| `list` | One item for each line. Each item must match the pattern of the setting (for example a chat id). |
+| `clock` | `HH:MM`, 24-hour. |
+| `secret` | A text. It is encrypted before it is saved. |
+
+An invalid value is not saved. The page shows the reason.
+
+## Secrets
+
+A secret (the Telegram bot token) is **encrypted with Fernet** before it goes in the database.
+
+- The key comes from `SETTINGS_ENCRYPTION_KEY`. If that is empty, it comes from `DJANGO_SECRET_KEY`.
+- The page never shows a saved secret. It shows only whether one is set. An empty field keeps the
+  saved secret.
+- The audit trail says that a secret changed. It never holds the old or the new value.
+- Logs and the log viewer hide tokens.
+- If the key changes, the old secrets cannot be read. They count as "not set". A superuser must
+  enter them again.
+
+:::important
+Set a separate `SETTINGS_ENCRYPTION_KEY` **before** you rotate `DJANGO_SECRET_KEY`. Keep both keys
+out of Git and out of logs, and back them up apart from the database.
+:::
+
+## Add a setting
+
+1. Add a `Spec` to the registry with a type, limits, a group and a help text.
+2. Add its environment default to `config/settings/base.py` (`env.int("NAME", default=...)`).
+3. Read it with `conf.NAME` everywhere.
+4. Add the line to `.env.example` and `.env.prod.example`.
+5. Write tests for the default, the environment, the saved value, the reset, an invalid value,
+   an unchanged secret, the cache and a database failure.
+6. Run the checks. The generated settings page changes by itself.

@@ -1,39 +1,48 @@
 ---
-title: Development workflow and code layout
+title: Development workflow
+sidebar_label: Workflow
+description: Where code belongs, the checklist for a change, migrations, API changes, and patch delivery.
 ---
 
-# Development workflow and code layout
+# Development workflow
 
-## Keep domain logic in the owning app
+## Put the code in the app that owns the data
 
-Place a rule beside the data it governs. News parsing belongs with news; market direction logic belongs with markets; IPO scoring belongs with IPOs; settings validation belongs with siteconfig; operational controls belong with Ops. Avoid imports that make low-level domain apps depend on web views.
+A rule goes next to the data that it governs. News parsing is in `news`. The market prediction is
+in `markets`. The IPO score is in `ipos`. The validation of settings is in `siteconfig`. The
+operator controls are in `ops`. A low-level app does not import a web view.
 
-A typical request path should be thin:
+A request is thin:
 
-1. A view validates input and checks access.
-2. A form or service validates domain rules.
-3. A service or model operation applies the change.
-4. A task handles work that can take a long time.
-5. Templates render safe output and do not recompute domain decisions.
+1. A view checks access and the input.
+2. A form or a service checks the rules of the domain.
+3. A service or a model changes the data.
+4. A Celery task does the work that takes long.
+5. A template shows the result. It does not compute a decision.
 
-Use the established module conventions in the app before adding a new abstraction. Keep public helper interfaces stable when more than one app or task uses them.
+## Checklist for a change
 
-## Change checklist
+- Find the model, service, task, view, template, setting and tests that the change touches.
+- Write the expected behavior first.
+- Check the input at the boundary. Use a database constraint for a rule that must hold when two
+  requests come at the same time.
+- Put an external call behind a small function that a test can replace. Set a timeout. Handle
+  each provider error.
+- Write the docstrings ([standard](./docstring-standard.md)).
+- Write tests: valid input, invalid input, limits, and failure.
+- If you add a setting, decide where it belongs:
+  - A value that an operator may change goes in `apps/siteconfig/registry.py`, and code reads it
+    with `conf`.
+  - A value that decides how the process starts stays in the environment. Add it to
+    `.env.example` and `.env.prod.example`.
+- If an Ops action sends a message or replaces data, use the confirmation text of the job and the
+  superuser check.
+- If you add a Celery task, give it a `name` and a `soft_time_limit`. If a user may start it,
+  add it to the job list in `apps/ops/jobs.py`. If it runs on a schedule, add it to
+  `apps/ops/defaults.py` and write a migration for existing databases.
+- Run the checks and read the diff.
 
-- Find the relevant model, service, task, view, form, template, settings entry, and tests.
-- Record the expected behavior before editing.
-- Add validation at the boundary and enforce concurrent invariants in the database where appropriate.
-- Keep external calls behind a small, testable boundary. Set timeouts and handle provider errors explicitly.
-- Document parameters, returns, raised exceptions, side effects, transactions, retries, and security requirements for every function.
-- Add tests for valid input, invalid input, edge cases, and failure behavior.
-- If an environment setting changes, update its example environment file and the settings documentation.
-- If an operator needs to tune a value, check whether it belongs in the siteconfig registry rather than being hard-coded.
-- If an Ops action can send a message, overwrite data, or otherwise cause a side effect, require the established confirmation and authorization pattern.
-- Run the checks below and review the final patch.
-
-## Python checks
-
-Run from the repository root:
+## Checks
 
 ```bash
 uv run ruff check .
@@ -41,18 +50,48 @@ uv run ruff format --check .
 uv run ty check
 uv run python manage.py makemigrations --check --dry-run
 uv run pytest
+cd docs && npm run reference:check && npm run build
 ```
 
-Tests run with warnings treated as errors. The test configuration uses `config.settings.dev`. Tests that touch the database must opt into the project's database test convention; do not allow a unit test to access the database by accident.
+[Pre-commit](https://pre-commit.com) runs Ruff, the file checks and `ty` before each commit.
+CI (`.github/workflows/ci.yml`) runs all the checks above for each pull request.
 
 ## Database migrations
 
-- Make schema changes in model code and create a migration.
-- Review generated migration operations and dependencies. Do not edit historical migrations just to improve new code.
-- Keep seed migrations deterministic and safe to run once on a new database.
-- Run the migration drift check and the relevant database tests.
-- Before deployment, take a restorable backup and define the rollback or forward-fix plan.
+- Change the model, then run `makemigrations`. Read the migration.
+- Do not edit a migration that is already in `main`.
+- A migration that adds first data must be safe to run once on a new database.
+- Before you deploy, take a [backup](../operations/backups-and-recovery.md) and decide how you
+  will go back or go forward if the migration fails.
+
+## Change the HTTP API
+
+The API is a contract. Inside `v1` you may only add things. See
+[Versioning](../api/versioning.md).
+
+1. Change the router in `apps/api/v1/` and the schemas in `apps/api/v1/schemas.py`. Describe
+   every field with `Field(description=...)`. Write the docstring of the endpoint for the API
+   user.
+2. Export the OpenAPI file:
+
+   ```bash
+   uv run python manage.py export_openapi --output docs/openapi/v1.json
+   ```
+
+3. Run the tests. `apps/api/tests/test_openapi.py` fails when the file is old, when an operation
+   has no summary or description, and when a response field has no description.
+4. Raise the minor number in `apps/api/versions.py` and write the change in the
+   [changelog](../api/changelog.md).
+5. CI runs `docs/scripts/openapi_compat.py` against the file on `main`. A breaking change fails.
 
 ## Patch delivery
 
-When sharing work as a patch, generate it from a known base commit. State the base commit and the apply command. Do not combine unrelated changes. Verify the patch with `git apply --check` against the recipient's checkout before applying it.
+To share work as a patch file, make it from a known base commit:
+
+```bash
+git format-patch origin/main..HEAD -o patches/
+git apply --check patches/*.patch      # on the other checkout
+git am patches/*.patch
+```
+
+Tell the receiver the base commit. Do not put unrelated changes in one patch.

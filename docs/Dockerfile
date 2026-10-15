@@ -1,26 +1,43 @@
-# Generate the Python API reference from the exact source tree being built.
-FROM python:3.13-slim AS api-reference
-WORKDIR /repo
-COPY . .
-RUN python docs/scripts/generate_api_reference.py --output /generated
+# Developer documentation image. Three stages:
+#   1. reference: read the Python source and write the reference pages (no project code runs).
+#   2. site:      build the Docusaurus site with the pinned lock file.
+#   3. runtime:   serve the static files with unprivileged nginx on port 8080.
+# Build from the repository root: docker build -f docs/Dockerfile .
 
-# Docusaurus emits static assets. Nginx serves them in the runtime image.
-FROM node:22-bookworm-slim AS site-build
+FROM python:3.13-slim AS reference
 WORKDIR /repo
+ARG DOCS_SOURCE_REF=main
+COPY apps ./apps
+COPY config ./config
+COPY manage.py ./
+COPY docs/scripts ./docs/scripts
+COPY docs/openapi ./docs/openapi
+RUN python docs/scripts/generate_reference.py --ref "$DOCS_SOURCE_REF" --output /generated/docs --static /generated/static
+
+FROM node:22-bookworm-slim AS site
+WORKDIR /site
 ARG DOCS_URL=https://localhost
-ENV DOCS_URL=${DOCS_URL}
-COPY . .
-COPY --from=api-reference /generated ./docs/docs/reference/generated
-RUN apt-get update && apt-get install -y --no-install-recommends python3 \
-  && rm -rf /var/lib/apt/lists/*
-WORKDIR /repo/docs
-RUN npm install --no-audit --no-fund
-RUN ./node_modules/.bin/docusaurus build
+ENV DOCS_URL=${DOCS_URL} \
+    DO_NOT_TRACK=1 \
+    DOCUSAURUS_TELEMETRY_DISABLED=1
+# Install first. This layer is cached until the lock file changes.
+COPY docs/package.json docs/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY docs/ ./
+COPY --from=reference /generated/docs ./docs/reference/generated
+COPY --from=reference /generated/static ./static
+RUN npx docusaurus build
 
-FROM nginx:stable-alpine AS runtime
+FROM python:3.13-slim AS headers
+COPY docs/scripts/csp_hashes.py /csp_hashes.py
+COPY --from=site /site/build /build
+RUN python /csp_hashes.py /build /security-headers.conf
+
+FROM nginx:1.28-alpine AS runtime
 COPY docs/nginx.conf /etc/nginx/nginx.conf
 RUN rm -f /etc/nginx/conf.d/default.conf
-COPY --from=site-build /repo/docs/build/ /usr/share/nginx/html/
+COPY --from=headers /security-headers.conf /etc/nginx/snippets/security-headers.conf
+COPY --from=site /site/build/ /usr/share/nginx/html/docs/
 USER nginx
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

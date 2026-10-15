@@ -1,23 +1,35 @@
 ---
 title: Backups and recovery
+sidebar_label: Backups and recovery
+description: What to back up, how to make a PostgreSQL backup, and how to test a restore.
 ---
 
 # Backups and recovery
 
-A deployment is not operationally complete until a backup can be restored. Select a protected backup target before relying on production data. Store backups away from the host that runs the application, restrict access, and encrypt them at rest and in transit.
+A backup has value only when you have tested a restore. Keep backups off the host that runs the
+application. Restrict access to them and encrypt them.
 
-## State that needs protection
+## What to protect
 
-- PostgreSQL data: articles, sentiment results, company and IPO records, market quotes and predictions, reports, runtime settings, schedules, feeds, instruments, user records, task runs, login events, and audit history.
-- The Django and settings encryption keys needed to read stored encrypted configuration. Store these separately from the database backup with an appropriate access policy.
-- `caddy_data`, if preserving current certificate state is required. It contains sensitive certificate keys.
-- The Ollama volume if the downloaded model needs to be preserved and model download time or bandwidth is significant. Models may be re-downloaded if their version and source remain available.
-- Any deployment-specific media or uploaded files, if the current application begins storing them.
-- The exact source revision, container image references, and `.env.prod` schema/version needed to reconstruct the deployment. Never put a plaintext `.env.prod` inside a general backup archive.
+| Item | Why | Where |
+| --- | --- | --- |
+| PostgreSQL data | All records: news, scores, companies, IPOs, quotes, predictions, reports, users, API token hashes, settings, schedule, feeds, instruments, task runs, login events, audit events | Volume `postgres_data` |
+| `DJANGO_SECRET_KEY` and `SETTINGS_ENCRYPTION_KEY` | They decrypt the secrets that are saved on the dashboard (the Telegram bot token) | `.env.prod` |
+| `.env.prod` | All first values and the secrets | The server |
+| `caddy_data` | TLS keys and certificates. Optional: Caddy can get new ones. | Volume `caddy_data` |
+| `ollama_data` | Downloaded models. Optional: you can download them again. | Volume `ollama_data` |
+| Source revision | The code must match the database schema | Git |
 
-## Create a PostgreSQL backup
+Redis has no volume and holds no data that you must keep. It holds the Celery queue and the API
+rate-limit counters. After a restart the queue is empty and the counters start again from zero.
+The Beat schedule is in the database, so a restore brings it back.
 
-Create a protected backup directory that is excluded from Git. This example writes a PostgreSQL custom-format dump to a local path; move it to your chosen off-host destination after verifying it:
+Store the keys apart from the database backup. Never put a plain `.env.prod` in a general backup
+archive.
+
+## Make a PostgreSQL backup
+
+The command writes a custom-format dump. The file has restrictive permissions.
 
 ```bash
 umask 077
@@ -26,35 +38,55 @@ backup_file="backups/kashengine-$(date -u +%Y%m%dT%H%M%SZ).dump"
 
 docker compose --env-file .env.prod \
   -f docker-compose.yml -f docker-compose.prod.yml \
-  exec -T db sh -lc 'pg_dump -Fc -U "$POSTGRES_USER" "$POSTGRES_DB"' \
+  exec -T db sh -c 'pg_dump -Fc -U "$POSTGRES_USER" "$POSTGRES_DB"' \
   > "$backup_file"
+
+pg_restore --list "$backup_file" > /dev/null && echo "dump is readable"
 ```
 
-Protect the backup from other local users. Do not commit it or print it to a log. Upload it to the backup target using an encrypted transport and verify the remote object size/checksum.
+Do not commit the file. Move it to the backup target over an encrypted channel. Compare the size
+or the checksum after the move.
 
-## Restore drill
+## Test a restore
 
-Perform the restore in an isolated environment first. A restore can replace live records, so do not run it against production without a documented maintenance window and explicit approval.
+Do the first restore on a separate machine or in a separate Compose project. A restore replaces
+data. Do not run it on production without a maintenance window and an approval.
 
-A typical restore sequence is:
+1. Start only the database: `docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d db`.
+2. Load the dump into an empty database:
 
-1. Stop web writes, Celery worker, and Beat for the target environment.
-2. Confirm that the target database and backup belong to the expected environment and date.
-3. Restore into a new/empty database using `pg_restore` with the correct owner and database settings.
-4. Run Django migration checks and any post-restore integrity checks.
-5. Start the application services and validate health, login, schedule rows, settings access, recent reports, and task execution.
-6. Record the restore duration, errors, missing external dependencies, and any manual steps.
+   ```bash
+   docker compose --env-file .env.prod \
+     -f docker-compose.yml -f docker-compose.prod.yml \
+     exec -T db sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner --exit-on-error' \
+     < "$backup_file"
+   ```
 
-The exact database role and ownership options depend on the target environment. Review `docker-compose.prod.yml` and the database configuration before applying a destructive restore command.
+3. Start the other services. Use the same source revision as the backup, or a later one.
+   `web` runs `migrate` when it starts.
+4. Check these things: you can log in, **Ops > Schedule** shows the schedule, **Ops > Settings**
+   shows the secrets as set, the last reports are there, and a manual job runs on **Ops > Jobs**.
+5. Write down how long the restore took and each manual step.
 
-## Recovery considerations
+To restore into a database that already has tables, stop `web`, `worker` and `beat` first. Then
+drop and make the database again, or use `pg_restore --clean --if-exists`. Check the target
+before you run the command.
 
-- If `SETTINGS_ENCRYPTION_KEY` is lost or changed, encrypted settings may be unreadable even when the database restores correctly. Recover the matching key or plan to re-enter those secrets.
-- If `DJANGO_SECRET_KEY` changes without a separate settings encryption key, encrypted settings may become unreadable.
-- Restore database data and compatible application code together. Schema compatibility matters.
-- Caddy certificate state is not a substitute for certificate/key backup policy; Caddy may be able to issue a new certificate, subject to provider limits.
-- A model download is not a data backup. Record which model and tag the application expects.
+## Recovery notes
 
-## Required operational decisions
+- If you lose `SETTINGS_ENCRYPTION_KEY` (or `DJANGO_SECRET_KEY` when the first is empty), the
+  saved secrets cannot be read. They show as "not set". Enter them again on **Ops > Settings**.
+  The rest of the data is not affected.
+- If you change `DJANGO_SECRET_KEY` and `SETTINGS_ENCRYPTION_KEY` is empty, the same happens.
+  Also, all web sessions end. API tokens stay valid, because the database holds only their hash.
+- Restore the database and the code of the same period. A newer database with older code can fail.
+- A download of a model is not a backup. Write down the model name that `LLM_MODEL` uses.
+- Without `caddy_data`, Caddy asks Let's Encrypt for a new certificate. Let's Encrypt limits how
+  many it gives for one domain each week.
 
-Choose a backup target, retention period, recovery point objective, recovery time objective, encryption policy, and owner. Schedule automated backups only after a restore drill has succeeded. Monitor backup age and alert on failed or missing backups.
+## Decisions for the owner
+
+Choose these before you go live: the backup target, how long to keep backups, the longest data
+loss that you accept (RPO), the longest outage that you accept (RTO), the encryption method and
+the person who owns the process. Automate the backup only after one restore test works. Watch the
+age of the last backup and send an alert when it is too old.

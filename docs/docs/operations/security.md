@@ -1,46 +1,170 @@
 ---
 title: Security model
+sidebar_label: Security
+description: The controls that protect Kash Engine, layer by layer, and how to check them.
 ---
 
 # Security model
 
-Security controls apply across Docker, Caddy, Django, Celery, configuration, logging, and the Ops UI. A change to one layer must not weaken another layer unintentionally.
+Each layer has its own controls. A change in one layer must not weaken another layer.
 
-## Network exposure
+## Network
 
-- Caddy is the only service with published production ports: 80/TCP, 443/TCP, and 443/UDP for HTTP/3.
-- `web`, `worker`, `beat`, PostgreSQL, Redis, Ollama, and the docs container have no published production ports.
-- Caddy reaches the web app through the `proxy` network and the docs container through that same proxy network.
-- Database and broker services remain on the internal backend network. Only services that need outbound provider access join `egress`.
-- The docs image contains generated static output; it does not receive application environment secrets or connect to the database.
+Caddy is the only service that is open to the internet. In production it publishes ports 80
+(TCP), 443 (TCP) and 443 (UDP, for HTTP/3). No other service publishes a port.
 
-## Caddy and browser security
+Four Docker networks keep the services apart (`docker-compose.prod.yml`):
 
-Caddy terminates TLS, redirects HTTP to HTTPS for a public domain, adds content security and other security headers, limits request-body size, closes slow connections, and has its administrative API disabled. Django sets the remaining application security headers and secure-cookie behavior. Keep policy changes narrow and test them in report-only mode before enforcing them.
+| Network | Members | Route to the internet |
+| --- | --- | --- |
+| `edge` | `caddy` | Yes. Caddy needs it for certificates. |
+| `proxy` | `caddy`, `web`, `docs` | No. The network is `internal`. |
+| `backend` | `web`, `worker`, `beat`, `db`, `redis`, `ollama` | No. The network is `internal`. |
+| `egress` | `worker`, `beat`, `ollama` | Yes. For news, quotes, Telegram and model downloads. |
 
-The application retains the stricter CSP. Docusaurus classic injects a small inline script for its theme selection, so only the `/docs/` path uses a separate policy that permits inline scripts. That exception is limited to the static documentation origin; generated API docstrings escape JSX-sensitive characters and the site must not execute user-submitted content. Keep all JS, CSS, and fonts same-origin. Do not add third-party scripts, analytics, external fonts, or plugins without a security review. The dev override uses report-only mode for both policies.
+The `docs` service has static files only. It has no secret, no database and no route to the
+internet.
 
-## Container hardening
+In development, Compose binds every port to `127.0.0.1`. Port 8000 goes to Django and skips
+Caddy. Use it only to debug.
 
-Production services use `no-new-privileges`, drop Linux capabilities, and use rotated logs. The application and edge containers use read-only root filesystems with explicit writable temporary or data volumes where needed. The Nginx docs container listens on 8080 and uses `/tmp` for writable temporary state. Do not add a published docs port.
+## Edge: Caddy
 
-## Admin access
+Caddy ends TLS. For a public domain it gets a certificate from Let's Encrypt. For `localhost` or an
+IP address it uses its own CA. These are the controls in `deploy/caddy/Caddyfile`:
 
-`ADMIN_ALLOWED_IPS` limits `/admin/` and `/ops/` at the proxy. Test the address Caddy observes from an allowed and blocked client, especially when Docker IPv6 or a VPN is involved. Django view authorization remains required even when the proxy restriction is configured.
+- The Caddy admin API is off (`admin off`).
+- Slow clients are closed: header 10 s, body 30 s, write 60 s, idle 2 min.
+- A request body is limited to 2 MB.
+- Responses use `zstd` and `gzip`. Logs go to stdout as JSON.
+- Caddy replaces the `X-Forwarded-*` headers of the client. Django trusts
+  `X-Forwarded-Proto` only because of this (`SECURE_PROXY_SSL_HEADER`).
+- Caddy adds `Permissions-Policy` and `Cross-Origin-Resource-Policy: same-origin`.
+  Django adds HSTS, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and
+  `Cross-Origin-Opener-Policy`.
 
-## Authentication and audit
+### Route order
 
-`django-axes` limits failed login attempts and provides an HTTP 429 lockout response. Ops displays locked addresses and allows superusers to unlock them. Test that successful logins clear failures according to policy and that the client address is derived from the trusted proxy header, not an untrusted value supplied directly by a client.
+Caddy runs the `handle` blocks in the order written. The first match wins. The order is:
 
-Audit every privileged mutation. Store old and new values only when they are safe to retain. For secrets, record that a change occurred without storing either value. Never log the Telegram token or a full request URL that contains it.
+1. `/admin` and `/ops` for an address outside `ADMIN_ALLOWED_IPS` get `403`.
+2. `/docs` for an address outside `DOCS_ALLOWED_IPS` gets `403`.
+3. `/docs` goes to `docs:8080`. Caddy does not remove the prefix.
+4. Everything else goes to `web:8000`.
 
-## Security review checklist
+`tests/test_deploy_config.py` checks this order. It also runs the real `caddy` binary when the
+binary is present.
 
-- [ ] No new public Compose port.
-- [ ] No secret in source, sample config, logs, task result, audit trail, or docs output.
-- [ ] Authorization tested for all user classes.
-- [ ] Invalid and oversized input handled safely.
-- [ ] Dependencies and image tags reviewed.
-- [ ] CSP and headers tested through Caddy.
-- [ ] Read-only and capability-drop assumptions still hold.
-- [ ] Backup and restore procedure remains valid after schema changes.
+### Content-Security-Policy
+
+The application pages use this policy. Caddy sets it from `CSP_HEADER`:
+
+```text
+default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-eval';
+style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self';
+connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+```
+
+- `https://cdn.jsdelivr.net` is for the Datastar script. To serve the script from this site,
+  save it as `static/vendor/datastar.js` and set `DATASTAR_SRC`.
+- `'unsafe-eval'` is needed by Datastar to read expressions.
+- Swagger UI at `/api/v1/docs` runs under this same policy. Its start code is in
+  `static/js/swagger-init.js`, because inline scripts are not allowed.
+
+The docs site (`/docs/`) has its own policy. The `docs` service sets it. Docusaurus puts a few
+small inline scripts in each page. The build step reads the page files and puts the hash of each
+script in the policy (`docs/scripts/csp_hashes.py`). So the docs policy does not use
+`'unsafe-inline'`. Caddy adds no policy for `/docs`, because a second policy would block the
+first.
+
+To test a new policy without blocking users, set
+`CSP_HEADER=Content-Security-Policy-Report-Only`. The development override does this, because the
+Django debug pages use inline styles.
+
+## Containers
+
+Every production service uses `no-new-privileges` and drops all Linux capabilities. `caddy` adds
+`NET_BIND_SERVICE`. `db` and `redis` add the few capabilities that their entry points need to
+set the owner of the data folder.
+
+`web`, `worker`, `beat`, `caddy` and `docs` have a read-only root file system. They write only
+to `/tmp` and to the named volumes. `web`, `worker` and `beat` run as the `app` user. The
+`docs` service runs as the `nginx` user. Logs rotate: 10 MB each, 5 files.
+
+## Access to the admin pages
+
+`ADMIN_ALLOWED_IPS` limits `/admin/` and `/ops/` at Caddy. The value is a list of addresses and
+ranges, separated by spaces. The default is everyone, so set it in production.
+
+Test the address that Caddy sees from an allowed client and from a blocked client. Docker IPv6
+and VPNs can change it.
+
+The proxy rule is not the only guard. Django also checks who the user is. Only superusers can
+change settings. Normal users never see configuration or infrastructure errors.
+
+`DOCS_ALLOWED_IPS` has the same format. The docs do not contain secrets, but they describe the
+system. Limit them in production.
+
+## Login protection
+
+`django-axes` counts failed logins for each client address.
+
+- The limit and the lockout time are settings: `LOGIN_FAILURE_LIMIT` (5) and
+  `LOGIN_COOLOFF_MINUTES` (30). `0` minutes means locked until an admin unlocks the address.
+- A locked client gets a `429` page. The page does not show users or limits.
+- A good login clears the failures (`AXES_RESET_ON_SUCCESS`).
+- The client address is the first value of `X-Forwarded-For`, checked as an IP address. This is
+  safe only because Caddy replaces the header.
+- **Ops > Logins** shows the locked addresses. A superuser can unlock them.
+
+## API security
+
+- A token is `ke_<8 hex>_<48 hex>`. The database stores only a SHA-256 hash and the 8-character
+  prefix. The full token is shown one time.
+- A password change makes the old tokens invalid (`password_stamp`).
+- Tokens expire after `API_TOKEN_EXPIRY_DAYS` (90). A user can have `API_TOKEN_MAX_PER_USER`
+  (5) active tokens. The user or a superuser can revoke a token.
+- The API has two rate limits. Each caller has `API_RATE_LIMIT_PER_MINUTE`. Each address has
+  `API_AUTH_FAIL_LIMIT_PER_MINUTE` for failed token checks. The counters are in the Django cache
+  (Redis, database 1, in production).
+- The API follows the same access rules as the web app (subscription and feature rules).
+- Answers have `Cache-Control: private` and `Vary: Authorization, Cookie`.
+- The API has only `GET` endpoints. A request cannot change data.
+- A superuser can turn the API off (`API_ENABLED`) or turn off only the Swagger page
+  (`API_DOCS_ENABLED`).
+
+See [Authentication](../api/authentication.md) and [Rate limits](../api/rate-limits.md).
+
+## Secrets
+
+- A secret saved on the dashboard (the Telegram bot token) is encrypted with Fernet. The key
+  comes from `SETTINGS_ENCRYPTION_KEY`. If this is empty, the key comes from `DJANGO_SECRET_KEY`.
+- The dashboard never shows a secret again. It shows only whether the secret is set.
+- The audit trail records that a secret changed. It does not store the old or the new value.
+- Log lines are cleaned before the Ops log viewer shows them (`redact()` in
+  `apps/ops/logs.py`). It hides Telegram bot tokens, `token=`, `password=` and similar pairs,
+  `Bearer` values, API tokens (`ke_...`) and session cookies.
+- The `httpx` and `httpcore` loggers stay at `WARNING`. The `httpx` logger at `INFO` writes the
+  full URL of each request. The Telegram URL contains the bot token.
+- `.env.prod` is never in Git. Give it mode `600`.
+
+## Audit
+
+Each action of an admin on the Ops pages is written to the audit trail (**Ops > Audit**). An
+event has the actor, the action, the target, a safe detail text, the client address and the time.
+The `ops.prune` task deletes old history. It keeps task runs and login events for
+`OPS_RETENTION_DAYS` (90 days). It keeps audit events for 365 days, or for
+`OPS_RETENTION_DAYS` if that value is larger.
+
+## Review checklist
+
+Use this list for each change that touches security:
+
+- [ ] No new public port in Compose.
+- [ ] No secret in source, sample files, logs, task results, the audit trail or the docs.
+- [ ] Authorization is tested for anonymous users, normal users and superusers.
+- [ ] Invalid and large input is handled safely.
+- [ ] New dependencies and image tags are reviewed.
+- [ ] The CSP and the headers are tested through Caddy.
+- [ ] The read-only file system and the dropped capabilities still work.
+- [ ] The backup and restore steps are still correct after a schema change.

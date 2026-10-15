@@ -77,6 +77,7 @@ def test_caddy_gets_no_app_secrets(prod):
         "SITE_ADDRESS",
         "ACME_EMAIL",
         "ADMIN_ALLOWED_IPS",
+        "DOCS_ALLOWED_IPS",
         "CSP_HEADER",
     }
 
@@ -92,6 +93,7 @@ def test_caddyfile_has_the_security_settings():
         "frame-ancestors 'none'",
         "object-src 'none'",
         "reverse_proxy web:8000",
+        "reverse_proxy docs:8080",
         "{$SITE_ADDRESS}",
     ):
         assert needle in text, f"The Caddyfile is missing: {needle}"
@@ -101,6 +103,91 @@ def test_caddyfile_limits_the_ops_pages_like_the_admin_site():
     text = (ROOT / "deploy" / "caddy" / "Caddyfile").read_text()
     assert "path /admin /admin/* /ops /ops/*" in text
     assert "not remote_ip {$ADMIN_ALLOWED_IPS" in text
+
+
+def site_block_lines() -> list[str]:
+    """Return the lines inside the `{$SITE_ADDRESS} { ... }` block of the Caddyfile."""
+    lines = (ROOT / "deploy" / "caddy" / "Caddyfile").read_text().splitlines()
+    start = lines.index("{$SITE_ADDRESS} {")
+    end = next(i for i in range(start + 1, len(lines)) if lines[i] == "}")
+    return lines[start + 1 : end]
+
+
+def test_caddy_routes_are_inside_handle_blocks():
+    """A `respond` or `reverse_proxy` outside `handle` runs after a catch-all `handle`.
+
+    Caddy sorts the `handle` directive before `respond`. A catch-all `handle` then ends the
+    request first, and the rule outside never runs. The admin IP limit was dead code for that
+    reason once. Keep every routing directive inside a `handle` block.
+    """
+    depth = 0
+    for line in site_block_lines():
+        text = line.strip()
+        if depth == 0 and text.startswith(("respond ", "reverse_proxy ")):
+            pytest.fail(f"Routing directive outside a handle block: {text}")
+        depth += text.count("{") - text.count("}") if not text.startswith("#") else 0
+
+
+def test_caddy_checks_the_admin_ip_limit_before_the_catch_all():
+    text = "\n".join(site_block_lines())
+    assert text.index("handle @admin_denied") < text.index("handle @docs_path")
+    assert text.index("handle @docs_path") < text.index("\thandle {\n")
+
+
+def test_docs_content_security_policy_is_not_set_by_caddy():
+    """The docs site sets its own policy with script hashes. A second policy would add to it."""
+    text = (ROOT / "deploy" / "caddy" / "Caddyfile").read_text()
+    docs_header = text[text.index("header @docs_path") : text.index("@application_path")]
+    assert "Content-Security-Policy" not in docs_header
+    assert "{$CSP_HEADER" not in docs_header
+
+
+@pytest.mark.skipif(shutil.which("caddy") is None, reason="The caddy binary is not installed.")
+def test_caddyfile_adapts_and_runs_the_admin_limit_first(monkeypatch):
+    """Adapt the Caddyfile with the real Caddy and check the order of the routes."""
+    monkeypatch.setenv("SITE_ADDRESS", "kash.example.com")
+    monkeypatch.setenv("ACME_EMAIL", "a@example.com")
+    caddy = shutil.which("caddy")
+    assert caddy is not None
+    result = subprocess.run(  # noqa: S603
+        [caddy, "adapt", "--config", str(ROOT / "deploy" / "caddy" / "Caddyfile")],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    config, _end = json.JSONDecoder().raw_decode(result.stdout)
+    site = next(
+        route
+        for server in config["apps"]["http"]["servers"].values()
+        for route in server["routes"]
+        if route.get("match", [{}])[0].get("host") == ["kash.example.com"]
+    )
+    routes = site["handle"][0]["routes"]
+    handled = [
+        route
+        for route in routes
+        if route["handle"] and route["handle"][0]["handler"] in {"subroute", "static_response"}
+    ]
+    texts = [json.dumps(route) for route in handled]
+    admin = next(i for i, text in enumerate(texts) if "/ops/*" in text)
+    catch_all = next(i for i, route in enumerate(handled) if "match" not in route)
+    assert admin < catch_all
+
+
+def test_docs_service_is_private_and_read_only(prod):
+    docs = prod["services"]["docs"]
+    assert docs["networks"] == ["proxy"]
+    assert docs["read_only"] is True
+    assert "ports" not in docs
+    assert "env_file" not in docs
+
+
+def test_docs_nginx_serves_under_the_public_path():
+    text = (ROOT / "docs" / "nginx.conf").read_text()
+    assert "location /docs/" in text
+    assert "absolute_redirect off" in text
+    assert "unsafe-inline" not in text
 
 
 # The tests below read the merged files, as Docker Compose sees them. They need the docker CLI

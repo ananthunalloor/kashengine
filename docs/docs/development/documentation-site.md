@@ -1,46 +1,87 @@
 ---
-title: Docusaurus site and API reference generation
+title: Documentation site
+sidebar_label: Documentation site
+description: How this site is built, how the reference pages are generated, and how CI keeps them true.
 ---
 
-# Docusaurus site and API reference generation
+# Documentation site
 
-## Source layout
+The site uses [Docusaurus](https://docusaurus.io) 3. It is served under `/docs/` by the `docs`
+service (nginx). Caddy sends the path `/docs` to that service.
 
-- `docs/docs/` contains curated conceptual and operational pages.
-- `docs/docusaurus.config.js` defines the site URL, `/docs/` base path, navigation, and theme.
-- `docs/sidebars.js` defines the guide sections and includes the generated reference.
-- `docs/scripts/generate_api_reference.py` scans the Python source with `ast`; it does not import application modules or connect to services.
-- `docs/docs/reference/generated/` is generated output. Do not edit it by hand.
-- `docs/Dockerfile` generates API pages, builds Docusaurus, and copies only static assets into an Nginx runtime image.
-- `docs/nginx.conf` serves static content on the private port 8080 and exposes an internal health check.
+## Files
 
-## Local editing
+| Path | What |
+| --- | --- |
+| `docs/docs/` | The guides (Markdown). You edit these by hand. |
+| `docs/docs/reference/generated/` | The generated pages. **Do not edit them.** Git ignores them. |
+| `docs/openapi/v1.json` | The OpenAPI file. The code exports it. A test keeps it current. |
+| `docs/scripts/generate_reference.py` | The generator. It reads the source with `ast` and never runs project code. |
+| `docs/scripts/docgen/` | The parts of the generator: docstring parser, inventory, checks, renderers. |
+| `docs/scripts/openapi_compat.py` | Finds breaking changes between two OpenAPI files. |
+| `docs/scripts/csp_hashes.py` | Makes the Content-Security-Policy of the site (see below). |
+| `docs/docusaurus.config.js`, `docs/sidebars.js` | The site settings and the sidebars. |
+| `docs/Dockerfile`, `docs/nginx.conf` | The image of the `docs` service. |
+
+## Edit the guides
 
 ```bash
 cd docs
-npm install
-npm start
+npm ci
+npm start          # make the generated pages, then start the site at http://localhost:3000/docs/
 ```
 
-`prestart` runs the API generator first. Edit Markdown under `docs/docs/`; keep page IDs in `sidebars.js` synchronized with the paths. The site uses a base URL of `/docs/`, because production Caddy strips that prefix before forwarding requests to Nginx.
+Edit a Markdown file under `docs/docs/`. The build fails on a broken link, on a broken anchor and
+on an MDX error. Write plain Markdown. Put code in backticks, because `<`, `>`, `{` and `}` are
+special in MDX.
 
-Build a static site and preview it:
+Add a new page to `docs/sidebars.js`.
+
+## What the generator makes
+
+`npm run reference:generate` runs `python docs/scripts/generate_reference.py`. It writes:
+
+| Folder | Pages | Source |
+| --- | --- | --- |
+| `http/` | One page for each tag of the API, and a page of the schemas. | `docs/openapi/v1.json` |
+| `python/` | One page for each module, grouped by app, and a coverage page. | The docstrings. |
+| `system/` | Settings, schedule, jobs, tasks, commands, routes. | `config/settings/*.py`, `apps/siteconfig/registry.py`, `apps/ops/defaults.py`, `apps/ops/jobs.py`, `@shared_task` decorators, `management/commands`, `urls.py` files. |
+
+The generator also copies the OpenAPI file to `docs/static/openapi/v1.json`, so the site serves
+it at `/docs/openapi/v1.json`.
+
+Every Python reference page has a link to the source line. The links use the Git reference from
+`DOCS_SOURCE_REF` (the build argument of the image, `main` by default).
+
+### Options
 
 ```bash
-npm run build
-npm run serve
+python docs/scripts/generate_reference.py --check       # exit 1 on a new docstring gap (see the baseline)
+python docs/scripts/generate_reference.py --write-baseline   # save the current gaps
+python docs/scripts/generate_reference.py --list        # print the backlog
+python docs/scripts/generate_reference.py --no-write    # do not write pages
+python docs/scripts/generate_reference.py --source apps/ipos --ref my-branch
 ```
 
-## Function inventory
+## CI
 
-The generator reads ASTs rather than importing Python modules. This avoids starting Django, connecting to PostgreSQL/Redis, loading credentials, or executing task registration code. It includes production `.py` files under `apps/` and `config/`, plus `manage.py`; it excludes tests, migrations, virtual environments, generated static files, and cache directories. It records nested functions and class methods.
+`.github/workflows/ci.yml` runs the Python checks, the tests, `npm run reference:check`, the
+OpenAPI compatibility check, and `npm run build`.
 
-Each module page lists source definitions and extracted docstrings. The coverage report separates functions with detailed documentation from functions that need more detail. A source link points to the corresponding location in the repository's `main` branch. If the build is made from a different branch, use the path and line number as the source locator and open that branch instead.
+## Security of the site
 
-## Deployment behavior
+- The `docs` image has no application code, no secret and no database access.
+- nginx sets a strict Content-Security-Policy. Docusaurus puts two small inline scripts in each
+  page. `csp_hashes.py` reads the built pages and lists the SHA-256 hash of each distinct inline
+  script, so the policy allows those scripts and no other inline script.
+- Caddy does not add a policy for `/docs`. It adds the other security headers.
+- The site has `noIndex` on, so search engines do not list it.
+- Search is local (`@easyops-cn/docusaurus-search-local`). The browser loads no third-party
+  script and no external font.
+- A superuser can limit the site to some addresses with `DOCS_ALLOWED_IPS`. The default is open.
 
-The container build runs the generator against the same source tree that is being built, builds static HTML/CSS/JavaScript, and serves the result with Nginx. The runtime container has no Python runtime, database credentials, Ollama dependency, or access to the application backend. It is attached to the proxy network only in production. Caddy routes `/docs/` to the docs container. It does not publish a new host port.
+## Update dependencies
 
-## Dependency updates
-
-Direct Docusaurus dependencies are pinned in `package.json`. When updating them, regenerate and commit `package-lock.json` using a network-enabled development machine, then change the Docker build to use `npm ci` after a lock file has been added. The initial integration uses `npm install` because no lock file existed when this documentation site was introduced; do not treat a transitive dependency resolution as reproducible until a lock file is checked in.
+The versions are exact in `package.json`, and `package-lock.json` is in Git. The image uses
+`npm ci`. To update a package, run `npm install <package>@<version> --save-exact`, run
+`npm run build`, and commit both files.

@@ -15,21 +15,49 @@ logger = logging.getLogger(__name__)
 
 
 class QuoteError(Exception):
-    """We could not get the prices of a symbol."""
+    """We could not get the prices of a symbol.
+
+    `fetch_bars` raises this error for every kind of failure. The message starts with the symbol.
+    `quotes.fetch_quotes` catches it, so one bad symbol does not stop the other symbols.
+    """
 
 
 @dataclass(frozen=True)
 class Bar:
-    """The close price of one trading day."""
+    """The close price of one trading day.
+
+    Attributes:
+        day: The trading day, as the local date of the exchange.
+        close: The close price. It is always greater than zero.
+    """
 
     day: date  # The local date of the exchange.
     close: float
 
 
 def fetch_bars(symbol: str, period: str = "1mo") -> list[Bar]:
-    """Return the daily closes of a symbol, oldest first. Raise QuoteError if there are none.
+    """Download the daily closes of a symbol from Yahoo Finance.
 
-    The last bar can be from the middle of a session. The real close replaces it at the next run.
+    The function makes one network call with yfinance (timeout of 20 seconds). It uses the raw
+    close, not the adjusted close. It drops rows without a close and rows with a close of zero or
+    less. If the data has two rows for one day, the last row wins.
+
+    Args:
+        symbol: The Yahoo Finance symbol, for example `^NSEI`.
+        period: The yfinance period text that sets how far back to read, for example `1mo` for
+            one month. The interval is always one day.
+
+    Returns:
+        A list of `Bar` values, oldest first, with one bar for each trading day. The list is
+        never empty.
+
+    Raises:
+        QuoteError: When yfinance fails for any reason, when the answer has no data, or when no
+            row has a valid price.
+
+    Note:
+        The last bar can be from the middle of a session. The real close replaces it at the next
+        run.
     """
     import yfinance as yf  # noqa: PLC0415  # Slow to import, and only this function needs it.
 

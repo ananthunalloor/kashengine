@@ -10,11 +10,12 @@ repos:
     hooks:
       # Saved web pages and the built CSS keep their exact bytes.
       - id: end-of-file-fixer
-        exclude: ^(gmp\.html|static/css/app\.css|apps/ipos/tests/data/)
+        exclude: ^(gmp\.html|static/css/app\.css|static/vendor/|apps/ipos/tests/data/)
       - id: trailing-whitespace
-        exclude: ^(gmp\.html|static/css/app\.css|apps/ipos/tests/data/)
+        exclude: ^(gmp\.html|static/css/app\.css|static/vendor/|apps/ipos/tests/data/)
       - id: check-yaml
       - id: check-added-large-files
+        exclude: ^static/vendor/
   - repo: local
     hooks:
       - id: ty

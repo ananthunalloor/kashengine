@@ -1,24 +1,38 @@
-"""The web pages. They only show data. They do not change it (except login and logout)."""
+"""The web pages. They show data.
+
+Three actions change data: login, logout, and the make and revoke of API tokens on the Account
+page.
+"""
 
 from datetime import date
+from typing import TYPE_CHECKING, cast
 
+from django.contrib import messages
 from django.contrib.auth.views import LoginView, LogoutView
 from django.core.paginator import Paginator
-from django.shortcuts import get_object_or_404, render
+from django.http import HttpRequest, HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from apps.access import features
 from apps.access.middleware import access_for
+from apps.api import tokens
+from apps.api.models import ApiToken
 from apps.delivery.models import DeliveryLog
 from apps.delivery.service import configured_chat_ids
 from apps.ipos.models import Ipo
 from apps.markets.evaluation import accuracy_stats
 from apps.markets.trading import today_ist
+from apps.ops import audit
 from apps.reports.models import Report
 from apps.siteconfig import conf
 
 from . import queries
 from .datastar import is_datastar, querystring, read_filters, read_page, signals_json
+from .decorators import post_only
+
+if TYPE_CHECKING:
+    from django.contrib.auth.base_user import AbstractBaseUser
 
 NEWS_FILTERS = ("q", "sentiment", "source", "page")
 IPO_FILTERS = ("q", "status", "verdict", "category", "page")
@@ -155,11 +169,11 @@ def delivery(request):
     return render(request, "web/delivery.html", context)
 
 
-def account(request):
-    """The account page: the subscription, and which features the user has.
+TOKEN_ROWS = 20  # How many tokens (active and old) the account page lists.
 
-    Every signed-in user can open it, also after the subscription has ended.
-    """
+
+def _account_context(request: HttpRequest, **extra) -> dict:
+    """The context of the account page. `extra` adds keys, for example a new token."""
     access = access_for(request)
     sub = access.subscription
     rows = [
@@ -170,7 +184,8 @@ def account(request):
         }
         for feature in features.FEATURES
     ]
-    context = {
+    api_tokens = list(ApiToken.objects.filter(user=request.user)[:TOKEN_ROWS])
+    return {
         "access": access,
         "sub": sub,
         "days_left": sub.days_left(access.now) if sub else None,
@@ -180,5 +195,71 @@ def account(request):
         "currency": conf.SUBSCRIPTION_CURRENCY,
         "period_days": conf.SUBSCRIPTION_PERIOD_DAYS,
         "contact": conf.SUBSCRIPTION_CONTACT_TEXT,
+        "api_enabled": conf.API_ENABLED,
+        "api_docs": conf.API_DOCS_ENABLED,
+        "api_tokens": api_tokens,
+        "active_tokens": sum(token.is_active(access.now) for token in api_tokens),
+        "token_limit": conf.API_TOKEN_MAX_PER_USER,
+        "token_days": conf.API_TOKEN_EXPIRY_DAYS,
+        **extra,
     }
-    return render(request, "web/account.html", context)
+
+
+def account(request):
+    """The account page: the subscription, the features, and the API tokens of the user.
+
+    Every signed-in user can open it, also after the subscription has ended.
+    """
+    return render(request, "web/account.html", _account_context(request))
+
+
+@post_only
+def token_create(request: HttpRequest) -> HttpResponse:
+    """Make an API token for the signed-in user and show it once.
+
+    The answer is the account page itself (not a redirect), so the secret is never in a URL, a
+    session or a log. The response is marked `no-store`.
+
+    Args:
+        request: A POST request with the field `name`.
+
+    Returns:
+        The account page. It shows the new token, or an error text.
+    """
+    user = cast("AbstractBaseUser", request.user)
+    new_token = ""
+    try:
+        row, new_token = tokens.issue(user, request.POST.get("name", ""))
+    except ValueError as exc:
+        messages.error(request, str(exc))
+    except tokens.TokenLimitError:
+        messages.error(
+            request,
+            f"You have {conf.API_TOKEN_MAX_PER_USER} active tokens. "
+            "Revoke one before you make a new one.",
+        )
+    else:
+        audit.record(user, "api token create", user.get_username(), f"{row.display}", request)
+    response = render(request, "web/account.html", _account_context(request, new_token=new_token))
+    response["Cache-Control"] = "no-store"
+    return response
+
+
+@post_only
+def token_revoke(request: HttpRequest, pk: int) -> HttpResponse:
+    """Revoke one API token of the signed-in user.
+
+    Args:
+        request: A POST request.
+        pk: The id of the token. A token of another user gives 404.
+
+    Returns:
+        A redirect to the account page.
+    """
+    token = get_object_or_404(ApiToken, pk=pk, user=request.user)
+    if tokens.revoke(token):
+        audit.record(
+            request.user, "api token revoke", request.user.get_username(), token.display, request
+        )
+        messages.success(request, f"Token {token.display} is revoked.")
+    return redirect("web:account")

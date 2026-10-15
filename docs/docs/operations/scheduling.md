@@ -1,33 +1,48 @@
 ---
-title: Scheduling and task runs
+title: Scheduling
+sidebar_label: Scheduling
+description: How the beat schedule is stored, how to change it, and how to add a job.
 ---
 
-# Scheduling and task runs
+# Scheduling
 
-Kash Engine uses `django-celery-beat` with `django_celery_beat.schedulers:DatabaseScheduler`. The production and development Beat commands are `celery -A config beat -l info`; do not configure a second file-based schedule.
+Kash Engine uses `django-celery-beat` with the `DatabaseScheduler`. The beat command is
+`celery -A config beat -l info`. There is **no** second schedule in a file or in settings.
 
-## Editing the schedule
+The default entries are in [Default schedule](../reference/generated/system/schedule.md). The
+first migration saves them. All times are IST.
 
-Open Ops > Schedule. Superusers can add or edit a schedule entry, turn it on or off, delete supported entries, or reset the schedule to defaults. The default schedule is seeded by a migration and defined in `apps/ops/defaults.py`. At the point recorded in the Phase 13 project summary, the default set had 13 entries and used IST.
+## Change the schedule
 
-Use the scheduling helpers in `apps/ops/schedule.py` instead of duplicating cron calculations. They cover entry enumeration, task eligibility, cron parsing, preview, next-run calculation, overdue calculations, and save/reset operations.
+On **Ops > Schedule** a superuser can add, change, turn on or off, and delete an entry, and can
+**reset** the schedule to the defaults (`apps/ops/defaults.py`). Beat sees a change in a few
+seconds. Only cron entries are used. Each entry has the five cron fields: minute, hour, day of
+month, month and day of week.
 
-## Schedule correctness
+The page shows the next three run times of an entry before you save it.
 
-- Use the schedule's configured time zone for cron parsing and next-run calculation.
-- Convert the current time to the schedule zone before calculating the next run.
-- Do not assume Celery automatically converts a cron time into the application's intended market time zone.
-- A task not scheduled for the current day should not be reported as overdue for that day.
-- Health checks apply grace periods to prediction and report tasks; check the current helper and registry before changing them.
-- Treat disabled tasks as intentionally not due.
+## Rules
 
-## Adding a job
+- **The clock is IST.** The code converts the current time to the zone of the schedule before it
+  computes a next run. Celery does not do this by itself. Use the helpers in
+  `apps/ops/schedule.py` (`next_after`, `next_run`, `parse_cron`, `preview`), not your own
+  calculation.
+- **Disabled means not due.** The health check does not report a disabled task as late.
+- **A task that does not run today is not late today.** `times_on` tells which times a task has on
+  a day.
+- **Late means more than 10 minutes** after the time (`OVERDUE_GRACE`). The health check gives the
+  prediction 30 minutes and the report 10 minutes.
 
-1. Implement a named Celery task or fixed management command.
-2. Register it in the Ops job registry with a stable key, label, task/command target, and confirmation requirement where needed.
-3. Add a default schedule entry only if the task should run automatically.
-4. Document task arguments, side effects, idempotency, timeout/retry policy, and what success means.
-5. Add task tests and schedule/health tests.
-6. Verify that manual runs cannot bypass authorization or launch duplicate active runs.
+## Add a job
 
-Never accept arbitrary command strings from an HTTP request. A job registry is an allowlist, not a shell interface.
+1. Write a Celery task with `@shared_task(name="app.name", soft_time_limit=...)`.
+2. Make it safe to run again. See [Reliability](../architecture/reliability.md).
+3. If a superuser may start it, add a `Job` to `apps/ops/jobs.py` with a stable key, a label, the
+   target and a confirm text if it sends a message or replaces data.
+4. If it runs on a schedule, add an entry to `DEFAULT_SCHEDULE` in `apps/ops/defaults.py`, and write
+   a data migration that adds it to existing databases.
+5. Write the docstring of the task: the arguments, the result, the side effects and what success
+   is.
+6. Write tests for the task, the schedule and the health check.
+
+The job list is an allowlist. Never accept a command text from an HTTP request.

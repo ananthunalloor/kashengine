@@ -38,4 +38,6 @@ urlpatterns = [
     path("companies/", views.company_list, name="companies"),
     path("delivery/", views.delivery, name="delivery"),
     path("account/", views.account, name="account"),
+    path("account/tokens/new/", views.token_create, name="token_create"),
+    path("account/tokens/<int:pk>/revoke/", views.token_revoke, name="token_revoke"),
 ]

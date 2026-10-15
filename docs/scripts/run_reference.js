@@ -1,7 +1,7 @@
 const {spawnSync} = require('node:child_process');
 const path = require('node:path');
 
-const script = path.join(__dirname, 'generate_api_reference.py');
+const script = path.join(__dirname, 'generate_reference.py');
 const requestedArgs = process.argv.slice(2);
 const candidates =
   process.platform === 'win32'

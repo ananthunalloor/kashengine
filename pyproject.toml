@@ -10,6 +10,7 @@ dependencies = [
     "django-axes>=8.3.1",
     "django-celery-beat>=2.1.0",
     "django-environ>=0.14.0",
+    "django-ninja>=1.7.1",
     "django-stubs>=6.1.1",
     "feedparser>=6.0.14",
     "gunicorn>=26.2.0",
@@ -106,6 +107,16 @@ max-positional-args = 6
 "**/conftest.py" = ["D", "ARG"]
 "config/settings/*.py" = ["F403", "F405"]  # prod and dev import * from base
 "manage.py" = ["D"]
+"docs/scripts/**" = [
+    "T201",     # the scripts print to the terminal
+    "E501",     # the page generators write long text lines
+    "INP001",   # the scripts are not a package
+    "PLR2004",
+    "C901",     # the parsers have many branches
+    "PLR0911",
+    "PLR0912",
+    "PLR0917",
+]
 
 [tool.ruff.format]
 quote-style = "double"
