@@ -45,4 +45,7 @@ def ops_nav(request) -> dict:
     match = getattr(request, "resolver_match", None)
     if not match or match.namespace != "ops":
         return {}
-    return {"ops_sections": [(key, label, reverse(name)) for key, label, name in SECTIONS]}
+    sections = [(key, label, reverse(name)) for key, label, name in SECTIONS]
+    if request.user.is_superuser:
+        sections.append(("backups", "Backups", reverse("ops:backups")))
+    return {"ops_sections": sections}

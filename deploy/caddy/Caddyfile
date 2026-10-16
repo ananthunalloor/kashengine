@@ -46,8 +46,13 @@
 		Cross-Origin-Resource-Policy same-origin
 	}
 
-	# Limit the size of a request body. The app needs only small forms.
-	request_body {
+	# Allow bounded snapshots only on the superuser restore endpoint (including form overhead).
+	@backup_import path /ops/backups/import/
+	request_body @backup_import {
+		max_size 141MiB
+	}
+	@small_forms not path /ops/backups/import/
+	request_body @small_forms {
 		max_size 2MB
 	}
 

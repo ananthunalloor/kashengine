@@ -17,6 +17,7 @@ from apps.siteconfig import conf, registry
 from apps.siteconfig import service as site_service
 
 from . import audit, configview, jobs, schedule
+from .backup_automation import SCHEDULE_NAME, TASK_NAME
 from .forms import (
     RESET_PREFIX,
     FeedForm,
@@ -162,6 +163,7 @@ def schedule_list(request: HttpRequest) -> HttpResponse:
     """All schedule entries with their next run and their last run."""
     now = timezone.now()
     labels = schedule.schedulable_tasks()
+    labels[TASK_NAME] = "Back up database"
     last_runs = {
         run.label: run
         for run in TaskRun.objects.filter(
@@ -177,15 +179,34 @@ def schedule_list(request: HttpRequest) -> HttpResponse:
                 "label": labels.get(entry.task, entry.task),
                 "next_run": upcoming,
                 "last": last_runs.get(entry.task),
+                "managed_backup": entry.name == SCHEDULE_NAME,
             }
         )
     return render(request, "ops/schedule.html", {"rows": rows, "section": "schedule"})
+
+
+def _backup_schedule_redirect(request: HttpRequest, name: str) -> HttpResponse | None:
+    """Keep the dedicated backup configuration authoritative over its Beat entry.
+
+    Args:
+        request: The staff user's schedule request.
+        name: The entry being edited, toggled, or deleted.
+
+    Returns:
+        A notified redirect for the managed entry, or None for ordinary schedules.
+    """
+    if name != SCHEDULE_NAME:
+        return None
+    messages.info(request, "Manage the backup schedule on Ops > Backups.")
+    return redirect("ops:backups" if _is_superuser(request) else "ops:schedule")
 
 
 def _schedule_form_page(request: HttpRequest, pk: int | None) -> HttpResponse:
     entry = next((e for e in schedule.entries(enabled_only=False) if e.pk == pk), None)
     if pk is not None and entry is None:
         raise Http404
+    if entry and (response := _backup_schedule_redirect(request, entry.name)) is not None:
+        return response
     initial = (
         {
             "name": entry.name,
@@ -255,6 +276,8 @@ def schedule_toggle(request: HttpRequest, pk: int) -> HttpResponse:
     entry = next((e for e in schedule.entries(enabled_only=False) if e.pk == pk), None)
     if entry is None:
         raise Http404
+    if (response := _backup_schedule_redirect(request, entry.name)) is not None:
+        return response
     schedule.save_entry(
         pk,
         name=entry.name,
@@ -276,6 +299,8 @@ def schedule_toggle(request: HttpRequest, pk: int) -> HttpResponse:
 def schedule_delete(request: HttpRequest, pk: int) -> HttpResponse:
     """Delete an entry."""
     row = get_object_or_404(PeriodicTask, pk=pk)
+    if (response := _backup_schedule_redirect(request, row.name)) is not None:
+        return response
     name = row.name
     row.delete()
     audit.record(request.user, "delete schedule", name, "", request)

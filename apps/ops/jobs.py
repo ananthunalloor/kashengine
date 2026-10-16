@@ -64,6 +64,14 @@ class Job:
 
 JOBS: tuple[Job, ...] = (
     Job(
+        "database-backup",
+        "Back up database",
+        "Save an encrypted snapshot to the configured S3 bucket or mounted folder.",
+        TASK,
+        "ops.backup_database",
+        group="System",
+    ),
+    Job(
         "news-fetch",
         "Fetch news feeds",
         "Read the RSS feeds. New articles start the company links, the scrape, and the scoring.",

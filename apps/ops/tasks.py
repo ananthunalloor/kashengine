@@ -17,6 +17,7 @@ from django.utils import timezone
 
 from apps.siteconfig import conf
 
+from .backup_automation import run_backup
 from .jobs import COMMAND_ALLOWLIST
 from .models import AuditEvent, LoginEvent, TaskRun
 from .signals import clip
@@ -27,6 +28,16 @@ MAX_OUTPUT_CHARS = 20000
 AUDIT_KEEP_DAYS = 365
 PENDING_LOST_AFTER = timedelta(hours=2)  # A job that no worker took.
 STARTED_LOST_AFTER = timedelta(hours=3)  # The longest soft time limit is one hour.
+
+
+@shared_task(name="ops.backup_database", soft_time_limit=300, time_limit=360)
+def backup_database() -> dict:
+    """Save an encrypted portable snapshot to the configured destination.
+
+    Returns:
+        The completed backup's storage location and encrypted byte count.
+    """
+    return run_backup()
 
 
 @shared_task(name="ops.run_command", bind=True, soft_time_limit=1800)

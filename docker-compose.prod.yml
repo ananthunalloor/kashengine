@@ -7,7 +7,7 @@
 # - The networks keep the services apart:
 #     edge     Caddy only. It has the published ports and can reach the internet (for TLS).
 #     proxy    Caddy, web and docs. No route to the internet.
-#     backend  web, worker, beat, db, redis, ollama. No route to the internet.
+#     backend  web, worker, beat, db, redis, ollama, minio, minio-init. No route to the internet.
 #     egress   worker, beat, ollama. Outbound only: news, quotes, Telegram, model downloads.
 # - Every container drops all Linux capabilities and cannot gain new ones.
 # - The app containers and Caddy have a read-only root file system (Caddy: see docker-compose.yml).
@@ -112,6 +112,25 @@ services:
       - CHOWN
       - SETGID
       - SETUID
+    networks:
+      - backend
+
+  minio:
+    <<: *hardened
+    env_file: .env.prod
+    read_only: true
+    tmpfs:
+      - /tmp
+    networks:
+      - backend
+
+  minio-init:
+    <<: *hardened
+    env_file: .env.prod
+    restart: "no"
+    read_only: true
+    tmpfs:
+      - /tmp
     networks:
       - backend
 

@@ -203,7 +203,9 @@ def merged_config(tmp_path: Path, *names: str) -> dict:
         shutil.copy(ROOT / name, tmp_path / name)
     (tmp_path / "deploy").symlink_to(ROOT / "deploy")
     for env_file in (".env.dev", ".env.prod"):
-        (tmp_path / env_file).touch()
+        (tmp_path / env_file).write_text(
+            "MINIO_ROOT_USER=test-minio-user\nMINIO_ROOT_PASSWORD=test-minio-password\n"
+        )
     (tmp_path / "test.env").write_text("SITE_ADDRESS=kash.example.com\nACME_EMAIL=a@example.com\n")
     command = [docker, "compose", "--env-file", "test.env"]
     for name in dict.fromkeys(("docker-compose.yml", *names)):
@@ -251,3 +253,55 @@ def test_dev_has_no_port_on_all_interfaces(dev_config):
     for name, service in dev_config["services"].items():
         for port in service.get("ports", []):
             assert port["host_ip"] == "127.0.0.1", f"{name} publishes {port['published']} publicly"
+
+
+def test_minio_is_private_persistent_and_initialized_in_prod(prod_config):
+    services = prod_config["services"]
+    storage = services["minio"]
+    assert set(storage["networks"]) == {"backend"}
+    assert storage["read_only"] is True
+    assert not storage.get("ports")
+    assert any(
+        volume["source"] == "minio_data" and volume["target"] == "/data"
+        for volume in storage["volumes"]
+    )
+    initializer = services["minio-init"]
+    assert set(initializer["networks"]) == {"backend"}
+    assert initializer["restart"] == "no"
+    assert initializer["read_only"] is True
+    assert initializer["depends_on"]["minio"]["condition"] == "service_healthy"
+    assert not initializer.get("ports")
+    assert storage["image"] == initializer["image"]
+    assert ":RELEASE." in storage["image"]
+
+
+def test_minio_dev_ports_are_loopback_only(dev_config):
+    ports = dev_config["services"]["minio"]["ports"]
+    assert {port["published"] for port in ports} == {"9000", "9001"}
+    assert {port["host_ip"] for port in ports} == {"127.0.0.1"}
+
+
+@pytest.mark.parametrize(
+    ("config_name", "env_file"),
+    [("dev", ".env.dev"), ("prod", ".env.prod")],
+)
+def test_minio_uses_the_application_environment_file(request, config_name, env_file):
+    config = request.getfixturevalue(config_name)
+    for service in ("minio", "minio-init"):
+        assert config["services"][service]["env_file"] == env_file
+
+
+@pytest.mark.parametrize("config_name", ["dev_config", "prod_config"])
+def test_minio_receives_shared_environment_credentials(request, config_name):
+    config = request.getfixturevalue(config_name)
+    for service in ("minio", "minio-init"):
+        environment = config["services"][service]["environment"]
+        assert environment["MINIO_ROOT_USER"] == "test-minio-user"
+        assert environment["MINIO_ROOT_PASSWORD"] == "test-minio-password"
+
+
+def test_minio_initialization_remains_idempotent():
+    script = (ROOT / "deploy" / "minio" / "initialize.sh").read_text()
+    assert "set -eu" in script
+    assert "mb --ignore-existing storage/kashengine-backups" in script
+    assert "mb --ignore-existing storage/kashengine-reports" in script

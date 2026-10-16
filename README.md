@@ -21,6 +21,7 @@ Early development. Phase 1 (project setup) is done. The features below are plann
 
 - Python 3.13, Django, Celery, Redis
 - PostgreSQL
+- MinIO (private S3-compatible storage for encrypted backups; PDF report storage planned)
 - Ollama (local LLM)
 - Docker and Docker Compose
 - uv (packages) and ruff (lint and format)
@@ -41,7 +42,11 @@ You need Docker and Docker Compose.
 
    ```bash
    cp .env.example .env.dev
+   chmod 600 .env.dev
    ```
+
+   Set unique `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` values in `.env.dev` before starting.
+   MinIO uses the same environment file as the application.
 
 2. Start all services:
 
@@ -70,6 +75,14 @@ In dev, every port is bound to `127.0.0.1`, so only your computer can reach the 
 | `localhost:8000` | Django directly. It skips Caddy, so use it only to debug |
 | `localhost:5432` | PostgreSQL |
 | `localhost:11434` | Ollama |
+| `localhost:9000` | MinIO S3 API |
+| <http://localhost:9001/> | MinIO console (root/admin login; development only) |
+
+MinIO starts automatically and initializes private `kashengine-backups` and `kashengine-reports`
+buckets without deleting existing objects. Use **Ops > Backups** to select S3 storage and endpoint
+`http://minio:9000` from the worker container. Use a dedicated upload-only credential.
+The reports bucket is reserved for future PDF storage; PDF generation is not implemented.
+See [MinIO backup setup](docs/docs/operations/backups-and-recovery.md#bundled-minio-service).
 
 If ports 80 or 443 are in use on your computer, change the `ports` of `caddy` in `docker-compose.override.yml`. Then use that port in the address, for example `https://localhost:8443/`.
 
@@ -102,6 +115,9 @@ You need a server with Docker, a domain name, and 16 GB RAM or more (for the pro
    chmod 600 .env.prod
    ```
 
+   Set unique MinIO root credentials in `.env.prod`. Production does not publish the MinIO API
+   or console ports. Its data persists in `minio_data`; keep an independent off-host copy.
+
 3. Start. The `--env-file` option is needed: Compose reads `SITE_ADDRESS` and `ACME_EMAIL` from it for Caddy.
 
    ```bash
@@ -122,7 +138,7 @@ To test the prod stack on your own computer, set `SITE_ADDRESS=localhost`. Caddy
 | Part | What it does |
 | --- | --- |
 | Ports | Only Caddy publishes ports (80, 443) in prod. In dev, all ports are bound to `127.0.0.1`. |
-| Networks | `edge`: Caddy. `proxy`: Caddy and web. `backend`: web, worker, beat, db, redis, ollama. The `proxy` and `backend` networks have no route to the internet. `egress`: worker, beat, and ollama only, for outbound requests. |
+| Networks | `edge`: Caddy. `proxy`: Caddy and web. `backend`: web, worker, beat, db, redis, ollama, minio, minio-init. The `proxy` and `backend` networks have no route to the internet. `egress`: worker, beat, and ollama only, for outbound requests. |
 | TLS | Caddy gets and renews a Let's Encrypt certificate. HTTP goes to HTTPS. Django also sends HSTS and sets secure cookies. |
 | Headers | Caddy adds a Content-Security-Policy, a Permissions-Policy, and Cross-Origin-Resource-Policy. It removes the `Server` header. Django adds the other security headers. |
 | Limits | Caddy closes slow clients, limits the request body to 2 MB, and has no admin API. |

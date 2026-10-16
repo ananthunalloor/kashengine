@@ -7,10 +7,43 @@ the task runs and the login events of the last `OPS_RETENTION_DAYS` days. It kee
 trail for at least 365 days.
 """
 
+from datetime import time
 from typing import ClassVar
 
 from django.conf import settings
 from django.db import models
+
+
+class BackupConfiguration(models.Model):
+    """Singleton configuration for encrypted, scheduled database snapshots."""
+
+    class Destination(models.TextChoices):
+        """Supported storage targets."""
+
+        S3 = "s3", "S3 / S3-compatible bucket"
+        LOCAL = "local", "Local / mounted drive folder"
+
+    enabled = models.BooleanField(default=False)
+    backup_time = models.TimeField(default=time(2, 0))
+    timezone = models.CharField(max_length=100, default="Asia/Kolkata")
+    destination = models.CharField(
+        max_length=10, choices=Destination.choices, default=Destination.LOCAL
+    )
+    local_directory = models.CharField(max_length=1000, blank=True)
+    bucket = models.CharField(max_length=255, blank=True)
+    prefix = models.CharField(max_length=500, blank=True, default="kashengine")
+    endpoint_url = models.CharField(max_length=500, blank=True)
+    region = models.CharField(max_length=100, blank=True)
+    access_key_encrypted = models.TextField(blank=True)
+    secret_key_encrypted = models.TextField(blank=True)
+    configured_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        """Return the singleton's display label."""
+        return "Automated database backup"
 
 
 class TaskRun(models.Model):

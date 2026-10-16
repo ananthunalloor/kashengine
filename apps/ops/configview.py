@@ -17,7 +17,9 @@ from django.conf import settings
 
 from apps.siteconfig import conf, registry
 
-SECRET_NAME = re.compile(r"SECRET|TOKEN|PASSWORD|PASSWD|API_KEY|PRIVATE", re.IGNORECASE)
+SECRET_NAME = re.compile(
+    r"SECRET|TOKEN|PASSWORD|PASSWD|API_KEY|ENCRYPTION_KEY|PRIVATE", re.IGNORECASE
+)
 URL_WITH_LOGIN = re.compile(r"^[a-z][a-z0-9+.-]*://[^/@\s]+@", re.IGNORECASE)
 
 GROUPS = (

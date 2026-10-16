@@ -128,6 +128,9 @@ API_TOKEN_EXPIRY_DAYS = env.int("API_TOKEN_EXPIRY_DAYS", default=90)  # 0 = no e
 # (dev and tests). Prod uses Redis, so all Gunicorn workers share the counters (prod.py).
 CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 
+# Separate Fernet key for portable backup files. Never stored in the database snapshot.
+BACKUP_ENCRYPTION_KEY = env("BACKUP_ENCRYPTION_KEY", default="")
+
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []

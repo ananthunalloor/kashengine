@@ -1,0 +1,69 @@
+{% extends "ops/base.html" %}
+{% block title %}Database backups{% endblock %}
+{% block ops %}
+<h1 class="mb-4 text-2xl font-semibold">Database backups</h1>
+<div class="mb-6 space-y-3 rounded-md border border-rule p-4">
+  <p><strong>Superusers only.</strong> Snapshots include all database records: users and password hashes,
+    sessions, API token hashes, encrypted settings, schedules, and application content.</p>
+  <p>Store downloads securely. Files, environment variables, encryption keys, and downloaded models
+    are not included. Keep the same code revision, migrations, and encryption keys when restoring.</p>
+  <p>Snapshots can migrate data from SQLite to PostgreSQL or back when the schema and keys match.
+    Automated exports take a consistent database snapshot and may briefly block writes.</p>
+  <p><strong>Use a maintenance window for restores.</strong> Stop workers, Beat, and other database
+    writers before restoring. For command-line restores, stop the web service too. Restart services
+    after restoring to clear cached settings. For large databases, use native database backups.</p>
+</div>
+<h2 class="mb-3 text-xl font-semibold">Automated encrypted backups</h2>
+<p class="mb-4">Disabled by default. Choose a daily time and time zone, then a destination.
+  Set BACKUP_ENCRYPTION_KEY in the environment of the web and worker services first.
+  Keep that key separately: without it, encrypted backups cannot be restored.
+  All backup files are retained; configure retention in your storage provider.</p>
+<p class="mb-4">Celery Beat and a worker must be running. Local folders must already exist and
+  be writable in the worker container (mount your drive there). External S3 requires HTTPS and permission
+  to upload objects to the chosen bucket and prefix. Saved S3 credentials are encrypted and never displayed.</p>
+<p class="mb-4">For bundled MinIO, choose S3 storage, endpoint <code>http://minio:9000</code>,
+  bucket <code>kashengine-backups</code>, and region <code>us-east-1</code>. Use a dedicated
+  upload-only MinIO access key, not the root login. Only this private endpoint is allowed over HTTP;
+  backup files remain encrypted.</p>
+{% if last_backup %}
+<p class="mb-4">Last run: <a href="{% url 'ops:run' last_backup.pk %}">{{ last_backup.get_status_display }}</a>
+  at {{ last_backup.created_at }}. Open the run for the result or error.</p>
+{% else %}
+<p class="mb-4">No automated backup runs yet.</p>
+{% endif %}
+<form method="post" action="{% url 'ops:backup_settings' %}" class="mb-6 space-y-4">
+  {% csrf_token %}
+  {{ backup_form.non_field_errors }}
+  {% for field in backup_form %}
+  <div>
+    {{ field.label_tag }} {{ field }}
+    {% if field.help_text %}<p class="text-sm text-muted">{{ field.help_text }}</p>{% endif %}
+    {{ field.errors }}
+  </div>
+  {% endfor %}
+  <button type="submit" class="rounded-md border border-rule px-4 py-2">Save backup settings</button>
+</form>
+<form method="post" action="{% url 'ops:backup_run' %}" class="mb-8">
+  {% csrf_token %}
+  <button type="submit" class="rounded-md border border-rule px-4 py-2"{% if not backup_config.enabled %} disabled{% endif %}>Run configured backup now</button>
+</form>
+<h2 class="mb-3 text-xl font-semibold">Manual database snapshot</h2>
+<form method="post" action="{% url 'ops:backup_export' %}" class="mb-8">
+  {% csrf_token %}
+  <button type="submit" class="rounded-md border border-rule px-4 py-2">Download database snapshot</button>
+</form>
+<h2 class="mb-3 text-xl font-semibold">Replace database from snapshot</h2>
+<p class="mb-4">This deletes all current records and replaces them with the snapshot. It does not merge.
+  Failed restores roll back completely. Maximum snapshot: 100 MiB (140 MiB for encrypted files).
+  Take a fresh backup first. JSON and encrypted .json.enc files are accepted.
+  After success, this browser is signed out; use a restored account to sign in.</p>
+<form method="post" action="{% url 'ops:backup_import' %}" enctype="multipart/form-data" class="space-y-4">
+  {% csrf_token %}
+  <div><label for="backup">Database snapshot</label>
+    <input id="backup" name="backup" type="file" accept=".json,.enc,application/json,application/octet-stream" required></div>
+  <div><label for="confirmation">Type RESTORE to replace all database records</label>
+    <input id="confirmation" name="confirmation" type="text" autocomplete="off" required pattern="RESTORE"
+      class="rounded-md border border-rule px-3 py-2"></div>
+  <button type="submit" class="rounded-md border border-rule px-4 py-2 text-loss">Replace entire database</button>
+</form>
+{% endblock %}

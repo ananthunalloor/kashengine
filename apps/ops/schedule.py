@@ -13,6 +13,7 @@ from django.conf import settings
 from django_celery_beat.models import CrontabSchedule, PeriodicTask
 
 from . import jobs
+from .backup_automation import SCHEDULE_NAME, TASK_NAME
 from .defaults import DEFAULT_SCHEDULE
 
 OVERDUE_GRACE = timedelta(minutes=10)  # Beat can be late by some seconds. This is a safe margin.
@@ -33,12 +34,13 @@ class ScheduleEntry:
     day_of_week: str
     day_of_month: str
     month_of_year: str
+    timezone: str
     schedule: crontab
     last_run_at: datetime | None
 
     @property
     def cron_text(self) -> str:
-        """The schedule as a cron line: minute hour day-of-month month day-of-week (IST)."""
+        """The five cron fields, interpreted in this entry's time zone."""
         return " ".join(
             (self.minute, self.hour, self.day_of_month, self.month_of_year, self.day_of_week)
         )
@@ -73,6 +75,7 @@ def _entry(row: PeriodicTask) -> ScheduleEntry:
         day_of_week=cron.day_of_week,
         day_of_month=cron.day_of_month,
         month_of_year=cron.month_of_year,
+        timezone=str(cron.timezone),
         schedule=_celery_crontab(cron),
         last_run_at=row.last_run_at,
     )
@@ -137,7 +140,11 @@ def times_on(task_name: str, day: date) -> list[tuple[int, int]]:
 
 def schedulable_tasks() -> dict[str, str]:
     """The tasks that an admin can schedule: {task name: job label}."""
-    return {job.target: job.label for job in jobs.JOBS if job.kind == jobs.TASK}
+    return {
+        job.target: job.label
+        for job in jobs.JOBS
+        if job.kind == jobs.TASK and job.target != TASK_NAME
+    }
 
 
 def parse_cron(minute: str, hour: str, day_of_week: str, day_of_month: str, month: str) -> crontab:
@@ -192,6 +199,10 @@ def save_entry(  # noqa: PLR0913
     enabled: bool,
 ) -> PeriodicTask:
     """Add or change an entry. Raise ValueError if the schedule or the task is not valid."""
+    if name == SCHEDULE_NAME or (
+        pk is not None and PeriodicTask.objects.filter(pk=pk, name=SCHEDULE_NAME).exists()
+    ):
+        raise ValueError("Manage the backup schedule on Ops > Backups.")
     if task not in schedulable_tasks():
         msg = "This task cannot be scheduled."
         raise ValueError(msg)

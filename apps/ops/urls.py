@@ -10,12 +10,17 @@ a POST request from a superuser. The login middleware sends an anonymous user to
 
 from django.urls import path
 
-from . import views, views_access, views_settings
+from . import views, views_access, views_backups, views_settings
 
 app_name = "ops"
 
 urlpatterns = [
     path("", views.overview, name="overview"),
+    path("backups/", views_backups.backup_page, name="backups"),
+    path("backups/export/", views_backups.backup_export, name="backup_export"),
+    path("backups/import/", views_backups.backup_import, name="backup_import"),
+    path("backups/settings/", views_backups.backup_settings, name="backup_settings"),
+    path("backups/run/", views_backups.backup_run, name="backup_run"),
     path("jobs/", views.job_list, name="jobs"),
     path("jobs/<slug:key>/run/", views.job_run, name="job_run"),
     path("runs/", views.run_list, name="runs"),
