@@ -8,7 +8,7 @@
     <h1 class="font-serif text-3xl font-semibold">{{ ipo.name }}</h1>
     <p class="mt-1 text-muted">{{ ipo.get_category_display }}, {{ ipo.get_status_display|lower }}</p>
   </div>
-  <span class="rounded px-3 py-1 text-sm font-medium {{ ipo.verdict|default:'unknown'|badge }}">{{ ipo.verdict|default:"unknown"|capfirst }}{% if ipo.score is not None %}, score {{ ipo.score|signed:2 }}{% endif %}</span>
+  <span class="rounded px-3 py-1 text-sm font-medium {{ ipo.verdict|default:'unknown'|badge }}">{{ ipo.verdict|default:"unknown"|capfirst }}{% if ipo.score is not None %}, score {{ ipo.score|signed_score }}{% endif %}</span>
 </div>
 
 <div class="mt-8 grid gap-10 md:grid-cols-2">
@@ -24,15 +24,16 @@
 
   <section aria-labelledby="score-title">
     <h2 id="score-title" class="font-serif text-2xl font-semibold">How the verdict was made</h2>
+    <p class="mt-2 text-sm text-muted">Scores run from 1.0/10 (most negative) through 5.5/10 (neutral) to 10.0/10 (most positive). GMP and subscription values keep their original units.</p>
     {% if signals %}
     <table class="mt-3 w-full text-sm">
-      <thead class="text-left text-muted"><tr><th scope="col" class="py-2 pr-4 font-normal">Signal</th><th scope="col" class="py-2 pr-4 text-right font-normal">Value</th><th scope="col" class="py-2 text-right font-normal">Signal (−1 to +1)</th></tr></thead>
+      <thead class="text-left text-muted"><tr><th scope="col" class="py-2 pr-4 font-normal">Signal</th><th scope="col" class="py-2 pr-4 text-right font-normal">Value</th><th scope="col" class="py-2 text-right font-normal">Signal (1–10)</th></tr></thead>
       <tbody class="divide-y divide-rule border-y border-rule">
         {% for s in signals %}
         <tr>
           <th scope="row" class="py-2 pr-4 text-left font-medium">{% if s.name == "gmp" %}GMP{% elif s.name == "subscription" %}Subscription{% else %}News{% endif %}</th>
-          <td class="num py-2 pr-4 text-right">{% if s.name == "gmp" %}{{ s.value|signed }}%{% elif s.name == "subscription" %}{{ s.value|times }}{% else %}{{ s.value|signed:2 }}{% endif %}</td>
-          <td class="num py-2 text-right font-medium {{ s.signal|tone }}">{{ s.signal|signed:2 }}</td>
+          <td class="num py-2 pr-4 text-right">{% if s.name == "gmp" %}{{ s.value|signed }}%{% elif s.name == "subscription" %}{{ s.value|times }}{% else %}{{ s.value|signed_score }}{% endif %}</td>
+          <td class="num py-2 text-right font-medium {{ s.signal|tone }}">{{ s.signal|signed_score }}</td>
         </tr>
         {% endfor %}
       </tbody>

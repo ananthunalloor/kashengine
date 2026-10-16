@@ -2,7 +2,7 @@
 {% block title %}News · Kash Engine{% endblock %}
 {% block content %}
 <h1 class="font-serif text-3xl font-semibold">News</h1>
-<p class="mt-1 text-muted">Every article that we fetched, with the score of the language model. A score goes from −1 (bad for stocks) to +1 (good).</p>
+<p class="mt-1 text-muted">Every article that we fetched, with the score of the language model. Sentiment goes from 1.0/10 (very negative for stocks) through 5.5/10 (neutral) to 10.0/10 (very positive). Relevance goes from 1.0/10 (least relevant) to 10.0/10 (most relevant).</p>
 
 <form method="get" action="{% url 'web:news' %}" class="mt-6 grid gap-3 sm:grid-cols-[1fr_auto_auto]"
       data-signals="{{ signals }}" data-indicator:fetching>

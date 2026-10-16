@@ -14,6 +14,7 @@ from apps.delivery.models import DeliveryLog
 from apps.ipos.models import Ipo
 from apps.markets.models import IndexQuote, Prediction
 from apps.news.models import NewsArticle
+from apps.reports.builder import gather
 from apps.reports.models import Report
 
 pytestmark = pytest.mark.django_db
@@ -143,7 +144,11 @@ def test_the_dashboard_shows_the_outlook(client_in):
 
     assert "The Nifty 50 is likely to rise." in text
     assert "Moderate signal." in text
-    assert "52%" in text
+    assert "The strength is 5.7/10" in text
+    assert 'aria-label="Signal strength 5.7/10"' in text
+    assert "6.9/10" in text  # News score 0.31.
+    assert "5.0/10" in text  # Global score -0.12.
+    assert "width: 52%" in text  # The original strength still drives the bar.
     assert "from 24 articles" in text
     assert "S&amp;P 500" in text
     assert "Few articles" in text
@@ -240,6 +245,33 @@ def test_the_report_list_and_detail(client_in):
     assert "Line one\nLine two" in detail
     assert "Chat not found" not in detail  # A normal user does not see delivery errors.
     assert reverse("web:report", args=[first.date]) in detail  # The link to the older report.
+    assert "strength 3.7/10" in listing
+    assert "strength 6.4/10" in listing
+    assert "strength 6.4/10" in detail
+
+
+def test_report_page_renders_saved_data_without_rewriting_it(client_in):
+    p = make_prediction()
+    data = gather(date(2026, 10, 7), p)
+    report = Report.objects.create(
+        date=date(2026, 10, 7),
+        text="Historical text with strength 0.52.",
+        data=data,
+        prediction=p.direction,
+        confidence=p.confidence,
+    )
+
+    text = client_in.get(reverse("web:report", args=[report.date])).text
+
+    assert "strength 5.7/10" in text
+    assert "News: 6.9/10" in text
+    report.refresh_from_db()
+    p.refresh_from_db()
+    assert report.text == "Historical text with strength 0.52."
+    assert report.data == data
+    assert report.confidence == p.confidence == 0.52
+    assert p.news_score == 0.31
+    assert p.global_score == -0.12
 
 
 def test_a_report_that_does_not_exist_gives_404(client_in):
@@ -287,6 +319,14 @@ def test_news_filters_by_search_score_and_source(client_in):
     assert "Bank profits" not in hindu
     assert "1 article" in search
     assert "Bank holiday notice" in search
+    assert "8.6/10" in positive
+    assert "2.8/10" in negative
+    assert "5.5/10" in neutral
+    assert "relevance 9.1/10" in positive
+    assert "text-gain" in positive
+    assert "text-loss" in negative
+    assert "text-muted" in neutral
+    assert NewsArticle.objects.get(title="Bank profits jump").sentiment_score == 0.7
 
 
 def test_a_datastar_request_gets_only_the_list(client_in):
@@ -301,6 +341,8 @@ def test_a_datastar_request_gets_only_the_list(client_in):
     assert "<html" not in response.text
     assert "Steel demand falls" in response.text
     assert "Bank profits" not in response.text
+    assert "3.2/10" in response.text
+    assert "relevance 9.1/10" in response.text
 
 
 def test_the_full_page_has_the_filter_form_and_the_datastar_script(client_in, settings):
@@ -450,6 +492,13 @@ def test_the_ipo_detail_page(client_in, ipos):
     assert "No subscription number." in text
     assert "updated 5 hours ago" in text
     assert "₹100" in text
+    assert "score 8.2/10" in text
+    assert "8.5/10" in text  # The signed GMP signal, not its actual percentage.
+    assert "8.4/10" in text  # The signed subscription signal.
+    assert "7.3/10" in text  # The news sentiment and signal.
+    ipo.refresh_from_db()
+    assert ipo.score == 0.6
+    assert ipo.score_inputs["signals"][0]["signal"] == 0.67
 
 
 def test_the_detail_page_of_an_ipo_without_a_score(client_in):
@@ -487,6 +536,8 @@ def test_the_markets_page_shows_history_and_the_result(client_in):
     assert "Wrong" in text
     assert "Waiting" in text
     assert text.index("Thu 8 Oct") < text.index("Tue 6 Oct")
+    assert "5.7/10" in text
+    assert "0.7" in text  # Actual market changes retain their percentage units.
 
 
 def test_the_companies_page_searches_by_name_symbol_and_sector(client_in):

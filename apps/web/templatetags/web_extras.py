@@ -2,6 +2,8 @@
 
 from django import template
 
+from apps.reports.formatting import score_out_of_ten
+
 register = template.Library()
 
 ARROWS = {"up": "▲", "down": "▼", "flat": "▬"}
@@ -27,6 +29,18 @@ BADGES = {
     "closed": TONE_CLASSES["flat"],
     "listed": TONE_CLASSES["flat"],
 }
+
+
+@register.filter
+def signed_score(value):
+    """Display a -1..1 score as 1.0..10.0, with neutral at 5.5."""
+    return score_out_of_ten(value, signed=True)
+
+
+@register.filter
+def unit_score(value):
+    """Display a 0..1 strength or relevance score as 1.0..10.0."""
+    return score_out_of_ten(value)
 
 
 @register.filter

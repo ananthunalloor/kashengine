@@ -5,11 +5,11 @@
 <p class="text-sm"><a href="{% url 'web:reports' %}">All reports</a></p>
 <h1 class="mt-2 font-serif text-3xl font-semibold">{{ report.date|date:"l j F Y" }}</h1>
 {% if report.prediction %}
-<p class="mt-2"><span class="rounded px-2 py-0.5 text-sm font-medium {{ report.prediction|badge }}">{{ report.prediction|arrow }} {{ report.prediction|direction_word }}{% if report.confidence is not None %}, strength {{ report.confidence|percent }}{% endif %}</span></p>
+<p class="mt-2"><span class="rounded px-2 py-0.5 text-sm font-medium {{ report.prediction|badge }}">{{ report.prediction|arrow }} {{ report.prediction|direction_word }}{% if report.confidence is not None %}, strength {{ report.confidence|unit_score }}{% endif %}</span></p>
 {% endif %}
 
 <article class="mt-6 rounded-lg border border-rule bg-card p-5 sm:p-6">
-  <div class="report-text">{{ report.text }}</div>
+  <div class="report-text">{{ report_text }}</div>
 </article>
 
 <section class="mt-8" aria-labelledby="sent-title">

@@ -146,6 +146,22 @@ an illustrative daily brief, and links to sign in. It does not display live acco
 Signed-in users open the protected Today dashboard at `/dashboard/`; report, news, IPO, and other
 application pages still require login and their existing access permissions.
 
+### Score display
+
+The web UI and newly built Telegram reports show scores with one decimal place out of 10:
+
+- Sentiment, market component scores, and IPO scores/signals map `-1..1` to `1.0..10.0`
+  (`1 + 4.5 × (score + 1)`). Neutral is `5.5/10`; higher means more positive.
+- Signal strength and news relevance map `0..1` to `1.0..10.0` (`1 + 9 × value`).
+  Strength is not a probability of being right.
+- Accuracy, price changes, GMP percentages, subscription multiples, and prices keep their units.
+
+This is presentation only: stored numeric scores, API values, scoring rules, filter thresholds,
+and verdicts do not change. No database migration is needed. Archived reports with saved
+structured data are reformatted when viewed, without overwriting their saved text or data.
+Legacy reports without structured data retain their original body text. Future report builds
+use the new display format; already-sent Telegram messages are not edited.
+
 ## Ops pages
 
 The Ops pages are for admins. They are at `/ops/`. A user with the "staff" flag can look at everything. Only a superuser can change something (start a job, end a session, turn a user on or off). Other users get a 403 page. The menu link "Ops" shows for staff users only.

@@ -39,6 +39,7 @@ from apps.markets.trading import next_trading_day, today_ist
 from apps.news.models import NewsArticle
 from apps.siteconfig import conf
 
+from .formatting import score_out_of_ten
 from .models import Report
 
 logger = logging.getLogger(__name__)
@@ -450,15 +451,20 @@ def _render_outlook(data: dict) -> list[str]:
     lines = [
         f"NIFTY 50 OUTLOOK, {_day(target)}",
         f"{ARROWS[p['direction']]} {p['direction'].upper()}: {_strength(p['confidence'])} signal "
-        f"(strength {p['confidence']:.2f}, score {p['score']:+.2f}).",
+        f"(strength {score_out_of_ten(p['confidence'])}, "
+        f"score {score_out_of_ten(p['score'], signed=True)}).",
         "The strength is not a probability.",
+        "Scores: 1.0/10 (negative), 5.5/10 (neutral), 10.0/10 (positive). "
+        "Strength: 1.0/10 (weakest) to 10.0/10 (strongest).",
     ]
     news = (
         "no scored news"
         if p["news_score"] is None
-        else f"{p['news_score']:+.2f} from {p['news_articles']} articles"
+        else f"{score_out_of_ten(p['news_score'], signed=True)} from {p['news_articles']} articles"
     )
-    glob = "no data" if p["global_score"] is None else f"{p['global_score']:+.2f}"
+    glob = (
+        "no data" if p["global_score"] is None else score_out_of_ten(p["global_score"], signed=True)
+    )
     lines.append(f"News: {news}. Global markets: {glob}.")
     if p["cues"]:
         lines.append(
@@ -499,7 +505,7 @@ def _render_story(item: dict) -> list[str]:
         The title line with the source and the score, then optional lines for the reason and
         the companies, then the link.
     """
-    head = f"• {item['title']} ({item['source']}, {item['score']:+.1f})"
+    head = f"• {item['title']} ({item['source']}, {score_out_of_ten(item['score'], signed=True)})"
     lines = [head]
     if item["reason"]:
         lines.append(f"  {item['reason']}")
@@ -572,7 +578,10 @@ def _render_ipos(ipos: dict) -> list[str]:
         lines.append(f"No IPO is open, listing, or coming in the next {ipos['days_ahead']} days.")
     if ipos["likely_good"]:
         lines.append("Likely to do well (our rule, not a promise):")
-        lines.extend(f"• {i['name']} (score {i['score']:+.2f})" for i in ipos["likely_good"])
+        lines.extend(
+            f"• {i['name']} (score {score_out_of_ten(i['score'], signed=True)})"
+            for i in ipos["likely_good"]
+        )
     if ipos["without_verdict"]:
         count = ipos["without_verdict"]
         subject = "1 IPO has" if count == 1 else f"{count} IPOs have"

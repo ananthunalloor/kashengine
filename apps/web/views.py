@@ -25,6 +25,7 @@ from apps.ipos.models import Ipo
 from apps.markets.evaluation import accuracy_stats
 from apps.markets.trading import today_ist
 from apps.ops import audit
+from apps.reports.builder import render_text
 from apps.reports.models import Report
 from apps.siteconfig import conf
 
@@ -93,6 +94,7 @@ def report_detail(request, day: date):
     report = get_object_or_404(Report, date=day)
     context = {
         "report": report,
+        "report_text": render_text(report.data) if report.data else report.text,
         "older": Report.objects.filter(date__lt=day).order_by("-date").first(),
         "newer": Report.objects.filter(date__gt=day).order_by("date").first(),
         "deliveries": DeliveryLog.objects.filter(report=report),

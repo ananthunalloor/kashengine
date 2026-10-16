@@ -293,9 +293,9 @@ def test_render_text_shows_all_the_parts():
 
     assert "KASH ENGINE: DAILY REPORT, Tue 6 Oct 2026" in text
     assert "NIFTY 50 OUTLOOK, Tue 6 Oct" in text
-    assert "▲ UP: strong signal (strength 0.62, score +0.31)." in text
+    assert "▲ UP: strong signal (strength 6.6/10, score 6.9/10)." in text
     assert "The strength is not a probability." in text
-    assert "News: +0.25 from 14 articles. Global markets: +0.40." in text
+    assert "News: 6.6/10 from 14 articles. Global markets: 7.3/10." in text
     assert "Cues: S&P 500 +0.8%" in text
     assert "Note: Only 3 of 7 global cues are available." in text
     assert (
@@ -303,13 +303,14 @@ def test_render_text_shows_all_the_parts():
     )
     assert "Track record: 7 of 12 right (58%). Simple baseline: 50%. Only 12 results." in text
     assert "20 important articles: 8 good, 5 bad, 7 neutral." in text
-    assert "• Banks gain (Wire, +0.8)" in text
+    assert "• Banks gain (Wire, 9.1/10)" in text
     assert "Companies: HDFC Bank" in text
-    assert "• Oil jumps (Wire, -0.7)" in text
+    assert "• Oil jumps (Wire, 2.4/10)" in text
     assert (
         "• Acme Foods (mainboard): ₹95-100, closes Thu 8 Oct, GMP +22%, likely to do well" in text
     )
     assert "Likely to do well (our rule, not a promise):" in text
+    assert "Acme Foods (score 8.6/10)" in text
     assert "2 IPOs have no verdict" in text
     assert text.endswith("It is not investment advice.")
     assert len(text) < 4000
@@ -410,7 +411,7 @@ def test_build_report_scores_the_ipos_first_so_the_gmp_is_current():
     item = report.data["ipos"]["open_now"][0]
     assert item["verdict"] == "good"
     assert "GMP +30%" in report.text
-    assert "Hot Ltd (score +1.00)" in report.text
+    assert "Hot Ltd (score 10.0/10)" in report.text
 
 
 def test_build_report_still_works_when_the_ipo_scoring_fails(monkeypatch):

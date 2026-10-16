@@ -3,13 +3,13 @@
 {% block title %}Reports · Kash Engine{% endblock %}
 {% block content %}
 <h1 class="font-serif text-3xl font-semibold">Reports</h1>
-<p class="mt-1 text-muted">Each report is the text that we send on Telegram.</p>
+<p class="mt-1 text-muted">Daily reports sent on Telegram. Scores are displayed on a 1.0–10.0 scale; older reports with saved data are reformatted for viewing without changing the original text.</p>
 {% if page.object_list %}
 <ul class="mt-6 divide-y divide-rule border-y border-rule">
   {% for r in page.object_list %}
   <li class="flex items-center justify-between gap-4 py-3">
     <a href="{% url 'web:report' r.date %}" class="font-medium text-ink">{{ r.date|date:"l j F Y" }}</a>
-    {% if r.prediction %}<span class="rounded px-2 py-0.5 text-xs font-medium {{ r.prediction|badge }}">{{ r.prediction|arrow }} {{ r.prediction|direction_word }}{% if r.confidence is not None %}, {{ r.confidence|percent }}{% endif %}</span>{% endif %}
+    {% if r.prediction %}<span class="rounded px-2 py-0.5 text-xs font-medium {{ r.prediction|badge }}">{{ r.prediction|arrow }} {{ r.prediction|direction_word }}{% if r.confidence is not None %}, strength {{ r.confidence|unit_score }}{% endif %}</span>{% endif %}
   </li>
   {% endfor %}
 </ul>

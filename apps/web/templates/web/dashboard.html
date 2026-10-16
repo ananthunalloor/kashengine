@@ -26,8 +26,8 @@
   <div class="mt-6 grid gap-x-10 gap-y-6 md:grid-cols-2">
     <div>
       <p class="text-sm"><span class="font-medium">{{ outlook.strength|capfirst }} signal.</span>
-        <span class="text-muted">The strength is {{ p.confidence|percent }}. It is not a chance of being right.</span></p>
-      <div class="relative mt-2 h-2 rounded-full bg-flat-soft" role="img" aria-label="Signal strength {{ p.confidence|percent }}">
+        <span class="text-muted">The strength is {{ p.confidence|unit_score }}. It is not a chance of being right.</span></p>
+      <div class="relative mt-2 h-2 rounded-full bg-flat-soft" role="img" aria-label="Signal strength {{ p.confidence|unit_score }}">
         <div class="h-2 rounded-full {% if p.direction == 'up' %}bg-gain{% elif p.direction == 'down' %}bg-loss{% else %}bg-muted{% endif %}" style="width: {% widthratio p.confidence 1 100 %}%"></div>
         <span class="absolute top-0 h-2 w-px bg-paper" style="left: 40%"></span>
         <span class="absolute top-0 h-2 w-px bg-paper" style="left: 60%"></span>
@@ -39,12 +39,12 @@
       <dl class="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
         <div>
           <dt class="text-muted">News</dt>
-          <dd class="num font-medium {{ p.news_score|tone }}">{{ p.news_score|signed:2 }}
+          <dd class="num font-medium {{ p.news_score|tone }}">{{ p.news_score|signed_score }}
             <span class="font-normal text-muted">from {{ p.news_articles }} article{{ p.news_articles|pluralize }}</span></dd>
         </div>
         <div>
           <dt class="text-muted">Global markets</dt>
-          <dd class="num font-medium {{ p.global_score|tone }}">{{ p.global_score|signed:2 }}</dd>
+          <dd class="num font-medium {{ p.global_score|tone }}">{{ p.global_score|signed_score }}</dd>
         </div>
       </dl>
       {% if outlook.cues %}
@@ -57,6 +57,7 @@
     </div>
   </div>
   {% for note in outlook.notes %}<p class="mt-5 text-sm text-muted">{{ note }}</p>{% endfor %}
+  <p class="mt-4 text-xs text-muted">Scores use a 1.0–10.0 scale. News and global market scores are neutral at 5.5; higher is more positive. Strength runs from weakest (1.0) to strongest (10.0).</p>
 </section>
 {% endwith %}
 {% else %}
