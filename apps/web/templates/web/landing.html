@@ -1,0 +1,98 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="Make sense of Indian markets with Kash Engine. Explore scored news, market outlooks, IPO research, company data, and daily reports in one place.">
+  <title>Kash Engine · Less noise. More perspective.</title>
+  <link rel="stylesheet" href="{% static 'css/landing.css' %}">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="news" viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h3m-3 4h8m-2-4h2"/></symbol>
+    <symbol id="chart" viewBox="0 0 24 24"><path d="M4 4v16h16M7 14l4-4 4 2 5-7"/></symbol>
+    <symbol id="ipo" viewBox="0 0 24 24"><path d="m12 3 7 4v6c0 4-7 8-7 8s-7-4-7-8V7zM9 12l2 2 4-4"/></symbol>
+    <symbol id="company" viewBox="0 0 24 24"><path d="M5 21V5l9-2v18m0-12h5v12M3 21h18M8 8h3m-3 4h3m-3 4h3m8-3h-2m2 4h-2"/></symbol>
+    <symbol id="report" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM14 3v5h4M9 12h6m-6 4h6"/></symbol>
+    <symbol id="send" viewBox="0 0 24 24"><path d="m3 10 18-7-7 18-3-8zM11 13l10-10"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+  </svg>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="{% url 'web:landing' %}" aria-label="Kash Engine home"><span class="brand-mark" aria-hidden="true">k<span>.</span></span>kash<span class="brand-light">engine</span></a>
+      <nav aria-label="Main navigation" class="header-nav">
+        <a href="#capabilities">Capabilities</a>
+        <a href="#how-it-works">How it works</a>
+        <a href="#principles">Our approach</a>
+      </nav>
+      <a class="button button-small button-dark" href="{% if user.is_authenticated %}{% url 'web:dashboard' %}{% else %}{% url 'web:login' %}{% endif %}">
+        {% if user.is_authenticated %}Open dashboard{% else %}Log in{% endif %}
+        <svg class="icon" aria-hidden="true"><use href="#arrow"/></svg>
+      </a>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero container" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="status-dot"></span> A clearer view of Indian markets</p>
+        <h1 id="hero-title">Less noise.<br>More <span>perspective.</span></h1>
+        <p class="hero-description">From the headlines to the opening bell. Bring market news, sentiment, and IPO research together in one thoughtful daily view.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="{% if user.is_authenticated %}{% url 'web:dashboard' %}{% else %}{% url 'web:login' %}{% endif %}">Explore your dashboard <svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></a>
+          <a class="text-link" href="#capabilities">See what’s inside <span aria-hidden="true">↘</span></a>
+        </div>
+        <div class="hero-notes"><span><svg class="icon" aria-hidden="true"><use href="#check"/></svg> Built for Indian markets</span><span><svg class="icon" aria-hidden="true"><use href="#check"/></svg> Powered by a local AI model</span></div>
+      </div>
+
+      <div class="preview-wrap">
+        <div class="preview-orbit" aria-hidden="true"></div>
+        <section class="brief-preview" aria-labelledby="preview-title">
+          <div class="preview-top"><span class="mini-brand"><span class="mini-mark">k.</span> YOUR DAILY PERSPECTIVE</span><span class="example-label">Illustrative preview</span></div>
+          <div class="preview-heading"><div><p class="small-label">THE MARKET BRIEF</p><h2 id="preview-title">A little context.<br>A clearer morning.</h2></div><span class="sun-icon" aria-hidden="true">☀</span></div>
+          <div class="outlook-label"><span>MARKET OUTLOOK</span><span class="positive-pill">↗ Positive signal</span></div>
+          <div class="chart-heading"><strong>Nifty 50</strong><span>News + global cues</span></div>
+          <svg class="market-chart" viewBox="0 0 400 112" role="img" aria-label="Illustrative rising trend, not live market data">
+            <defs><linearGradient id="chart-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#7163e8" stop-opacity=".2"/><stop offset="1" stop-color="#7163e8" stop-opacity="0"/></linearGradient></defs>
+            <path class="chart-grid" d="M0 26H400M0 62H400M0 98H400"/>
+            <path fill="url(#chart-fill)" d="M0 93 22 87 42 92 63 66 85 73 105 58 127 66 148 49 167 61 190 39 211 47 232 27 251 40 271 25 293 31 315 13 335 24 355 12 378 19 400 5V112H0Z"/>
+            <path class="chart-line" d="m0 93 22-6 20 5 21-26 22 7 20-15 22 8 21-17 19 12 23-22 21 8 21-20 19 13 20-15 22 6 22-18 20 11 20-12 23 7 22-14"/>
+          </svg>
+          <div class="preview-stories"><div class="story-icon"><svg class="icon" aria-hidden="true"><use href="#news"/></svg></div><div><strong>The stories behind the signal</strong><p>Scored news. Reasons included.</p></div><span class="preview-arrow" aria-hidden="true">↗</span></div>
+          <div class="preview-bottom"><span><span class="status-dot"></span> News, outlook &amp; IPOs</span><span>One daily report</span></div>
+        </section>
+        <div class="floating-note"><span class="note-icon"><svg class="icon" aria-hidden="true"><use href="#send"/></svg></span><div><strong>Your morning, simplified.</strong><span>Daily reports via Telegram</span></div></div>
+      </div>
+    </section>
+
+    <div class="context-strip"><div class="container context-inner"><span>THE BIG PICTURE.<br><strong>WITHOUT THE TAB OVERLOAD.</strong></span><p>Indian equities</p><span class="strip-divider"></span><p>Global market cues</p><span class="strip-divider"></span><p>IPO intelligence</p><span class="strip-divider"></span><p>News sentiment</p></div></div>
+
+    <section id="capabilities" class="container capabilities" aria-labelledby="capabilities-title">
+      <div class="section-heading"><div><p class="eyebrow">YOUR RESEARCH, CONNECTED</p><h2 id="capabilities-title">One engine. The whole picture.</h2></div><p>Go beyond the headline. Find the context that helps you ask better questions.</p></div>
+      <div class="capability-grid">
+        <article class="capability-card"><div class="card-top"><span class="capability-icon violet"><svg class="icon" aria-hidden="true"><use href="#news"/></svg></span><span class="card-category">01 / UNDERSTAND</span></div><h3>News with a point of view</h3><p>Follow financial headlines with sentiment scores and a reason behind each signal. Less scrolling, more understanding.</p><div class="card-tags"><span>Scored sentiment</span><span>Source filters</span></div><details><summary>Explore news capabilities <span aria-hidden="true">+</span></summary><p>Search stories and filter by source or sentiment. See positive and negative coverage together, with the model’s explanation for each scored article.</p><a href="{% url 'web:news' %}">Open news <span aria-hidden="true">→</span></a></details></article>
+        <article class="capability-card"><div class="card-top"><span class="capability-icon green"><svg class="icon" aria-hidden="true"><use href="#chart"/></svg></span><span class="card-category">02 / CONNECT</span></div><h3>A more informed outlook</h3><p>Connect news sentiment with global market cues for a next-session outlook on the Nifty 50.</p><div class="card-tags"><span>Market direction</span><span>Track record</span></div><details><summary>Explore market capabilities <span aria-hidden="true">+</span></summary><p>Review signal strength, prediction history, index quotes, and measured accuracy against a baseline. Signal strength is not a probability of being right.</p><a href="{% url 'web:markets' %}">Open markets <span aria-hidden="true">→</span></a></details></article>
+        <article class="capability-card"><div class="card-top"><span class="capability-icon orange"><svg class="icon" aria-hidden="true"><use href="#ipo"/></svg></span><span class="card-category">03 / DISCOVER</span></div><h3>IPOs, beyond the buzz</h3><p>Keep upcoming and open issues in view, with key facts and scoring signals to guide your own research.</p><div class="card-tags"><span>Issue calendar</span><span>Score breakdowns</span></div><details><summary>Explore IPO capabilities <span aria-hidden="true">+</span></summary><p>Filter issues by status, verdict, or category. Open an IPO to examine its dates, available facts, scoring inputs, and notes. GMP is unofficial, not a guarantee.</p><a href="{% url 'web:ipos' %}">Open IPOs <span aria-hidden="true">→</span></a></details></article>
+        <article class="capability-card"><div class="card-top"><span class="capability-icon blue"><svg class="icon" aria-hidden="true"><use href="#company"/></svg></span><span class="card-category">04 / RESEARCH</span></div><h3>Know the companies</h3><p>Look up company data in one searchable directory. Add business context to the names in your news feed.</p><div class="card-tags"><span>Company search</span><span>Fundamentals</span></div><details><summary>Explore company capabilities <span aria-hidden="true">+</span></summary><p>Search the company list and review available financial data collected from Screener.in. Data availability depends on the configured collection jobs.</p><a href="{% url 'web:companies' %}">Open companies <span aria-hidden="true">→</span></a></details></article>
+        <article class="capability-card"><div class="card-top"><span class="capability-icon rose"><svg class="icon" aria-hidden="true"><use href="#report"/></svg></span><span class="card-category">05 / GET THE PICTURE</span></div><h3>Your daily market brief</h3><p>Bring the outlook, important stories, and IPO watchlist together in one readable report. Revisit any day.</p><div class="card-tags"><span>Daily digest</span><span>Report archive</span></div><details><summary>Explore report capabilities <span aria-hidden="true">+</span></summary><p>Browse past reports by date and move between daily editions. Each report brings together the available news, market signals, and IPO information.</p><a href="{% url 'web:reports' %}">Open reports <span aria-hidden="true">→</span></a></details></article>
+        <article class="capability-card"><div class="card-top"><span class="capability-icon teal"><svg class="icon" aria-hidden="true"><use href="#send"/></svg></span><span class="card-category">06 / STAY IN THE LOOP</span></div><h3>From the engine to you</h3><p>Get the daily report through configured Telegram delivery, and check whether each send made it through.</p><div class="card-tags"><span>Telegram delivery</span><span>Delivery history</span></div><details><summary>Explore delivery capabilities <span aria-hidden="true">+</span></summary><p>Review send attempts, delivery status, and errors in the delivery log. Telegram destinations and scheduled sending are configured by your administrator.</p><a href="{% url 'web:delivery' %}">Open delivery <span aria-hidden="true">→</span></a></details></article>
+      </div>
+      <div class="api-note"><span class="code-icon" aria-hidden="true">&lt;/&gt;</span><p><strong>Prefer to build your own view?</strong> Read the data through our versioned, read-only REST API.</p><a href="{% url 'docs' %}">Explore API docs <svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></a></div>
+    </section>
+
+    <section id="how-it-works" class="workflow-section" aria-labelledby="workflow-title"><div class="container">
+      <div class="section-heading"><div><p class="eyebrow">FROM INFORMATION TO PERSPECTIVE</p><h2 id="workflow-title">A simpler research routine.</h2></div><p>The groundwork happens in the background.<br>You start with the context.</p></div>
+      <div class="workflow-grid"><div><span class="step-number">01</span><h3>Collect the signals</h3><p>News feeds, company data, IPO information, and market quotes come together.</p></div><div><span class="step-number">02</span><h3>Connect the context</h3><p>A local language model scores news sentiment. Rules combine it with market cues.</p></div><div><span class="step-number">03</span><h3>Start with the big picture</h3><p>Read the daily brief, explore the details, and make your own informed decisions.</p></div></div>
+    </div></section>
+
+    <section id="principles" class="container principles" aria-labelledby="principles-title"><div><p class="eyebrow">PERSPECTIVE, NOT PROMISES</p><h2 id="principles-title">Research tools.<br>Not a crystal ball.</h2></div><div class="principle-copy"><p>Markets are uncertain. Your tools should be honest about that. Kash Engine shows the reasoning, tracks the outcomes, and keeps the limitations in view.</p><ul><li><svg class="icon" aria-hidden="true"><use href="#check"/></svg> Explanations alongside signals</li><li><svg class="icon" aria-hidden="true"><use href="#check"/></svg> Accuracy measured against a baseline</li><li><svg class="icon" aria-hidden="true"><use href="#check"/></svg> Your judgment stays in the driver’s seat</li></ul></div></section>
+
+    <section class="container"><div class="closing-cta"><div><p class="eyebrow">MAKE ROOM FOR THE BIG PICTURE</p><h2>Your next market morning,<br>a little clearer.</h2><p>All your research signals. One place to begin.</p></div><a class="button button-primary" href="{% if user.is_authenticated %}{% url 'web:dashboard' %}{% else %}{% url 'web:login' %}{% endif %}">{% if user.is_authenticated %}Open your dashboard{% else %}Log in to Kash Engine{% endif %} <svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></a></div></section>
+  </main>
+  <footer class="container site-footer"><div class="footer-top"><a class="brand" href="{% url 'web:landing' %}"><span class="brand-mark" aria-hidden="true">k<span>.</span></span>kash<span class="brand-light">engine</span></a><span>A little less noise. A lot more context.</span><a href="#capabilities">Back to capabilities ↑</a></div><div class="footer-bottom"><p>Not financial advice. Predictions can be wrong. GMP is unofficial. Always do your own research.</p><span>Built for a more informed morning.</span></div></footer>
+</body>
+</html>

@@ -139,6 +139,13 @@ Notes:
 - There is no limit on login attempts yet. Use a long password for the login. A limit (for example `django-axes`) is a good next step.
 - Run `python manage.py check --deploy` with the prod settings after each change to the settings. It must show no issues.
 
+## Web entry points
+
+The public landing page at `/` introduces the app with capability cards, expandable details,
+an illustrative daily brief, and links to sign in. It does not display live account or market data.
+Signed-in users open the protected Today dashboard at `/dashboard/`; report, news, IPO, and other
+application pages still require login and their existing access permissions.
+
 ## Ops pages
 
 The Ops pages are for admins. They are at `/ops/`. A user with the "staff" flag can look at everything. Only a superuser can change something (start a job, end a session, turn a user on or off). Other users get a 403 page. The menu link "Ops" shows for staff users only.

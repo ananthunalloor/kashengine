@@ -26,7 +26,8 @@ register_converter(IsoDateConverter, "date")
 app_name = "web"
 
 urlpatterns = [
-    path("", views.dashboard, name="dashboard"),
+    path("", views.landing, name="landing"),
+    path("dashboard/", views.dashboard, name="dashboard"),
     path("login/", views.Login.as_view(), name="login"),
     path("logout/", views.Logout.as_view(), name="logout"),
     path("reports/", views.report_list, name="reports"),

@@ -8,6 +8,7 @@ from datetime import date
 from typing import TYPE_CHECKING, cast
 
 from django.contrib import messages
+from django.contrib.auth.decorators import login_not_required
 from django.contrib.auth.views import LoginView, LogoutView
 from django.core.paginator import Paginator
 from django.http import HttpRequest, HttpResponse
@@ -67,6 +68,12 @@ def _filter_view(request, template, partial, names, build_queryset, extra=None):
         **(extra() if extra else {}),
     }
     return render(request, partial if is_datastar(request) else template, context)
+
+
+@login_not_required
+def landing(request: HttpRequest) -> HttpResponse:
+    """Introduce the app without exposing account or market data."""
+    return render(request, "web/landing.html")
 
 
 def dashboard(request):
