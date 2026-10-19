@@ -63,6 +63,17 @@ pages remain server-rendered until their React replacements reach parity. Start 
 `pnpm --dir frontend dev` alongside Django, or use the frontend service in the dev Compose file.
 Production uses the Vite manifest and built assets included in the Python image.
 
+Today opens `/app/dashboard/`, backed by the session-only `/api/app/today` endpoint.
+It requires an active subscription when that rule is enabled, but is not a separate feature:
+Markets, News, IPOs, and Reports sections are independently authorized before their queries
+run. Disabled sections return null, not hidden data. The preview preserves the existing
+36-hour news window, ranking/deduplication, four-story/group limits, mutually exclusive IPO
+groups, configured quotes, and latest saved report. The latest outlook keeps its actual target
+date, five strongest saved cues and their trading dates, notes, component scores, and baseline/
+small-sample caveats. Reads do not fetch, score, evaluate, or send anything. Bounded summaries
+use local TanStack tables and shared metric colors; full-list links stay inside React.
+The original `/dashboard/` and login redirect remain unchanged; Account and Ops still use Django.
+
 The private `/api/app/session` endpoint supplies the current user, allowed features, subscription
 notice, and navigation. It reuses Django's navigation/access rules, accepts session cookies only,
 and rejects Authorization headers. It is available even when the public API is disabled, and

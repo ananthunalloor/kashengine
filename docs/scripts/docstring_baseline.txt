@@ -308,7 +308,6 @@ apps/web/datastar.py::signals_json
 apps/web/decorators.py::post_only.wrapper
 apps/web/queries.py::_age
 apps/web/queries.py::_day
-apps/web/queries.py::_ipo_groups
 apps/web/queries.py::company_queryset
 apps/web/queries.py::dashboard_data
 apps/web/queries.py::ipo_facts

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CompaniesIndexRouteImport } from './routes/companies.index'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DeliveryIndexRouteImport } from './routes/delivery.index'
 import { Route as IposIndexRouteImport } from './routes/ipos.index'
 import { Route as IposIdRouteImport } from './routes/ipos.$id'
@@ -27,6 +28,11 @@ const IndexRoute = IndexRouteImport.update({
 const CompaniesIndexRoute = CompaniesIndexRouteImport.update({
   id: '/companies/',
   path: '/companies/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/dashboard/',
+  path: '/dashboard/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DeliveryIndexRoute = DeliveryIndexRouteImport.update({
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/ipos/$id': typeof IposIdRoute
   '/reports/$day': typeof ReportsDayRoute
   '/companies/': typeof CompaniesIndexRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/delivery/': typeof DeliveryIndexRoute
   '/ipos/': typeof IposIndexRoute
   '/markets/': typeof MarketsIndexRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/ipos/$id': typeof IposIdRoute
   '/reports/$day': typeof ReportsDayRoute
   '/companies': typeof CompaniesIndexRoute
+  '/dashboard': typeof DashboardIndexRoute
   '/delivery': typeof DeliveryIndexRoute
   '/ipos': typeof IposIndexRoute
   '/markets': typeof MarketsIndexRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/ipos/$id': typeof IposIdRoute
   '/reports/$day': typeof ReportsDayRoute
   '/companies/': typeof CompaniesIndexRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/delivery/': typeof DeliveryIndexRoute
   '/ipos/': typeof IposIndexRoute
   '/markets/': typeof MarketsIndexRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/ipos/$id'
     | '/reports/$day'
     | '/companies/'
+    | '/dashboard/'
     | '/delivery/'
     | '/ipos/'
     | '/markets/'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/ipos/$id'
     | '/reports/$day'
     | '/companies'
+    | '/dashboard'
     | '/delivery'
     | '/ipos'
     | '/markets'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/ipos/$id'
     | '/reports/$day'
     | '/companies/'
+    | '/dashboard/'
     | '/delivery/'
     | '/ipos/'
     | '/markets/'
@@ -140,6 +152,7 @@ export interface RootRouteChildren {
   IposIdRoute: typeof IposIdRoute
   ReportsDayRoute: typeof ReportsDayRoute
   CompaniesIndexRoute: typeof CompaniesIndexRoute
+  DashboardIndexRoute: typeof DashboardIndexRoute
   DeliveryIndexRoute: typeof DeliveryIndexRoute
   IposIndexRoute: typeof IposIndexRoute
   MarketsIndexRoute: typeof MarketsIndexRoute
@@ -161,6 +174,13 @@ declare module '@tanstack/react-router' {
       path: '/companies'
       fullPath: '/companies/'
       preLoaderRoute: typeof CompaniesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/dashboard'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/delivery/': {
@@ -220,6 +240,7 @@ const rootRouteChildren: RootRouteChildren = {
   IposIdRoute: IposIdRoute,
   ReportsDayRoute: ReportsDayRoute,
   CompaniesIndexRoute: CompaniesIndexRoute,
+  DashboardIndexRoute: DashboardIndexRoute,
   DeliveryIndexRoute: DeliveryIndexRoute,
   IposIndexRoute: IposIndexRoute,
   MarketsIndexRoute: MarketsIndexRoute,

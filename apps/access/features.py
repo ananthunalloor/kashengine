@@ -4,9 +4,9 @@ A feature is a part of the web app. Every user has all features by default. An a
 a feature from one user on Ops > Users. The middleware checks the feature of each page by the
 name of its URL, so a new page cannot skip the check if its name is in this list.
 
-The pages "Today" (dashboard), the React shell, the account page, login, and logout are not
-features. Everybody who may use the site can open them. The dashboard hides the parts that belong
-to a feature that the user does not have.
+The pages "Today" (dashboard and its React preview), the React shell, the account page, login,
+and logout are not features. Everybody who may use the site can open them. The dashboard hides
+the parts that belong to a feature that the user does not have.
 """
 
 from dataclasses import dataclass

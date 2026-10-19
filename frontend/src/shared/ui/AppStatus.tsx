@@ -32,7 +32,7 @@ export function AppError({
   section = "Reports",
 }: ErrorComponentProps & {
   withinShell?: boolean;
-  section?: "Reports" | "News" | "IPOs" | "Markets" | "Companies" | "Delivery";
+  section?: "Today" | "Reports" | "News" | "IPOs" | "Markets" | "Companies" | "Delivery";
 }) {
   const router = useRouter();
   const unauthorized = error instanceof ApiError && error.kind === "unauthorized";
@@ -82,7 +82,11 @@ export function AppError({
             </Button>
           )
         )}
-        {withinShell && <Anchor href={`/app/${section.toLowerCase()}/`}>Back to {section}</Anchor>}
+        {withinShell && (
+          <Anchor href={section === "Today" ? "/app/dashboard/" : `/app/${section.toLowerCase()}/`}>
+            Back to {section}
+          </Anchor>
+        )}
         <Anchor href="/account/">Open your account</Anchor>
       </Stack>
     </Container>

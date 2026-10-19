@@ -20,6 +20,7 @@ from .markets import router as markets_router
 from .news import router as news_router
 from .reports import router as reports_router
 from .schemas import Session
+from .today import router as today_router
 
 api = NinjaAPI(
     title="Kash Engine App API",
@@ -36,6 +37,7 @@ api.add_router("", ipos_router)
 api.add_router("", markets_router)
 api.add_router("", companies_router)
 api.add_router("", delivery_router)
+api.add_router("", today_router)
 
 
 @api.exception_handler(AuthenticationError)

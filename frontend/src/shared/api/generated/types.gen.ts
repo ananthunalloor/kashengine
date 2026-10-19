@@ -1264,6 +1264,245 @@ export type DeliveryPage = {
     items: Array<DeliveryItem>;
 };
 
+/**
+ * Today
+ *
+ * Feature-filtered daily overview; unavailable sections contain no data.
+ */
+export type Today = {
+    /**
+     * Today
+     *
+     * Current date in Asia/Kolkata.
+     */
+    today: string;
+    markets: TodayMarkets | null;
+    news: TodayNews | null;
+    ipos: TodayIpos | null;
+    /**
+     * Latest report summary, without its text.
+     */
+    report: ReportSummary | null;
+};
+
+/**
+ * TodayCue
+ *
+ * One of the five saved cues with the largest weighted contribution.
+ */
+export type TodayCue = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Change
+     *
+     * Signed percentage change, or a dash.
+     */
+    change: string;
+    /**
+     * As Of
+     *
+     * Saved cue trading date, not today's date.
+     */
+    as_of: string;
+};
+
+/**
+ * TodayIpo
+ *
+ * Existing dashboard issue facts, retaining original units and group ordering.
+ */
+export type TodayIpo = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Category
+     */
+    category: string;
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Open Date
+     */
+    open_date: string | null;
+    /**
+     * Close Date
+     */
+    close_date: string | null;
+    /**
+     * Price Band
+     */
+    price_band: string;
+    /**
+     * Gmp
+     */
+    gmp: string;
+    /**
+     * Subscribed
+     */
+    subscribed: string;
+    /**
+     * Verdict
+     */
+    verdict: string;
+    /**
+     * Score
+     */
+    score: string | null;
+};
+
+/**
+ * TodayIpos
+ *
+ * Mutually exclusive dashboard groups, limited to four issues per group.
+ */
+export type TodayIpos = {
+    /**
+     * Likely Good
+     */
+    likely_good: Array<TodayIpo>;
+    /**
+     * Open Now
+     */
+    open_now: Array<TodayIpo>;
+    /**
+     * Upcoming
+     */
+    upcoming: Array<TodayIpo>;
+    /**
+     * Days Ahead
+     */
+    days_ahead: number;
+};
+
+/**
+ * TodayMarkets
+ *
+ * Markets section; omitted entirely when Markets is unavailable.
+ */
+export type TodayMarkets = {
+    outlook: TodayOutlook | null;
+    stats: MarketStats;
+    /**
+     * Quotes
+     */
+    quotes: Array<MarketQuote>;
+};
+
+/**
+ * TodayNews
+ *
+ * Existing dashboard news counts and up to four stories per sentiment.
+ */
+export type TodayNews = {
+    /**
+     * Since
+     */
+    since: string;
+    /**
+     * Articles
+     */
+    articles: number;
+    /**
+     * Positive
+     */
+    positive: number;
+    /**
+     * Negative
+     */
+    negative: number;
+    /**
+     * Good
+     */
+    good: Array<TodayStory>;
+    /**
+     * Bad
+     */
+    bad: Array<TodayStory>;
+};
+
+/**
+ * TodayOutlook
+ *
+ * The latest saved prediction, with its actual target date and evidence.
+ */
+export type TodayOutlook = {
+    /**
+     * Date
+     */
+    date: string;
+    /**
+     * Direction
+     */
+    direction: 'up' | 'down' | 'flat';
+    /**
+     * Strength
+     */
+    strength: string;
+    /**
+     * Strength Label
+     */
+    strength_label: string;
+    /**
+     * News Score
+     */
+    news_score: string;
+    /**
+     * News Articles
+     */
+    news_articles: number;
+    /**
+     * Global Score
+     */
+    global_score: string;
+    /**
+     * Cues
+     */
+    cues: Array<TodayCue>;
+    /**
+     * Notes
+     */
+    notes: Array<string>;
+};
+
+/**
+ * TodayStory
+ *
+ * A bounded, deduplicated story from the existing 36-hour news selection.
+ */
+export type TodayStory = {
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Source
+     */
+    source: string;
+    /**
+     * Url
+     */
+    url: string;
+    /**
+     * Score
+     */
+    score: string;
+    /**
+     * Reason
+     */
+    reason: string;
+    /**
+     * Companies
+     */
+    companies: Array<string>;
+};
+
 export type GetAppSessionData = {
     body?: never;
     path?: never;
@@ -1732,3 +1971,36 @@ export type GetAppDeliveryResponses = {
 };
 
 export type GetAppDeliveryResponse = GetAppDeliveryResponses[keyof GetAppDeliveryResponses];
+
+export type GetAppTodayData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/app/today';
+};
+
+export type GetAppTodayErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type GetAppTodayError = GetAppTodayErrors[keyof GetAppTodayErrors];
+
+export type GetAppTodayResponses = {
+    /**
+     * OK
+     */
+    200: Today;
+};
+
+export type GetAppTodayResponse = GetAppTodayResponses[keyof GetAppTodayResponses];

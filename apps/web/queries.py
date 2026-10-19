@@ -83,8 +83,16 @@ def prediction_history(limit: int = 30) -> list[Prediction]:
     return list(Prediction.objects.all()[:limit])
 
 
-def _ipo_groups(today: date) -> dict:
-    """The IPO lists for the dashboard. An IPO is in one list only. Dates are real dates."""
+def dashboard_ipos(today: date) -> dict:
+    """The IPO lists for the dashboard. An IPO is in one list only. Dates are real dates.
+
+    Args:
+        today: The current IST date used to select open and upcoming issues.
+
+    Returns:
+        Existing report IPO groups, deduplicated against the likely-good group, with dates
+        converted from ISO strings to date objects.
+    """
     groups = gather_ipos(today, limit=DASHBOARD_ITEMS)
     shown = {item["name"] for item in groups["likely_good"]}
     for key in ("open_now", "upcoming"):
@@ -106,7 +114,7 @@ def dashboard_data(now: datetime | None = None) -> dict:
         "outlook": outlook(Prediction.objects.order_by("-target_date").first()),
         "report": Report.objects.first(),
         "stats": accuracy_stats(),
-        "ipos": _ipo_groups(today),
+        "ipos": dashboard_ipos(today),
         "news": gather_news(now - timedelta(hours=NEWS_WINDOW_HOURS), limit=DASHBOARD_ITEMS),
         "quotes": latest_quotes(),
     }

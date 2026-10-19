@@ -432,6 +432,120 @@ export const zDeliveryPage = z.object({
 });
 
 /**
+ * TodayCue
+ *
+ * One of the five saved cues with the largest weighted contribution.
+ */
+export const zTodayCue = z.object({
+    name: z.string(),
+    change: z.string(),
+    as_of: z.iso.date()
+});
+
+/**
+ * TodayIpo
+ *
+ * Existing dashboard issue facts, retaining original units and group ordering.
+ */
+export const zTodayIpo = z.object({
+    name: z.string(),
+    category: z.string(),
+    status: z.string(),
+    open_date: z.iso.date().nullable(),
+    close_date: z.iso.date().nullable(),
+    price_band: z.string(),
+    gmp: z.string(),
+    subscribed: z.string(),
+    verdict: z.string(),
+    score: z.string().nullable()
+});
+
+/**
+ * TodayIpos
+ *
+ * Mutually exclusive dashboard groups, limited to four issues per group.
+ */
+export const zTodayIpos = z.object({
+    likely_good: z.array(zTodayIpo),
+    open_now: z.array(zTodayIpo),
+    upcoming: z.array(zTodayIpo),
+    days_ahead: z.int()
+});
+
+/**
+ * TodayOutlook
+ *
+ * The latest saved prediction, with its actual target date and evidence.
+ */
+export const zTodayOutlook = z.object({
+    date: z.iso.date(),
+    direction: z.enum([
+        'up',
+        'down',
+        'flat'
+    ]),
+    strength: z.string(),
+    strength_label: z.string(),
+    news_score: z.string(),
+    news_articles: z.int(),
+    global_score: z.string(),
+    cues: z.array(zTodayCue),
+    notes: z.array(z.string())
+});
+
+/**
+ * TodayMarkets
+ *
+ * Markets section; omitted entirely when Markets is unavailable.
+ */
+export const zTodayMarkets = z.object({
+    outlook: zTodayOutlook.nullable(),
+    stats: zMarketStats,
+    quotes: z.array(zMarketQuote)
+});
+
+/**
+ * TodayStory
+ *
+ * A bounded, deduplicated story from the existing 36-hour news selection.
+ */
+export const zTodayStory = z.object({
+    title: z.string(),
+    source: z.string(),
+    url: z.string(),
+    score: z.string(),
+    reason: z.string(),
+    companies: z.array(z.string())
+});
+
+/**
+ * TodayNews
+ *
+ * Existing dashboard news counts and up to four stories per sentiment.
+ */
+export const zTodayNews = z.object({
+    since: z.iso.datetime(),
+    articles: z.int(),
+    positive: z.int(),
+    negative: z.int(),
+    good: z.array(zTodayStory),
+    bad: z.array(zTodayStory)
+});
+
+/**
+ * Today
+ *
+ * Feature-filtered daily overview; unavailable sections contain no data.
+ */
+export const zToday = z.object({
+    today: z.iso.date(),
+    markets: zTodayMarkets.nullable(),
+    news: zTodayNews.nullable(),
+    ipos: zTodayIpos.nullable(),
+    report: zReportSummary.nullable()
+});
+
+/**
  * OK
  */
 export const zGetAppSessionResponse = zSession;
@@ -518,3 +632,8 @@ export const zListAppCompaniesResponse = zCompanyPage;
  * OK
  */
 export const zGetAppDeliveryResponse = zDeliveryPage;
+
+/**
+ * OK
+ */
+export const zGetAppTodayResponse = zToday;

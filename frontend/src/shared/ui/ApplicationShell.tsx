@@ -145,6 +145,7 @@ export function ApplicationShell({
           />
           {session.navigation.map((item) => {
             const migrated = [
+              "/dashboard/",
               "/reports/",
               "/news/",
               "/ipos/",

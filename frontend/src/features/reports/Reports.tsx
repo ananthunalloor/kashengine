@@ -7,16 +7,10 @@ import type { ReportDetail, ReportPage, ReportSummary } from "../../shared/api/g
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { DataTable } from "../../shared/ui/DataTable";
 import { MetricValue, StrengthLegend } from "../../shared/ui/MetricValue";
+import { formatReportDate } from "../../shared/ui/formatReportDate";
 import { reportSearchSchema } from "../../shared/api/reports";
 import type { ReportSearch } from "../../shared/api/reports";
 
-const reportDate = new Intl.DateTimeFormat("en-IN", {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-  timeZone: "Asia/Kolkata",
-});
 const deliveryDate = new Intl.DateTimeFormat("en-IN", {
   day: "numeric",
   month: "short",
@@ -24,10 +18,6 @@ const deliveryDate = new Intl.DateTimeFormat("en-IN", {
   minute: "2-digit",
   timeZone: "Asia/Kolkata",
 });
-
-export function formatReportDate(day: string) {
-  return reportDate.format(new Date(`${day}T00:00:00+05:30`));
-}
 
 export function ReportOutlook({ report }: { report: ReportSummary }) {
   if (!report.prediction) return null;

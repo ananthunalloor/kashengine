@@ -683,6 +683,25 @@ h2 {
   overflow-wrap: anywhere;
 }
 
+.today-outlook {
+  background: linear-gradient(115deg, var(--brand-surface), var(--brand-soft));
+}
+
+.today-direction {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.today-direction > .report-outlook {
+  font-size: 2rem;
+}
+
+.today-cues {
+  margin-top: 1.5rem;
+}
+
 #market-record + p {
   max-width: 65rem;
 }

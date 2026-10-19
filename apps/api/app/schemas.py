@@ -222,6 +222,92 @@ class Markets(Schema):
     history: list[MarketPrediction] = Field(description="Newest 30 predictions, newest first.")
 
 
+class TodayCue(Schema):
+    """One of the five saved cues with the largest weighted contribution."""
+
+    name: str
+    change: str = Field(description="Signed percentage change, or a dash.")
+    as_of: dt.date = Field(description="Saved cue trading date, not today's date.")
+
+
+class TodayOutlook(Schema):
+    """The latest saved prediction, with its actual target date and evidence."""
+
+    date: dt.date
+    direction: Literal["up", "down", "flat"]
+    strength: str
+    strength_label: str
+    news_score: str
+    news_articles: int
+    global_score: str
+    cues: list[TodayCue]
+    notes: list[str]
+
+
+class TodayMarkets(Schema):
+    """Markets section; omitted entirely when Markets is unavailable."""
+
+    outlook: TodayOutlook | None
+    stats: MarketStats
+    quotes: list[MarketQuote]
+
+
+class TodayStory(Schema):
+    """A bounded, deduplicated story from the existing 36-hour news selection."""
+
+    title: str
+    source: str
+    url: str
+    score: str
+    reason: str
+    companies: list[str]
+
+
+class TodayNews(Schema):
+    """Existing dashboard news counts and up to four stories per sentiment."""
+
+    since: datetime
+    articles: int
+    positive: int
+    negative: int
+    good: list[TodayStory]
+    bad: list[TodayStory]
+
+
+class TodayIpo(Schema):
+    """Existing dashboard issue facts, retaining original units and group ordering."""
+
+    name: str
+    category: str
+    status: str
+    open_date: dt.date | None
+    close_date: dt.date | None
+    price_band: str
+    gmp: str
+    subscribed: str
+    verdict: str
+    score: str | None
+
+
+class TodayIpos(Schema):
+    """Mutually exclusive dashboard groups, limited to four issues per group."""
+
+    likely_good: list[TodayIpo]
+    open_now: list[TodayIpo]
+    upcoming: list[TodayIpo]
+    days_ahead: int
+
+
+class Today(Schema):
+    """Feature-filtered daily overview; unavailable sections contain no data."""
+
+    today: dt.date = Field(description="Current date in Asia/Kolkata.")
+    markets: TodayMarkets | None
+    news: TodayNews | None
+    ipos: TodayIpos | None
+    report: ReportSummary | None = Field(description="Latest report summary, without its text.")
+
+
 class CompanyItem(Schema):
     """Company directory display fields, without scraped data or internal aliases."""
 

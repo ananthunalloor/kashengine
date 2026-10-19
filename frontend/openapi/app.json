@@ -943,6 +943,64 @@
           }
         ]
       }
+    },
+    "/api/app/today": {
+      "get": {
+        "operationId": "get_app_today",
+        "summary": "Read the daily overview for the current account's available features",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Today"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Gate each section before reading it; never refresh or evaluate saved data.\n\nArgs:\n    request: The authenticated browser request with feature/subscription access.\n\nReturns:\n    Saved dashboard sections; unavailable features contain no data.\n\nRaises:\n    ApiError: When the current subscription does not permit dashboard access.",
+        "tags": [
+          "Today"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -2487,6 +2545,400 @@
           "items"
         ],
         "title": "DeliveryPage",
+        "type": "object"
+      },
+      "Today": {
+        "description": "Feature-filtered daily overview; unavailable sections contain no data.",
+        "properties": {
+          "today": {
+            "description": "Current date in Asia/Kolkata.",
+            "format": "date",
+            "title": "Today",
+            "type": "string"
+          },
+          "markets": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TodayMarkets"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "news": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TodayNews"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ipos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TodayIpos"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReportSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Latest report summary, without its text."
+          }
+        },
+        "required": [
+          "today",
+          "markets",
+          "news",
+          "ipos",
+          "report"
+        ],
+        "title": "Today",
+        "type": "object"
+      },
+      "TodayCue": {
+        "description": "One of the five saved cues with the largest weighted contribution.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "change": {
+            "description": "Signed percentage change, or a dash.",
+            "title": "Change",
+            "type": "string"
+          },
+          "as_of": {
+            "description": "Saved cue trading date, not today's date.",
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "change",
+          "as_of"
+        ],
+        "title": "TodayCue",
+        "type": "object"
+      },
+      "TodayIpo": {
+        "description": "Existing dashboard issue facts, retaining original units and group ordering.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "open_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open Date"
+          },
+          "close_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Close Date"
+          },
+          "price_band": {
+            "title": "Price Band",
+            "type": "string"
+          },
+          "gmp": {
+            "title": "Gmp",
+            "type": "string"
+          },
+          "subscribed": {
+            "title": "Subscribed",
+            "type": "string"
+          },
+          "verdict": {
+            "title": "Verdict",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          }
+        },
+        "required": [
+          "name",
+          "category",
+          "status",
+          "open_date",
+          "close_date",
+          "price_band",
+          "gmp",
+          "subscribed",
+          "verdict",
+          "score"
+        ],
+        "title": "TodayIpo",
+        "type": "object"
+      },
+      "TodayIpos": {
+        "description": "Mutually exclusive dashboard groups, limited to four issues per group.",
+        "properties": {
+          "likely_good": {
+            "items": {
+              "$ref": "#/components/schemas/TodayIpo"
+            },
+            "title": "Likely Good",
+            "type": "array"
+          },
+          "open_now": {
+            "items": {
+              "$ref": "#/components/schemas/TodayIpo"
+            },
+            "title": "Open Now",
+            "type": "array"
+          },
+          "upcoming": {
+            "items": {
+              "$ref": "#/components/schemas/TodayIpo"
+            },
+            "title": "Upcoming",
+            "type": "array"
+          },
+          "days_ahead": {
+            "title": "Days Ahead",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "likely_good",
+          "open_now",
+          "upcoming",
+          "days_ahead"
+        ],
+        "title": "TodayIpos",
+        "type": "object"
+      },
+      "TodayMarkets": {
+        "description": "Markets section; omitted entirely when Markets is unavailable.",
+        "properties": {
+          "outlook": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TodayOutlook"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stats": {
+            "$ref": "#/components/schemas/MarketStats"
+          },
+          "quotes": {
+            "items": {
+              "$ref": "#/components/schemas/MarketQuote"
+            },
+            "title": "Quotes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "outlook",
+          "stats",
+          "quotes"
+        ],
+        "title": "TodayMarkets",
+        "type": "object"
+      },
+      "TodayNews": {
+        "description": "Existing dashboard news counts and up to four stories per sentiment.",
+        "properties": {
+          "since": {
+            "format": "date-time",
+            "title": "Since",
+            "type": "string"
+          },
+          "articles": {
+            "title": "Articles",
+            "type": "integer"
+          },
+          "positive": {
+            "title": "Positive",
+            "type": "integer"
+          },
+          "negative": {
+            "title": "Negative",
+            "type": "integer"
+          },
+          "good": {
+            "items": {
+              "$ref": "#/components/schemas/TodayStory"
+            },
+            "title": "Good",
+            "type": "array"
+          },
+          "bad": {
+            "items": {
+              "$ref": "#/components/schemas/TodayStory"
+            },
+            "title": "Bad",
+            "type": "array"
+          }
+        },
+        "required": [
+          "since",
+          "articles",
+          "positive",
+          "negative",
+          "good",
+          "bad"
+        ],
+        "title": "TodayNews",
+        "type": "object"
+      },
+      "TodayOutlook": {
+        "description": "The latest saved prediction, with its actual target date and evidence.",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "up",
+              "down",
+              "flat"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "strength": {
+            "title": "Strength",
+            "type": "string"
+          },
+          "strength_label": {
+            "title": "Strength Label",
+            "type": "string"
+          },
+          "news_score": {
+            "title": "News Score",
+            "type": "string"
+          },
+          "news_articles": {
+            "title": "News Articles",
+            "type": "integer"
+          },
+          "global_score": {
+            "title": "Global Score",
+            "type": "string"
+          },
+          "cues": {
+            "items": {
+              "$ref": "#/components/schemas/TodayCue"
+            },
+            "title": "Cues",
+            "type": "array"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "date",
+          "direction",
+          "strength",
+          "strength_label",
+          "news_score",
+          "news_articles",
+          "global_score",
+          "cues",
+          "notes"
+        ],
+        "title": "TodayOutlook",
+        "type": "object"
+      },
+      "TodayStory": {
+        "description": "A bounded, deduplicated story from the existing 36-hour news selection.",
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "companies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Companies",
+            "type": "array"
+          }
+        },
+        "required": [
+          "title",
+          "source",
+          "url",
+          "score",
+          "reason",
+          "companies"
+        ],
+        "title": "TodayStory",
         "type": "object"
       }
     },

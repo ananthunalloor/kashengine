@@ -324,7 +324,7 @@ cards through `static/css/brand-tokens.css`. Light mode is the default; a saved 
 is retained. Theme changes use static CSS and do not weaken the Content-Security-Policy.
 
 The React workspace uses React Icons (Lucide set) for navigation and controls, with a shared
-TanStack Table for Reports, News, IPOs, Companies, Markets, Delivery, and detail-page tables.
+TanStack Table for Today summaries, Reports, News, IPOs, Companies, Markets, Delivery, and detail-page tables.
 Sortable headers, accessible search/filters, row-size selection, and first/previous/next/last
 pagination share one responsive design. Wide tables scroll within their panel, not the page.
 Reports, News, IPOs, and Companies search/filter/sort the full dataset on the server before
@@ -334,6 +334,14 @@ filtering. Page sizes are bounded to 1-100, with the configured web size used by
 Markets history and Delivery deliberately remain limited to the latest 30 predictions and 50
 attempts; their local search, filters, sorting, and pagination are labeled with those limits.
 No table fetches external data, recalculates scores, sends messages, or exposes recipient fields.
+
+Today now has a React preview at `/app/dashboard/`, with a feature-filtered private endpoint at
+`/api/app/today`. It shows the latest saved outlook and its actual target date, strength and
+component scores, up to five saved cues, accuracy/baseline warnings, the strongest stories from
+the last 36 hours, grouped IPOs, saved closes, and the latest report link. Disabled sections are
+excluded by the server. News and IPO groups retain their existing four-item limits; the tables
+search/filter/sort those bounded summaries, with links to the full React lists.
+The original `/dashboard/` and login landing behavior remain unchanged.
 
 The other existing pages remain Django-rendered during the incremental migration. Run
 `pnpm --dir frontend build` to create the production bundle and

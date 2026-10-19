@@ -16,6 +16,39 @@ from .schemas import Markets
 router = Router(tags=["Markets"], auth=AppSession("markets"))
 
 
+def market_stats() -> dict:
+    """Format saved accuracy statistics for the private Markets and Today pages.
+
+    Returns:
+        Existing evaluation statistics with formatted accuracy and baseline percentages.
+    """
+    stats = accuracy_stats()
+    return {
+        **stats,
+        "accuracy": percent(stats["accuracy"]),
+        "baseline_accuracy": percent(stats["baseline_accuracy"]),
+    }
+
+
+def market_quotes() -> list[dict]:
+    """Format the latest configured closes without fetching new prices.
+
+    Returns:
+        Instrument names, actual trading dates, closes and signed percentage changes.
+    """
+    return [
+        {
+            "name": quote["name"],
+            "day": quote["day"],
+            "close": floatformat(quote["close"], 2),
+            "change": f"{signed(quote['change_pct'], 2)}%"
+            if quote["change_pct"] is not None
+            else "–",
+        }
+        for quote in latest_quotes()
+    ]
+
+
 @router.get(
     "/markets",
     response={200: Markets, **ERRORS},
@@ -24,24 +57,9 @@ router = Router(tags=["Markets"], auth=AppSession("markets"))
 )
 def get_markets(request: HttpRequest):
     """Read saved results without fetching quotes or evaluating predictions."""
-    stats = accuracy_stats()
     return {
-        "stats": {
-            **stats,
-            "accuracy": percent(stats["accuracy"]),
-            "baseline_accuracy": percent(stats["baseline_accuracy"]),
-        },
-        "quotes": [
-            {
-                "name": quote["name"],
-                "day": quote["day"],
-                "close": floatformat(quote["close"], 2),
-                "change": f"{signed(quote['change_pct'], 2)}%"
-                if quote["change_pct"] is not None
-                else "–",
-            }
-            for quote in latest_quotes()
-        ],
+        "stats": market_stats(),
+        "quotes": market_quotes(),
         "history": [
             {
                 "date": prediction.target_date,
