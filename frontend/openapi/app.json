@@ -74,8 +74,63 @@
             "name": "page",
             "schema": {
               "default": 1,
+              "description": "Requested page; out-of-range values are clamped.",
               "title": "Page",
               "type": "integer"
+            },
+            "required": false,
+            "description": "Requested page; out-of-range values are clamped."
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rows per page, 1-100.",
+              "title": "Page Size"
+            },
+            "required": false,
+            "description": "Rows per page, 1-100."
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "default": "",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "schema": {
+              "default": "",
+              "pattern": "^(|up|down|flat|unknown)$",
+              "title": "Direction",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "default": "",
+              "pattern": "^(|-?(date|prediction|strength))$",
+              "title": "Sort",
+              "type": "string"
             },
             "required": false
           }
@@ -239,6 +294,38 @@
         "parameters": [
           {
             "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "Requested page; out-of-range values are clamped.",
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Requested page; out-of-range values are clamped."
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rows per page, 1-100.",
+              "title": "Page Size"
+            },
+            "required": false,
+            "description": "Rows per page, 1-100."
+          },
+          {
+            "in": "query",
             "name": "q",
             "schema": {
               "default": "",
@@ -278,15 +365,14 @@
           },
           {
             "in": "query",
-            "name": "page",
+            "name": "sort",
             "schema": {
-              "default": 1,
-              "description": "Requested page; out-of-range values are clamped.",
-              "title": "Page",
-              "type": "integer"
+              "default": "",
+              "pattern": "^(|-?(title|source|published_at|score|relevance))$",
+              "title": "Sort",
+              "type": "string"
             },
-            "required": false,
-            "description": "Requested page; out-of-range values are clamped."
+            "required": false
           }
         ],
         "responses": {
@@ -359,6 +445,38 @@
         "parameters": [
           {
             "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "Requested page; out-of-range values are clamped.",
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Requested page; out-of-range values are clamped."
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rows per page, 1-100.",
+              "title": "Page Size"
+            },
+            "required": false,
+            "description": "Rows per page, 1-100."
+          },
+          {
+            "in": "query",
             "name": "q",
             "schema": {
               "default": "",
@@ -411,15 +529,14 @@
           },
           {
             "in": "query",
-            "name": "page",
+            "name": "sort",
             "schema": {
-              "default": 1,
-              "description": "Requested page; out-of-range values are clamped.",
-              "title": "Page",
-              "type": "integer"
+              "default": "",
+              "pattern": "^(|-?(name|category|status|dates|price_band|gmp|subscribed|listing_gain|score|verdict))$",
+              "title": "Sort",
+              "type": "string"
             },
-            "required": false,
-            "description": "Requested page; out-of-range values are clamped."
+            "required": false
           }
         ],
         "responses": {
@@ -638,6 +755,38 @@
         "parameters": [
           {
             "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "Requested page; out-of-range values are clamped.",
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Requested page; out-of-range values are clamped."
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rows per page, 1-100.",
+              "title": "Page Size"
+            },
+            "required": false,
+            "description": "Rows per page, 1-100."
+          },
+          {
+            "in": "query",
             "name": "q",
             "schema": {
               "default": "",
@@ -651,15 +800,27 @@
           },
           {
             "in": "query",
-            "name": "page",
+            "name": "sector",
             "schema": {
-              "default": 1,
-              "description": "Requested page; out-of-range values are clamped.",
-              "title": "Page",
-              "type": "integer"
+              "default": "",
+              "description": "Exact sector, or all.",
+              "maxLength": 100,
+              "title": "Sector",
+              "type": "string"
             },
             "required": false,
-            "description": "Requested page; out-of-range values are clamped."
+            "description": "Exact sector, or all."
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "default": "",
+              "pattern": "^(|-?(name|symbol|sector|last_updated))$",
+              "title": "Sort",
+              "type": "string"
+            },
+            "required": false
           }
         ],
         "responses": {
@@ -982,6 +1143,51 @@
         "title": "Problem",
         "type": "object"
       },
+      "ReportFilters": {
+        "description": "Search saved report text/date and filter the outlook before pagination.",
+        "properties": {
+          "page": {
+            "default": 1,
+            "description": "Requested page; out-of-range values are clamped.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rows per page, 1-100.",
+            "title": "Page Size"
+          },
+          "q": {
+            "default": "",
+            "maxLength": 100,
+            "title": "Q",
+            "type": "string"
+          },
+          "direction": {
+            "default": "",
+            "pattern": "^(|up|down|flat|unknown)$",
+            "title": "Direction",
+            "type": "string"
+          },
+          "sort": {
+            "default": "",
+            "pattern": "^(|-?(date|prediction|strength))$",
+            "title": "Sort",
+            "type": "string"
+          }
+        },
+        "title": "ReportFilters",
+        "type": "object"
+      },
       "ReportPage": {
         "description": "A page of daily reports in newest-first order.",
         "properties": {
@@ -1006,6 +1212,12 @@
           "total": {
             "description": "Total number of reports.",
             "title": "Total",
+            "type": "integer"
+          },
+          "page_size": {
+            "default": 25,
+            "description": "Resolved number of rows per page.",
+            "title": "Page Size",
             "type": "integer"
           }
         },
@@ -1187,6 +1399,26 @@
       "NewsFilters": {
         "description": "Bound search input to the same lengths as the existing web filters.",
         "properties": {
+          "page": {
+            "default": 1,
+            "description": "Requested page; out-of-range values are clamped.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rows per page, 1-100.",
+            "title": "Page Size"
+          },
           "q": {
             "default": "",
             "description": "Headline or summary search text.",
@@ -1208,11 +1440,11 @@
             "title": "Sentiment",
             "type": "string"
           },
-          "page": {
-            "default": 1,
-            "description": "Requested page; out-of-range values are clamped.",
-            "title": "Page",
-            "type": "integer"
+          "sort": {
+            "default": "",
+            "pattern": "^(|-?(title|source|published_at|score|relevance))$",
+            "title": "Sort",
+            "type": "string"
           }
         },
         "title": "NewsFilters",
@@ -1380,6 +1612,12 @@
             },
             "title": "Sentiments",
             "type": "array"
+          },
+          "page_size": {
+            "default": 25,
+            "description": "Resolved number of rows per page.",
+            "title": "Page Size",
+            "type": "integer"
           }
         },
         "required": [
@@ -1396,6 +1634,26 @@
       "IpoFilters": {
         "description": "Bound IPO search and validate the filters supported by the existing pages.",
         "properties": {
+          "page": {
+            "default": 1,
+            "description": "Requested page; out-of-range values are clamped.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rows per page, 1-100.",
+            "title": "Page Size"
+          },
           "q": {
             "default": "",
             "description": "IPO name search text.",
@@ -1424,11 +1682,11 @@
             "title": "Category",
             "type": "string"
           },
-          "page": {
-            "default": 1,
-            "description": "Requested page; out-of-range values are clamped.",
-            "title": "Page",
-            "type": "integer"
+          "sort": {
+            "default": "",
+            "pattern": "^(|-?(name|category|status|dates|price_band|gmp|subscribed|listing_gain|score|verdict))$",
+            "title": "Sort",
+            "type": "string"
           }
         },
         "title": "IpoFilters",
@@ -1504,6 +1762,12 @@
             },
             "title": "Categories",
             "type": "array"
+          },
+          "page_size": {
+            "default": 25,
+            "description": "Resolved number of rows per page.",
+            "title": "Page Size",
+            "type": "integer"
           }
         },
         "required": [
@@ -1987,6 +2251,26 @@
       "CompanyFilters": {
         "description": "Bound directory search and validate pagination.",
         "properties": {
+          "page": {
+            "default": 1,
+            "description": "Requested page; out-of-range values are clamped.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rows per page, 1-100.",
+            "title": "Page Size"
+          },
           "q": {
             "default": "",
             "description": "Name, symbol, or sector search.",
@@ -1994,11 +2278,18 @@
             "title": "Q",
             "type": "string"
           },
-          "page": {
-            "default": 1,
-            "description": "Requested page; out-of-range values are clamped.",
-            "title": "Page",
-            "type": "integer"
+          "sector": {
+            "default": "",
+            "description": "Exact sector, or all.",
+            "maxLength": 100,
+            "title": "Sector",
+            "type": "string"
+          },
+          "sort": {
+            "default": "",
+            "pattern": "^(|-?(name|symbol|sector|last_updated))$",
+            "title": "Sort",
+            "type": "string"
           }
         },
         "title": "CompanyFilters",
@@ -2082,6 +2373,20 @@
             "description": "Total matching companies.",
             "title": "Total",
             "type": "integer"
+          },
+          "page_size": {
+            "default": 25,
+            "description": "Resolved number of rows per page.",
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "sectors": {
+            "description": "All nonempty sectors, sorted.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sectors",
+            "type": "array"
           }
         },
         "required": [

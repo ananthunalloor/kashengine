@@ -2,7 +2,7 @@
 
 from django.core.paginator import Paginator
 from django.http import HttpRequest
-from ninja import Field, Query, Router, Schema
+from ninja import Field, Query, Router
 
 from apps.api.v1.common import ERRORS_WITH_VALIDATION
 from apps.reports.builder import STORY_MIN_SCORE
@@ -12,11 +12,12 @@ from apps.web.queries import SENTIMENT_FILTERS, news_queryset, news_sources
 
 from .auth import AppSession
 from .schemas import NewsPage
+from .tables import TableFilters, ordered
 
 router = Router(tags=["News"], auth=AppSession("news"))
 
 
-class NewsFilters(Schema):
+class NewsFilters(TableFilters):
     """Bound search input to the same lengths as the existing web filters."""
 
     q: str = Field(default="", max_length=100, description="Headline or summary search text.")
@@ -26,7 +27,7 @@ class NewsFilters(Schema):
         pattern="^(|positive|negative|neutral|unscored)$",
         description="Sentiment category, or empty for all.",
     )
-    page: int = Field(default=1, description="Requested page; out-of-range values are clamped.")
+    sort: str = Field(default="", pattern="^(|-?(title|source|published_at|score|relevance))$")
 
 
 @router.get(
@@ -47,7 +48,20 @@ def list_news(request: HttpRequest, filters: Query[NewsFilters]):
         .defer("text", "summary")
         .order_by("-published_at", "-fetched_at", "-pk")
     )
-    result = Paginator(articles, conf.WEB_PAGE_SIZE).get_page(max(1, filters.page))
+    articles = ordered(
+        articles,
+        filters.sort,
+        {
+            "title": "title",
+            "source": "source",
+            "published_at": "published_at",
+            "score": "sentiment_score",
+            "relevance": "relevance",
+        },
+    )
+    result = Paginator(articles, filters.page_size or conf.WEB_PAGE_SIZE).get_page(
+        max(1, filters.page)
+    )
     items = []
     for article in result.object_list:
         score = article.sentiment_score
@@ -81,6 +95,7 @@ def list_news(request: HttpRequest, filters: Query[NewsFilters]):
         "page": result.number,
         "pages": result.paginator.num_pages,
         "total": result.paginator.count,
+        "page_size": result.paginator.per_page,
         "sources": news_sources(),
         "sentiments": [{"value": key, "label": label} for key, label in SENTIMENT_FILTERS.items()],
     }

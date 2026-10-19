@@ -44,7 +44,13 @@ def test_report_pagination_and_empty_state(client, member, settings):
     settings.WEB_PAGE_SIZE = 2
     conf.invalidate()
     client.force_login(member)
-    assert client.get(URL).json() == {"items": [], "page": 1, "pages": 1, "total": 0}
+    assert client.get(URL).json() == {
+        "items": [],
+        "page": 1,
+        "pages": 1,
+        "total": 0,
+        "page_size": 2,
+    }
     for offset in range(3):
         Report.objects.create(date=DAY + timedelta(days=offset), text="Report")
 

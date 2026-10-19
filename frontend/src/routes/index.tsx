@@ -1,20 +1,62 @@
 import { Stack, Text, Title } from "@mantine/core";
 import { createFileRoute } from "@tanstack/react-router";
+import { LuArrowUpRight, LuChartNoAxesCombined, LuSparkles } from "react-icons/lu";
 
 import { usePageTitle } from "../shared/ui/usePageTitle";
 
 function AppHome() {
   usePageTitle("React preview");
+  const { session } = Route.useRouteContext();
+  const previews = new Set([
+    "/reports/",
+    "/news/",
+    "/ipos/",
+    "/markets/",
+    "/companies/",
+    "/delivery/",
+  ]);
   return (
-    <Stack gap="md" py="xl">
-      <Title order={1} tabIndex={-1}>
-        React preview
-      </Title>
-      <Text maw={640}>
-        Your account's available sections are in the navigation. Reports, News, IPOs, Markets,
-        Companies, and Delivery now have React previews. Other sections still open the existing
-        pages while their React replacements are built and checked for parity.
-      </Text>
+    <Stack gap="xl">
+      <header>
+        <Text className="app-eyebrow" mb="sm">
+          <LuSparkles aria-hidden="true" /> Your intelligence workspace
+        </Text>
+        <Title order={1} tabIndex={-1}>
+          React preview
+        </Title>
+        <Text maw={640} c="dimmed" mt="sm">
+          Your account's available sections are in the navigation. Reports, News, IPOs, Markets,
+          Companies, and Delivery now have React previews. Other sections still open the existing
+          pages while their React replacements are built and checked for parity.
+        </Text>
+      </header>
+      <div className="workspace-welcome">
+        <div>
+          <span className="workspace-icon">
+            <LuChartNoAxesCombined aria-hidden="true" />
+          </span>
+          <Title order={2} mt="md">
+            Less noise. More perspective.
+          </Title>
+          <Text c="dimmed" mt="sm">
+            Explore the stories, companies, and signals shaping the market. Your available sections
+            are ready below.
+          </Text>
+        </div>
+        <span className="welcome-decoration" aria-hidden="true">
+          <LuChartNoAxesCombined />
+        </span>
+      </div>
+      <div className="workspace-links">
+        {session.navigation
+          .filter((item) => previews.has(item.url))
+          .map((item) => (
+            <a key={item.url} href={`/app${item.url}`}>
+              <span>{item.label}</span>
+              <LuArrowUpRight aria-hidden="true" />
+            </a>
+          ))}
+      </div>
     </Stack>
   );
 }

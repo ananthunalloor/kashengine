@@ -3,9 +3,10 @@
 from datetime import date
 
 from django.core.paginator import Paginator
+from django.db.models import Q
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
-from ninja import Router
+from ninja import Field, Query, Router
 
 from apps.api.v1.common import ERRORS_WITH_NOT_FOUND, ERRORS_WITH_VALIDATION
 from apps.delivery.models import DeliveryLog
@@ -16,8 +17,17 @@ from apps.siteconfig import conf
 
 from .auth import AppSession
 from .schemas import ReportDetail, ReportPage, ReportSummary
+from .tables import TableFilters, ordered
 
 router = Router(tags=["Reports"], auth=AppSession("reports"))
+
+
+class ReportFilters(TableFilters):
+    """Search saved report text/date and filter the outlook before pagination."""
+
+    q: str = Field(default="", max_length=100)
+    direction: str = Field(default="", pattern="^(|up|down|flat|unknown)$")
+    sort: str = Field(default="", pattern="^(|-?(date|prediction|strength))$")
 
 
 def summary(report: Report) -> ReportSummary:
@@ -42,16 +52,25 @@ def summary(report: Report) -> ReportSummary:
     operation_id="list_app_reports",
     summary="List daily reports for the browser",
 )
-def list_reports(request: HttpRequest, page: int = 1):
+def list_reports(request: HttpRequest, filters: Query[ReportFilters]):
     """Return a bounded page using the existing web page size and date ordering."""
-    result = Paginator(Report.objects.defer("text", "data"), conf.WEB_PAGE_SIZE).get_page(
-        max(1, page)
+    rows = Report.objects.defer("text", "data")
+    if filters.q.strip():
+        rows = rows.filter(
+            Q(text__icontains=filters.q.strip()) | Q(date__icontains=filters.q.strip())
+        )
+    if filters.direction:
+        rows = rows.filter(prediction="" if filters.direction == "unknown" else filters.direction)
+    rows = ordered(
+        rows, filters.sort, {"date": "date", "prediction": "prediction", "strength": "confidence"}
     )
+    result = Paginator(rows, filters.page_size or conf.WEB_PAGE_SIZE).get_page(max(1, filters.page))
     return {
         "items": [summary(report) for report in result.object_list],
         "page": result.number,
         "pages": result.paginator.num_pages,
         "total": result.paginator.count,
+        "page_size": result.paginator.per_page,
     }
 
 

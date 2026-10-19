@@ -1,8 +1,10 @@
 import { Anchor, Stack, Text, Title } from "@mantine/core";
 import { Link } from "@tanstack/react-router";
+import { LuSend } from "react-icons/lu";
 
 import type { DeliveryPage } from "../../shared/api/generated/types.gen";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
+import { DataTable } from "../../shared/ui/DataTable";
 
 const attemptDate = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
@@ -33,6 +35,7 @@ export function Delivery({
     <Stack gap="xl">
       <header>
         <Text className="app-eyebrow" mb="xs">
+          <LuSend aria-hidden="true" />
           From the report to your inbox
         </Text>
         <Title order={1} tabIndex={-1}>
@@ -64,54 +67,84 @@ export function Delivery({
         <Text c="dimmed" size="sm" mt="sm" mb="md">
           The newest 50 send attempts. Times are in IST.
         </Text>
-        {data.items.length ? (
-          <ul className="news-list">
-            {data.items.map((attempt) => {
-              const label = attempt.report_date
-                ? reportDate.format(new Date(`${attempt.report_date}T00:00:00+05:30`))
-                : "Test";
-              return (
-                <li key={attempt.id} className="news-card">
-                  <div className="news-card-heading">
-                    <Title order={3} size="h4">
-                      <time dateTime={attempt.created_at}>
-                        {attemptDate.format(new Date(attempt.created_at))} IST
-                      </time>
-                    </Title>
-                    <span className="report-status" data-tone={attempt.status}>
-                      {attempt.status_label}
-                    </span>
-                  </div>
-                  <dl className="delivery-facts">
-                    <div>
-                      <dt>Channel</dt>
-                      <dd>{attempt.channel}</dd>
-                    </div>
-                    <div>
-                      <dt>Report</dt>
-                      <dd>
-                        {attempt.report_date && canReadReports ? (
-                          <Link to="/reports/$day/" params={{ day: attempt.report_date }}>
-                            {label}
-                          </Link>
-                        ) : (
-                          label
-                        )}
-                      </dd>
-                    </div>
-                  </dl>
-                  {isStaff && attempt.error && (
-                    <Text className="report-diagnostic" size="sm" mt="sm">
-                      {attempt.error}
-                    </Text>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <Text c="dimmed">Nothing was sent yet.</Text>
-        )}
+        <DataTable
+          data={data.items}
+          label="Delivery attempts (latest 50)"
+          initialSort={[{ id: "created_at", desc: true }]}
+          filters={[
+            { label: "Status", value: (row) => row.status_label, options: ["Sent", "Failed"] },
+            { label: "Channel", value: (row) => row.channel, options: ["Telegram", "Email"] },
+          ]}
+          columns={[
+            {
+              id: "created_at",
+              label: "Time (IST)",
+              value: (row) => row.created_at,
+              render: (row) => (
+                <time dateTime={row.created_at}>
+                  {attemptDate.format(new Date(row.created_at))} IST
+                </time>
+              ),
+            },
+            {
+              id: "channel",
+              label: "Channel",
+              value: (row) => row.channel,
+              render: (row) => <span className="symbol-chip">{row.channel}</span>,
+            },
+            {
+              id: "report",
+              label: "Report",
+              value: (row) => row.report_date ?? "Test",
+              render: (row) => {
+                const label = row.report_date
+                  ? reportDate.format(new Date(`${row.report_date}T00:00:00+05:30`))
+                  : "Test";
+                return row.report_date && canReadReports ? (
+                  <Link to="/reports/$day/" params={{ day: row.report_date }}>
+                    {label}
+                  </Link>
+                ) : (
+                  label
+                );
+              },
+            },
+            {
+              id: "status",
+              label: "Result",
+              value: (row) => row.status_label,
+              render: (row) => (
+                <span className="report-status" data-tone={row.status}>
+                  {row.status_label}
+                </span>
+              ),
+            },
+            ...(isStaff
+              ? [
+                  {
+                    id: "error",
+                    label: "Diagnostics",
+                    value: (row: DeliveryPage["items"][number]) => row.error,
+                    render: (row: DeliveryPage["items"][number]) =>
+                      row.error ? (
+                        <Text className="report-diagnostic" size="sm">
+                          {row.error}
+                        </Text>
+                      ) : (
+                        "Not available"
+                      ),
+                  },
+                ]
+              : []),
+          ]}
+          empty={
+            <Text c="dimmed">
+              {data.items.length
+                ? "No attempts match. Clear the search or filters."
+                : "Nothing was sent yet."}
+            </Text>
+          }
+        />
       </section>
     </Stack>
   );

@@ -64,6 +64,19 @@ export const zProblem = z.object({
 });
 
 /**
+ * ReportFilters
+ *
+ * Search saved report text/date and filter the outlook before pagination.
+ */
+export const zReportFilters = z.object({
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
+    q: z.string().max(100).optional().default(''),
+    direction: z.string().regex(/^(|up|down|flat|unknown)$/).optional().default(''),
+    sort: z.string().regex(/^(|-?(date|prediction|strength))$/).optional().default('')
+});
+
+/**
  * ReportSummary
  *
  * A report's date and outlook, without the full report text.
@@ -83,7 +96,8 @@ export const zReportPage = z.object({
     items: z.array(zReportSummary),
     page: z.int(),
     pages: z.int(),
-    total: z.int()
+    total: z.int(),
+    page_size: z.int().optional().default(25)
 });
 
 /**
@@ -121,10 +135,12 @@ export const zReportDetail = z.object({
  * Bound search input to the same lengths as the existing web filters.
  */
 export const zNewsFilters = z.object({
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
     q: z.string().max(100).optional().default(''),
     source: z.string().max(100).optional().default(''),
     sentiment: z.string().regex(/^(|positive|negative|neutral|unscored)$/).optional().default(''),
-    page: z.int().optional().default(1)
+    sort: z.string().regex(/^(|-?(title|source|published_at|score|relevance))$/).optional().default('')
 });
 
 /**
@@ -171,7 +187,8 @@ export const zNewsPage = z.object({
     pages: z.int(),
     total: z.int(),
     sources: z.array(z.string()),
-    sentiments: z.array(zNewsFilterOption)
+    sentiments: z.array(zNewsFilterOption),
+    page_size: z.int().optional().default(25)
 });
 
 /**
@@ -180,11 +197,13 @@ export const zNewsPage = z.object({
  * Bound IPO search and validate the filters supported by the existing pages.
  */
 export const zIpoFilters = z.object({
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
     q: z.string().max(100).optional().default(''),
     status: z.string().regex(/^(|open|upcoming|closed|listed|all)$/).optional().default(''),
     verdict: z.string().regex(/^(|good|mixed|weak|unknown)$/).optional().default(''),
     category: z.string().regex(/^(|mainboard|sme)$/).optional().default(''),
-    page: z.int().optional().default(1)
+    sort: z.string().regex(/^(|-?(name|category|status|dates|price_band|gmp|subscribed|listing_gain|score|verdict))$/).optional().default('')
 });
 
 /**
@@ -228,7 +247,8 @@ export const zIpoPage = z.object({
     total: z.int(),
     statuses: z.array(zIpoFilterOption),
     verdicts: z.array(zIpoFilterOption),
-    categories: z.array(zIpoFilterOption)
+    categories: z.array(zIpoFilterOption),
+    page_size: z.int().optional().default(25)
 });
 
 /**
@@ -351,8 +371,11 @@ export const zMarkets = z.object({
  * Bound directory search and validate pagination.
  */
 export const zCompanyFilters = z.object({
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
     q: z.string().max(100).optional().default(''),
-    page: z.int().optional().default(1)
+    sector: z.string().max(100).optional().default(''),
+    sort: z.string().regex(/^(|-?(name|symbol|sector|last_updated))$/).optional().default('')
 });
 
 /**
@@ -378,7 +401,9 @@ export const zCompanyPage = z.object({
     items: z.array(zCompanyItem),
     page: z.int(),
     pages: z.int(),
-    total: z.int()
+    total: z.int(),
+    page_size: z.int().optional().default(25),
+    sectors: z.array(z.string()).optional()
 });
 
 /**
@@ -412,7 +437,11 @@ export const zDeliveryPage = z.object({
 export const zGetAppSessionResponse = zSession;
 
 export const zListAppReportsQuery = z.object({
-    page: z.int().optional().default(1)
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
+    q: z.string().max(100).optional().default(''),
+    direction: z.string().regex(/^(|up|down|flat|unknown)$/).optional().default(''),
+    sort: z.string().regex(/^(|-?(date|prediction|strength))$/).optional().default('')
 });
 
 /**
@@ -430,10 +459,12 @@ export const zGetAppReportPath = z.object({
 export const zGetAppReportResponse = zReportDetail;
 
 export const zListAppNewsQuery = z.object({
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
     q: z.string().max(100).optional().default(''),
     source: z.string().max(100).optional().default(''),
     sentiment: z.string().regex(/^(|positive|negative|neutral|unscored)$/).optional().default(''),
-    page: z.int().optional().default(1)
+    sort: z.string().regex(/^(|-?(title|source|published_at|score|relevance))$/).optional().default('')
 });
 
 /**
@@ -442,11 +473,13 @@ export const zListAppNewsQuery = z.object({
 export const zListAppNewsResponse = zNewsPage;
 
 export const zListAppIposQuery = z.object({
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
     q: z.string().max(100).optional().default(''),
     status: z.string().regex(/^(|open|upcoming|closed|listed|all)$/).optional().default(''),
     verdict: z.string().regex(/^(|good|mixed|weak|unknown)$/).optional().default(''),
     category: z.string().regex(/^(|mainboard|sme)$/).optional().default(''),
-    page: z.int().optional().default(1)
+    sort: z.string().regex(/^(|-?(name|category|status|dates|price_band|gmp|subscribed|listing_gain|score|verdict))$/).optional().default('')
 });
 
 /**
@@ -469,8 +502,11 @@ export const zGetAppIpoResponse = zIpoDetail;
 export const zGetAppMarketsResponse = zMarkets;
 
 export const zListAppCompaniesQuery = z.object({
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
     q: z.string().max(100).optional().default(''),
-    page: z.int().optional().default(1)
+    sector: z.string().max(100).optional().default(''),
+    sort: z.string().regex(/^(|-?(name|symbol|sector|last_updated))$/).optional().default('')
 });
 
 /**

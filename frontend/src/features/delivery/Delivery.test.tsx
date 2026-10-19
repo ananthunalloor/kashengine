@@ -109,10 +109,10 @@ it("shows configuration count, channels, test/report attempts and IST times", as
   expect(await screen.findByRole("heading", { level: 1, name: "Delivery" })).toHaveFocus();
   expect(document.title).toBe("Delivery | Kash Engine");
   expect(screen.getByText("The report goes to 2 Telegram chats.")).toBeInTheDocument();
-  expect(screen.getByText("Email")).toBeInTheDocument();
-  expect(screen.getByText("Telegram")).toBeInTheDocument();
-  expect(screen.getByText("Failed")).toBeInTheDocument();
-  expect(screen.getByText("Sent")).toBeInTheDocument();
+  expect(screen.getByRole("cell", { name: "Email" })).toBeInTheDocument();
+  expect(screen.getByRole("cell", { name: "Telegram" })).toBeInTheDocument();
+  expect(screen.getByRole("cell", { name: "Failed" })).toBeInTheDocument();
+  expect(screen.getByRole("cell", { name: "Sent" })).toBeInTheDocument();
   expect(screen.getByText("Test")).toBeInTheDocument();
   expect(screen.getByText(/17 Oct 2026, 04:30 am IST/i)).toBeInTheDocument();
   expect(screen.queryByText("<b>Plain diagnostic</b>")).not.toBeInTheDocument();

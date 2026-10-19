@@ -13,9 +13,39 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { useRef } from "react";
 import type { ReactNode } from "react";
+import {
+  LuActivity,
+  LuArrowUpRight,
+  LuBuilding2,
+  LuChartNoAxesCombined,
+  LuCircleUserRound,
+  LuFileText,
+  LuHouse,
+  LuLayoutDashboard,
+  LuLogOut,
+  LuMoon,
+  LuNewspaper,
+  LuSend,
+  LuSettings2,
+  LuShieldCheck,
+  LuSparkles,
+  LuSun,
+} from "react-icons/lu";
+import type { IconType } from "react-icons";
 
 import { csrfToken } from "../api/client";
 import type { Session } from "../api/generated/types.gen";
+
+const navigationIcons: Record<string, IconType> = {
+  "/dashboard/": LuHouse,
+  "/reports/": LuFileText,
+  "/news/": LuNewspaper,
+  "/ipos/": LuActivity,
+  "/markets/": LuChartNoAxesCombined,
+  "/companies/": LuBuilding2,
+  "/delivery/": LuSend,
+  "/account/": LuCircleUserRound,
+};
 
 export function ApplicationShell({
   session,
@@ -58,6 +88,10 @@ export function ApplicationShell({
             </a>
           </Group>
           <Group gap="xs">
+            <span className="workspace-badge app-desktop-only">
+              <LuShieldCheck aria-hidden="true" />
+              Private workspace
+            </span>
             <Text size="sm" className="app-desktop-only">
               {session.username}
             </Text>
@@ -66,6 +100,13 @@ export function ApplicationShell({
               size="compact-sm"
               onClick={() => setColorScheme(colorScheme === "dark" ? "light" : "dark")}
               aria-label="Toggle color scheme"
+              leftSection={
+                colorScheme === "dark" ? (
+                  <LuSun aria-hidden="true" />
+                ) : (
+                  <LuMoon aria-hidden="true" />
+                )
+              }
             >
               {colorScheme === "dark" ? "Light theme" : "Dark theme"}
             </Button>
@@ -83,6 +124,16 @@ export function ApplicationShell({
           }
         }}
       >
+        <div className="workspace-card">
+          <span className="workspace-icon">
+            <LuSparkles aria-hidden="true" />
+          </span>
+          <div>
+            <strong>Your workspace</strong>
+            <span>Market intelligence</span>
+          </div>
+        </div>
+        <p className="navigation-label">Workspace</p>
         <nav aria-label="Main">
           <NavLink
             href="/app/"
@@ -90,6 +141,7 @@ export function ApplicationShell({
             active={pathname === "/app/"}
             aria-current={pathname === "/app/" ? "page" : undefined}
             onClick={close}
+            leftSection={<LuLayoutDashboard aria-hidden="true" />}
           />
           {session.navigation.map((item) => {
             const migrated = [
@@ -102,6 +154,7 @@ export function ApplicationShell({
             ].includes(item.url);
             const url = migrated ? `/app${item.url}` : item.url;
             const active = pathname === url || (migrated && pathname.startsWith(url));
+            const Icon = navigationIcons[item.url] ?? LuSettings2;
             return (
               <NavLink
                 key={item.url}
@@ -110,17 +163,28 @@ export function ApplicationShell({
                 active={active}
                 aria-current={active ? "page" : undefined}
                 onClick={close}
+                leftSection={<Icon aria-hidden="true" />}
+                rightSection={!migrated && <LuArrowUpRight aria-hidden="true" />}
               />
             );
           })}
         </nav>
         <Stack mt="auto" p="xs" gap="xs">
+          <span className="account-avatar" aria-hidden="true">
+            {session.username.slice(0, 2).toUpperCase()}
+          </span>
           <Text size="sm" c="dimmed">
             Signed in as {session.username}
           </Text>
           <form action={session.logout_url} method="post">
             <input type="hidden" name="csrfmiddlewaretoken" value={token ?? ""} />
-            <Button type="submit" variant="default" fullWidth disabled={!token}>
+            <Button
+              type="submit"
+              variant="default"
+              fullWidth
+              disabled={!token}
+              leftSection={<LuLogOut aria-hidden="true" />}
+            >
               Log out
             </Button>
           </form>

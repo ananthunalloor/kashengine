@@ -1,10 +1,12 @@
 """Private IPO previews using the existing query, fact, and score-formatting helpers."""
 
 from django.core.paginator import Paginator
+from django.db.models import FloatField
+from django.db.models.functions import Cast, NullIf
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from ninja import Field, Query, Router, Schema
+from ninja import Field, Query, Router
 
 from apps.api.v1.common import ERRORS_WITH_NOT_FOUND, ERRORS_WITH_VALIDATION
 from apps.ipos.models import Ipo
@@ -15,11 +17,12 @@ from apps.web.templatetags.web_extras import rupees, signed, times
 
 from .auth import AppSession
 from .schemas import IpoDetail, IpoPage, IpoSummary
+from .tables import TableFilters, ordered
 
 router = Router(tags=["IPOs"], auth=AppSession("ipos"))
 
 
-class IpoFilters(Schema):
+class IpoFilters(TableFilters):
     """Bound IPO search and validate the filters supported by the existing pages."""
 
     q: str = Field(default="", max_length=100, description="IPO name search text.")
@@ -38,7 +41,10 @@ class IpoFilters(Schema):
         pattern="^(|mainboard|sme)$",
         description="Board, or all.",
     )
-    page: int = Field(default=1, description="Requested page; out-of-range values are clamped.")
+    sort: str = Field(
+        default="",
+        pattern="^(|-?(name|category|status|dates|price_band|gmp|subscribed|listing_gain|score|verdict))$",
+    )
 
 
 def summary(ipo: Ipo) -> IpoSummary:
@@ -78,16 +84,38 @@ def summary(ipo: Ipo) -> IpoSummary:
 )
 def list_ipos(request: HttpRequest, filters: Query[IpoFilters]):
     """Preserve Active ordering, listed history, board and verdict filtering."""
-    values = filters.model_dump(exclude={"page"})
+    values = filters.model_dump(exclude={"page", "page_size", "sort"})
     values["q"] = values["q"].strip()
-    page = Paginator(ipo_queryset(values).defer("score_inputs"), conf.WEB_PAGE_SIZE).get_page(
-        max(1, filters.page)
+    rows = ipo_queryset(values).defer("score_inputs")
+    if filters.sort.removeprefix("-") == "gmp":
+        rows = rows.alias(
+            gmp_percentage=Cast("gmp", FloatField())
+            * 100.0
+            / NullIf(Cast("price_band_high", FloatField()), 0.0)
+        )
+    rows = ordered(
+        rows,
+        filters.sort,
+        {
+            "name": "name",
+            "category": "category",
+            "status": "status",
+            "dates": "open_date",
+            "price_band": "price_band_high",
+            "gmp": "gmp_percentage",
+            "subscribed": "subscription_times",
+            "listing_gain": "listing_gain_pct",
+            "score": "score",
+            "verdict": "verdict",
+        },
     )
+    page = Paginator(rows, filters.page_size or conf.WEB_PAGE_SIZE).get_page(max(1, filters.page))
     return {
         "items": [summary(ipo) for ipo in page.object_list],
         "page": page.number,
         "pages": page.paginator.num_pages,
         "total": page.paginator.count,
+        "page_size": page.paginator.per_page,
         "statuses": [{"value": key, "label": label} for key, label in IPO_TABS.items()],
         "verdicts": [{"value": key, "label": label} for key, label in VERDICT_FILTERS.items()],
         "categories": [{"value": key, "label": label} for key, label in CATEGORY_FILTERS.items()],

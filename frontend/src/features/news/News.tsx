@@ -1,12 +1,14 @@
 import { Anchor, Button, Group, Stack, Text, Title } from "@mantine/core";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { LuNewspaper, LuSlidersHorizontal, LuX } from "react-icons/lu";
 
 import type { NewsPage } from "../../shared/api/generated/types.gen";
 import type { NewsSearch } from "../../shared/api/news";
 import { newsSearchSchema } from "../../shared/api/news";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { sourceLink } from "../../shared/ui/sourceLink";
+import { DataTable } from "../../shared/ui/DataTable";
 
 const publishedDate = new Intl.DateTimeFormat("en-IN", {
   day: "numeric",
@@ -36,7 +38,7 @@ export function News({
   useEffect(() => {
     setQuery(filters.q);
     return () => clearTimeout(timer.current);
-  }, [filters.q, filters.source, filters.sentiment, filters.page]);
+  }, [filters.q, filters.source, filters.sentiment, filters.page, filters.sort, filters.page_size]);
 
   function apply(values: NewsSearch, replace = false) {
     clearTimeout(timer.current);
@@ -47,6 +49,7 @@ export function News({
     <Stack gap="xl">
       <header>
         <Text className="app-eyebrow" mb="xs">
+          <LuNewspaper aria-hidden="true" />
           The stories behind the signal
         </Text>
         <Title order={1} tabIndex={-1}>
@@ -128,13 +131,16 @@ export function News({
           </select>
         </div>
         <Group gap="xs">
-          <Button type="submit">Apply</Button>
+          <Button type="submit" leftSection={<LuSlidersHorizontal aria-hidden="true" />}>
+            Apply
+          </Button>
           <Button
             type="button"
             variant="default"
+            leftSection={<LuX aria-hidden="true" />}
             onClick={() => {
               setQuery("");
-              apply({ q: "", sentiment: "", source: "", page: 1 });
+              apply({ ...filters, q: "", sentiment: "", source: "", page: 1 });
               searchInput.current?.focus();
             }}
           >
@@ -146,14 +152,19 @@ export function News({
         <Text size="sm" c="dimmed" role="status" mb="md">
           {data.total} article{data.total === 1 ? "" : "s"}
         </Text>
-        {data.items.length ? (
-          <ul className="news-list">
-            {data.items.map((article) => {
-              const href = sourceLink(article.url);
-              return (
-                <li key={article.id} className="news-card">
-                  <div className="news-card-heading">
-                    <Title order={2} size="h4">
+        <DataTable
+          data={data.items}
+          label="News"
+          columns={[
+            {
+              id: "title",
+              label: "Article & context",
+              value: (row) => row.title,
+              render: (article) => {
+                const href = sourceLink(article.url);
+                return (
+                  <div className="table-story">
+                    <div className="table-primary">
                       {href ? (
                         <a href={href} target="_blank" rel="noopener noreferrer">
                           {article.title}
@@ -162,51 +173,80 @@ export function News({
                       ) : (
                         article.title
                       )}
-                    </Title>
-                    {article.score !== null && (
-                      <span
-                        className="news-score"
-                        data-sentiment={article.sentiment}
-                        aria-label={`Sentiment ${article.score}`}
-                      >
-                        {article.score}
-                      </span>
+                    </div>
+                    {!href && (
+                      <Text size="xs" c="dimmed">
+                        Source link unavailable.
+                      </Text>
+                    )}
+                    {article.score === null && (
+                      <Text size="sm" c="dimmed">
+                        Not scored yet
+                      </Text>
+                    )}
+                    {article.reason && (
+                      <Text size="sm" mt="sm">
+                        {article.reason}
+                      </Text>
+                    )}
+                    {!!article.companies.length && (
+                      <Text size="sm" c="dimmed" mt="xs">
+                        {article.companies.join(", ")}
+                      </Text>
                     )}
                   </div>
-                  {!href && (
-                    <Text size="xs" c="dimmed">
-                      Source link unavailable.
-                    </Text>
-                  )}
-                  <Text size="sm" c="dimmed" mt="xs">
-                    {article.source}
-                    {article.published_at && (
-                      <>
-                        ,{" "}
-                        <time dateTime={article.published_at}>
-                          {publishedDate.format(new Date(article.published_at))} IST
-                        </time>
-                      </>
-                    )}
-                    {article.relevance !== null && `, relevance ${article.relevance}`}
-                    {article.score === null && " · Not scored yet"}
-                  </Text>
-                  {article.reason && (
-                    <Text size="sm" mt="sm">
-                      {article.reason}
-                    </Text>
-                  )}
-                  {!!article.companies.length && (
-                    <Text size="sm" c="dimmed" mt="xs">
-                      {article.companies.join(", ")}
-                    </Text>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <div className="news-card">
+                );
+              },
+            },
+            { id: "source", label: "Source", value: (row) => row.source },
+            {
+              id: "published_at",
+              label: "Published",
+              value: (row) => row.published_at,
+              render: (row) =>
+                row.published_at ? (
+                  <time dateTime={row.published_at}>
+                    {publishedDate.format(new Date(row.published_at))} IST
+                  </time>
+                ) : (
+                  "Not available"
+                ),
+            },
+            {
+              id: "score",
+              label: "Sentiment",
+              value: (row) => row.score,
+              render: (row) =>
+                row.score === null ? (
+                  "Not scored"
+                ) : (
+                  <span
+                    className="news-score"
+                    data-sentiment={row.sentiment}
+                    aria-label={`Sentiment ${row.score}`}
+                  >
+                    {row.score}
+                  </span>
+                ),
+            },
+            { id: "relevance", label: "Relevance", value: (row) => row.relevance },
+          ]}
+          server={{
+            page: data.page,
+            pages: data.pages,
+            total: data.total,
+            pageSize: data.page_size ?? 25,
+            sort: filters.sort,
+            onSort: (sort) => apply({ ...filters, q: query, sort }),
+            onPageSize: (page_size) => apply({ ...filters, q: query, page_size }),
+            paginationLabel: "News pages",
+            pageLink: (page, label) => (
+              <Link to="/news/" search={{ ...filters, page }}>
+                {label}
+              </Link>
+            ),
+          }}
+          empty={
             <Text c="dimmed">
               No article matches. Change the search, or clear the filters.
               {isStaff && !filtered && (
@@ -217,30 +257,9 @@ export function News({
                 </>
               )}
             </Text>
-          </div>
-        )}
+          }
+        />
       </section>
-      {data.pages > 1 && (
-        <nav aria-label="News pages" className="report-pagination">
-          <span>
-            {data.page > 1 && (
-              <Link to="/news/" search={{ ...filters, page: data.page - 1 }}>
-                Newer
-              </Link>
-            )}
-          </span>
-          <Text size="sm" c="dimmed">
-            Page {data.page} of {data.pages}
-          </Text>
-          <span>
-            {data.page < data.pages && (
-              <Link to="/news/" search={{ ...filters, page: data.page + 1 }}>
-                Older
-              </Link>
-            )}
-          </span>
-        </nav>
-      )}
     </Stack>
   );
 }

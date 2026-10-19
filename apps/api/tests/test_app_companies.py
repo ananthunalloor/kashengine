@@ -72,7 +72,14 @@ def test_search_trimming_and_page_clamping(client, member, companies, settings):
     assert client.get(URL, {"page": -1}).json()["page"] == 1
     assert client.get(URL, {"q": " ALPHA "}).json()["total"] == 1
     empty = client.get(URL, {"q": "unmatched", "page": 99}).json()
-    assert empty == {"items": [], "total": 0, "page": 1, "pages": 1}
+    assert empty == {
+        "items": [],
+        "total": 0,
+        "page": 1,
+        "pages": 1,
+        "page_size": 1,
+        "sectors": ["Finance", "Manufacturing", "Services"],
+    }
 
 
 @pytest.mark.parametrize("params", [{"q": "x" * 101}, {"page": "invalid"}, {"page": "1.5"}])

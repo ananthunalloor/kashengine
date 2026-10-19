@@ -100,13 +100,14 @@ it("loads typed reports and links to real preview routes and the existing pages"
   expect(await screen.findByRole("heading", { name: "Reports", level: 1 })).toBeInTheDocument();
   const link = screen.getByRole("link", { name: /Wednesday, 7 October 2026/ });
   expect(link).toHaveAttribute("href", "/app/reports/2026-10-07/");
-  expect(screen.getByText("Up, strength 7.3/10")).toBeInTheDocument();
+  expect(screen.getByRole("cell", { name: "Up" })).toBeInTheDocument();
+  expect(screen.getByRole("cell", { name: "7.3/10" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Compare with/ })).toHaveAttribute("href", "/reports/");
-  expect(screen.getByRole("link", { name: "Older" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "Next" })).toHaveAttribute(
     "href",
     "/app/reports/?page=2",
   );
-  expect(screen.queryByRole("link", { name: "Newer" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Previous" })).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
   expect(screen.getAllByRole("main")).toHaveLength(1);
   expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
@@ -118,7 +119,7 @@ it("navigates to a report without leaving the React application", async () => {
   expect(await screen.findByRole("article", { name: "Report text" })).toHaveTextContent("<script>");
   await waitFor(() => expect(router.state.location.pathname).toBe("/reports/2026-10-07/"));
   expect(document.querySelector("article script")).toBeNull();
-  expect(screen.getByText("Failed")).toBeInTheDocument();
+  expect(screen.getByRole("cell", { name: "Failed" })).toBeInTheDocument();
   expect(screen.getByText(/8:30 am IST/i)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Older:/ })).toHaveAttribute(
     "href",
@@ -135,12 +136,45 @@ it("navigates to a report without leaving the React application", async () => {
 it("supports bookmarked pagination and omits out-of-range controls", async () => {
   await showReports({ path: "/app/reports/?page=2", list: { ...page, page: 2 } });
   expect(await screen.findByText("Page 2 of 2")).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Newer" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "Previous" })).toHaveAttribute(
     "href",
     "/app/reports/?page=1",
   );
-  expect(screen.queryByRole("link", { name: "Older" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Next" })).not.toBeInTheDocument();
   expect(fetch).toHaveBeenCalledWith("/api/app/reports?page=2", expect.anything());
+});
+
+it("searches and filters reports before paging and preserves server sorting", async () => {
+  const router = await showReports({ path: "/app/reports/?page=2&sort=-strength&page_size=10" });
+  const search = await screen.findByRole("searchbox", { name: "Search reports" });
+  search.focus();
+  fireEvent.change(search, { target: { value: "banks" } });
+  await waitFor(() =>
+    expect(router.state.location.search).toMatchObject({
+      q: "banks",
+      page: 1,
+      sort: "-strength",
+      page_size: 10,
+    }),
+  );
+  expect(search).toHaveFocus();
+  fireEvent.change(screen.getByRole("combobox", { name: "Outlook" }), {
+    target: { value: "down" },
+  });
+  await waitFor(() => expect(router.state.location.search.direction).toBe("down"));
+  fireEvent.click(screen.getByRole("button", { name: "Report date" }));
+  await waitFor(() => expect(router.state.location.search.sort).toBe("date"));
+  fireEvent.change(screen.getByRole("combobox", { name: "Rows per page for Reports" }), {
+    target: { value: "50" },
+  });
+  await waitFor(() =>
+    expect(router.state.location.search).toMatchObject({
+      page_size: 50,
+      page: 1,
+      direction: "down",
+      q: "banks",
+    }),
+  );
 });
 
 it.each([false, true])("renders the empty state with staff hint = %s", async (staff) => {

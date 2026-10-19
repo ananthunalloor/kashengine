@@ -122,12 +122,12 @@ it("shows saved track record, baseline, sample warning, closes and all result st
   expect(screen.getByText("1 of 1 right")).toBeInTheDocument();
   expect(screen.getByText("24500.00")).toBeInTheDocument();
   for (const state of ["Right", "Wrong", "No session", "Waiting"])
-    expect(screen.getByText(state, { exact: true })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: state })).toBeInTheDocument();
   expect(screen.getByText("6.4/10")).toBeInTheDocument();
   expect(screen.getByText(/not a probability/)).toBeInTheDocument();
   expect(screen.getAllByText("16 Oct 2026")).toHaveLength(2);
-  expect(screen.getByRole("heading", { name: "<b>Nifty 50</b>" })).toBeInTheDocument();
-  expect(document.querySelector(".market-quotes b")).toBeNull();
+  expect(screen.getByRole("cell", { name: "<b>Nifty 50</b>" })).toBeInTheDocument();
+  expect(document.querySelector(".data-table b")).toBeNull();
   expect(screen.getAllByRole("main")).toHaveLength(1);
   expect(screen.getByRole("link", { name: /Compare with/ })).toHaveAttribute("href", "/markets/");
   expect(screen.getByRole("link", { name: "Markets", current: "page" })).toHaveAttribute(

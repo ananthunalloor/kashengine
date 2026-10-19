@@ -1,7 +1,10 @@
 import { Anchor, Stack, Text, Title } from "@mantine/core";
+import { LuChartNoAxesCombined } from "react-icons/lu";
 
 import type { Markets as MarketsData } from "../../shared/api/generated/types.gen";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
+import { DataTable } from "../../shared/ui/DataTable";
+import { displayNumber } from "../../shared/ui/displayNumber";
 
 const tradingDate = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
@@ -31,6 +34,7 @@ export function Markets({ data, isStaff }: { data: MarketsData; isStaff: boolean
     <Stack gap="xl">
       <header>
         <Text className="app-eyebrow" mb="xs">
+          <LuChartNoAxesCombined aria-hidden="true" />
           The market, in context
         </Text>
         <Title order={1} tabIndex={-1}>
@@ -90,31 +94,36 @@ export function Markets({ data, isStaff }: { data: MarketsData; isStaff: boolean
           Last close
         </Title>
         {quotes.length ? (
-          <ul className="market-quotes">
-            {quotes.map((quote, index) => (
-              <li className="news-card" key={index}>
-                <Title order={3} size="h4">
-                  {quote.name}
-                </Title>
-                <dl className="market-summary">
-                  <div>
-                    <dt>Close</dt>
-                    <dd>{quote.close}</dd>
-                  </div>
-                  <div>
-                    <dt>Change</dt>
-                    <dd>{quote.change}</dd>
-                  </div>
-                  <div>
-                    <dt>Trading day</dt>
-                    <dd>
-                      <MarketDate day={quote.day} />
-                    </dd>
-                  </div>
-                </dl>
-              </li>
-            ))}
-          </ul>
+          <DataTable
+            data={quotes}
+            label="Saved market closes"
+            columns={[
+              {
+                id: "name",
+                label: "Instrument",
+                value: (row) => row.name,
+                render: (row) => <span className="table-primary">{row.name}</span>,
+              },
+              {
+                id: "close",
+                label: "Close",
+                value: (row) => displayNumber(row.close),
+                render: (row) => row.close,
+              },
+              {
+                id: "change",
+                label: "Change",
+                value: (row) => displayNumber(row.change),
+                render: (row) => row.change,
+              },
+              {
+                id: "day",
+                label: "Trading day",
+                value: (row) => row.day,
+                render: (row) => <MarketDate day={row.day} />,
+              },
+            ]}
+          />
         ) : (
           <Text c="dimmed">No saved closes yet.</Text>
         )}
@@ -129,51 +138,74 @@ export function Markets({ data, isStaff }: { data: MarketsData; isStaff: boolean
           is not a probability of being right.
         </Text>
         {history.length ? (
-          <ul className="news-list">
-            {history.map((prediction) => (
-              <li className="news-card" key={prediction.date}>
-                <div className="news-card-heading">
-                  <Title order={3} size="h4">
-                    <MarketDate day={prediction.date} />
-                  </Title>
+          <DataTable
+            data={history}
+            label="Predictions (latest 30)"
+            initialSort={[{ id: "date", desc: true }]}
+            filters={[
+              {
+                label: "Result",
+                value: (row) => row.result,
+                options: ["Right", "Wrong", "No session", "Waiting"],
+              },
+              {
+                label: "Direction",
+                value: (row) => row.direction,
+                options: ["up", "down", "flat"],
+              },
+            ]}
+            columns={[
+              {
+                id: "date",
+                label: "Day",
+                value: (row) => row.date,
+                render: (row) => <MarketDate day={row.date} />,
+              },
+              {
+                id: "direction",
+                label: "We said",
+                value: (row) => row.direction,
+                render: (row) => <Direction value={row.direction} />,
+              },
+              {
+                id: "strength",
+                label: "Strength",
+                value: (row) => displayNumber(row.strength),
+                render: (row) => row.strength,
+              },
+              {
+                id: "actual_direction",
+                label: "It was",
+                value: (row) => row.actual_direction,
+                render: (row) => <Direction value={row.actual_direction} />,
+              },
+              {
+                id: "change",
+                label: "Change",
+                value: (row) => displayNumber(row.change),
+                render: (row) => row.change,
+              },
+              {
+                id: "result",
+                label: "Result",
+                value: (row) => row.result,
+                render: (row) => (
                   <span
                     className="report-status"
                     data-tone={
-                      prediction.result === "Right"
+                      row.result === "Right"
                         ? "sent"
-                        : prediction.result === "Wrong"
+                        : row.result === "Wrong"
                           ? "failed"
                           : undefined
                     }
                   >
-                    {prediction.result}
+                    {row.result}
                   </span>
-                </div>
-                <dl className="market-summary market-prediction">
-                  <div>
-                    <dt>We said</dt>
-                    <dd>
-                      <Direction value={prediction.direction} />
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Strength</dt>
-                    <dd>{prediction.strength}</dd>
-                  </div>
-                  <div>
-                    <dt>It was</dt>
-                    <dd>
-                      <Direction value={prediction.actual_direction} />
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Change</dt>
-                    <dd>{prediction.change}</dd>
-                  </div>
-                </dl>
-              </li>
-            ))}
-          </ul>
+                ),
+              },
+            ]}
+          />
         ) : (
           <Text c="dimmed">
             No prediction yet.

@@ -97,9 +97,9 @@ it("shows scored articles, plain-text explanations, source links and IST publica
   );
   expect(screen.getByText("7.3/10")).toHaveAttribute("data-sentiment", "positive");
   expect(screen.getByText(/8:30 am IST/i)).toBeInTheDocument();
-  expect(screen.getByText(/relevance 8.2\/10/)).toBeInTheDocument();
+  expect(screen.getByRole("cell", { name: "8.2/10" })).toBeInTheDocument();
   expect(screen.getByText("<b>Strong earnings</b>")).toBeInTheDocument();
-  expect(document.querySelector(".news-card b")).toBeNull();
+  expect(document.querySelector(".data-table b")).toBeNull();
   expect(screen.getByText("Example Bank")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "News", current: "page" })).toHaveAttribute(
     "href",
@@ -118,15 +118,15 @@ it("restores bookmarked filters and preserves them in pagination links", async (
   expect(await screen.findByRole("searchbox", { name: "Search" })).toHaveValue("bank");
   expect(screen.getByRole("combobox", { name: "Score" })).toHaveValue("positive");
   expect(screen.getByRole("combobox", { name: "Source" })).toHaveValue("Mint");
-  expect(screen.getByRole("link", { name: "Newer" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "Previous" })).toHaveAttribute(
     "href",
     expect.stringContaining("q=bank"),
   );
-  expect(screen.getByRole("link", { name: "Newer" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "Previous" })).toHaveAttribute(
     "href",
     expect.stringContaining("sentiment=positive"),
   );
-  expect(screen.queryByRole("link", { name: "Older" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Next" })).not.toBeInTheDocument();
   expect(fetch).toHaveBeenCalledWith(
     "/api/app/news?q=bank&source=Mint&sentiment=positive&page=2",
     expect.anything(),
@@ -209,7 +209,9 @@ it("handles missing scores and dates without inventing values or unsafe links", 
       ],
     },
   });
-  expect(await screen.findByText(/Not scored yet/, { selector: "p" })).toBeInTheDocument();
+  await waitFor(() =>
+    expect(screen.getByText(/Not scored yet/, { selector: "p" })).toBeInTheDocument(),
+  );
   expect(screen.queryByRole("link", { name: /Banks grow/ })).not.toBeInTheDocument();
   expect(screen.getByText("Source link unavailable.")).toBeInTheDocument();
   expect(screen.queryByText("7.3/10")).not.toBeInTheDocument();
@@ -231,4 +233,28 @@ it("rejects contract drift visibly", async () => {
     expect(screen.getByRole("heading", { name: "Unable to load this page" })).toBeInTheDocument(),
   );
   expect(screen.getByText(/The news response does not match/)).toBeInTheDocument();
+});
+
+it("uses server sorting and page size without losing news filters", async () => {
+  const router = await showNews({
+    path: "/app/news/?q=bank&source=Mint&sentiment=positive&page=2",
+  });
+  fireEvent.click(await screen.findByRole("button", { name: "Sentiment" }));
+  await waitFor(() =>
+    expect(router.state.location.search).toMatchObject({
+      sort: "score",
+      q: "bank",
+      source: "Mint",
+      sentiment: "positive",
+      page: 1,
+    }),
+  );
+  fireEvent.change(screen.getByRole("combobox", { name: "Rows per page for News" }), {
+    target: { value: "50" },
+  });
+  await waitFor(() => expect(router.state.location.search.page_size).toBe(50));
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/app/news?q=bank&source=Mint&sentiment=positive&page=1&sort=score&page_size=50",
+    expect.anything(),
+  );
 });

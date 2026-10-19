@@ -175,6 +175,38 @@ export type Problem = {
 };
 
 /**
+ * ReportFilters
+ *
+ * Search saved report text/date and filter the outlook before pagination.
+ */
+export type ReportFilters = {
+    /**
+     * Page
+     *
+     * Requested page; out-of-range values are clamped.
+     */
+    page?: number;
+    /**
+     * Page Size
+     *
+     * Rows per page, 1-100.
+     */
+    page_size?: number | null;
+    /**
+     * Q
+     */
+    q?: string;
+    /**
+     * Direction
+     */
+    direction?: string;
+    /**
+     * Sort
+     */
+    sort?: string;
+};
+
+/**
  * ReportPage
  *
  * A page of daily reports in newest-first order.
@@ -204,6 +236,12 @@ export type ReportPage = {
      * Total number of reports.
      */
     total: number;
+    /**
+     * Page Size
+     *
+     * Resolved number of rows per page.
+     */
+    page_size?: number;
 };
 
 /**
@@ -333,6 +371,18 @@ export type ReportDetail = {
  */
 export type NewsFilters = {
     /**
+     * Page
+     *
+     * Requested page; out-of-range values are clamped.
+     */
+    page?: number;
+    /**
+     * Page Size
+     *
+     * Rows per page, 1-100.
+     */
+    page_size?: number | null;
+    /**
      * Q
      *
      * Headline or summary search text.
@@ -351,11 +401,9 @@ export type NewsFilters = {
      */
     sentiment?: string;
     /**
-     * Page
-     *
-     * Requested page; out-of-range values are clamped.
+     * Sort
      */
-    page?: number;
+    sort?: string;
 };
 
 /**
@@ -488,6 +536,12 @@ export type NewsPage = {
      * Supported sentiment filters.
      */
     sentiments: Array<NewsFilterOption>;
+    /**
+     * Page Size
+     *
+     * Resolved number of rows per page.
+     */
+    page_size?: number;
 };
 
 /**
@@ -496,6 +550,18 @@ export type NewsPage = {
  * Bound IPO search and validate the filters supported by the existing pages.
  */
 export type IpoFilters = {
+    /**
+     * Page
+     *
+     * Requested page; out-of-range values are clamped.
+     */
+    page?: number;
+    /**
+     * Page Size
+     *
+     * Rows per page, 1-100.
+     */
+    page_size?: number | null;
     /**
      * Q
      *
@@ -521,11 +587,9 @@ export type IpoFilters = {
      */
     category?: string;
     /**
-     * Page
-     *
-     * Requested page; out-of-range values are clamped.
+     * Sort
      */
-    page?: number;
+    sort?: string;
 };
 
 /**
@@ -596,6 +660,12 @@ export type IpoPage = {
      * Board filters.
      */
     categories: Array<IpoFilterOption>;
+    /**
+     * Page Size
+     *
+     * Resolved number of rows per page.
+     */
+    page_size?: number;
 };
 
 /**
@@ -1007,17 +1077,33 @@ export type Markets = {
  */
 export type CompanyFilters = {
     /**
+     * Page
+     *
+     * Requested page; out-of-range values are clamped.
+     */
+    page?: number;
+    /**
+     * Page Size
+     *
+     * Rows per page, 1-100.
+     */
+    page_size?: number | null;
+    /**
      * Q
      *
      * Name, symbol, or sector search.
      */
     q?: string;
     /**
-     * Page
+     * Sector
      *
-     * Requested page; out-of-range values are clamped.
+     * Exact sector, or all.
      */
-    page?: number;
+    sector?: string;
+    /**
+     * Sort
+     */
+    sort?: string;
 };
 
 /**
@@ -1094,6 +1180,18 @@ export type CompanyPage = {
      * Total matching companies.
      */
     total: number;
+    /**
+     * Page Size
+     *
+     * Resolved number of rows per page.
+     */
+    page_size?: number;
+    /**
+     * Sectors
+     *
+     * All nonempty sectors, sorted.
+     */
+    sectors?: Array<string>;
 };
 
 /**
@@ -1205,8 +1303,28 @@ export type ListAppReportsData = {
     query?: {
         /**
          * Page
+         *
+         * Requested page; out-of-range values are clamped.
          */
         page?: number;
+        /**
+         * Page Size
+         *
+         * Rows per page, 1-100.
+         */
+        page_size?: number | null;
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * Direction
+         */
+        direction?: string;
+        /**
+         * Sort
+         */
+        sort?: string;
     };
     url: '/api/app/reports';
 };
@@ -1292,6 +1410,18 @@ export type ListAppNewsData = {
     path?: never;
     query?: {
         /**
+         * Page
+         *
+         * Requested page; out-of-range values are clamped.
+         */
+        page?: number;
+        /**
+         * Page Size
+         *
+         * Rows per page, 1-100.
+         */
+        page_size?: number | null;
+        /**
          * Q
          *
          * Headline or summary search text.
@@ -1310,11 +1440,9 @@ export type ListAppNewsData = {
          */
         sentiment?: string;
         /**
-         * Page
-         *
-         * Requested page; out-of-range values are clamped.
+         * Sort
          */
-        page?: number;
+        sort?: string;
     };
     url: '/api/app/news';
 };
@@ -1354,6 +1482,18 @@ export type ListAppIposData = {
     path?: never;
     query?: {
         /**
+         * Page
+         *
+         * Requested page; out-of-range values are clamped.
+         */
+        page?: number;
+        /**
+         * Page Size
+         *
+         * Rows per page, 1-100.
+         */
+        page_size?: number | null;
+        /**
          * Q
          *
          * IPO name search text.
@@ -1378,11 +1518,9 @@ export type ListAppIposData = {
          */
         category?: string;
         /**
-         * Page
-         *
-         * Requested page; out-of-range values are clamped.
+         * Sort
          */
-        page?: number;
+        sort?: string;
     };
     url: '/api/app/ipos';
 };
@@ -1501,17 +1639,33 @@ export type ListAppCompaniesData = {
     path?: never;
     query?: {
         /**
+         * Page
+         *
+         * Requested page; out-of-range values are clamped.
+         */
+        page?: number;
+        /**
+         * Page Size
+         *
+         * Rows per page, 1-100.
+         */
+        page_size?: number | null;
+        /**
          * Q
          *
          * Name, symbol, or sector search.
          */
         q?: string;
         /**
-         * Page
+         * Sector
          *
-         * Requested page; out-of-range values are clamped.
+         * Exact sector, or all.
          */
-        page?: number;
+        sector?: string;
+        /**
+         * Sort
+         */
+        sort?: string;
     };
     url: '/api/app/companies';
 };

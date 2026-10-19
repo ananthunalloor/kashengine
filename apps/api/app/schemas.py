@@ -51,6 +51,7 @@ class ReportPage(Schema):
     page: int = Field(description="Resolved page number, starting at one.")
     pages: int = Field(description="Total number of pages; one for an empty list.")
     total: int = Field(description="Total number of reports.")
+    page_size: int = Field(default=25, description="Resolved number of rows per page.")
 
 
 class ReportDelivery(Schema):
@@ -106,6 +107,7 @@ class NewsPage(Schema):
     total: int = Field(description="Total matching articles.")
     sources: list[str] = Field(description="All source names, sorted, independent of the filters.")
     sentiments: list[NewsFilterOption] = Field(description="Supported sentiment filters.")
+    page_size: int = Field(default=25, description="Resolved number of rows per page.")
 
 
 class IpoSummary(Schema):
@@ -141,6 +143,7 @@ class IpoPage(Schema):
     statuses: list[IpoFilterOption] = Field(description="Status filters, including Active and All.")
     verdicts: list[IpoFilterOption] = Field(description="Verdict filters.")
     categories: list[IpoFilterOption] = Field(description="Board filters.")
+    page_size: int = Field(default=25, description="Resolved number of rows per page.")
 
 
 class IpoFact(Schema):
@@ -237,6 +240,8 @@ class CompanyPage(Schema):
     page: int = Field(description="Resolved page number, starting at one.")
     pages: int = Field(description="Total pages; one when empty.")
     total: int = Field(description="Total matching companies.")
+    page_size: int = Field(default=25, description="Resolved number of rows per page.")
+    sectors: list[str] = Field(default_factory=list, description="All nonempty sectors, sorted.")
 
 
 class DeliveryItem(ReportDelivery):

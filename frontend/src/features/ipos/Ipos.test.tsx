@@ -54,6 +54,31 @@ const list: IpoPage = {
 };
 const clients: QueryClient[] = [];
 
+it("sorts IPO metrics on the server and retains board/status filters across size changes", async () => {
+  const router = await showIpos({ path: "/app/ipos/?category=sme&status=listed&page=2" });
+  fireEvent.click(await screen.findByRole("button", { name: "GMP" }));
+  await waitFor(() =>
+    expect(router.state.location.search).toMatchObject({
+      category: "sme",
+      status: "listed",
+      page: 1,
+      sort: "gmp",
+    }),
+  );
+  fireEvent.change(screen.getByRole("combobox", { name: "Rows per page for IPOs" }), {
+    target: { value: "50" },
+  });
+  await waitFor(() =>
+    expect(router.state.location.search).toMatchObject({
+      category: "sme",
+      status: "listed",
+      page: 1,
+      sort: "gmp",
+      page_size: 50,
+    }),
+  );
+});
+
 afterEach(() => {
   document.cookie = "csrftoken=; Max-Age=0; path=/";
   clients.forEach((client) => client.clear());
@@ -163,11 +188,11 @@ it("restores all bookmarked filters and retains them in pagination", async () =>
   expect(screen.getByRole("combobox", { name: "Status" })).toHaveValue("listed");
   expect(screen.getByRole("combobox", { name: "Verdict" })).toHaveValue("good");
   expect(screen.getByRole("combobox", { name: "Board" })).toHaveValue("sme");
-  const href = screen.getByRole("link", { name: "Newer" }).getAttribute("href")!;
+  const href = screen.getByRole("link", { name: "Previous" }).getAttribute("href")!;
   expect(href).toContain("status=listed");
   expect(href).toContain("category=sme");
   expect(href).toContain("verdict=good");
-  expect(screen.queryByRole("link", { name: "Older" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Next" })).not.toBeInTheDocument();
 });
 
 it("debounces search, resets page, and applies board/verdict/status filters", async () => {

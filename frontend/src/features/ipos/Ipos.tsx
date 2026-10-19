@@ -1,12 +1,15 @@
 import { Anchor, Button, Group, Stack, Text, Title } from "@mantine/core";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { LuActivity, LuSlidersHorizontal, LuX } from "react-icons/lu";
 
 import type { IpoDetail, IpoPage, IpoSummary } from "../../shared/api/generated/types.gen";
 import { ipoSearchSchema } from "../../shared/api/ipos";
 import type { IpoSearch } from "../../shared/api/ipos";
 import { sourceLink } from "../../shared/ui/sourceLink";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
+import { DataTable } from "../../shared/ui/DataTable";
+import { displayNumber } from "../../shared/ui/displayNumber";
 
 const scoredDate = new Intl.DateTimeFormat("en-IN", {
   day: "numeric",
@@ -44,7 +47,15 @@ export function Ipos({
   useEffect(() => {
     setQuery(filters.q);
     return () => clearTimeout(timer.current);
-  }, [filters.q, filters.status, filters.verdict, filters.category, filters.page]);
+  }, [
+    filters.q,
+    filters.status,
+    filters.verdict,
+    filters.category,
+    filters.page,
+    filters.sort,
+    filters.page_size,
+  ]);
   function apply(value: IpoSearch, replace = false) {
     clearTimeout(timer.current);
     onFilter({ ...value, q: value.q.trim(), page: 1 }, replace);
@@ -53,6 +64,7 @@ export function Ipos({
     <Stack gap="xl">
       <header>
         <Text className="app-eyebrow" mb="xs">
+          <LuActivity aria-hidden="true" />
           IPO intelligence
         </Text>
         <Title order={1} tabIndex={-1}>
@@ -153,13 +165,16 @@ export function Ipos({
           </select>
         </div>
         <Group gap="xs">
-          <Button type="submit">Apply</Button>
+          <Button type="submit" leftSection={<LuSlidersHorizontal aria-hidden="true" />}>
+            Apply
+          </Button>
           <Button
             type="button"
             variant="default"
+            leftSection={<LuX aria-hidden="true" />}
             onClick={() => {
               setQuery("");
-              apply({ q: "", status: "", verdict: "", category: "", page: 1 });
+              apply({ ...filters, q: "", status: "", verdict: "", category: "", page: 1 });
               input.current?.focus();
             }}
           >
@@ -171,42 +186,56 @@ export function Ipos({
         <Text role="status" size="sm" c="dimmed" mb="md">
           {data.total} IPO{data.total === 1 ? "" : "s"}
         </Text>
-        {data.items.length ? (
-          <ul className="ipo-list">
-            {data.items.map((ipo) => (
-              <li key={ipo.id} className="news-card">
-                <Group justify="space-between" align="flex-start">
-                  <div>
-                    <Title order={2} size="h3">
-                      <Link to="/ipos/$id/" params={{ id: String(ipo.id) }}>
-                        {ipo.name}
-                      </Link>
-                    </Title>
-                    <Text size="sm" c="dimmed" mt="xs">
-                      {ipo.category}, {ipo.status}
-                    </Text>
-                  </div>
-                  <Verdict ipo={ipo} />
-                </Group>
-                <dl className="ipo-summary">
-                  {[
-                    ["Dates", ipo.dates],
-                    ["Price band", ipo.price_band],
-                    ["GMP", ipo.gmp],
-                    ["Subscribed", ipo.subscribed],
-                    ["Listing gain", ipo.listing_gain],
-                  ].map(([label, value]) => (
-                    <div key={label}>
-                      <dt>{label}</dt>
-                      <dd>{value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="news-card">
+        <DataTable
+          data={data.items}
+          label="IPOs"
+          columns={[
+            {
+              id: "name",
+              label: "Issue",
+              value: (row) => row.name,
+              render: (row) => (
+                <Link className="table-primary" to="/ipos/$id/" params={{ id: String(row.id) }}>
+                  {row.name}
+                </Link>
+              ),
+            },
+            { id: "category", label: "Board", value: (row) => row.category },
+            {
+              id: "status",
+              label: "Status",
+              value: (row) => row.status,
+              render: (row) => <span className="report-status">{row.status}</span>,
+            },
+            { id: "dates", label: "Dates", value: (row) => row.dates },
+            { id: "price_band", label: "Price band", value: (row) => row.price_band },
+            { id: "gmp", label: "GMP", value: (row) => row.gmp },
+            { id: "subscribed", label: "Subscribed", value: (row) => row.subscribed },
+            { id: "listing_gain", label: "Listing gain", value: (row) => row.listing_gain },
+            {
+              id: "verdict",
+              label: "Verdict",
+              value: (row) => row.verdict,
+              render: (row) => <Verdict ipo={row} />,
+            },
+            { id: "score", label: "Score", value: (row) => row.score },
+          ]}
+          server={{
+            page: data.page,
+            pages: data.pages,
+            total: data.total,
+            pageSize: data.page_size ?? 25,
+            sort: filters.sort,
+            onSort: (sort) => apply({ ...filters, q: query, sort }),
+            onPageSize: (page_size) => apply({ ...filters, q: query, page_size }),
+            paginationLabel: "IPO pages",
+            pageLink: (page, label) => (
+              <Link to="/ipos/" search={{ ...filters, page }}>
+                {label}
+              </Link>
+            ),
+          }}
+          empty={
             <Text c="dimmed">
               No IPO matches. Change the filters.
               {isStaff && !filters.q && (
@@ -218,30 +247,9 @@ export function Ipos({
                 </>
               )}
             </Text>
-          </div>
-        )}
+          }
+        />
       </section>
-      {data.pages > 1 && (
-        <nav aria-label="IPO pages" className="report-pagination">
-          <span>
-            {data.page > 1 && (
-              <Link to="/ipos/" search={{ ...filters, page: data.page - 1 }}>
-                Newer
-              </Link>
-            )}
-          </span>
-          <Text c="dimmed" size="sm">
-            Page {data.page} of {data.pages}
-          </Text>
-          <span>
-            {data.page < data.pages && (
-              <Link to="/ipos/" search={{ ...filters, page: data.page + 1 }}>
-                Older
-              </Link>
-            )}
-          </span>
-        </nav>
-      )}
     </Stack>
   );
 }
@@ -299,25 +307,20 @@ export function IpoView({ ipo }: { ipo: IpoDetail }) {
             positive). GMP and subscription values keep their original units.
           </Text>
           {ipo.signals.length ? (
-            <table className="ipo-signals">
-              <caption className="sr-only">Saved scoring inputs</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Signal</th>
-                  <th scope="col">Value</th>
-                  <th scope="col">Signal (1-10)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ipo.signals.map((signal, index) => (
-                  <tr key={`${signal.name}-${index}`}>
-                    <th scope="row">{signal.name}</th>
-                    <td>{signal.value}</td>
-                    <td>{signal.signal}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable
+              data={ipo.signals}
+              label="Saved scoring inputs"
+              columns={[
+                { id: "name", label: "Signal", value: (row) => row.name },
+                { id: "value", label: "Value", value: (row) => row.value, sortable: false },
+                {
+                  id: "signal",
+                  label: "Signal (1-10)",
+                  value: (row) => displayNumber(row.signal),
+                  render: (row) => row.signal,
+                },
+              ]}
+            />
           ) : (
             <Text c="dimmed" mt="md">
               There is no usable signal yet.

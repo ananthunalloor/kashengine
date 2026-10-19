@@ -1,0 +1,104 @@
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { expect, it, vi } from "vitest";
+
+import { DataTable } from "./DataTable";
+import { displayNumber } from "./displayNumber";
+
+const data = Array.from({ length: 26 }, (_, index) => ({
+  name: `Record ${String(index + 1).padStart(2, "0")}`,
+  score: index + 1,
+  status: index % 2 ? "Failed" : "Sent",
+}));
+const columns = [
+  { id: "name", label: "Name", value: (row: (typeof data)[number]) => row.name },
+  { id: "score", label: "Score", value: (row: (typeof data)[number]) => row.score },
+  { id: "status", label: "Status", value: (row: (typeof data)[number]) => row.status },
+];
+
+it("paginates, sorts numerically, filters all rows, and resets page on search/size change", () => {
+  render(
+    <DataTable
+      data={data}
+      columns={columns}
+      label="Records"
+      filters={[{ label: "Status", value: (row) => row.status, options: ["Sent", "Failed"] }]}
+    />,
+  );
+  expect(screen.getAllByRole("row")).toHaveLength(11);
+  fireEvent.click(screen.getByRole("button", { name: "Last page" }));
+  expect(screen.getByText("Record 26")).toBeInTheDocument();
+  fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Record 02" } });
+  expect(screen.getAllByRole("row")).toHaveLength(2);
+  expect(screen.getByText("Record 02")).toBeInTheDocument();
+  fireEvent.change(screen.getByRole("searchbox"), { target: { value: "" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "Status" }), { target: { value: "Sent" } });
+  expect(screen.getByText("1-10 of 13 results")).toBeInTheDocument();
+  fireEvent.change(screen.getByRole("combobox", { name: "Rows per page for Records" }), {
+    target: { value: "25" },
+  });
+  expect(screen.getAllByRole("row")).toHaveLength(14);
+  fireEvent.click(screen.getByRole("button", { name: "Score" }));
+  const heading = screen.getByRole("columnheader", { name: "Score" });
+  expect(heading).toHaveAttribute("aria-sort");
+  expect(
+    within(screen.getAllByRole("row")[1]!).getByRole("cell", { name: "1" }),
+  ).toBeInTheDocument();
+});
+
+it("shows a useful empty filtered state and keeps the search focused", () => {
+  render(<DataTable data={data} columns={columns} label="Records" />);
+  const search = screen.getByRole("searchbox");
+  search.focus();
+  fireEvent.change(search, { target: { value: "does not exist" } });
+  expect(screen.getByText(/No results match/)).toBeInTheDocument();
+  expect(screen.getByText("0 results")).toBeInTheDocument();
+  expect(search).toHaveFocus();
+});
+
+it("uses server sort/size callbacks without re-sorting or slicing a page locally", () => {
+  const onSort = vi.fn(),
+    onPageSize = vi.fn();
+  render(
+    <DataTable
+      data={data.slice(0, 2)}
+      columns={columns}
+      label="Records"
+      server={{
+        page: 2,
+        pages: 13,
+        total: 26,
+        pageSize: 2,
+        sort: "name",
+        onSort,
+        onPageSize,
+        paginationLabel: "Record pages",
+        pageLink: (page, label) => <a href={`?page=${page}`}>{label}</a>,
+      }}
+    />,
+  );
+  expect(screen.getAllByRole("row")).toHaveLength(3);
+  fireEvent.click(screen.getByRole("button", { name: "Name" }));
+  expect(onSort).toHaveBeenCalledWith("-name");
+  fireEvent.change(screen.getByRole("combobox", { name: "Rows per page for Records" }), {
+    target: { value: "50" },
+  });
+  expect(onPageSize).toHaveBeenCalledWith(50);
+  expect(screen.getByRole("link", { name: "Next" })).toHaveAttribute("href", "?page=3");
+  expect(screen.getByText("Record 01")).toBeInTheDocument();
+});
+
+it("keeps nulls last and parses formatted numeric values without sorting lexically", () => {
+  expect(displayNumber("−1.25%")).toBe(-1.25);
+  expect(displayNumber("10.0/10")).toBe(10);
+  expect(displayNumber("1,234.50")).toBe(1234.5);
+  expect(displayNumber("–")).toBeNull();
+  render(
+    <DataTable
+      data={[{ n: null }, { n: 10 }, { n: 2 }]}
+      label="Numbers"
+      columns={[{ id: "n", label: "Number", value: (row) => row.n }]}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Number" }));
+  expect(screen.getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["2", "10", "–"]);
+});

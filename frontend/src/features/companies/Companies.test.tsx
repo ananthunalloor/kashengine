@@ -94,7 +94,7 @@ it("shows directory fields, safe source links, IST dates and preview navigation"
   expect(source).toHaveAttribute("href", data.items[0].screener_url);
   expect(source).toHaveAttribute("rel", "noopener noreferrer");
   expect(source).toHaveAttribute("target", "_blank");
-  expect(document.querySelector(".news-card b")).toBeNull();
+  expect(document.querySelector(".data-table b")).toBeNull();
   expect(screen.queryByRole("link", { name: /Beta Tools/ })).not.toBeInTheDocument();
   expect(screen.getByText("Source link unavailable.")).toBeInTheDocument();
   expect(screen.getByText("17 Oct 2026")).toBeInTheDocument();
@@ -202,4 +202,41 @@ it("surfaces malformed responses and retries successfully", async () => {
   );
   fireEvent.click(screen.getByRole("button", { name: "Try again" }));
   expect(await screen.findByText("5 companies")).toBeInTheDocument();
+});
+
+it("sends server sorting, page size and exact sector filters and restores them from the URL", async () => {
+  const router = await showCompanies({
+    path: "/app/companies/?q=bank&page=2&sort=-symbol&page_size=10&sector=Finance",
+    body: { ...data, page_size: 10, sectors: ["Finance", "Tools"] },
+  });
+  expect(await screen.findByRole("columnheader", { name: "Symbol" })).toHaveAttribute(
+    "aria-sort",
+    "descending",
+  );
+  expect(screen.getByRole("combobox", { name: "Sector" })).toHaveValue("Finance");
+  fireEvent.click(screen.getByRole("button", { name: "Company" }));
+  await waitFor(() =>
+    expect(router.state.location.search).toMatchObject({
+      sort: "name",
+      page: 1,
+      page_size: 10,
+      sector: "Finance",
+    }),
+  );
+  fireEvent.change(screen.getByRole("combobox", { name: "Rows per page for Companies" }), {
+    target: { value: "50" },
+  });
+  await waitFor(() => expect(router.state.location.search.page_size).toBe(50));
+  fireEvent.change(screen.getByRole("combobox", { name: "Sector" }), {
+    target: { value: "Tools" },
+  });
+  await waitFor(() =>
+    expect(router.state.location.search).toMatchObject({
+      q: "bank",
+      sort: "name",
+      sector: "Tools",
+      page_size: 50,
+      page: 1,
+    }),
+  );
 });

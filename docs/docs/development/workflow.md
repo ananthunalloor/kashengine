@@ -118,6 +118,26 @@ serialized, and diagnostics are staff-only. Attempts without a report retain the
 omitted when the Reports feature is unavailable. The preview has no send/retry-write actions;
 reading never sends messages. Both routes enforce Delivery access; `/delivery/` is unchanged.
 
+### Table and icon conventions
+
+Use the shared `DataTable` (`frontend/src/shared/ui/DataTable.tsx`) for tabular lists, with
+React Icons imported from `react-icons/lu`. Decorative SVGs are hidden from assistive technology;
+icon-only actions retain accessible names. Sorting uses keyboard-accessible header buttons and
+`aria-sort`. Table panels contain their own horizontal scrolling region and pagination.
+
+Reports, News, IPOs, and Companies use manual TanStack pagination/filtering/sorting. The private
+API validates a per-resource sort allowlist and optional `page_size` (1-100), applies filters and
+stable sorting to the full queryset, then paginates. Empty sorting retains the legacy ordering;
+nulls sort last in both directions. IPO GMP sorts by its percentage, not rupee amount or display
+text. Search/filter/sort/page-size changes reset to page one and cancel pending search timers.
+URL search schemas preserve bookmarks and back/forward navigation. Do not locally sort or filter
+one server page as if it were the whole dataset.
+
+Bounded overviews (latest 30 predictions, latest 50 delivery attempts), configured market closes,
+and detail tables use local TanStack row models. Keep the history limits visible, sort formatted
+numeric values via numeric accessors, and preserve missing values rather than inventing zeroes.
+The API continues to redact diagnostics for members and exclude recipient identifiers.
+
 After changing the private schemas:
 
 ```bash

@@ -323,6 +323,18 @@ React shares the landing page's purple accent, white surfaces, sans-serif typogr
 cards through `static/css/brand-tokens.css`. Light mode is the default; a saved dark-mode choice
 is retained. Theme changes use static CSS and do not weaken the Content-Security-Policy.
 
+The React workspace uses React Icons (Lucide set) for navigation and controls, with a shared
+TanStack Table for Reports, News, IPOs, Companies, Markets, Delivery, and detail-page tables.
+Sortable headers, accessible search/filters, row-size selection, and first/previous/next/last
+pagination share one responsive design. Wide tables scroll within their panel, not the page.
+Reports, News, IPOs, and Companies search/filter/sort the full dataset on the server before
+pagination; URL parameters preserve the table state across reloads and browser history.
+Reports support date/text search and outlook filters; Companies also supports exact sector
+filtering. Page sizes are bounded to 1-100, with the configured web size used by default.
+Markets history and Delivery deliberately remain limited to the latest 30 predictions and 50
+attempts; their local search, filters, sorting, and pagination are labeled with those limits.
+No table fetches external data, recalculates scores, sends messages, or exposes recipient fields.
+
 The other existing pages remain Django-rendered during the incremental migration. Run
 `pnpm --dir frontend build` to create the production bundle and
 `pnpm --dir frontend build:legacy-css` to rebuild the stylesheet still used by Django templates.
