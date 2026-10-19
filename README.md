@@ -279,8 +279,8 @@ pnpm --dir frontend dev
 
 Open `http://localhost:8000/app/` while signed in to view the authenticated React shell.
 The preview loads navigation, feature permissions, subscription notices, and the staff flag
-from the session-only private API at `/api/app/session`. Reports, News, IPOs, and Markets open React previews at
-`/app/reports/`, `/app/news/`, `/app/ipos/`, and `/app/markets/`; other links still open the existing Django pages. The shell includes a mobile menu,
+from the session-only private API at `/api/app/session`. Reports, News, IPOs, Markets, and Companies open React previews at
+`/app/reports/`, `/app/news/`, `/app/ipos/`, `/app/markets/`, and `/app/companies/`; other links still open the existing Django pages. The shell includes a mobile menu,
 a persistent light/dark toggle, and CSRF-protected logout.
 An expired session returns to login; API errors display a retryable error page.
 
@@ -306,6 +306,12 @@ saved instrument closes with their trading dates, and the newest 30 predictions.
 Waiting, and No session remain distinct; strength is not a probability. Its session-only
 `/api/app/markets` endpoint reuses the existing queries and evaluation statistics without
 downloading prices or evaluating predictions. The original `/markets/` page remains unchanged.
+
+The Companies preview at `/app/companies/` preserves name/symbol/sector search, alphabetical
+ordering, pagination, source links, and last-fetched dates in IST. Search is debounced and stored
+in the URL for bookmarks and browser history. The session-only `/api/app/companies` endpoint
+uses the existing company query and enforces company feature/subscription rules; scraped data
+and aliases are not exposed. The original `/companies/` page remains unchanged.
 
 React shares the landing page's purple accent, white surfaces, sans-serif typography, and rounded
 cards through `static/css/brand-tokens.css`. Light mode is the default; a saved dark-mode choice

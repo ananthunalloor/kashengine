@@ -32,7 +32,7 @@ export function AppError({
   section = "Reports",
 }: ErrorComponentProps & {
   withinShell?: boolean;
-  section?: "Reports" | "News" | "IPOs" | "Markets";
+  section?: "Reports" | "News" | "IPOs" | "Markets" | "Companies";
 }) {
   const router = useRouter();
   const unauthorized = error instanceof ApiError && error.kind === "unauthorized";

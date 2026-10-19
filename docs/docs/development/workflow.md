@@ -102,6 +102,14 @@ date; missing changes are not displayed as zero. Both preview and API enforce th
 feature and subscription rules. No read refreshes prices or evaluates results, and the original
 `/markets/` page is unchanged.
 
+Companies opens `/app/companies/`, backed by the session-only `/api/app/companies` endpoint.
+It reuses `company_queryset` for name/symbol/sector search and alphabetical ordering. Only
+directory display fields are returned, not aliases or scraped data. Search and pagination live
+in the URL; debounced typing preserves focus, resets the page, and cancels pending updates on
+navigation. Last-fetched dates use IST, and source links accept only absolute HTTP(S) URLs.
+Direct preview and API requests enforce Companies access rules. Reads never refresh company
+data, and the original `/companies/` page remains unchanged.
+
 After changing the private schemas:
 
 ```bash

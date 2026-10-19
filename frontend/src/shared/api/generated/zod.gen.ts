@@ -346,6 +346,42 @@ export const zMarkets = z.object({
 });
 
 /**
+ * CompanyFilters
+ *
+ * Bound directory search and validate pagination.
+ */
+export const zCompanyFilters = z.object({
+    q: z.string().max(100).optional().default(''),
+    page: z.int().optional().default(1)
+});
+
+/**
+ * CompanyItem
+ *
+ * Company directory display fields, without scraped data or internal aliases.
+ */
+export const zCompanyItem = z.object({
+    id: z.int(),
+    name: z.string(),
+    symbol: z.string(),
+    sector: z.string(),
+    screener_url: z.string(),
+    last_updated: z.iso.datetime().nullable()
+});
+
+/**
+ * CompanyPage
+ *
+ * A page of the company directory, ordered by name.
+ */
+export const zCompanyPage = z.object({
+    items: z.array(zCompanyItem),
+    page: z.int(),
+    pages: z.int(),
+    total: z.int()
+});
+
+/**
  * OK
  */
 export const zGetAppSessionResponse = zSession;
@@ -406,3 +442,13 @@ export const zGetAppIpoResponse = zIpoDetail;
  * OK
  */
 export const zGetAppMarketsResponse = zMarkets;
+
+export const zListAppCompaniesQuery = z.object({
+    q: z.string().max(100).optional().default(''),
+    page: z.int().optional().default(1)
+});
+
+/**
+ * OK
+ */
+export const zListAppCompaniesResponse = zCompanyPage;

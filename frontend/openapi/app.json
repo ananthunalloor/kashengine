@@ -630,6 +630,100 @@
           }
         ]
       }
+    },
+    "/api/app/companies": {
+      "get": {
+        "operationId": "list_app_companies",
+        "summary": "Search the company directory",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "default": "",
+              "description": "Name, symbol, or sector search.",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            },
+            "required": false,
+            "description": "Name, symbol, or sector search."
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "Requested page; out-of-range values are clamped.",
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Requested page; out-of-range values are clamped."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read display fields without fetching or exposing scraped company data.",
+        "tags": [
+          "Companies"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -1830,6 +1924,115 @@
           "history"
         ],
         "title": "Markets",
+        "type": "object"
+      },
+      "CompanyFilters": {
+        "description": "Bound directory search and validate pagination.",
+        "properties": {
+          "q": {
+            "default": "",
+            "description": "Name, symbol, or sector search.",
+            "maxLength": 100,
+            "title": "Q",
+            "type": "string"
+          },
+          "page": {
+            "default": 1,
+            "description": "Requested page; out-of-range values are clamped.",
+            "title": "Page",
+            "type": "integer"
+          }
+        },
+        "title": "CompanyFilters",
+        "type": "object"
+      },
+      "CompanyItem": {
+        "description": "Company directory display fields, without scraped data or internal aliases.",
+        "properties": {
+          "id": {
+            "description": "Company primary key.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "description": "Company name, rendered as plain text.",
+            "title": "Name",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "NSE or BSE symbol.",
+            "title": "Symbol",
+            "type": "string"
+          },
+          "sector": {
+            "description": "Sector, or empty when unknown.",
+            "title": "Sector",
+            "type": "string"
+          },
+          "screener_url": {
+            "description": "Source URL; the browser only links HTTP(S) URLs.",
+            "title": "Screener Url",
+            "type": "string"
+          },
+          "last_updated": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last data fetch, or null if never fetched.",
+            "title": "Last Updated"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "symbol",
+          "sector",
+          "screener_url",
+          "last_updated"
+        ],
+        "title": "CompanyItem",
+        "type": "object"
+      },
+      "CompanyPage": {
+        "description": "A page of the company directory, ordered by name.",
+        "properties": {
+          "items": {
+            "description": "Companies matching name, symbol, or sector.",
+            "items": {
+              "$ref": "#/components/schemas/CompanyItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "description": "Resolved page number, starting at one.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "description": "Total pages; one when empty.",
+            "title": "Pages",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total matching companies.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pages",
+          "total"
+        ],
+        "title": "CompanyPage",
         "type": "object"
       }
     },

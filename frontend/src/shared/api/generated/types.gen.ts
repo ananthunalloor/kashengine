@@ -1000,6 +1000,102 @@ export type Markets = {
     history: Array<MarketPrediction>;
 };
 
+/**
+ * CompanyFilters
+ *
+ * Bound directory search and validate pagination.
+ */
+export type CompanyFilters = {
+    /**
+     * Q
+     *
+     * Name, symbol, or sector search.
+     */
+    q?: string;
+    /**
+     * Page
+     *
+     * Requested page; out-of-range values are clamped.
+     */
+    page?: number;
+};
+
+/**
+ * CompanyItem
+ *
+ * Company directory display fields, without scraped data or internal aliases.
+ */
+export type CompanyItem = {
+    /**
+     * Id
+     *
+     * Company primary key.
+     */
+    id: number;
+    /**
+     * Name
+     *
+     * Company name, rendered as plain text.
+     */
+    name: string;
+    /**
+     * Symbol
+     *
+     * NSE or BSE symbol.
+     */
+    symbol: string;
+    /**
+     * Sector
+     *
+     * Sector, or empty when unknown.
+     */
+    sector: string;
+    /**
+     * Screener Url
+     *
+     * Source URL; the browser only links HTTP(S) URLs.
+     */
+    screener_url: string;
+    /**
+     * Last Updated
+     *
+     * Last data fetch, or null if never fetched.
+     */
+    last_updated: string | null;
+};
+
+/**
+ * CompanyPage
+ *
+ * A page of the company directory, ordered by name.
+ */
+export type CompanyPage = {
+    /**
+     * Items
+     *
+     * Companies matching name, symbol, or sector.
+     */
+    items: Array<CompanyItem>;
+    /**
+     * Page
+     *
+     * Resolved page number, starting at one.
+     */
+    page: number;
+    /**
+     * Pages
+     *
+     * Total pages; one when empty.
+     */
+    pages: number;
+    /**
+     * Total
+     *
+     * Total matching companies.
+     */
+    total: number;
+};
+
 export type GetAppSessionData = {
     body?: never;
     path?: never;
@@ -1329,3 +1425,53 @@ export type GetAppMarketsResponses = {
 };
 
 export type GetAppMarketsResponse = GetAppMarketsResponses[keyof GetAppMarketsResponses];
+
+export type ListAppCompaniesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Q
+         *
+         * Name, symbol, or sector search.
+         */
+        q?: string;
+        /**
+         * Page
+         *
+         * Requested page; out-of-range values are clamped.
+         */
+        page?: number;
+    };
+    url: '/api/app/companies';
+};
+
+export type ListAppCompaniesErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type ListAppCompaniesError = ListAppCompaniesErrors[keyof ListAppCompaniesErrors];
+
+export type ListAppCompaniesResponses = {
+    /**
+     * OK
+     */
+    200: CompanyPage;
+};
+
+export type ListAppCompaniesResponse = ListAppCompaniesResponses[keyof ListAppCompaniesResponses];

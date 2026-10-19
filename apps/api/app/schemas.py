@@ -217,3 +217,23 @@ class Markets(Schema):
     stats: MarketStats = Field(description="Accuracy and baseline statistics.")
     quotes: list[MarketQuote] = Field(description="Latest closes in configured instrument order.")
     history: list[MarketPrediction] = Field(description="Newest 30 predictions, newest first.")
+
+
+class CompanyItem(Schema):
+    """Company directory display fields, without scraped data or internal aliases."""
+
+    id: int = Field(description="Company primary key.")
+    name: str = Field(description="Company name, rendered as plain text.")
+    symbol: str = Field(description="NSE or BSE symbol.")
+    sector: str = Field(description="Sector, or empty when unknown.")
+    screener_url: str = Field(description="Source URL; the browser only links HTTP(S) URLs.")
+    last_updated: datetime | None = Field(description="Last data fetch, or null if never fetched.")
+
+
+class CompanyPage(Schema):
+    """A page of the company directory, ordered by name."""
+
+    items: list[CompanyItem] = Field(description="Companies matching name, symbol, or sector.")
+    page: int = Field(description="Resolved page number, starting at one.")
+    pages: int = Field(description="Total pages; one when empty.")
+    total: int = Field(description="Total matching companies.")
