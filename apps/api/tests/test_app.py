@@ -210,6 +210,7 @@ def test_private_contract_is_separate_and_committed():
         "/api/app/account/tokens",
         "/api/app/account/tokens/{pk}/revoke",
         "/api/app/ops/runs",
+        "/api/app/ops/audit",
         "/api/app/ops/runs/{pk}",
     }
     assert set(schema["components"]["securitySchemes"]) == {"AppSession", "OpsSession"}

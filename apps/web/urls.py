@@ -33,6 +33,7 @@ urlpatterns = [
     path("app/dashboard/", views.react_app, name="react_dashboard"),
     path("app/account/", views.react_app, name="react_account"),
     path("app/ops/runs/", staff_required(views.react_app), name="react_ops_runs"),
+    path("app/ops/audit/", staff_required(views.react_app), name="react_ops_audit"),
     path("app/ops/runs/<int:pk>/", staff_required(views.react_ops_run), name="react_ops_run"),
     path("app/reports/", views.react_app, name="react_reports"),
     path("app/reports/<date:day>/", views.react_report, name="react_report"),

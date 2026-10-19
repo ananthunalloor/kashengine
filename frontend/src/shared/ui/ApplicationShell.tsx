@@ -19,6 +19,7 @@ import {
   LuBuilding2,
   LuChartNoAxesCombined,
   LuCircleUserRound,
+  LuClipboardList,
   LuFileText,
   LuHouse,
   LuLayoutDashboard,
@@ -178,6 +179,16 @@ export function ApplicationShell({
               aria-current={pathname.startsWith("/app/ops/runs/") ? "page" : undefined}
               onClick={close}
               leftSection={<LuActivity aria-hidden="true" />}
+            />
+          )}
+          {session.is_staff && (
+            <NavLink
+              href="/app/ops/audit/"
+              label="Audit trail"
+              active={pathname.startsWith("/app/ops/audit/")}
+              aria-current={pathname.startsWith("/app/ops/audit/") ? "page" : undefined}
+              onClick={close}
+              leftSection={<LuClipboardList aria-hidden="true" />}
             />
           )}
         </nav>

@@ -20,6 +20,7 @@ import { Route as MarketsIndexRouteImport } from './routes/markets.index'
 import { Route as NewsIndexRouteImport } from './routes/news.index'
 import { Route as ReportsIndexRouteImport } from './routes/reports.index'
 import { Route as ReportsDayRouteImport } from './routes/reports.$day'
+import { Route as OpsAuditIndexRouteImport } from './routes/ops.audit.index'
 import { Route as OpsRunsIndexRouteImport } from './routes/ops.runs.index'
 import { Route as OpsRunsIdRouteImport } from './routes/ops.runs.$id'
 
@@ -78,6 +79,11 @@ const ReportsDayRoute = ReportsDayRouteImport.update({
   path: '/reports/$day',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OpsAuditIndexRoute = OpsAuditIndexRouteImport.update({
+  id: '/ops/audit/',
+  path: '/ops/audit/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OpsRunsIndexRoute = OpsRunsIndexRouteImport.update({
   id: '/ops/runs/',
   path: '/ops/runs/',
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/news/': typeof NewsIndexRoute
   '/reports/': typeof ReportsIndexRoute
   '/ops/runs/$id': typeof OpsRunsIdRoute
+  '/ops/audit/': typeof OpsAuditIndexRoute
   '/ops/runs/': typeof OpsRunsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/news': typeof NewsIndexRoute
   '/reports': typeof ReportsIndexRoute
   '/ops/runs/$id': typeof OpsRunsIdRoute
+  '/ops/audit': typeof OpsAuditIndexRoute
   '/ops/runs': typeof OpsRunsIndexRoute
 }
 export interface FileRoutesById {
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/news/': typeof NewsIndexRoute
   '/reports/': typeof ReportsIndexRoute
   '/ops/runs/$id': typeof OpsRunsIdRoute
+  '/ops/audit/': typeof OpsAuditIndexRoute
   '/ops/runs/': typeof OpsRunsIndexRoute
 }
 export interface FileRouteTypes {
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/news/'
     | '/reports/'
     | '/ops/runs/$id'
+    | '/ops/audit/'
     | '/ops/runs/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/news'
     | '/reports'
     | '/ops/runs/$id'
+    | '/ops/audit'
     | '/ops/runs'
   id:
     | '__root__'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
     | '/news/'
     | '/reports/'
     | '/ops/runs/$id'
+    | '/ops/audit/'
     | '/ops/runs/'
   fileRoutesById: FileRoutesById
 }
@@ -196,6 +208,7 @@ export interface RootRouteChildren {
   NewsIndexRoute: typeof NewsIndexRoute
   ReportsIndexRoute: typeof ReportsIndexRoute
   OpsRunsIdRoute: typeof OpsRunsIdRoute
+  OpsAuditIndexRoute: typeof OpsAuditIndexRoute
   OpsRunsIndexRoute: typeof OpsRunsIndexRoute
 }
 
@@ -278,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsDayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ops/audit/': {
+      id: '/ops/audit/'
+      path: '/ops/audit'
+      fullPath: '/ops/audit/'
+      preLoaderRoute: typeof OpsAuditIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ops/runs/': {
       id: '/ops/runs/'
       path: '/ops/runs'
@@ -308,6 +328,7 @@ const rootRouteChildren: RootRouteChildren = {
   NewsIndexRoute: NewsIndexRoute,
   ReportsIndexRoute: ReportsIndexRoute,
   OpsRunsIdRoute: OpsRunsIdRoute,
+  OpsAuditIndexRoute: OpsAuditIndexRoute,
   OpsRunsIndexRoute: OpsRunsIndexRoute,
 }
 export const routeTree = rootRouteImport

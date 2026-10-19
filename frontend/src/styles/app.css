@@ -604,6 +604,11 @@ h2 {
   color: var(--brand-loss);
 }
 
+.audit-detail {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .report-status[data-tone="warning"] {
   color: var(--metric-caution);
   background: var(--metric-caution-soft);

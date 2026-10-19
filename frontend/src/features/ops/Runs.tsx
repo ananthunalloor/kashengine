@@ -7,20 +7,7 @@ import type { OpsRunPage, OpsRunSummary } from "../../shared/api/generated/types
 import type { RunSearch } from "../../shared/api/ops";
 import { DataTable } from "../../shared/ui/DataTable";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
-
-const runDate = new Intl.DateTimeFormat("en-IN", {
-  timeZone: "Asia/Kolkata",
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-});
-
-export function RunTime({ value }: { value: string | null }) {
-  return value ? <time dateTime={value}>{runDate.format(new Date(value))} IST</time> : "\u2013";
-}
+import { OpsTime } from "./OpsTime";
 
 export function RunStatus({ run }: { run: Pick<OpsRunSummary, "status" | "status_label"> }) {
   return (
@@ -209,7 +196,7 @@ export function Runs({
             id: "started_at",
             label: "Started",
             value: (run) => run.started_at ?? run.created_at,
-            render: (run) => <RunTime value={run.started_at ?? run.created_at} />,
+            render: (run) => <OpsTime value={run.started_at ?? run.created_at} />,
           },
           {
             id: "duration_ms",

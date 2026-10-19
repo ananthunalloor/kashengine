@@ -361,6 +361,13 @@ distinguish waiting, running, done, and failed runs. These read-only previews us
 session endpoints under `/api/app/ops/runs`, with the same admin IP restrictions as `/ops/`.
 Job execution and all other Ops controls remain on Django; the original run pages are unchanged.
 
+The read-only Ops audit preview is at `/app/ops/audit/`, backed by staff-only
+`GET /api/app/ops/audit`. Its TanStack table searches recorded names, actions, targets, details,
+and addresses across all retained records before pagination. Exact recorded-admin/action filters,
+sorting, and page size are preserved in the URL. Actor names survive account renames/deletion;
+details render as plain text, with timestamps in IST. Audit reads never create or alter events.
+The original `/ops/audit/` remains available, with the same staff and admin IP restrictions.
+
 The other existing pages remain Django-rendered during the incremental migration. Run
 `pnpm --dir frontend build` to create the production bundle and
 `pnpm --dir frontend build:legacy-css` to rebuild the stylesheet still used by Django templates.

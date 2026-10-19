@@ -11,6 +11,7 @@ NOT_FEATURES = features.OPEN_URL_NAMES | {
     "react_dashboard",
     "react_ops_runs",
     "react_ops_run",
+    "react_ops_audit",
 }
 
 

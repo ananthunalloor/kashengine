@@ -1236,6 +1236,151 @@
         ]
       }
     },
+    "/api/app/ops/audit": {
+      "get": {
+        "operationId": "list_app_ops_audit",
+        "summary": "Search the audit trail as staff",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "Requested page; out-of-range values are clamped.",
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Requested page; out-of-range values are clamped."
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rows per page, 1-100.",
+              "title": "Page Size"
+            },
+            "required": false,
+            "description": "Rows per page, 1-100."
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "actor",
+            "schema": {
+              "default": "",
+              "maxLength": 150,
+              "title": "Actor",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "schema": {
+              "default": "",
+              "maxLength": 50,
+              "title": "Action",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "default": "",
+              "pattern": "^(|-?(created_at|actor_name|action|target|ip_address))$",
+              "title": "Sort",
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsAuditPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Search all retained audit records before pagination, without changing them.\n\nArgs:\n    request: The authenticated staff request.\n    filters: Search, recorded actor, action, sorting, and pagination.\n\nReturns:\n    Legacy audit display fields with global actor/action choices and page metadata.",
+        "tags": [
+          "Ops"
+        ],
+        "security": [
+          {
+            "OpsSession": []
+          }
+        ]
+      }
+    },
     "/api/app/ops/runs": {
       "get": {
         "operationId": "list_app_ops_runs",
@@ -3694,6 +3839,162 @@
           "name"
         ],
         "title": "TokenCreate",
+        "type": "object"
+      },
+      "AuditFilters": {
+        "description": "Bound audit search, exact actor/action filters, and display-column sorts.",
+        "properties": {
+          "page": {
+            "default": 1,
+            "description": "Requested page; out-of-range values are clamped.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rows per page, 1-100.",
+            "title": "Page Size"
+          },
+          "q": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Q",
+            "type": "string"
+          },
+          "actor": {
+            "default": "",
+            "maxLength": 150,
+            "title": "Actor",
+            "type": "string"
+          },
+          "action": {
+            "default": "",
+            "maxLength": 50,
+            "title": "Action",
+            "type": "string"
+          },
+          "sort": {
+            "default": "",
+            "pattern": "^(|-?(created_at|actor_name|action|target|ip_address))$",
+            "title": "Sort",
+            "type": "string"
+          }
+        },
+        "title": "AuditFilters",
+        "type": "object"
+      },
+      "OpsAuditEvent": {
+        "description": "Staff-only audit display fields, retaining the recorded actor name.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "actor_name": {
+            "title": "Actor Name",
+            "type": "string"
+          },
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "ip_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip Address"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "actor_name",
+          "action",
+          "target",
+          "detail",
+          "ip_address"
+        ],
+        "title": "OpsAuditEvent",
+        "type": "object"
+      },
+      "OpsAuditPage": {
+        "description": "Server-filtered audit history and global filter choices.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OpsAuditEvent"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "title": "Pages",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "actors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Actors",
+            "type": "array"
+          },
+          "actions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Actions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pages",
+          "total",
+          "page_size",
+          "actors",
+          "actions"
+        ],
+        "title": "OpsAuditPage",
         "type": "object"
       },
       "RunFilters": {

@@ -630,6 +630,50 @@ export const zTokenCreate = z.object({
 });
 
 /**
+ * AuditFilters
+ *
+ * Bound audit search, exact actor/action filters, and display-column sorts.
+ */
+export const zAuditFilters = z.object({
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
+    q: z.string().max(200).optional().default(''),
+    actor: z.string().max(150).optional().default(''),
+    action: z.string().max(50).optional().default(''),
+    sort: z.string().regex(/^(|-?(created_at|actor_name|action|target|ip_address))$/).optional().default('')
+});
+
+/**
+ * OpsAuditEvent
+ *
+ * Staff-only audit display fields, retaining the recorded actor name.
+ */
+export const zOpsAuditEvent = z.object({
+    id: z.int(),
+    created_at: z.iso.datetime(),
+    actor_name: z.string(),
+    action: z.string(),
+    target: z.string(),
+    detail: z.string(),
+    ip_address: z.string().nullable()
+});
+
+/**
+ * OpsAuditPage
+ *
+ * Server-filtered audit history and global filter choices.
+ */
+export const zOpsAuditPage = z.object({
+    items: z.array(zOpsAuditEvent),
+    page: z.int(),
+    pages: z.int(),
+    total: z.int(),
+    page_size: z.int(),
+    actors: z.array(z.string()),
+    actions: z.array(z.string())
+});
+
+/**
  * RunFilters
  *
  * Bound search, exact legacy filters, and display-column sorts.
@@ -819,6 +863,20 @@ export const zRevokeAppTokenPath = z.object({
  * OK
  */
 export const zRevokeAppTokenResponse = zAccountToken;
+
+export const zListAppOpsAuditQuery = z.object({
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
+    q: z.string().max(200).optional().default(''),
+    actor: z.string().max(150).optional().default(''),
+    action: z.string().max(50).optional().default(''),
+    sort: z.string().regex(/^(|-?(created_at|actor_name|action|target|ip_address))$/).optional().default('')
+});
+
+/**
+ * OK
+ */
+export const zListAppOpsAuditResponse = zOpsAuditPage;
 
 export const zListAppOpsRunsQuery = z.object({
     page: z.int().optional().default(1),

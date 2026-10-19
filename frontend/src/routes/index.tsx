@@ -30,6 +30,7 @@ function AppHome() {
           Your account's available sections are in the navigation. Today, Reports, News, IPOs,
           Markets, Companies, Delivery, and Account now have React previews. Other sections still
           open the existing pages while their React replacements are built and checked for parity.
+          Staff also have read-only Task runs and Audit trail previews.
         </Text>
       </header>
       <div className="workspace-welcome">
@@ -61,6 +62,12 @@ function AppHome() {
         {session.is_staff && (
           <a href="/app/ops/runs/">
             <span>Ops task runs</span>
+            <LuArrowUpRight aria-hidden="true" />
+          </a>
+        )}
+        {session.is_staff && (
+          <a href="/app/ops/audit/">
+            <span>Ops audit trail</span>
             <LuArrowUpRight aria-hidden="true" />
           </a>
         )}

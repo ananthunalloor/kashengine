@@ -28,6 +28,12 @@ checked on every private API request before reading any run data. `ADMIN_ALLOWED
 covers these preview pages and `/api/app/ops/`. Job execution and all other controls still use
 the original Ops pages.
 
+The audit trail also has a read-only preview at `/app/ops/audit/`, using the same staff and
+admin-IP rules. Search covers recorded admins, actions, targets, details, and addresses.
+Admin/action filters, sorting, and pagination operate on all retained events, not only the
+visible page, and remain in the URL. Names are shown as recorded at the time of the event.
+The original `/ops/audit/` remains available. Reading either page does not write audit events.
+
 ## Pages
 
 | Page | What it shows | What a superuser can do |

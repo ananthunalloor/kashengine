@@ -36,6 +36,7 @@ export function AppError({
   onRetry?: () => void;
   section?:
     | "Account"
+    | "Audit"
     | "Today"
     | "Reports"
     | "News"
@@ -60,7 +61,7 @@ export function AppError({
           ? "IPO not found"
           : "Page not found"
       : forbidden
-        ? section === "Task runs"
+        ? section === "Task runs" || section === "Audit"
           ? "Staff access required"
           : "Not on your account"
         : "Unable to load this page";
@@ -103,7 +104,9 @@ export function AppError({
                 ? "/app/dashboard/"
                 : section === "Task runs"
                   ? "/app/ops/runs/"
-                  : `/app/${section.toLowerCase()}/`
+                  : section === "Audit"
+                    ? "/app/ops/audit/"
+                    : `/app/${section.toLowerCase()}/`
             }
           >
             Back to {section}

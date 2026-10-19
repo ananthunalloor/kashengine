@@ -93,6 +93,30 @@ class TokenCreated(Schema):
     secret: str = Field(description="Copy once; never cache or persist this response.")
 
 
+class OpsAuditEvent(Schema):
+    """Staff-only audit display fields, retaining the recorded actor name."""
+
+    id: int
+    created_at: datetime
+    actor_name: str
+    action: str
+    target: str
+    detail: str
+    ip_address: str | None
+
+
+class OpsAuditPage(Schema):
+    """Server-filtered audit history and global filter choices."""
+
+    items: list[OpsAuditEvent]
+    page: int
+    pages: int
+    total: int
+    page_size: int
+    actors: list[str]
+    actions: list[str]
+
+
 class OpsRunSummary(Schema):
     """Staff-only run metadata without arguments, result, error, or output."""
 

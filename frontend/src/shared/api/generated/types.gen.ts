@@ -1685,6 +1685,114 @@ export type TokenCreate = {
 };
 
 /**
+ * AuditFilters
+ *
+ * Bound audit search, exact actor/action filters, and display-column sorts.
+ */
+export type AuditFilters = {
+    /**
+     * Page
+     *
+     * Requested page; out-of-range values are clamped.
+     */
+    page?: number;
+    /**
+     * Page Size
+     *
+     * Rows per page, 1-100.
+     */
+    page_size?: number | null;
+    /**
+     * Q
+     */
+    q?: string;
+    /**
+     * Actor
+     */
+    actor?: string;
+    /**
+     * Action
+     */
+    action?: string;
+    /**
+     * Sort
+     */
+    sort?: string;
+};
+
+/**
+ * OpsAuditEvent
+ *
+ * Staff-only audit display fields, retaining the recorded actor name.
+ */
+export type OpsAuditEvent = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Actor Name
+     */
+    actor_name: string;
+    /**
+     * Action
+     */
+    action: string;
+    /**
+     * Target
+     */
+    target: string;
+    /**
+     * Detail
+     */
+    detail: string;
+    /**
+     * Ip Address
+     */
+    ip_address: string | null;
+};
+
+/**
+ * OpsAuditPage
+ *
+ * Server-filtered audit history and global filter choices.
+ */
+export type OpsAuditPage = {
+    /**
+     * Items
+     */
+    items: Array<OpsAuditEvent>;
+    /**
+     * Page
+     */
+    page: number;
+    /**
+     * Pages
+     */
+    pages: number;
+    /**
+     * Total
+     */
+    total: number;
+    /**
+     * Page Size
+     */
+    page_size: number;
+    /**
+     * Actors
+     */
+    actors: Array<string>;
+    /**
+     * Actions
+     */
+    actions: Array<string>;
+};
+
+/**
  * RunFilters
  *
  * Bound search, exact legacy filters, and display-column sorts.
@@ -2521,6 +2629,72 @@ export type RevokeAppTokenResponses = {
 };
 
 export type RevokeAppTokenResponse = RevokeAppTokenResponses[keyof RevokeAppTokenResponses];
+
+export type ListAppOpsAuditData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page
+         *
+         * Requested page; out-of-range values are clamped.
+         */
+        page?: number;
+        /**
+         * Page Size
+         *
+         * Rows per page, 1-100.
+         */
+        page_size?: number | null;
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * Actor
+         */
+        actor?: string;
+        /**
+         * Action
+         */
+        action?: string;
+        /**
+         * Sort
+         */
+        sort?: string;
+    };
+    url: '/api/app/ops/audit';
+};
+
+export type ListAppOpsAuditErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type ListAppOpsAuditError = ListAppOpsAuditErrors[keyof ListAppOpsAuditErrors];
+
+export type ListAppOpsAuditResponses = {
+    /**
+     * OK
+     */
+    200: OpsAuditPage;
+};
+
+export type ListAppOpsAuditResponse = ListAppOpsAuditResponses[keyof ListAppOpsAuditResponses];
 
 export type ListAppOpsRunsData = {
     body?: never;

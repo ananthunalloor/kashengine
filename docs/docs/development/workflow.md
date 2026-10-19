@@ -111,6 +111,20 @@ data, with manual retry for recoverable errors. Neither endpoint dispatches a jo
 external services, or writes audit events. Job execution and other Ops pages remain Django
 links; `/ops/runs/` and its original details remain available.
 
+The audit trail preview opens `/app/ops/audit/` and reads `GET /api/app/ops/audit` with the
+same `OpsSession` staff check and Caddy IP restrictions. All legacy display fields are retained:
+time, recorded actor name, action, target, detail, and nullable address. Names come from the
+event snapshot rather than the current user record, so renames/deletions do not change history.
+The API serializes only these fields and the event ID, not user/session/token objects.
+
+Search matches all text display fields and addresses. Exact actor/action filters use globally
+distinct choices, independent of the current search. Whitelisted display-column sorting uses
+nulls-last ordering and stable ID ties; default ordering remains newest-first. Pagination uses
+`OPS_PAGE_SIZE` with an optional 1-100 override. The TanStack table keeps filters, search, sort,
+and page size in the URL. Detail text is escaped and preserves line breaks, never HTML.
+Background permission or refresh errors hide stale audit rows and display explicit recovery.
+The page is read-only, has no polling, and never creates audit events. `/ops/audit/` is unchanged.
+
 The private `/api/app/session` endpoint supplies the current user, allowed features, subscription
 notice, and navigation. It reuses Django's navigation/access rules, accepts session cookies only,
 and rejects Authorization headers. It is available even when the public API is disabled, and

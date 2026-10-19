@@ -4,7 +4,8 @@ import { LuActivity, LuArrowLeft, LuRefreshCw } from "react-icons/lu";
 
 import type { OpsRunDetail } from "../../shared/api/generated/types.gen";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
-import { RunActor, RunStatus, RunTime } from "./Runs";
+import { RunActor, RunStatus } from "./Runs";
+import { OpsTime } from "./OpsTime";
 
 export function RunDetail({
   run,
@@ -62,19 +63,19 @@ export function RunDetail({
           <div>
             <dt>Queued</dt>
             <dd>
-              <RunTime value={run.created_at} />
+              <OpsTime value={run.created_at} />
             </dd>
           </div>
           <div>
             <dt>Started</dt>
             <dd>
-              <RunTime value={run.started_at} />
+              <OpsTime value={run.started_at} />
             </dd>
           </div>
           <div>
             <dt>Finished</dt>
             <dd>
-              <RunTime value={run.finished_at} />
+              <OpsTime value={run.finished_at} />
             </dd>
           </div>
           <div>
