@@ -124,6 +124,19 @@ def react_ipo(request: HttpRequest, pk: int) -> HttpResponse:
     return react_app(request)
 
 
+def react_ops_page(request: HttpRequest, section: str) -> HttpResponse:
+    """Serve a staff Ops preview; the private API validates the requested page.
+
+    Args:
+        request: The staff browser request.
+        section: The requested Ops section within the preview.
+
+    Returns:
+        The uncached React shell without operational data.
+    """
+    return react_app(request)
+
+
 def react_ops_run(request: HttpRequest, pk: int) -> HttpResponse:
     """Serve a run's preview shell; staff authentication is applied by the URL wrapper.
 

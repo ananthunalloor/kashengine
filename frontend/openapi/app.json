@@ -1624,6 +1624,162 @@
           }
         ]
       }
+    },
+    "/api/app/ops/pages/{path}": {
+      "get": {
+        "operationId": "get_app_ops_page",
+        "summary": "Read an Ops workspace page",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "path",
+            "schema": {
+              "title": "Path",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Reuse the legacy view's context without rendering HTML or serializing models.",
+        "tags": [
+          "Ops workspace"
+        ],
+        "security": [
+          {
+            "OpsSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/ops/actions/{path}": {
+      "post": {
+        "operationId": "post_app_ops_action",
+        "summary": "Perform an existing superuser Ops action",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "path",
+            "schema": {
+              "title": "Path",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsActionResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Keep domain validation/auditing in the original handler; return explicit outcomes.",
+        "tags": [
+          "Ops workspace"
+        ],
+        "security": [
+          {
+            "OpsSession": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -4343,6 +4499,543 @@
           "output"
         ],
         "title": "OpsRunDetail",
+        "type": "object"
+      },
+      "OpsCell": {
+        "description": "Escaped display content with an optional same-origin link and explicit status tone.",
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "href": {
+            "default": "",
+            "title": "Href",
+            "type": "string"
+          },
+          "tone": {
+            "default": "neutral",
+            "enum": [
+              "neutral",
+              "positive",
+              "negative",
+              "warning"
+            ],
+            "title": "Tone",
+            "type": "string"
+          },
+          "kind": {
+            "default": "text",
+            "enum": [
+              "text",
+              "time"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "OpsCell",
+        "type": "object"
+      },
+      "OpsChartPoint": {
+        "description": "Daily values and failures for an accessible, paired series chart.",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "label",
+          "value",
+          "failed"
+        ],
+        "title": "OpsChartPoint",
+        "type": "object"
+      },
+      "OpsChoice": {
+        "description": "One select option; values are form data, not URLs.",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "OpsChoice",
+        "type": "object"
+      },
+      "OpsColumn": {
+        "description": "A display column whose key is also an allowlisted sort field.",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "key"
+        ],
+        "title": "OpsColumn",
+        "type": "object"
+      },
+      "OpsField": {
+        "description": "A Django-validated field; password values are never serialized.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "kind": {
+            "default": "text",
+            "enum": [
+              "text",
+              "password",
+              "number",
+              "checkbox",
+              "select",
+              "textarea",
+              "date",
+              "time",
+              "file",
+              "hidden"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "value": {
+            "default": "",
+            "title": "Value",
+            "type": "string"
+          },
+          "checked": {
+            "default": false,
+            "title": "Checked",
+            "type": "boolean"
+          },
+          "required": {
+            "default": false,
+            "title": "Required",
+            "type": "boolean"
+          },
+          "help": {
+            "default": "",
+            "title": "Help",
+            "type": "string"
+          },
+          "choices": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OpsChoice"
+            },
+            "title": "Choices",
+            "type": "array"
+          },
+          "errors": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "step": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step"
+          },
+          "max_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Length"
+          }
+        },
+        "required": [
+          "name",
+          "label"
+        ],
+        "title": "OpsField",
+        "type": "object"
+      },
+      "OpsForm": {
+        "description": "An allowlisted administrative action, never an arbitrary URL or task.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "fields": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OpsField"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "errors": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "confirmation": {
+            "default": "",
+            "title": "Confirmation",
+            "type": "string"
+          },
+          "disabled": {
+            "default": false,
+            "title": "Disabled",
+            "type": "boolean"
+          },
+          "download": {
+            "default": false,
+            "title": "Download",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "action",
+          "label"
+        ],
+        "title": "OpsForm",
+        "type": "object"
+      },
+      "OpsPage": {
+        "description": "Safe presentation shared with the existing Ops views, without rendered HTML.",
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/OpsSection"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "refresh_seconds": {
+            "default": 0,
+            "title": "Refresh Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "title",
+          "sections"
+        ],
+        "title": "OpsPage",
+        "type": "object"
+      },
+      "OpsRow": {
+        "description": "Explicit display fields only; model internals are never dumped.",
+        "properties": {
+          "cells": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/OpsCell"
+            },
+            "title": "Cells",
+            "type": "object"
+          },
+          "forms": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OpsForm"
+            },
+            "title": "Forms",
+            "type": "array"
+          },
+          "links": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/NavigationItem"
+            },
+            "title": "Links",
+            "type": "array"
+          }
+        },
+        "required": [
+          "cells"
+        ],
+        "title": "OpsRow",
+        "type": "object"
+      },
+      "OpsSection": {
+        "description": "One native React section: details, a table, validated forms, and links.",
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/OpsCell"
+            },
+            "default": {},
+            "title": "Details",
+            "type": "object"
+          },
+          "table": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpsTable"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "forms": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OpsForm"
+            },
+            "title": "Forms",
+            "type": "array"
+          },
+          "links": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/NavigationItem"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "chart": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OpsChartPoint"
+            },
+            "title": "Chart",
+            "type": "array"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "OpsSection",
+        "type": "object"
+      },
+      "OpsTable": {
+        "description": "A paginated full-list table, or a documented bounded monitoring snapshot.",
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/OpsColumn"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/OpsRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "server": {
+            "default": false,
+            "title": "Server",
+            "type": "boolean"
+          },
+          "page": {
+            "default": 1,
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "default": 1,
+            "title": "Pages",
+            "type": "integer"
+          },
+          "page_size": {
+            "default": 10,
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          },
+          "filters": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Filters",
+            "type": "array"
+          },
+          "filter_choices": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "default": {},
+            "title": "Filter Choices",
+            "type": "object"
+          }
+        },
+        "required": [
+          "columns",
+          "rows"
+        ],
+        "title": "OpsTable",
+        "type": "object"
+      },
+      "OpsActionResult": {
+        "description": "Action outcome, with invalid forms kept in React and no automatic retry.",
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/OpsMessage"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "redirect": {
+            "default": "",
+            "title": "Redirect",
+            "type": "string"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpsPage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "ok",
+          "messages"
+        ],
+        "title": "OpsActionResult",
+        "type": "object"
+      },
+      "OpsMessage": {
+        "description": "An existing Django action's explicit success, warning, or error notification.",
+        "properties": {
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "level",
+          "text"
+        ],
+        "title": "OpsMessage",
         "type": "object"
       }
     },

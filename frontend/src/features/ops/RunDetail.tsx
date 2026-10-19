@@ -46,7 +46,7 @@ export function RunDetail({
         {run.status === "pending" && (
           <Text mt="sm">
             The job waits for a worker. If this does not change, check that a worker is running in{" "}
-            <Anchor href="/ops/">Ops Overview</Anchor>.
+            <Anchor href="/app/ops/">Ops Overview</Anchor>.
           </Text>
         )}
         <Group mt="md">

@@ -240,6 +240,153 @@ h2 {
   position: relative;
 }
 
+.ops-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.ops-navigation a {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--brand-line);
+  border-radius: 0.65rem;
+  background: var(--brand-surface);
+  color: var(--brand-muted);
+  text-decoration: none;
+}
+
+.ops-navigation a:hover,
+.ops-navigation a[aria-current="page"] {
+  color: var(--brand-purple);
+  background: var(--brand-soft);
+}
+
+.ops-workspace {
+  overflow-wrap: anywhere;
+}
+
+.ops-section {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.ops-detail-grid,
+.ops-form-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1rem;
+}
+
+.ops-detail-grid div {
+  padding: 1rem;
+  background: var(--brand-surface);
+  border: 1px solid var(--brand-line);
+  border-radius: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.ops-detail-grid dt,
+.ops-field-help {
+  color: var(--brand-muted);
+  font-size: 0.8rem;
+}
+
+.ops-detail-grid dd {
+  margin: 0.5rem 0 0;
+}
+
+.ops-action-form fieldset {
+  position: relative;
+  border: 0;
+  min-width: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.ops-field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.ops-field input:not([type="checkbox"]),
+.ops-field select,
+.ops-field textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--brand-line);
+  border-radius: 0.5rem;
+  padding: 0.65rem;
+  color: var(--brand-ink);
+  background: var(--brand-surface);
+}
+
+.ops-checkbox {
+  grid-template-columns: auto 1fr;
+  align-content: start;
+  align-items: center;
+}
+
+.ops-checkbox input {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.ops-checkbox label,
+.ops-checkbox .ops-field-help {
+  grid-column: 2;
+}
+
+.ops-row-actions {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 10rem;
+}
+
+.ops-row-actions details[open] {
+  min-width: 16rem;
+}
+
+.ops-cell {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ops-series {
+  width: 100%;
+  max-height: 15rem;
+  color: var(--brand-muted);
+}
+
+.ops-series text {
+  fill: currentColor;
+  font-size: 7px;
+}
+
+.ops-bar-value {
+  fill: var(--brand-purple);
+}
+
+.ops-bar-failed {
+  fill: var(--brand-loss);
+}
+
+.ops-tone-positive {
+  color: var(--brand-gain);
+}
+
+.ops-tone-negative,
+.ops-field [role="alert"] {
+  color: var(--brand-loss);
+}
+
+.ops-tone-warning {
+  color: var(--metric-caution);
+}
+
 .account-popover {
   position: absolute;
   right: 0;
@@ -699,8 +846,14 @@ h2 {
   line-height: 1.8;
 }
 
-.ops-run-filters {
+.ops-run-filters,
+.ops-workspace-filters {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+}
+
+.ops-workspace-filters input[type="checkbox"] {
+  width: auto;
+  margin-right: 0.5rem;
 }
 
 .ops-run-facts {

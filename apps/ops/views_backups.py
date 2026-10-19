@@ -7,7 +7,8 @@ from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
 from django.db import DatabaseError
 from django.http import FileResponse, HttpRequest, HttpResponse, HttpResponseNotAllowed
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect
+from django.template.response import TemplateResponse
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 
@@ -47,7 +48,7 @@ def _render_page(request: HttpRequest, form=None, *, status: int = 200) -> HttpR
         The rendered backups page.
     """
     config = backup_automation.configuration()
-    return render(
+    return TemplateResponse(
         request,
         "ops/backups.html",
         {

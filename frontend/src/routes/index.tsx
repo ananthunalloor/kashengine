@@ -16,6 +16,7 @@ function AppHome() {
     "/markets/",
     "/companies/",
     "/delivery/",
+    "/ops/",
   ]);
   return (
     <Stack gap="xl">
@@ -28,9 +29,9 @@ function AppHome() {
         </Title>
         <Text maw={640} c="dimmed" mt="sm">
           Your account's available sections are in the navigation. Today, Reports, News, IPOs,
-          Markets, Companies, Delivery, and Account now have React previews. Other sections still
-          open the existing pages while their React replacements are built and checked for parity.
-          Staff also have read-only Task runs and Audit trail previews.
+          Markets, Companies, Delivery, and Account now have React previews. Staff also have the
+          complete Operations workspace; administrative actions retain their existing superuser
+          permissions. Original Django pages remain available for comparison.
         </Text>
       </header>
       <div className="workspace-welcome">

@@ -33,6 +33,7 @@ import type { IconType } from "react-icons";
 
 import type { Session } from "../api/generated/types.gen";
 import { AccountMenu } from "./AccountMenu";
+import { OpsNavigation } from "./OpsNavigation";
 
 const navigationIcons: Record<string, IconType> = {
   "/dashboard/": LuHouse,
@@ -146,6 +147,7 @@ export function ApplicationShell({
               "/markets/",
               "/companies/",
               "/delivery/",
+              "/ops/",
             ].includes(item.url);
             const url = migrated ? `/app${item.url}` : item.url;
             const active = pathname === url || (migrated && pathname.startsWith(url));
@@ -163,7 +165,7 @@ export function ApplicationShell({
               />
             );
           })}
-          {session.is_staff && (
+          {session.is_staff && !pathname.startsWith("/app/ops/") && (
             <NavLink
               href="/app/ops/runs/"
               label="Task runs"
@@ -173,7 +175,7 @@ export function ApplicationShell({
               leftSection={<LuActivity aria-hidden="true" />}
             />
           )}
-          {session.is_staff && (
+          {session.is_staff && !pathname.startsWith("/app/ops/") && (
             <NavLink
               href="/app/ops/audit/"
               label="Audit trail"
@@ -186,6 +188,9 @@ export function ApplicationShell({
         </nav>
       </aside>
       <main className="app-main" id="main" tabIndex={-1}>
+        {session.is_staff && pathname.startsWith("/app/ops/") && (
+          <OpsNavigation superuser={session.is_superuser} pathname={pathname} />
+        )}
         {session.notice && (
           <Alert color="yellow" title="Your subscription" role="status" mb="md">
             {session.notice} <Anchor href="/app/account/">See your account</Anchor>.

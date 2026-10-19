@@ -752,6 +752,183 @@ export const zOpsRunDetail = z.object({
 });
 
 /**
+ * OpsCell
+ *
+ * Escaped display content with an optional same-origin link and explicit status tone.
+ */
+export const zOpsCell = z.object({
+    text: z.string(),
+    href: z.string().optional().default(''),
+    tone: z.enum([
+        'neutral',
+        'positive',
+        'negative',
+        'warning'
+    ]).optional().default('neutral'),
+    kind: z.enum(['text', 'time']).optional().default('text'),
+    value: z.union([
+        z.string(),
+        z.number()
+    ]).nullish()
+});
+
+/**
+ * OpsChartPoint
+ *
+ * Daily values and failures for an accessible, paired series chart.
+ */
+export const zOpsChartPoint = z.object({
+    label: z.string(),
+    value: z.int(),
+    failed: z.int()
+});
+
+/**
+ * OpsChoice
+ *
+ * One select option; values are form data, not URLs.
+ */
+export const zOpsChoice = z.object({
+    label: z.string(),
+    value: z.string()
+});
+
+/**
+ * OpsColumn
+ *
+ * A display column whose key is also an allowlisted sort field.
+ */
+export const zOpsColumn = z.object({
+    label: z.string(),
+    key: z.string()
+});
+
+/**
+ * OpsField
+ *
+ * A Django-validated field; password values are never serialized.
+ */
+export const zOpsField = z.object({
+    name: z.string(),
+    label: z.string(),
+    kind: z.enum([
+        'text',
+        'password',
+        'number',
+        'checkbox',
+        'select',
+        'textarea',
+        'date',
+        'time',
+        'file',
+        'hidden'
+    ]).optional().default('text'),
+    value: z.string().optional().default(''),
+    checked: z.boolean().optional().default(false),
+    required: z.boolean().optional().default(false),
+    help: z.string().optional().default(''),
+    choices: z.array(zOpsChoice).optional().default([]),
+    errors: z.array(z.string()).optional().default([]),
+    min: z.string().nullish(),
+    max: z.string().nullish(),
+    step: z.string().nullish(),
+    max_length: z.int().nullish()
+});
+
+/**
+ * OpsForm
+ *
+ * An allowlisted administrative action, never an arbitrary URL or task.
+ */
+export const zOpsForm = z.object({
+    id: z.string(),
+    action: z.string(),
+    label: z.string(),
+    fields: z.array(zOpsField).optional().default([]),
+    errors: z.array(z.string()).optional().default([]),
+    confirmation: z.string().optional().default(''),
+    disabled: z.boolean().optional().default(false),
+    download: z.boolean().optional().default(false)
+});
+
+/**
+ * OpsRow
+ *
+ * Explicit display fields only; model internals are never dumped.
+ */
+export const zOpsRow = z.object({
+    cells: z.record(z.string(), zOpsCell),
+    forms: z.array(zOpsForm).optional().default([]),
+    links: z.array(zNavigationItem).optional().default([])
+});
+
+/**
+ * OpsTable
+ *
+ * A paginated full-list table, or a documented bounded monitoring snapshot.
+ */
+export const zOpsTable = z.object({
+    columns: z.array(zOpsColumn),
+    rows: z.array(zOpsRow),
+    server: z.boolean().optional().default(false),
+    page: z.int().optional().default(1),
+    pages: z.int().optional().default(1),
+    page_size: z.int().optional().default(10),
+    total: z.int().optional().default(0),
+    filters: z.array(z.string()).optional().default([]),
+    filter_choices: z.record(z.string(), z.array(z.string())).optional().default({})
+});
+
+/**
+ * OpsSection
+ *
+ * One native React section: details, a table, validated forms, and links.
+ */
+export const zOpsSection = z.object({
+    title: z.string(),
+    description: z.string().optional().default(''),
+    details: z.record(z.string(), zOpsCell).optional().default({}),
+    table: zOpsTable.nullish(),
+    forms: z.array(zOpsForm).optional().default([]),
+    links: z.array(zNavigationItem).optional().default([]),
+    chart: z.array(zOpsChartPoint).optional().default([])
+});
+
+/**
+ * OpsPage
+ *
+ * Safe presentation shared with the existing Ops views, without rendered HTML.
+ */
+export const zOpsPage = z.object({
+    title: z.string(),
+    description: z.string().optional().default(''),
+    sections: z.array(zOpsSection),
+    refresh_seconds: z.int().optional().default(0)
+});
+
+/**
+ * OpsMessage
+ *
+ * An existing Django action's explicit success, warning, or error notification.
+ */
+export const zOpsMessage = z.object({
+    level: z.string(),
+    text: z.string()
+});
+
+/**
+ * OpsActionResult
+ *
+ * Action outcome, with invalid forms kept in React and no automatic retry.
+ */
+export const zOpsActionResult = z.object({
+    ok: z.boolean(),
+    messages: z.array(zOpsMessage),
+    redirect: z.string().optional().default(''),
+    page: zOpsPage.nullish()
+});
+
+/**
  * OK
  */
 export const zGetAppSessionResponse = zSession;
@@ -902,3 +1079,21 @@ export const zGetAppOpsRunPath = z.object({
  * OK
  */
 export const zGetAppOpsRunResponse = zOpsRunDetail;
+
+export const zGetAppOpsPagePath = z.object({
+    path: z.string()
+});
+
+/**
+ * OK
+ */
+export const zGetAppOpsPageResponse = zOpsPage;
+
+export const zPostAppOpsActionPath = z.object({
+    path: z.string()
+});
+
+/**
+ * OK
+ */
+export const zPostAppOpsActionResponse = zOpsActionResult;

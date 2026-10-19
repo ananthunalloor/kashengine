@@ -1,5 +1,6 @@
 """Private application endpoints. These do not belong to the public versioned contract."""
 
+from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, JsonResponse
 from django.middleware.csrf import get_token
 from django.urls import reverse
@@ -20,6 +21,7 @@ from .ipos import router as ipos_router
 from .markets import router as markets_router
 from .news import router as news_router
 from .ops import router as ops_router
+from .ops_pages import router as ops_pages_router
 from .reports import router as reports_router
 from .schemas import Session
 from .today import router as today_router
@@ -42,6 +44,23 @@ api.add_router("", delivery_router)
 api.add_router("", today_router)
 api.add_router("", account_router)
 api.add_router("", ops_router)
+api.add_router("", ops_pages_router)
+
+
+@api.exception_handler(PermissionDenied)
+def ops_permission_denied(request: HttpRequest, exc: PermissionDenied):
+    """Keep Django action permission failures inside the private problem contract.
+
+    Args:
+        request: The authenticated request denied by a protected Ops action.
+        exc: The original permission failure.
+
+    Returns:
+        A private 403 problem response.
+    """
+    return errors.problem(
+        request, "feature_not_available", "Superuser access is required for this action."
+    )
 
 
 @api.exception_handler(AuthenticationError)

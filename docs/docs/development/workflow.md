@@ -108,8 +108,8 @@ as the legacy staff-only page, rendered as plain text with IST times and the sha
 duration formatter. Waiting/running details poll every three seconds while visible and stop
 when terminal, on errors, or on navigation. Failed refreshes explicitly hide stale operational
 data, with manual retry for recoverable errors. Neither endpoint dispatches a job, calls
-external services, or writes audit events. Job execution and other Ops pages remain Django
-links; `/ops/runs/` and its original details remain available.
+external services, or writes audit events. Job execution is available in the full React Ops
+workspace; `/ops/runs/` and its original details remain available.
 
 The audit trail preview opens `/app/ops/audit/` and reads `GET /api/app/ops/audit` with the
 same `OpsSession` staff check and Caddy IP restrictions. All legacy display fields are retained:
@@ -124,6 +124,40 @@ nulls-last ordering and stable ID ties; default ordering remains newest-first. P
 and page size in the URL. Detail text is escaped and preserves line breaks, never HTML.
 Background permission or refresh errors hide stale audit rows and display explicit recovery.
 The page is read-only, has no polling, and never creates audit events. `/ops/audit/` is unchanged.
+
+The full Ops preview now starts at `/app/ops/`: Overview, Jobs, Logs, Metrics, Users and user
+details/access/subscriptions, Subscriptions, Logins/lockouts, Settings and every setting group,
+Schedule/add/edit, Feeds, Instruments, Configuration, and Backups. Runs/Audit retain their
+dedicated endpoints. All old `/ops/` routes still work; no default-route cutover has occurred.
+
+`GET /api/app/ops/pages/{path}` resolves only a fixed Ops page allowlist. Django views return
+`TemplateResponse` so the legacy HTML and explicit JSON presenters share the same context and
+domain queries without parsing or embedding server-rendered HTML. The typed page contract
+contains only selected display cells, native field descriptors, safe links, charts, and actions,
+never arbitrary model dumps. Field descriptors preserve prefixes, repeated feature checkboxes,
+validation, defaults, and reset controls. Password widgets always serialize empty values.
+
+`POST /api/app/ops/actions/{path}` resolves a separate fixed action allowlist and invokes the
+existing decorated handler, preserving all domain validation, dispatch/busy checks, audit events,
+self/last-superuser protections, managed backup schedule rules, and transaction behavior.
+It requires a superuser, a browser session, and CSRF; reads still require staff (Backups requires
+superuser). Redirects and Django notifications become typed outcomes in React, invalid forms
+remain editable with field errors, and snapshot exports remain streaming attachments. A restore
+keeps the existing typed RESTORE confirmation and signs out before any subsequent refetch.
+Session termination uses an opaque HMAC identifier rather than exposing usable session keys.
+No action is automatically retried or optimistically reported as saved. Form submissions are
+imperative: credentials/uploads are not retained in Query/mutation caches, storage, or URLs.
+
+Users, subscriptions, login events, schedules, feeds, and instruments use TanStack server tables
+with complete-list search/filter/sort before pagination (1–100 rows); state is in the route URL.
+Fixed job registries, health checks, metric series, and explicitly labeled recent-history
+snapshots use local TanStack search/pagination. Metrics have accessible SVG daily-series charts
+and exact values in tables. Overview polls every 15 seconds; opt-in live logs every 5 seconds,
+only while visible, stopping on errors. Logs retain the existing redacted, bounded tail
+(up to 1000 entries). Failed refreshes hide stale operational data. Static styles retain the
+landing palette, dark mode, and strict CSP without runtime style injection.
+The entrypoint configures Zod's `jitless` mode before constructing schemas so even its
+optional eval capability probe does not trigger a CSP violation.
 
 The private `/api/app/session` endpoint supplies the current user, allowed features, subscription
 notice, and navigation. It reuses Django's navigation/access rules, accepts session cookies only,

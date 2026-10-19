@@ -282,7 +282,7 @@ it("renders stored diagnostics only as text, metadata and pending guidance", asy
   expect(screen.getByText("task-123")).toBeInTheDocument();
   expect(screen.getByText("worker-one")).toBeInTheDocument();
   expect(screen.getByText(/job waits for a worker/)).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Ops Overview" })).toHaveAttribute("href", "/ops/");
+  expect(screen.getByRole("link", { name: "Ops Overview" })).toHaveAttribute("href", "/app/ops/");
   expect(document.querySelector("pre img, pre script, dd b")).toBeNull();
   expect(screen.getAllByText("\u2013").length).toBeGreaterThan(1);
 });

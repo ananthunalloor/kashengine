@@ -18,6 +18,8 @@ import { Route as IposIndexRouteImport } from './routes/ipos.index'
 import { Route as IposIdRouteImport } from './routes/ipos.$id'
 import { Route as MarketsIndexRouteImport } from './routes/markets.index'
 import { Route as NewsIndexRouteImport } from './routes/news.index'
+import { Route as OpsIndexRouteImport } from './routes/ops.index'
+import { Route as OpsSplatRouteImport } from './routes/ops.$'
 import { Route as ReportsIndexRouteImport } from './routes/reports.index'
 import { Route as ReportsDayRouteImport } from './routes/reports.$day'
 import { Route as OpsAuditIndexRouteImport } from './routes/ops.audit.index'
@@ -69,6 +71,16 @@ const NewsIndexRoute = NewsIndexRouteImport.update({
   path: '/news/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OpsIndexRoute = OpsIndexRouteImport.update({
+  id: '/ops/',
+  path: '/ops/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OpsSplatRoute = OpsSplatRouteImport.update({
+  id: '/ops/$',
+  path: '/ops/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReportsIndexRoute = ReportsIndexRouteImport.update({
   id: '/reports/',
   path: '/reports/',
@@ -98,6 +110,7 @@ const OpsRunsIdRoute = OpsRunsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ipos/$id': typeof IposIdRoute
+  '/ops/$': typeof OpsSplatRoute
   '/reports/$day': typeof ReportsDayRoute
   '/account/': typeof AccountIndexRoute
   '/companies/': typeof CompaniesIndexRoute
@@ -106,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/ipos/': typeof IposIndexRoute
   '/markets/': typeof MarketsIndexRoute
   '/news/': typeof NewsIndexRoute
+  '/ops/': typeof OpsIndexRoute
   '/reports/': typeof ReportsIndexRoute
   '/ops/runs/$id': typeof OpsRunsIdRoute
   '/ops/audit/': typeof OpsAuditIndexRoute
@@ -114,6 +128,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ipos/$id': typeof IposIdRoute
+  '/ops/$': typeof OpsSplatRoute
   '/reports/$day': typeof ReportsDayRoute
   '/account': typeof AccountIndexRoute
   '/companies': typeof CompaniesIndexRoute
@@ -122,6 +137,7 @@ export interface FileRoutesByTo {
   '/ipos': typeof IposIndexRoute
   '/markets': typeof MarketsIndexRoute
   '/news': typeof NewsIndexRoute
+  '/ops': typeof OpsIndexRoute
   '/reports': typeof ReportsIndexRoute
   '/ops/runs/$id': typeof OpsRunsIdRoute
   '/ops/audit': typeof OpsAuditIndexRoute
@@ -131,6 +147,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/ipos/$id': typeof IposIdRoute
+  '/ops/$': typeof OpsSplatRoute
   '/reports/$day': typeof ReportsDayRoute
   '/account/': typeof AccountIndexRoute
   '/companies/': typeof CompaniesIndexRoute
@@ -139,6 +156,7 @@ export interface FileRoutesById {
   '/ipos/': typeof IposIndexRoute
   '/markets/': typeof MarketsIndexRoute
   '/news/': typeof NewsIndexRoute
+  '/ops/': typeof OpsIndexRoute
   '/reports/': typeof ReportsIndexRoute
   '/ops/runs/$id': typeof OpsRunsIdRoute
   '/ops/audit/': typeof OpsAuditIndexRoute
@@ -149,6 +167,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/ipos/$id'
+    | '/ops/$'
     | '/reports/$day'
     | '/account/'
     | '/companies/'
@@ -157,6 +176,7 @@ export interface FileRouteTypes {
     | '/ipos/'
     | '/markets/'
     | '/news/'
+    | '/ops/'
     | '/reports/'
     | '/ops/runs/$id'
     | '/ops/audit/'
@@ -165,6 +185,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/ipos/$id'
+    | '/ops/$'
     | '/reports/$day'
     | '/account'
     | '/companies'
@@ -173,6 +194,7 @@ export interface FileRouteTypes {
     | '/ipos'
     | '/markets'
     | '/news'
+    | '/ops'
     | '/reports'
     | '/ops/runs/$id'
     | '/ops/audit'
@@ -181,6 +203,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/ipos/$id'
+    | '/ops/$'
     | '/reports/$day'
     | '/account/'
     | '/companies/'
@@ -189,6 +212,7 @@ export interface FileRouteTypes {
     | '/ipos/'
     | '/markets/'
     | '/news/'
+    | '/ops/'
     | '/reports/'
     | '/ops/runs/$id'
     | '/ops/audit/'
@@ -198,6 +222,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   IposIdRoute: typeof IposIdRoute
+  OpsSplatRoute: typeof OpsSplatRoute
   ReportsDayRoute: typeof ReportsDayRoute
   AccountIndexRoute: typeof AccountIndexRoute
   CompaniesIndexRoute: typeof CompaniesIndexRoute
@@ -206,6 +231,7 @@ export interface RootRouteChildren {
   IposIndexRoute: typeof IposIndexRoute
   MarketsIndexRoute: typeof MarketsIndexRoute
   NewsIndexRoute: typeof NewsIndexRoute
+  OpsIndexRoute: typeof OpsIndexRoute
   ReportsIndexRoute: typeof ReportsIndexRoute
   OpsRunsIdRoute: typeof OpsRunsIdRoute
   OpsAuditIndexRoute: typeof OpsAuditIndexRoute
@@ -277,6 +303,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NewsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ops/': {
+      id: '/ops/'
+      path: '/ops'
+      fullPath: '/ops/'
+      preLoaderRoute: typeof OpsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ops/$': {
+      id: '/ops/$'
+      path: '/ops/$'
+      fullPath: '/ops/$'
+      preLoaderRoute: typeof OpsSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reports/': {
       id: '/reports/'
       path: '/reports'
@@ -318,6 +358,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   IposIdRoute: IposIdRoute,
+  OpsSplatRoute: OpsSplatRoute,
   ReportsDayRoute: ReportsDayRoute,
   AccountIndexRoute: AccountIndexRoute,
   CompaniesIndexRoute: CompaniesIndexRoute,
@@ -326,6 +367,7 @@ const rootRouteChildren: RootRouteChildren = {
   IposIndexRoute: IposIndexRoute,
   MarketsIndexRoute: MarketsIndexRoute,
   NewsIndexRoute: NewsIndexRoute,
+  OpsIndexRoute: OpsIndexRoute,
   ReportsIndexRoute: ReportsIndexRoute,
   OpsRunsIdRoute: OpsRunsIdRoute,
   OpsAuditIndexRoute: OpsAuditIndexRoute,

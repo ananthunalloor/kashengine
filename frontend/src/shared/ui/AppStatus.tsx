@@ -44,7 +44,8 @@ export function AppError({
     | "Markets"
     | "Companies"
     | "Delivery"
-    | "Task runs";
+    | "Task runs"
+    | "Operations";
 }) {
   const router = useRouter();
   const unauthorized = error instanceof ApiError && error.kind === "unauthorized";
@@ -63,7 +64,9 @@ export function AppError({
       : forbidden
         ? section === "Task runs" || section === "Audit"
           ? "Staff access required"
-          : "Not on your account"
+          : section === "Operations"
+            ? "Ops access required"
+            : "Not on your account"
         : "Unable to load this page";
   usePageTitle(title);
 
@@ -100,13 +103,15 @@ export function AppError({
         {withinShell && (
           <Anchor
             href={
-              section === "Today"
-                ? "/app/dashboard/"
-                : section === "Task runs"
-                  ? "/app/ops/runs/"
-                  : section === "Audit"
-                    ? "/app/ops/audit/"
-                    : `/app/${section.toLowerCase()}/`
+              section === "Operations"
+                ? "/app/ops/"
+                : section === "Today"
+                  ? "/app/dashboard/"
+                  : section === "Task runs"
+                    ? "/app/ops/runs/"
+                    : section === "Audit"
+                      ? "/app/ops/audit/"
+                      : `/app/${section.toLowerCase()}/`
             }
           >
             Back to {section}

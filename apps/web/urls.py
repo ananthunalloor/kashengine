@@ -4,7 +4,7 @@ from datetime import date
 
 from django.urls import path, register_converter
 
-from apps.ops.permissions import staff_required
+from apps.ops.permissions import staff_required, superuser_required
 
 from . import views
 
@@ -35,6 +35,9 @@ urlpatterns = [
     path("app/ops/runs/", staff_required(views.react_app), name="react_ops_runs"),
     path("app/ops/audit/", staff_required(views.react_app), name="react_ops_audit"),
     path("app/ops/runs/<int:pk>/", staff_required(views.react_ops_run), name="react_ops_run"),
+    path("app/ops/", staff_required(views.react_app), name="react_ops"),
+    path("app/ops/backups/", superuser_required(views.react_app), name="react_ops_backups"),
+    path("app/ops/<path:section>/", staff_required(views.react_ops_page), name="react_ops_page"),
     path("app/reports/", views.react_app, name="react_reports"),
     path("app/reports/<date:day>/", views.react_report, name="react_report"),
     path("app/news/", views.react_app, name="react_news"),

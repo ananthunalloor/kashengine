@@ -14,6 +14,141 @@ class NavigationItem(Schema):
     url: str = Field(description="Same-origin path to the existing section.")
 
 
+class OpsChoice(Schema):
+    """One select option; values are form data, not URLs."""
+
+    label: str
+    value: str
+
+
+class OpsColumn(Schema):
+    """A display column whose key is also an allowlisted sort field."""
+
+    label: str
+    key: str
+
+
+class OpsField(Schema):
+    """A Django-validated field; password values are never serialized."""
+
+    name: str
+    label: str
+    kind: Literal[
+        "text",
+        "password",
+        "number",
+        "checkbox",
+        "select",
+        "textarea",
+        "date",
+        "time",
+        "file",
+        "hidden",
+    ] = "text"
+    value: str = ""
+    checked: bool = False
+    required: bool = False
+    help: str = ""
+    choices: list[OpsChoice] = Field(default_factory=list, json_schema_extra={"default": []})
+    errors: list[str] = Field(default_factory=list, json_schema_extra={"default": []})
+    min: str | None = None
+    max: str | None = None
+    step: str | None = None
+    max_length: int | None = None
+
+
+class OpsForm(Schema):
+    """An allowlisted administrative action, never an arbitrary URL or task."""
+
+    id: str
+    action: str
+    label: str
+    fields: list[OpsField] = Field(default_factory=list, json_schema_extra={"default": []})
+    errors: list[str] = Field(default_factory=list, json_schema_extra={"default": []})
+    confirmation: str = ""
+    disabled: bool = False
+    download: bool = False
+
+
+class OpsCell(Schema):
+    """Escaped display content with an optional same-origin link and explicit status tone."""
+
+    text: str
+    href: str = ""
+    tone: Literal["neutral", "positive", "negative", "warning"] = "neutral"
+    kind: Literal["text", "time"] = "text"
+    value: str | float | None = None
+
+
+class OpsRow(Schema):
+    """Explicit display fields only; model internals are never dumped."""
+
+    cells: dict[str, OpsCell]
+    forms: list[OpsForm] = Field(default_factory=list, json_schema_extra={"default": []})
+    links: list[NavigationItem] = Field(default_factory=list, json_schema_extra={"default": []})
+
+
+class OpsTable(Schema):
+    """A paginated full-list table, or a documented bounded monitoring snapshot."""
+
+    columns: list[OpsColumn]
+    rows: list[OpsRow]
+    server: bool = False
+    page: int = 1
+    pages: int = 1
+    page_size: int = 10
+    total: int = 0
+    filters: list[str] = Field(default_factory=list, json_schema_extra={"default": []})
+    filter_choices: dict[str, list[str]] = Field(
+        default_factory=dict, json_schema_extra={"default": {}}
+    )
+
+
+class OpsChartPoint(Schema):
+    """Daily values and failures for an accessible, paired series chart."""
+
+    label: str
+    value: int
+    failed: int
+
+
+class OpsSection(Schema):
+    """One native React section: details, a table, validated forms, and links."""
+
+    title: str
+    description: str = ""
+    details: dict[str, OpsCell] = Field(default_factory=dict, json_schema_extra={"default": {}})
+    table: OpsTable | None = None
+    forms: list[OpsForm] = Field(default_factory=list, json_schema_extra={"default": []})
+    links: list[NavigationItem] = Field(default_factory=list, json_schema_extra={"default": []})
+    chart: list[OpsChartPoint] = Field(default_factory=list, json_schema_extra={"default": []})
+
+
+class OpsPage(Schema):
+    """Safe presentation shared with the existing Ops views, without rendered HTML."""
+
+    title: str
+    description: str = ""
+    sections: list[OpsSection]
+    refresh_seconds: int = 0
+
+
+class OpsMessage(Schema):
+    """An existing Django action's explicit success, warning, or error notification."""
+
+    level: str
+    text: str
+
+
+class OpsActionResult(Schema):
+    """Action outcome, with invalid forms kept in React and no automatic retry."""
+
+    ok: bool
+    messages: list[OpsMessage]
+    redirect: str = ""
+    page: OpsPage | None = None
+
+
 class Session(Schema):
     """The current browser user's permissions and navigation."""
 

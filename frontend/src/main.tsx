@@ -1,3 +1,4 @@
+import "./app/validation";
 import "./styles/app.css";
 
 import { QueryClientProvider } from "@tanstack/react-query";

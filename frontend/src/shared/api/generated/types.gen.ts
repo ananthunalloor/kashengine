@@ -2014,6 +2014,350 @@ export type OpsRunDetail = {
     output: string;
 };
 
+/**
+ * OpsCell
+ *
+ * Escaped display content with an optional same-origin link and explicit status tone.
+ */
+export type OpsCell = {
+    /**
+     * Text
+     */
+    text: string;
+    /**
+     * Href
+     */
+    href?: string;
+    /**
+     * Tone
+     */
+    tone?: 'neutral' | 'positive' | 'negative' | 'warning';
+    /**
+     * Kind
+     */
+    kind?: 'text' | 'time';
+    /**
+     * Value
+     */
+    value?: string | number | null;
+};
+
+/**
+ * OpsChartPoint
+ *
+ * Daily values and failures for an accessible, paired series chart.
+ */
+export type OpsChartPoint = {
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Value
+     */
+    value: number;
+    /**
+     * Failed
+     */
+    failed: number;
+};
+
+/**
+ * OpsChoice
+ *
+ * One select option; values are form data, not URLs.
+ */
+export type OpsChoice = {
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Value
+     */
+    value: string;
+};
+
+/**
+ * OpsColumn
+ *
+ * A display column whose key is also an allowlisted sort field.
+ */
+export type OpsColumn = {
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Key
+     */
+    key: string;
+};
+
+/**
+ * OpsField
+ *
+ * A Django-validated field; password values are never serialized.
+ */
+export type OpsField = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Kind
+     */
+    kind?: 'text' | 'password' | 'number' | 'checkbox' | 'select' | 'textarea' | 'date' | 'time' | 'file' | 'hidden';
+    /**
+     * Value
+     */
+    value?: string;
+    /**
+     * Checked
+     */
+    checked?: boolean;
+    /**
+     * Required
+     */
+    required?: boolean;
+    /**
+     * Help
+     */
+    help?: string;
+    /**
+     * Choices
+     */
+    choices?: Array<OpsChoice>;
+    /**
+     * Errors
+     */
+    errors?: Array<string>;
+    /**
+     * Min
+     */
+    min?: string | null;
+    /**
+     * Max
+     */
+    max?: string | null;
+    /**
+     * Step
+     */
+    step?: string | null;
+    /**
+     * Max Length
+     */
+    max_length?: number | null;
+};
+
+/**
+ * OpsForm
+ *
+ * An allowlisted administrative action, never an arbitrary URL or task.
+ */
+export type OpsForm = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Action
+     */
+    action: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Fields
+     */
+    fields?: Array<OpsField>;
+    /**
+     * Errors
+     */
+    errors?: Array<string>;
+    /**
+     * Confirmation
+     */
+    confirmation?: string;
+    /**
+     * Disabled
+     */
+    disabled?: boolean;
+    /**
+     * Download
+     */
+    download?: boolean;
+};
+
+/**
+ * OpsPage
+ *
+ * Safe presentation shared with the existing Ops views, without rendered HTML.
+ */
+export type OpsPage = {
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Description
+     */
+    description?: string;
+    /**
+     * Sections
+     */
+    sections: Array<OpsSection>;
+    /**
+     * Refresh Seconds
+     */
+    refresh_seconds?: number;
+};
+
+/**
+ * OpsRow
+ *
+ * Explicit display fields only; model internals are never dumped.
+ */
+export type OpsRow = {
+    /**
+     * Cells
+     */
+    cells: {
+        [key: string]: OpsCell;
+    };
+    /**
+     * Forms
+     */
+    forms?: Array<OpsForm>;
+    /**
+     * Links
+     */
+    links?: Array<NavigationItem>;
+};
+
+/**
+ * OpsSection
+ *
+ * One native React section: details, a table, validated forms, and links.
+ */
+export type OpsSection = {
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Description
+     */
+    description?: string;
+    /**
+     * Details
+     */
+    details?: {
+        [key: string]: OpsCell;
+    };
+    table?: OpsTable | null;
+    /**
+     * Forms
+     */
+    forms?: Array<OpsForm>;
+    /**
+     * Links
+     */
+    links?: Array<NavigationItem>;
+    /**
+     * Chart
+     */
+    chart?: Array<OpsChartPoint>;
+};
+
+/**
+ * OpsTable
+ *
+ * A paginated full-list table, or a documented bounded monitoring snapshot.
+ */
+export type OpsTable = {
+    /**
+     * Columns
+     */
+    columns: Array<OpsColumn>;
+    /**
+     * Rows
+     */
+    rows: Array<OpsRow>;
+    /**
+     * Server
+     */
+    server?: boolean;
+    /**
+     * Page
+     */
+    page?: number;
+    /**
+     * Pages
+     */
+    pages?: number;
+    /**
+     * Page Size
+     */
+    page_size?: number;
+    /**
+     * Total
+     */
+    total?: number;
+    /**
+     * Filters
+     */
+    filters?: Array<string>;
+    /**
+     * Filter Choices
+     */
+    filter_choices?: {
+        [key: string]: Array<string>;
+    };
+};
+
+/**
+ * OpsActionResult
+ *
+ * Action outcome, with invalid forms kept in React and no automatic retry.
+ */
+export type OpsActionResult = {
+    /**
+     * Ok
+     */
+    ok: boolean;
+    /**
+     * Messages
+     */
+    messages: Array<OpsMessage>;
+    /**
+     * Redirect
+     */
+    redirect?: string;
+    page?: OpsPage | null;
+};
+
+/**
+ * OpsMessage
+ *
+ * An existing Django action's explicit success, warning, or error notification.
+ */
+export type OpsMessage = {
+    /**
+     * Level
+     */
+    level: string;
+    /**
+     * Text
+     */
+    text: string;
+};
+
 export type GetAppSessionData = {
     body?: never;
     path?: never;
@@ -2817,3 +3161,87 @@ export type GetAppOpsRunResponses = {
 };
 
 export type GetAppOpsRunResponse = GetAppOpsRunResponses[keyof GetAppOpsRunResponses];
+
+export type GetAppOpsPageData = {
+    body?: never;
+    path: {
+        /**
+         * Path
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/api/app/ops/pages/{path}';
+};
+
+export type GetAppOpsPageErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type GetAppOpsPageError = GetAppOpsPageErrors[keyof GetAppOpsPageErrors];
+
+export type GetAppOpsPageResponses = {
+    /**
+     * OK
+     */
+    200: OpsPage;
+};
+
+export type GetAppOpsPageResponse = GetAppOpsPageResponses[keyof GetAppOpsPageResponses];
+
+export type PostAppOpsActionData = {
+    body?: never;
+    path: {
+        /**
+         * Path
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/api/app/ops/actions/{path}';
+};
+
+export type PostAppOpsActionErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type PostAppOpsActionError = PostAppOpsActionErrors[keyof PostAppOpsActionErrors];
+
+export type PostAppOpsActionResponses = {
+    /**
+     * OK
+     */
+    200: OpsActionResult;
+};
+
+export type PostAppOpsActionResponse = PostAppOpsActionResponses[keyof PostAppOpsActionResponses];

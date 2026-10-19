@@ -27,8 +27,10 @@ from django.contrib.admin.models import LogEntry
 from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
 from django.http import Http404, HttpRequest, HttpResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, redirect
+from django.template.response import TemplateResponse
 from django.utils import timezone
+from django.utils.crypto import constant_time_compare, salted_hmac
 
 from apps.api import tokens
 from apps.api.models import ApiToken
@@ -102,7 +104,7 @@ def overview(request: HttpRequest) -> HttpResponse:
         "section": "overview",
     }
     template = "ops/_health_panel.html" if is_datastar(request) else "ops/overview.html"
-    return render(request, template, context)
+    return TemplateResponse(request, template, context)
 
 
 def _job_rows() -> list[dict]:
@@ -155,7 +157,7 @@ def job_list(request: HttpRequest) -> HttpResponse:
     grouped: dict[str, list[dict]] = {}
     for row in _job_rows():
         grouped.setdefault(row["job"].group, []).append(row)
-    return render(request, "ops/jobs.html", {"groups": grouped, "section": "jobs"})
+    return TemplateResponse(request, "ops/jobs.html", {"groups": grouped, "section": "jobs"})
 
 
 @superuser_post_required
@@ -231,7 +233,7 @@ def run_list(request: HttpRequest) -> HttpResponse:
         "triggers": RUN_TRIGGER_FILTERS,
         "section": "runs",
     }
-    return render(request, "ops/runs.html", context)
+    return TemplateResponse(request, "ops/runs.html", context)
 
 
 @staff_required
@@ -253,7 +255,7 @@ def run_detail(request: HttpRequest, pk: int) -> HttpResponse:
     """
     run = get_object_or_404(TaskRun.objects.select_related("triggered_by"), pk=pk)
     template = "ops/_run_panel.html" if is_datastar(request) else "ops/run_detail.html"
-    return render(request, template, {"run": run, "section": "runs"})
+    return TemplateResponse(request, template, {"run": run, "section": "runs"})
 
 
 @staff_required
@@ -290,7 +292,7 @@ def log_view(request: HttpRequest) -> HttpResponse:
         "section": "logs",
     }
     template = "ops/_log_panel.html" if is_datastar(request) else "ops/logs.html"
-    return render(request, template, context)
+    return TemplateResponse(request, template, context)
 
 
 @staff_required
@@ -319,7 +321,7 @@ def metric_view(request: HttpRequest) -> HttpResponse:
         "accuracy": accuracy_stats(),
         "section": "metrics",
     }
-    return render(request, "ops/metrics.html", context)
+    return TemplateResponse(request, "ops/metrics.html", context)
 
 
 @staff_required
@@ -347,7 +349,7 @@ def user_list(request: HttpRequest) -> HttpResponse:
         for user in users.users_with_stats(filters["q"])
     ]
     context = {"rows": rows, "filters": filters, "section": "users"}
-    return render(request, "ops/users.html", context)
+    return TemplateResponse(request, "ops/users.html", context)
 
 
 @staff_required
@@ -386,7 +388,7 @@ def user_detail(request: HttpRequest, pk: int) -> HttpResponse:
         "section": "users",
         **views_access.panel(user),
     }
-    return render(request, "ops/user_detail.html", context)
+    return TemplateResponse(request, "ops/user_detail.html", context)
 
 
 @superuser_post_required
@@ -413,6 +415,20 @@ def user_end_sessions(request: HttpRequest, pk: int) -> HttpResponse:
     user = get_object_or_404(get_user_model(), pk=pk)
     current = request.session.session_key or ""
     key = request.POST.get("key", "")
+    if opaque := request.POST.get("session"):
+        key = next(
+            (
+                session.key
+                for session in users.sessions_of(user.pk)
+                if constant_time_compare(
+                    salted_hmac("ops-session-action", session.key, algorithm="sha256").hexdigest(),
+                    opaque,
+                )
+            ),
+            None,
+        )
+        if key is None:
+            raise Http404
     try:
         if key:
             if key not in {s.key for s in users.sessions_of(user.pk)}:
@@ -526,7 +542,7 @@ def login_list(request: HttpRequest) -> HttpResponse:
         "lockouts": users.lockouts(),
         "section": "logins",
     }
-    return render(request, "ops/logins.html", context)
+    return TemplateResponse(request, "ops/logins.html", context)
 
 
 @staff_required
@@ -546,7 +562,7 @@ def audit_list(request: HttpRequest) -> HttpResponse:
         "qs": "",
         "section": "audit",
     }
-    return render(request, "ops/audit.html", context)
+    return TemplateResponse(request, "ops/audit.html", context)
 
 
 @staff_required
@@ -562,7 +578,7 @@ def config_view(request: HttpRequest) -> HttpResponse:
     Returns:
         The page `ops/config.html`.
     """
-    return render(
+    return TemplateResponse(
         request,
         "ops/config.html",
         {"sections": configview.sections(), "section": "config", "now": timezone.now()},

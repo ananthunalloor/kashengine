@@ -181,7 +181,11 @@ use the new display format; already-sent Telegram messages are not edited.
 
 ## Ops pages
 
-The Ops pages are for admins. They are at `/ops/`. A user with the "staff" flag can look at everything. Only a superuser can change something (start a job, end a session, turn a user on or off). Other users get a 403 page. The menu link "Ops" shows for staff users only.
+The Ops pages are for admins. The complete React preview is at `/app/ops/`; the original
+`/ops/` pages and URLs remain available. Staff can inspect operations; database backups require
+a superuser even for viewing. Only superusers can make changes (start jobs, manage users,
+settings, schedules, feeds, instruments, and backups). Other users get a 403 response.
+The workspace's Ops link and sub-navigation show only to staff.
 
 | Page | What it shows |
 | --- | --- |
@@ -199,6 +203,7 @@ The Ops pages are for admins. They are at `/ops/`. A user with the "staff" flag 
 | Feeds | The news feeds, with the result of the last fetch. Add, turn off, or delete a feed. |
 | Instruments | The market symbols and the weights of the global cues in the prediction. |
 | Config | The values that the server uses now (a value saved on the dashboard wins). Secrets show only "set (hidden)". |
+| Backups | Superuser-only encrypted backup configuration, run-now, snapshot download, and replacement restore. Existing maintenance warnings, size limits, RESTORE confirmation, and sign-out are retained. |
 
 How it works:
 
@@ -363,7 +368,8 @@ before pagination, with job/result/trigger filters and URL-preserved sorting and
 Active run details refresh every three seconds and stop on completion or error. Status badges
 distinguish waiting, running, done, and failed runs. These read-only previews use staff-only
 session endpoints under `/api/app/ops/runs`, with the same admin IP restrictions as `/ops/`.
-Job execution and all other Ops controls remain on Django; the original run pages are unchanged.
+Job execution and all other Ops controls now also have React pages under `/app/ops/`;
+the original run pages are unchanged.
 
 The read-only Ops audit preview is at `/app/ops/audit/`, backed by staff-only
 `GET /api/app/ops/audit`. Its TanStack table searches recorded names, actions, targets, details,
@@ -372,7 +378,15 @@ sorting, and page size are preserved in the URL. Actor names survive account ren
 details render as plain text, with timestamps in IST. Audit reads never create or alter events.
 The original `/ops/audit/` remains available, with the same staff and admin IP restrictions.
 
-The other existing pages remain Django-rendered during the incremental migration. Run
+The full Ops preview includes Overview, Jobs, Logs, Metrics, Users/access/subscriptions,
+Logins/lockouts, Settings, Schedule, Feeds, Instruments, Configuration, and Backups.
+Superuser actions reuse the original backend handlers, confirmations, validations, and audit
+logging through private session/CSRF endpoints. Secret settings are never echoed; backup
+restore retains its maintenance warnings, typed confirmation, and sign-out. Full lists use
+server-side TanStack search, filters, sorting, and pagination; metric and recent-history
+snapshots are explicitly bounded. The landing theme and strict CSP apply throughout.
+
+Original pages remain Django-rendered and available during the preview rollout. Run
 `pnpm --dir frontend build` to create the production bundle and
 `pnpm --dir frontend build:legacy-css` to rebuild the stylesheet still used by Django templates.
 The Docker image builds the React bundle automatically.

@@ -7,7 +7,8 @@ Secrets are never shown. The page shows only if a secret is set.
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpRequest, HttpResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, redirect
+from django.template.response import TemplateResponse
 from django.utils import timezone
 from django_celery_beat.models import PeriodicTask
 
@@ -65,7 +66,7 @@ def settings_index(request: HttpRequest) -> HttpResponse:
         for name, text in rows
     ]
     context = {"groups": groups, "fixed": fixed, "section": "settings"}
-    return render(request, "ops/settings_index.html", context)
+    return TemplateResponse(request, "ops/settings_index.html", context)
 
 
 def _rows(form, specs: list[registry.Spec]) -> list[dict]:
@@ -124,7 +125,7 @@ def settings_group(request: HttpRequest, group: str) -> HttpResponse:
         if group == "telegram"
         else [],
     }
-    return render(request, "ops/settings_group.html", context)
+    return TemplateResponse(request, "ops/settings_group.html", context)
 
 
 def _save_group(request: HttpRequest, group: str, specs, form) -> HttpResponse:
@@ -182,7 +183,7 @@ def schedule_list(request: HttpRequest) -> HttpResponse:
                 "managed_backup": entry.name == SCHEDULE_NAME,
             }
         )
-    return render(request, "ops/schedule.html", {"rows": rows, "section": "schedule"})
+    return TemplateResponse(request, "ops/schedule.html", {"rows": rows, "section": "schedule"})
 
 
 def _backup_schedule_redirect(request: HttpRequest, name: str) -> HttpResponse | None:
@@ -255,7 +256,7 @@ def _schedule_form_page(request: HttpRequest, pk: int | None) -> HttpResponse:
     elif entry:
         upcoming = schedule.preview(entry.schedule, timezone.now())
     context = {"form": form, "entry": entry, "upcoming": upcoming, "section": "schedule"}
-    return render(request, "ops/schedule_form.html", context)
+    return TemplateResponse(request, "ops/schedule_form.html", context)
 
 
 @staff_required
@@ -336,7 +337,7 @@ def feed_list(request: HttpRequest) -> HttpResponse:
             messages.success(request, f"Added: {feed}.")
             return redirect("ops:feeds")
     context = {"feeds": NewsFeed.objects.all(), "form": form, "section": "feeds"}
-    return render(request, "ops/feeds.html", context)
+    return TemplateResponse(request, "ops/feeds.html", context)
 
 
 @superuser_post_required
@@ -389,7 +390,7 @@ def instrument_list(request: HttpRequest) -> HttpResponse:
         "weight_total": round(sum(abs(c.weight) for c in cues), 4),
         "section": "instruments",
     }
-    return render(request, "ops/instruments.html", context)
+    return TemplateResponse(request, "ops/instruments.html", context)
 
 
 @superuser_post_required
