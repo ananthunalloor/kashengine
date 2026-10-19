@@ -142,7 +142,9 @@ async function makeToken() {
 
 it("renders subscription, access explanations and masked tokens for locked accounts", async () => {
   await showAccount();
-  expect(await screen.findByRole("heading", { level: 1, name: "Your account" })).toHaveFocus();
+  expect(
+    await screen.findByRole("heading", { level: 1, name: "Your account" }),
+  ).not.toHaveAttribute("tabindex");
   expect(document.title).toBe("Account | Kash Engine");
   expect(screen.getByRole("link", { name: "Account", current: "page" })).toHaveAttribute(
     "href",

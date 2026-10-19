@@ -110,16 +110,20 @@ async function show({
 
 it("renders native React Ops tables, complete navigation, escaped cells and IST values without style injection", async () => {
   await show();
-  expect(await screen.findByRole("heading", { name: "News feeds", level: 1 })).toHaveFocus();
+  expect(await screen.findByRole("heading", { name: "News feeds", level: 1 })).not.toHaveAttribute(
+    "tabindex",
+  );
   expect(screen.getByRole("cell", { name: "<b>Saved feed</b>" })).toBeInTheDocument();
   expect(document.querySelector(".data-table b")).toBeNull();
   const nav = within(screen.getByRole("navigation", { name: "Operations" }));
   expect(nav.getAllByRole("link")).toHaveLength(15);
   expect(nav.getByRole("link", { name: "Feeds" })).toHaveAttribute("aria-current", "page");
-  expect(screen.getByRole("link", { name: "Open original Django page" })).toHaveAttribute(
-    "href",
-    "/ops/feeds/",
+  expect(nav.getByRole("link", { name: "Feeds" }).querySelector("svg")).not.toBeNull();
+  expect(document.querySelector(".ops-shell")).not.toBeNull();
+  expect(screen.getByRole("cell", { name: "On" }).querySelector(".ops-status")).toHaveClass(
+    "ops-tone-positive",
   );
+  expect(screen.queryByRole("link", { name: "Open original Django page" })).not.toBeInTheDocument();
   expect(document.querySelector("style")).toBeNull();
 });
 
@@ -221,6 +225,42 @@ it("preserves action notifications across React navigation", async () => {
   fireEvent.submit(screen.getByRole("button", { name: "Add feed" }).closest("form")!);
   await waitFor(() => expect(router.state.location.pathname).toBe("/ops/schedule/"));
   await waitFor(() => expect(screen.getByText("Schedule saved by React.")).toBeInTheDocument());
+  expect(screen.getByText("success").closest(".ops-status")).toHaveClass("ops-tone-positive");
+});
+
+it("renders semantic statistic cards and table states with distinct icons and a chart legend", async () => {
+  await show({
+    body: zOpsPage.parse({
+      ...page,
+      sections: [
+        {
+          title: "Job activity (last 7 days)",
+          details: {
+            Succeeded: { text: "12", value: 12, tone: "positive" },
+            Failed: { text: "2", value: 2, tone: "negative" },
+            "Success rate": { text: "86%", value: 86, tone: "negative" },
+          },
+          chart: [{ label: "19 Oct", value: 14, failed: 2 }],
+          table: {
+            columns: [{ key: "state", label: "Result" }],
+            rows: [
+              { cells: { state: { text: "Failed", tone: "negative" } } },
+              { cells: { state: { text: "Waiting", tone: "warning" } } },
+            ],
+          },
+        },
+      ],
+    }),
+  });
+  await screen.findByRole("heading", { name: "Job activity (last 7 days)" });
+  expect(screen.getByText("12").closest(".ops-stat")).toHaveClass("ops-stat-positive");
+  expect(screen.getByText("2").closest(".ops-stat")).toHaveClass("ops-stat-negative");
+  expect(screen.getByRole("cell", { name: "Failed" }).querySelector(".ops-status")).toHaveClass(
+    "ops-tone-negative",
+  );
+  expect(screen.getByRole("cell", { name: "Waiting" }).querySelector("svg")).not.toBeNull();
+  expect(screen.getByText("Failed / alerts")).toBeInTheDocument();
+  expect(screen.getByRole("img", { name: /daily totals and failures/ })).toBeInTheDocument();
 });
 
 function renderForm(value = form) {
@@ -329,6 +369,8 @@ it("renders field validation, required restore upload, and cleared password valu
   expect(screen.getByLabelText("Database snapshot")).toHaveAttribute("type", "file");
   expect(screen.getByLabelText("Database snapshot")).toBeRequired();
   expect(screen.getByLabelText("Type RESTORE")).toHaveAttribute("aria-invalid", "true");
+  expect(screen.getByText("Nothing was saved.")).toHaveClass("ops-form-error");
+  expect(screen.getByText("Type RESTORE to continue.").querySelector("svg")).not.toBeNull();
   expect(screen.getAllByRole("alert")).toHaveLength(2);
 });
 

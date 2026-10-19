@@ -146,7 +146,9 @@ async function showIpos({
 
 it("shows issue cards, metrics and preview-only navigation", async () => {
   await showIpos();
-  expect(await screen.findByRole("heading", { level: 1, name: "IPOs" })).toHaveFocus();
+  expect(await screen.findByRole("heading", { level: 1, name: "IPOs" })).not.toHaveAttribute(
+    "tabindex",
+  );
   expect(screen.getByRole("link", { name: "Example Ltd" })).toHaveAttribute("href", "/ipos/1/");
   expect(screen.getByText("0.0x")).toBeInTheDocument();
   expect(screen.getByText("+20.0%")).toHaveAttribute("data-tone", "positive");
@@ -167,7 +169,7 @@ it("navigates to saved facts and evidence without leaving React", async () => {
   fireEvent.click(await screen.findByRole("link", { name: "Example Ltd" }));
   expect(await screen.findByRole("heading", { name: "The issue" })).toBeInTheDocument();
   expect(router.state.location.pathname).toBe("/ipos/1/");
-  expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+  expect(screen.getByRole("heading", { level: 1 })).not.toHaveAttribute("tabindex");
   expect(screen.getByText(/Good, score/)).toHaveTextContent("Good, score 8.2/10");
   expect(screen.getByText(/updated 3 days ago/)).toHaveAttribute("data-tone", "positive");
   expect(screen.getByText("7.8/10")).toHaveAttribute("data-tone", "positive");

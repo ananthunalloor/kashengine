@@ -89,7 +89,9 @@ async function showNews({ path = "/news/", data = news, status = 200, staff = fa
 
 it("shows scored articles, plain-text explanations, source links and IST publication times", async () => {
   await showNews();
-  expect(await screen.findByRole("heading", { level: 1, name: "News" })).toHaveFocus();
+  expect(await screen.findByRole("heading", { level: 1, name: "News" })).not.toHaveAttribute(
+    "tabindex",
+  );
   expect(screen.getByRole("link", { name: /Banks grow/ })).toHaveAttribute("target", "_blank");
   expect(screen.getByRole("link", { name: /Banks grow/ })).toHaveAttribute(
     "rel",

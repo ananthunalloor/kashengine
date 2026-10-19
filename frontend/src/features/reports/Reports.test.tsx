@@ -108,7 +108,7 @@ it("loads typed reports and links to real preview routes and the existing pages"
   expect(screen.queryByRole("link", { name: "Previous" })).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
   expect(screen.getAllByRole("main")).toHaveLength(1);
-  expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+  expect(screen.getByRole("heading", { level: 1 })).not.toHaveAttribute("tabindex");
   expect(screen.getByText("7.3/10")).toHaveAttribute("data-tone", "positive");
 });
 
@@ -138,7 +138,7 @@ it("navigates to a report without leaving the React application", async () => {
     "/reports/2026-10-09/",
   );
   expect(screen.getAllByRole("main")).toHaveLength(1);
-  expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+  expect(screen.getByRole("heading", { level: 1 })).not.toHaveAttribute("tabindex");
 });
 
 it("supports bookmarked pagination and omits out-of-range controls", async () => {

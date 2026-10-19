@@ -19,6 +19,7 @@ from apps.api.errors import ApiError
 from apps.api.v1.common import ERRORS_WITH_VALIDATION
 from apps.ops import users
 from apps.ops.permissions import superuser_required
+from apps.ops.templatetags.ops_extras import duration
 from apps.siteconfig import conf
 
 from .auth import OpsSession
@@ -459,7 +460,12 @@ def _present_overview(request: HttpRequest, name: str, context: dict[str, Any]) 
             table=table(
                 request,
                 [
-                    row(address=entry["ip_address"], failures=entry["count"])
+                    row(
+                        address=entry["ip_address"],
+                        failures=cell(
+                            entry["count"], tone="negative" if entry["count"] else "neutral"
+                        ),
+                    )
                     for entry in c["failed_logins"]
                 ],
             ),
@@ -489,6 +495,27 @@ def _present_jobs(request: HttpRequest, name: str, context: dict[str, Any]) -> O
         "Staff can inspect operations. Only superusers can make changes. Times are shown in IST."
     )
     refresh = 0
+    entries = [entry for group in c["groups"].values() for entry in group]
+    statistics = {entry["job"].run_label: entry["stats"] for entry in entries if entry["stats"]}
+    totals = {
+        key: sum(stats[key] for stats in statistics.values()) for key in ("runs", "ok", "failed")
+    }
+    sections.append(
+        OpsSection(
+            title="Job activity (last 7 days)",
+            description="Success rate uses completed runs only. Active jobs is the current count.",
+            details={
+                "Configured jobs": cell(len(entries)),
+                "Active jobs now": cell(sum(bool(entry["active"]) for entry in entries)),
+                "Total runs": cell(totals["runs"]),
+                "Succeeded": cell(totals["ok"], tone="positive" if totals["ok"] else "neutral"),
+                "Failed": cell(
+                    totals["failed"], tone="negative" if totals["failed"] else "neutral"
+                ),
+                "Success rate": _job_statistics(totals)["success_rate"],
+            },
+        )
+    )
     for group, entries in c["groups"].items():
         rows = []
         for entry in entries:
@@ -499,7 +526,7 @@ def _present_jobs(request: HttpRequest, name: str, context: dict[str, Any]) -> O
                 schedule="\n".join(entry["schedules"]) or "By hand only",
                 next_run=entry["next_run"],
                 last=state(entry["last"].status) if entry["last"] else "Never",
-                statistics=str(entry["stats"] or "No runs in the last 7 days"),
+                **_job_statistics(entry["stats"]),
             )
             for key in ("last", "active"):
                 if entry[key]:
@@ -527,6 +554,37 @@ def _present_jobs(request: HttpRequest, name: str, context: dict[str, Any]) -> O
         sections.append(OpsSection(title=group, table=table(request, rows)))
 
     return OpsPage(title=title, description=description, sections=sections, refresh_seconds=refresh)
+
+
+def _job_statistics(stats: dict[str, Any] | None) -> dict[str, OpsCell]:
+    """Format seven-day job counts and durations without exposing raw dictionaries.
+
+    Args:
+        stats: The existing task_stats aggregate, or no runs.
+
+    Returns:
+        Numeric sortable counts, a completed-run success rate, and readable durations.
+    """
+    values = stats or {}
+    succeeded, failed = values.get("ok", 0), values.get("failed", 0)
+    completed = succeeded + failed
+    rate = round(100 * succeeded / completed) if completed else None
+    return {
+        "runs_7d": cell(values.get("runs", 0)),
+        "succeeded": cell(succeeded, tone="positive" if succeeded else "neutral"),
+        "failed": cell(failed, tone="negative" if failed else "neutral"),
+        "success_rate": OpsCell(
+            text=f"{rate}%" if rate is not None else "No completed runs",
+            value=rate,
+            tone="neutral" if rate is None else "positive" if not failed else "negative",
+        ),
+        "average_duration": OpsCell(
+            text=duration(values.get("avg_ms")), value=values.get("avg_ms")
+        ),
+        "maximum_duration": OpsCell(
+            text=duration(values.get("max_ms")), value=values.get("max_ms")
+        ),
+    }
 
 
 def _present_logs(request: HttpRequest, name: str, context: dict[str, Any]) -> OpsPage:
@@ -617,7 +675,21 @@ def _present_metrics(request: HttpRequest, name: str, context: dict[str, Any]) -
     )
     sections.append(
         OpsSection(
-            title="Jobs (7 days)", table=table(request, [row(**entry) for entry in c["tasks"]])
+            title="Jobs (7 days)",
+            description=(
+                "Success rate uses completed runs only; durations exclude runs without timings."
+            ),
+            table=table(
+                request,
+                [
+                    row(
+                        job=entry["label"],
+                        **_job_statistics(entry),
+                        last_started=entry["last_started"],
+                    )
+                    for entry in c["tasks"]
+                ],
+            ),
         )
     )
     sections.extend(
@@ -979,7 +1051,13 @@ def _present_logins(request: HttpRequest, name: str, context: dict[str, Any]) ->
             title="Failed logins (top 10 addresses, 24 hours)",
             table=table(
                 request,
-                [row(address=e["ip_address"], failures=e["count"]) for e in c["failed_by_address"]],
+                [
+                    row(
+                        address=e["ip_address"],
+                        failures=cell(e["count"], tone="negative" if e["count"] else "neutral"),
+                    )
+                    for e in c["failed_by_address"]
+                ],
             ),
         )
     )
@@ -988,7 +1066,7 @@ def _present_logins(request: HttpRequest, name: str, context: dict[str, Any]) ->
         item = row(
             address=entry["ip_address"],
             usernames=", ".join(entry["usernames"]),
-            failures=entry["failures"],
+            failures=cell(entry["failures"], tone="negative" if entry["failures"] else "neutral"),
             last=entry["last"],
             until=entry["until"],
         )

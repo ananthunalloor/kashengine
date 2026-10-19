@@ -54,9 +54,7 @@ export function Companies({
           <LuBuilding2 aria-hidden="true" />
           The companies behind the stories
         </Text>
-        <Title order={1} tabIndex={-1}>
-          Companies
-        </Title>
+        <Title order={1}>Companies</Title>
         <Text c="dimmed" mt="sm">
           The companies that we link to news. Data comes from Screener.in.
         </Text>

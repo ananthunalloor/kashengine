@@ -88,7 +88,9 @@ async function showCompanies({
 
 it("shows directory fields, safe source links, IST dates and preview navigation", async () => {
   await showCompanies();
-  expect(await screen.findByRole("heading", { level: 1, name: "Companies" })).toHaveFocus();
+  expect(await screen.findByRole("heading", { level: 1, name: "Companies" })).not.toHaveAttribute(
+    "tabindex",
+  );
   expect(document.title).toBe("Companies | Kash Engine");
   const source = screen.getByRole("link", { name: /<b>Alpha Bank<\/b>/ });
   expect(source).toHaveAttribute("href", data.items[0].screener_url);

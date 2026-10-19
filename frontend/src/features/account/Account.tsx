@@ -133,9 +133,7 @@ export function Account({ data }: { data: AccountData }) {
         <Text className="app-eyebrow" mb="xs">
           <LuCircleUserRound aria-hidden="true" /> Your workspace, your access
         </Text>
-        <Title order={1} tabIndex={-1}>
-          Your account
-        </Title>
+        <Title order={1}>Your account</Title>
         <Text c="dimmed" mt="sm">
           {data.username}
           {data.email && ` \u00b7 ${data.email}`}

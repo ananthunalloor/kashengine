@@ -38,9 +38,7 @@ export function Delivery({
           <LuSend aria-hidden="true" />
           From the report to your inbox
         </Text>
-        <Title order={1} tabIndex={-1}>
-          Delivery
-        </Title>
+        <Title order={1}>Delivery</Title>
         <Text c="dimmed" mt="sm">
           {data.chat_count ? (
             <>

@@ -157,6 +157,14 @@ details/access/subscriptions, Subscriptions, Logins/lockouts, Settings and every
 Schedule/add/edit, Feeds, Instruments, Configuration, and Backups. Runs/Audit retain their
 dedicated endpoints. Legacy `/ops/` pages and actions are isolated on the archive hostname.
 
+Ops uses a scoped square-edged console layout with icon navigation. Status badges combine
+labels and icons with green success, red failure, and amber warning colors in both themes;
+action notices use the same semantics, including after redirects. Jobs shows seven-day
+totals and separate per-job counts, completed-run success rates, and formatted average/maximum
+durations. Metrics uses the same statistics formatter; no-run rates are not shown as 0% success.
+Page titles update the browser title without focusing headings or adding heading `tabindex`.
+Keyboard focus on controls, the skip link, and the one-time token panel is preserved.
+
 `GET /api/app/ops/pages/{path}` resolves only a fixed Ops page allowlist. Django views return
 `TemplateResponse` so the legacy HTML and explicit JSON presenters share the same context and
 domain queries without parsing or embedding server-rendered HTML. The typed page contract

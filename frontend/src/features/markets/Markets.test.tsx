@@ -113,7 +113,9 @@ async function showMarkets({
 
 it("shows saved track record, baseline, sample warning, closes and all result states", async () => {
   await showMarkets();
-  expect(await screen.findByRole("heading", { level: 1, name: "Markets" })).toHaveFocus();
+  expect(await screen.findByRole("heading", { level: 1, name: "Markets" })).not.toHaveAttribute(
+    "tabindex",
+  );
   expect(document.title).toBe("Markets | Kash Engine");
   expect(screen.getByText(/right on 1 of 2 days \(50%\)/)).toHaveTextContent(
     "most common result (up)",

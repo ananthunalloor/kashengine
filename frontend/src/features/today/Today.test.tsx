@@ -154,7 +154,9 @@ async function showToday({
 
 it("renders the dated overview, evidence, baseline and colored values without injected styles", async () => {
   await showToday();
-  expect(await screen.findByRole("heading", { level: 1, name: "Today" })).toHaveFocus();
+  expect(await screen.findByRole("heading", { level: 1, name: "Today" })).not.toHaveAttribute(
+    "tabindex",
+  );
   expect(document.title).toBe("Today | Kash Engine");
   expect(screen.getByRole("link", { name: "Today", current: "page" })).toHaveAttribute(
     "href",

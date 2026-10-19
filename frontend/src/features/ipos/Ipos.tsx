@@ -72,9 +72,7 @@ export function Ipos({
           <LuActivity aria-hidden="true" />
           IPO intelligence
         </Text>
-        <Title order={1} tabIndex={-1}>
-          IPOs
-        </Title>
+        <Title order={1}>IPOs</Title>
         <Text c="dimmed" mt="sm" maw={760}>
           The verdict comes from GMP, final subscription, and news. The rule is a first guess, and
           GMP is not official data.
@@ -286,9 +284,7 @@ export function IpoView({ ipo }: { ipo: IpoDetail }) {
         <Text className="app-eyebrow" mt="lg" mb="xs">
           The issue, in context
         </Text>
-        <Title order={1} tabIndex={-1}>
-          {ipo.name}
-        </Title>
+        <Title order={1}>{ipo.name}</Title>
         <Text c="dimmed" mt="xs" mb="sm">
           {ipo.category}, {ipo.status}
         </Text>

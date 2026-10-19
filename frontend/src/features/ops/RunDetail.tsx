@@ -1,6 +1,13 @@
 import { Anchor, Button, Group, Stack, Text, Title } from "@mantine/core";
 import { Link } from "@tanstack/react-router";
-import { LuActivity, LuArrowLeft, LuRefreshCw } from "react-icons/lu";
+import {
+  LuActivity,
+  LuArrowLeft,
+  LuCircleCheck,
+  LuCircleX,
+  LuRefreshCw,
+  LuTerminal,
+} from "react-icons/lu";
 
 import type { OpsRunDetail } from "../../shared/api/generated/types.gen";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
@@ -23,7 +30,8 @@ export function RunDetail({
         <Text className="app-eyebrow" mb="xs">
           <LuActivity aria-hidden="true" /> Operations / run details
         </Text>
-        <Title order={1} tabIndex={-1}>
+        <Title order={1} className="ops-page-title">
+          <LuActivity aria-hidden="true" />
           {run.label}
         </Title>
         <Group mt="md">
@@ -53,9 +61,6 @@ export function RunDetail({
           <Link to="/ops/runs/" search={{ q: "", label: "", status: "", trigger: "", page: 1 }}>
             <LuArrowLeft aria-hidden="true" /> Back to task runs
           </Link>
-          <Anchor href={`/ops/runs/${run.id}/`} size="sm">
-            Compare with the original run page
-          </Anchor>
         </Group>
       </header>
       <section className="news-card" aria-label="Run metadata">
@@ -117,13 +122,19 @@ export function RunDetail({
       {(["error", "result", "output"] as const).map(
         (field) =>
           run[field] && (
-            <section key={field} aria-labelledby={`run-${field}`}>
-              <Title
-                order={2}
-                size="h3"
-                id={`run-${field}`}
-                className={field === "error" ? "ops-run-error" : undefined}
-              >
+            <section
+              key={field}
+              className={`ops-output ops-output-${field === "result" && run.status !== "success" ? "output" : field}`}
+              aria-labelledby={`run-${field}`}
+            >
+              <Title order={2} size="h3" id={`run-${field}`} className="ops-section-title">
+                {field === "error" ? (
+                  <LuCircleX aria-hidden="true" />
+                ) : field === "result" && run.status === "success" ? (
+                  <LuCircleCheck aria-hidden="true" />
+                ) : (
+                  <LuTerminal aria-hidden="true" />
+                )}
                 {field.charAt(0).toUpperCase() + field.slice(1)}
               </Title>
               <pre className="report-text">{run[field]}</pre>

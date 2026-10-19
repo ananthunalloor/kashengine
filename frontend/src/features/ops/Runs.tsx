@@ -1,30 +1,33 @@
 import { Anchor, Button, Group, Stack, Text, Title } from "@mantine/core";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { LuActivity, LuSearch, LuX } from "react-icons/lu";
+import { LuActivity, LuClock3, LuLoaderCircle, LuSearch, LuX } from "react-icons/lu";
 
 import type { OpsRunPage, OpsRunSummary } from "../../shared/api/generated/types.gen";
 import type { RunSearch } from "../../shared/api/ops";
 import { DataTable } from "../../shared/ui/DataTable";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { OpsTime } from "./OpsTime";
+import { OpsStatus } from "./OpsStatus";
 
 export function RunStatus({ run }: { run: Pick<OpsRunSummary, "status" | "status_label"> }) {
   return (
-    <span
-      className="report-status"
-      data-tone={
+    <OpsStatus
+      icon={
+        run.status === "started" ? LuLoaderCircle : run.status === "pending" ? LuClock3 : undefined
+      }
+      tone={
         run.status === "success"
-          ? "sent"
+          ? "positive"
           : run.status === "failure"
-            ? "failed"
+            ? "negative"
             : run.status === "pending"
               ? "warning"
-              : undefined
+              : "neutral"
       }
     >
       {run.status_label}
-    </span>
+    </OpsStatus>
   );
 }
 
@@ -69,17 +72,14 @@ export function Runs({
         <Text className="app-eyebrow" mb="xs">
           <LuActivity aria-hidden="true" /> Operations / execution history
         </Text>
-        <Title order={1} tabIndex={-1}>
-          Task runs
+        <Title order={1} className="ops-page-title">
+          <LuActivity aria-hidden="true" /> Task runs
         </Title>
         <Text c="dimmed" mt="sm">
           Every recorded task or command, with its time and result. Old runs are deleted after{" "}
           {data.retention_days} days.
         </Text>
         <Group mt="sm">
-          <Anchor href="/ops/runs/" size="sm">
-            Compare with the original Runs page
-          </Anchor>
           <Anchor href="/ops/jobs/" size="sm">
             Manage jobs in Ops
           </Anchor>

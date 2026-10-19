@@ -106,7 +106,9 @@ async function showDelivery({
 
 it("shows configuration count, channels, test/report attempts and IST times", async () => {
   await showDelivery();
-  expect(await screen.findByRole("heading", { level: 1, name: "Delivery" })).toHaveFocus();
+  expect(await screen.findByRole("heading", { level: 1, name: "Delivery" })).not.toHaveAttribute(
+    "tabindex",
+  );
   expect(document.title).toBe("Delivery | Kash Engine");
   expect(screen.getByText("The report goes to 2 Telegram chats.")).toBeInTheDocument();
   expect(screen.getByRole("cell", { name: "Email" })).toBeInTheDocument();

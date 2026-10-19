@@ -40,9 +40,7 @@ export function Today({ data, session }: { data: TodayData; session: Session }) 
         <Text className="app-eyebrow" mb="xs">
           <LuHouse aria-hidden="true" /> Your daily perspective
         </Text>
-        <Title order={1} tabIndex={-1}>
-          Today
-        </Title>
+        <Title order={1}>Today</Title>
         <Text c="dimmed" mt="sm">
           <time dateTime={data.today}>{formatReportDate(data.today)}</time>
           {" · "}Your latest saved outlook, stories, and issues.

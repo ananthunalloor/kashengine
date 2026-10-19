@@ -78,9 +78,7 @@ export function AppError({
       tabIndex={-1}
     >
       <Stack role="alert">
-        <Title order={1} tabIndex={-1}>
-          {title}
-        </Title>
+        <Title order={1}>{title}</Title>
         <Text>
           {error instanceof ApiError ? error.message : "An unexpected error occurred. Try again."}
         </Text>

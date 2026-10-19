@@ -2,7 +2,17 @@ import { Alert, Anchor, Button, Group, Stack, Text, Title } from "@mantine/core"
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useEffect, useId, useRef, useState } from "react";
-import { LuActivity, LuRefreshCw, LuSettings2 } from "react-icons/lu";
+import {
+  LuActivity,
+  LuCircleAlert,
+  LuDownload,
+  LuPlay,
+  LuRefreshCw,
+  LuSave,
+  LuSettings2,
+  LuTrash2,
+  LuUpload,
+} from "react-icons/lu";
 
 import type {
   OpsActionResult,
@@ -17,7 +27,9 @@ import type { OpsSearch } from "../../shared/api/opsWorkspace";
 import { AppError, AppLoading } from "../../shared/ui/AppStatus";
 import { DataTable } from "../../shared/ui/DataTable";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
+import { opsPageIcon } from "../../shared/ui/OpsNavigation";
 import { OpsTime } from "./OpsTime";
+import { OpsNotice, OpsStatus } from "./OpsStatus";
 
 function Field({ field, disabled }: { field: OpsField; disabled: boolean }) {
   const id = useId();
@@ -75,7 +87,8 @@ function Field({ field, disabled }: { field: OpsField; disabled: boolean }) {
       <div id={`${id}-help`} className="ops-field-help">
         {field.help}
         {field.errors.map((error, index) => (
-          <p key={index} role="alert">
+          <p key={index} role="alert" className="ops-form-error">
+            <LuCircleAlert aria-hidden="true" />
             {error}
           </p>
         ))}
@@ -95,6 +108,15 @@ export function OpsActionForm({
   const [error, setError] = useState("");
   const [version, setVersion] = useState(0);
   const lock = useRef(false);
+  const ActionIcon = form.download
+    ? LuDownload
+    : form.action.endsWith("/import/")
+      ? LuUpload
+      : form.action.endsWith("/delete/")
+        ? LuTrash2
+        : form.action.endsWith("/run/")
+          ? LuPlay
+          : LuSave;
   return (
     <form
       className="ops-action-form"
@@ -145,16 +167,22 @@ export function OpsActionForm({
           ))}
         </div>
         {form.errors.map((error, index) => (
-          <p key={index} role="alert">
+          <p key={index} role="alert" className="ops-form-error">
+            <LuCircleAlert aria-hidden="true" />
             {error}
           </p>
         ))}
-        <Button type="submit" disabled={pending || form.disabled}>
+        <Button
+          type="submit"
+          disabled={pending || form.disabled}
+          color={form.action.endsWith("/delete/") ? "red" : undefined}
+          leftSection={<ActionIcon aria-hidden="true" />}
+        >
           {pending ? "Working..." : form.label}
         </Button>
       </fieldset>
       {error && (
-        <Alert role="alert" color="red" title="Action failed">
+        <Alert role="alert" color="red" title="Action failed" icon={<LuCircleAlert />}>
           {error}
         </Alert>
       )}
@@ -184,9 +212,11 @@ function WorkspaceTable({
       if (!value) return "\u2013";
       const content =
         value.kind === "time" ? <OpsTime value={value.text || null} /> : value.text || "\u2013";
+      const display =
+        value.tone === "neutral" ? content : <OpsStatus tone={value.tone}>{content}</OpsStatus>;
       return (
-        <span className={`ops-cell ops-tone-${value.tone}`}>
-          {value.href ? <a href={value.href}>{content}</a> : content}
+        <span className="ops-cell">
+          {value.href ? <a href={value.href}>{display}</a> : display}
         </span>
       );
     },
@@ -284,6 +314,7 @@ export function Workspace({
     setDraft(filters.q);
   }, [scope]);
   const data = invalidPage ?? query.data;
+  const PageIcon = opsPageIcon(path);
   usePageTitle(data?.title ?? "Operations");
   async function onResult(result: OpsActionResult) {
     setResult(result);
@@ -327,16 +358,14 @@ export function Workspace({
         <Text className="app-eyebrow">
           <LuSettings2 aria-hidden="true" /> Operations
         </Text>
-        <Title order={1} tabIndex={-1}>
+        <Title order={1} className="ops-page-title">
+          <PageIcon aria-hidden="true" />
           {data.title}
         </Title>
         <Text c="dimmed" mt="sm">
           {data.description}
         </Text>
         <Group mt="sm">
-          <Anchor href={`/ops/${path === "overview/" ? "" : path}`}>
-            Open original Django page
-          </Anchor>
           <Button
             variant="default"
             onClick={() => {
@@ -350,26 +379,14 @@ export function Workspace({
         </Group>
       </header>
       {result && (
-        <div role={result.ok ? "status" : "alert"}>
-          {result.messages.map((message, index) => (
-            <Alert
-              key={index}
-              color={
-                message.level === "error"
-                  ? "red"
-                  : message.level === "warning"
-                    ? "yellow"
-                    : "violet"
-              }
-              title={message.level}
-            >
-              {message.text}
-            </Alert>
-          ))}
+        <>
+          <OpsNotice messages={result.messages} />
           {!result.ok && !result.messages.length && (
-            <Alert color="red">Nothing was saved. Fix the marked fields.</Alert>
+            <Alert role="alert" color="red" icon={<LuCircleAlert />}>
+              Nothing was saved. Fix the marked fields.
+            </Alert>
           )}
-        </div>
+        </>
       )}
       {(mainTable || path === "logs/" || path === "logins/") && (
         <form
@@ -484,61 +501,75 @@ export function Workspace({
       )}
       {data.sections.map((section, index) => (
         <section key={`${scope}-${index}`} className="ops-section">
-          <Title order={2}>{section.title}</Title>
+          <Title order={2} className="ops-section-title">
+            <PageIcon aria-hidden="true" /> {section.title}
+          </Title>
           {section.description && (
             <Text c="dimmed" size="sm">
               {section.description}
             </Text>
           )}
           {section.chart.length > 0 && (
-            <svg
-              className="ops-series"
-              viewBox={`0 0 ${section.chart.length * 32} 130`}
-              role="img"
-              aria-label={`${section.title}: daily totals and failures. Exact values in the table below.`}
-            >
-              {section.chart.map((point, index) => {
-                const max = Math.max(
-                  1,
-                  ...section.chart.map((point) => Math.max(point.value, point.failed)),
-                );
-                const height = (100 * point.value) / max;
-                const failedHeight = (100 * point.failed) / max;
-                return (
-                  <g key={point.label}>
-                    <title>
-                      {point.label}: {point.value} total, {point.failed} failed
-                    </title>
-                    <rect
-                      x={index * 32 + 3}
-                      y={105 - height}
-                      width={12}
-                      height={height}
-                      className="ops-bar-value"
-                    />
-                    <rect
-                      x={index * 32 + 16}
-                      y={105 - failedHeight}
-                      width={10}
-                      height={failedHeight}
-                      className="ops-bar-failed"
-                    />
-                    <text x={index * 32 + 14} y={122} textAnchor="middle">
-                      {point.label}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
+            <figure className="ops-chart">
+              <figcaption className="ops-chart-legend">
+                <span>
+                  <i className="ops-legend-total" /> Total
+                </span>
+                <span className="ops-tone-negative">
+                  <i className="ops-legend-failed" /> Failed / alerts
+                </span>
+              </figcaption>
+              <svg
+                className="ops-series"
+                viewBox={`0 0 ${section.chart.length * 32} 130`}
+                role="img"
+                aria-label={`${section.title}: daily totals and failures. Exact values in the table below.`}
+              >
+                {section.chart.map((point, index) => {
+                  const max = Math.max(
+                    1,
+                    ...section.chart.map((point) => Math.max(point.value, point.failed)),
+                  );
+                  const height = (100 * point.value) / max;
+                  const failedHeight = (100 * point.failed) / max;
+                  return (
+                    <g key={point.label}>
+                      <title>
+                        {point.label}: {point.value} total, {point.failed} failed
+                      </title>
+                      <rect
+                        x={index * 32 + 3}
+                        y={105 - height}
+                        width={12}
+                        height={height}
+                        className="ops-bar-value"
+                      />
+                      <rect
+                        x={index * 32 + 16}
+                        y={105 - failedHeight}
+                        width={10}
+                        height={failedHeight}
+                        className="ops-bar-failed"
+                      />
+                      <text x={index * 32 + 14} y={122} textAnchor="middle">
+                        {point.label}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            </figure>
           )}
           {!!Object.keys(section.details).length && (
             <dl className="ops-detail-grid">
               {Object.entries(section.details).map(([label, value]) => (
-                <div key={label}>
+                <div key={label} className={`ops-stat ops-stat-${value.tone}`}>
                   <dt>{label}</dt>
-                  <dd className={`ops-tone-${value.tone}`}>
+                  <dd>
                     {value.kind === "time" ? (
                       <OpsTime value={value.text} />
+                    ) : value.tone !== "neutral" ? (
+                      <OpsStatus tone={value.tone}>{value.text || "\u2013"}</OpsStatus>
                     ) : (
                       value.text || "\u2013"
                     )}

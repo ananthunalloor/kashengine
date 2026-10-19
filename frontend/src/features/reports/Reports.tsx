@@ -63,9 +63,7 @@ export function ReportsList({
           <LuFileText aria-hidden="true" />
           Your daily perspective
         </Text>
-        <Title order={1} tabIndex={-1}>
-          Reports
-        </Title>
+        <Title order={1}>Reports</Title>
         <Text c="dimmed" mt="sm" maw={720}>
           Daily reports sent on Telegram. Scores use a 1.0-10.0 scale; older reports with saved data
           are reformatted for viewing without changing the original text. Signal strength is not a
@@ -214,9 +212,7 @@ export function ReportView({ report }: { report: ReportDetail }) {
         <Text className="app-eyebrow" mt="lg" mb="xs">
           The market brief
         </Text>
-        <Title order={1} tabIndex={-1}>
-          {formatReportDate(report.date)}
-        </Title>
+        <Title order={1}>{formatReportDate(report.date)}</Title>
         <Text mt="sm" component="div">
           <ReportOutlook report={report} />
         </Text>

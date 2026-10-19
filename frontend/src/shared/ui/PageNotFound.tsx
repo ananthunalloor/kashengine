@@ -7,9 +7,7 @@ export function PageNotFound() {
   return (
     <section className="public-auth" aria-labelledby="not-found-title">
       <p className="app-eyebrow">404</p>
-      <h1 id="not-found-title" tabIndex={-1}>
-        Page not found
-      </h1>
+      <h1 id="not-found-title">Page not found</h1>
       <p>
         This page does not exist or may have moved. Check the address or use one of the links below.
       </p>

@@ -53,9 +53,7 @@ export function News({
           <LuNewspaper aria-hidden="true" />
           The stories behind the signal
         </Text>
-        <Title order={1} tabIndex={-1}>
-          News
-        </Title>
+        <Title order={1}>News</Title>
         <Text c="dimmed" mt="sm" maw={760}>
           Every article we fetched, with the language model's score and explanation. Sentiment
           ranges from 1.0/10 (very negative for stocks) through 5.5/10 (neutral) to 10.0/10 (very

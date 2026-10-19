@@ -58,9 +58,10 @@ export function ApplicationShell({
   const { setColorScheme } = useMantineColorScheme({ keepTransitions: true });
   const colorScheme = useComputedColorScheme("light", { getInitialValueInEffect: true });
   const burger = useRef<HTMLButtonElement>(null);
+  const isOps = pathname.startsWith("/ops/");
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${isOps ? " ops-shell" : ""}`}>
       <header className="app-header">
         <Group h="100%" px="md" justify="space-between">
           <Group>
@@ -86,7 +87,7 @@ export function ApplicationShell({
           <Group gap="xs">
             <span className="workspace-badge app-desktop-only">
               <LuShieldCheck aria-hidden="true" />
-              Private workspace
+              {isOps ? "Operations console" : "Private workspace"}
             </span>
             <button
               type="button"
@@ -118,11 +119,11 @@ export function ApplicationShell({
       >
         <div className="workspace-card">
           <span className="workspace-icon">
-            <LuSparkles aria-hidden="true" />
+            {isOps ? <LuSettings2 aria-hidden="true" /> : <LuSparkles aria-hidden="true" />}
           </span>
           <div>
-            <strong>Your workspace</strong>
-            <span>Market intelligence</span>
+            <strong>{isOps ? "Operations console" : "Your workspace"}</strong>
+            <span>{isOps ? "Monitor, diagnose, manage" : "Market intelligence"}</span>
           </div>
         </div>
         <p className="navigation-label">Workspace</p>

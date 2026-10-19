@@ -1,5 +1,4 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Alert } from "@mantine/core";
 import { z } from "zod";
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Outlet, useRouterState } from "@tanstack/react-router";
@@ -9,6 +8,7 @@ import { zOpsMessage } from "../shared/api/generated/zod.gen";
 import { ApplicationShell } from "../shared/ui/ApplicationShell";
 import { AppError, AppLoading } from "../shared/ui/AppStatus";
 import { PageNotFound } from "../shared/ui/PageNotFound";
+import { OpsNotice } from "../features/ops/OpsStatus";
 
 function RootLayout() {
   const { data: session } = useSuspenseQuery(sessionQuery);
@@ -19,17 +19,7 @@ function RootLayout() {
   return (
     <ApplicationShell session={session} pathname={pathname}>
       {notice.success && notice.data.opsNotice?.length ? (
-        <div role="status">
-          {notice.data.opsNotice.map((message, index) => (
-            <Alert
-              key={index}
-              title={message.level}
-              color={message.level === "error" ? "red" : "violet"}
-            >
-              {message.text}
-            </Alert>
-          ))}
-        </div>
+        <OpsNotice messages={notice.data.opsNotice} />
       ) : null}
       <Outlet />
     </ApplicationShell>

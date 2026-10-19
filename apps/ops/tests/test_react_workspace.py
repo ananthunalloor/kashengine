@@ -1,21 +1,103 @@
 """Full workspace parity over existing domain handlers, with explicit safe JSON."""
 
 import json
+from datetime import timedelta
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
+from django.utils import timezone
 
-from apps.api.app.ops_pages import ACTIONS, PAGES, form_data
+from apps.api.app.ops_pages import ACTIONS, PAGES, _job_statistics, form_data
 from apps.markets.models import Instrument
 from apps.news.models import NewsFeed
 from apps.ops import jobs, schedule
 from apps.ops.forms import settings_form
-from apps.ops.models import AuditEvent
+from apps.ops.models import AuditEvent, TaskRun
 from apps.siteconfig import registry
 
 pytestmark = pytest.mark.django_db
 BASE = "/api/app/ops/"
+
+
+def test_job_statistics_have_numeric_counts_rates_and_formatted_durations(boss_client):
+    job = jobs.JOBS[0]
+    old = TaskRun.objects.create(
+        task_id="old-job-stats",
+        task_name=job.target,
+        label=job.run_label,
+        status="success",
+        duration_ms=90000,
+    )
+    TaskRun.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(days=8))
+    for index, (status, duration_ms) in enumerate(
+        [("success", 0), ("failure", 2500), ("started", None), ("pending", None)]
+    ):
+        TaskRun.objects.create(
+            task_id=f"job-stats-{index}",
+            task_name=job.target,
+            label=job.run_label,
+            status=status,
+            duration_ms=duration_ms,
+        )
+    body = boss_client.get(f"{BASE}pages/jobs/").json()
+    summary = body["sections"][0]
+    assert summary["title"] == "Job activity (last 7 days)"
+    assert summary["details"]["Total runs"]["value"] == 4
+    assert summary["details"]["Succeeded"]["value"] == 1
+    assert summary["details"]["Failed"]["value"] == 1
+    assert summary["details"]["Success rate"]["text"] == "50%"
+    items = [
+        item
+        for section in body["sections"]
+        if section["table"]
+        for item in section["table"]["rows"]
+    ]
+    cells = next(item["cells"] for item in items if item["cells"]["job"]["text"] == job.label)
+    assert "statistics" not in cells
+    assert cells["runs_7d"]["value"] == 4
+    assert cells["succeeded"]["tone"] == "positive"
+    assert cells["failed"]["tone"] == "negative"
+    assert cells["success_rate"]["text"] == "50%"
+    assert cells["average_duration"]["text"] == "1.2 s"
+    assert cells["maximum_duration"]["text"] == "2.5 s"
+    assert cells["average_duration"]["value"] == 1250
+    empty = next(item["cells"] for item in items if item["cells"]["job"]["text"] != job.label)
+    assert empty["runs_7d"]["value"] == 0
+    assert empty["success_rate"]["text"] == "No completed runs"
+    assert empty["average_duration"]["value"] is None
+
+
+@pytest.mark.parametrize(
+    ("stats", "text", "tone"),
+    [
+        (None, "No completed runs", "neutral"),
+        ({"runs": 2, "ok": 0, "failed": 0}, "No completed runs", "neutral"),
+        ({"runs": 4, "ok": 1, "failed": 0, "avg_ms": 0}, "100%", "positive"),
+        ({"runs": 1, "ok": 0, "failed": 1}, "0%", "negative"),
+    ],
+)
+def test_job_success_rate_excludes_unfinished_runs_and_preserves_zero(stats, text, tone):
+    cells = _job_statistics(stats)
+    assert cells["success_rate"].text == text
+    assert cells["success_rate"].tone == tone
+    if stats and stats.get("avg_ms") == 0:
+        assert cells["average_duration"].text == "0 ms"
+        assert cells["average_duration"].value == 0
+
+
+def test_metrics_uses_the_same_readable_job_statistics(boss_client, offline):
+    TaskRun.objects.create(
+        task_id="metrics-duration", task_name="test", label="test", status="failure", duration_ms=0
+    )
+    sections = boss_client.get(f"{BASE}pages/metrics/").json()["sections"]
+    task_section = next(section for section in sections if section["title"] == "Jobs (7 days)")
+    cells = task_section["table"]["rows"][0]["cells"]
+    assert cells["failed"]["text"] == "1"
+    assert cells["failed"]["tone"] == "negative"
+    assert cells["success_rate"]["text"] == "0%"
+    assert cells["average_duration"]["text"] == "0 ms"
+    assert cells["maximum_duration"]["text"] == "0 ms"
 
 
 @pytest.mark.parametrize(

@@ -109,7 +109,7 @@ export function Landing({ authenticated }: Pick<PublicData, "authenticated">) {
           <p className="app-eyebrow">
             <LuSparkles aria-hidden="true" /> A clearer view of Indian markets
           </p>
-          <h1 id="hero-title" tabIndex={-1}>
+          <h1 id="hero-title">
             Less noise.
             <br />
             More <span>perspective.</span>
@@ -291,9 +291,7 @@ function Login({ data }: { data: PublicData }) {
   return (
     <section className="public-auth" aria-labelledby="login-title">
       <p className="app-eyebrow">Your private workspace</p>
-      <h1 id="login-title" tabIndex={-1}>
-        Log in
-      </h1>
+      <h1 id="login-title">Log in</h1>
       <p>
         Use the account that you made with <code>createsuperuser</code>.
       </p>
@@ -375,9 +373,7 @@ export function PublicPage({ data }: { data: PublicData }) {
           <PageNotFound />
         ) : (
           <section className="public-auth" aria-labelledby="status-title">
-            <h1 id="status-title" tabIndex={-1}>
-              {title}
-            </h1>
+            <h1 id="status-title">{title}</h1>
             {data.page === "access" ? (
               <>
                 <p>

@@ -7,6 +7,20 @@ import { ThemeProvider } from "../../app/ThemeProvider";
 import { routeTree } from "../../routeTree.gen";
 import type { OpsRunDetail, OpsRunSummary } from "../../shared/api/generated/types.gen";
 import { session } from "../../test/session";
+import { RunStatus } from "./Runs";
+
+it.each([
+  ["pending", "Waiting", "warning"],
+  ["started", "Running", "neutral"],
+  ["success", "Done", "positive"],
+  ["failure", "Failed", "negative"],
+] as const)("distinguishes %s runs with a semantic icon and label", (status, label, tone) => {
+  render(<RunStatus run={{ status, status_label: label }} />);
+  const badge = screen.getByText(label);
+  expect(badge).toHaveClass(`ops-tone-${tone}`);
+  expect(badge.querySelectorAll("svg")).toHaveLength(1);
+  expect(badge.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+});
 
 const pending: OpsRunSummary = {
   id: 1,
@@ -185,7 +199,9 @@ it("hides previously loaded history after a staff-permission failure", async () 
 
 it("shows staff history, retention, missing times, zero duration, and semantic status colors", async () => {
   await showRuns();
-  expect(await screen.findByRole("heading", { level: 1, name: "Task runs" })).toHaveFocus();
+  expect(await screen.findByRole("heading", { level: 1, name: "Task runs" })).not.toHaveAttribute(
+    "tabindex",
+  );
   expect(document.title).toBe("Task runs | Kash Engine");
   expect(screen.getByRole("link", { name: "Task runs", current: "page" })).toHaveAttribute(
     "href",
@@ -195,8 +211,8 @@ it("shows staff history, retention, missing times, zero duration, and semantic s
   expect(screen.getByText("An admin (deleted)")).toBeInTheDocument();
   expect(screen.getByText("Schedule or another task")).toBeInTheDocument();
   expect(screen.getByRole("cell", { name: "0 ms" })).toBeInTheDocument();
-  expect(screen.getByText("Waiting", { selector: "span" })).toHaveAttribute("data-tone", "warning");
-  expect(screen.getByText("Done", { selector: "span" })).toHaveAttribute("data-tone", "sent");
+  expect(screen.getByText("Waiting", { selector: "span" })).toHaveClass("ops-tone-warning");
+  expect(screen.getByText("Done", { selector: "span" })).toHaveClass("ops-tone-positive");
   expect(screen.getAllByText(/19 Oct 2026, 08:30:00 am IST/i)).toHaveLength(2);
   expect(screen.getAllByRole("main")).toHaveLength(1);
   expect(document.querySelector("style")).toBeNull();
@@ -274,7 +290,9 @@ it("paginates server results and navigates to details without leaving React", as
 
 it("renders stored diagnostics only as text, metadata and pending guidance", async () => {
   await showRuns({ path: "/ops/runs/1/" });
-  expect(await screen.findByRole("heading", { name: "news.fetch", level: 1 })).toHaveFocus();
+  expect(await screen.findByRole("heading", { name: "news.fetch", level: 1 })).not.toHaveAttribute(
+    "tabindex",
+  );
   expect(screen.getByText(detail.args)).toBeInTheDocument();
   expect(screen.getByText(detail.result)).toBeInTheDocument();
   expect(screen.getByText(detail.error)).toBeInTheDocument();

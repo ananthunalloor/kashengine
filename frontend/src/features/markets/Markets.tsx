@@ -28,9 +28,7 @@ export function Markets({ data, isStaff }: { data: MarketsData; isStaff: boolean
           <LuChartNoAxesCombined aria-hidden="true" />
           The market, in context
         </Text>
-        <Title order={1} tabIndex={-1}>
-          Markets
-        </Title>
+        <Title order={1}>Markets</Title>
         <Text c="dimmed" mt="sm">
           Saved closes and the track record of our daily outlook.
         </Text>

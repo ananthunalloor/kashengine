@@ -1,4 +1,4 @@
-import { Anchor, Button, Group, Stack, Text, Title } from "@mantine/core";
+import { Button, Group, Stack, Text, Title } from "@mantine/core";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { LuClipboardList, LuSearch, LuX } from "react-icons/lu";
@@ -38,16 +38,13 @@ export function Audit({
         <Text className="app-eyebrow" mb="xs">
           <LuClipboardList aria-hidden="true" /> Operations / recorded activity
         </Text>
-        <Title order={1} tabIndex={-1}>
-          Audit trail
+        <Title order={1} className="ops-page-title">
+          <LuClipboardList aria-hidden="true" /> Audit trail
         </Title>
         <Text c="dimmed" mt="sm">
           Recorded actions: jobs started, sessions ended, account changes, and API token management.
           Names are preserved as recorded, even after an account is renamed or deleted.
         </Text>
-        <Anchor href="/ops/audit/" size="sm">
-          Compare with the original Audit page
-        </Anchor>
       </header>
       <form
         className="news-filters ops-run-filters"

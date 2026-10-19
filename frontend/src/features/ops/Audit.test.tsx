@@ -114,7 +114,9 @@ async function showAudit({
 
 it("shows legacy audit fields, recorded actors, masked details, IPv6 and IST dates", async () => {
   await showAudit();
-  expect(await screen.findByRole("heading", { level: 1, name: "Audit trail" })).toHaveFocus();
+  expect(await screen.findByRole("heading", { level: 1, name: "Audit trail" })).not.toHaveAttribute(
+    "tabindex",
+  );
   expect(document.title).toBe("Audit trail | Kash Engine");
   expect(screen.getByRole("link", { name: "Audit trail", current: "page" })).toHaveAttribute(
     "href",
@@ -129,7 +131,7 @@ it("shows legacy audit fields, recorded actors, masked details, IPv6 and IST dat
   expect(table.getByRole("cell", { name: "\u2013" })).toBeInTheDocument();
   expect(screen.getByText(events[0].detail)).toBeInTheDocument();
   expect(document.querySelector(".data-table img, .data-table script")).toBeNull();
-  expect(screen.getByRole("link", { name: /Compare with/ })).toHaveAttribute("href", "/ops/audit/");
+  expect(screen.queryByRole("link", { name: /Compare with/ })).not.toBeInTheDocument();
   expect(screen.getAllByRole("main")).toHaveLength(1);
   expect(document.querySelector("style")).toBeNull();
 });
