@@ -170,6 +170,16 @@ export function ApplicationShell({
               />
             );
           })}
+          {session.is_staff && (
+            <NavLink
+              href="/app/ops/runs/"
+              label="Task runs"
+              active={pathname.startsWith("/app/ops/runs/")}
+              aria-current={pathname.startsWith("/app/ops/runs/") ? "page" : undefined}
+              onClick={close}
+              leftSection={<LuActivity aria-hidden="true" />}
+            />
+          )}
         </nav>
         <Stack mt="auto" p="xs" gap="xs">
           <span className="account-avatar" aria-hidden="true">

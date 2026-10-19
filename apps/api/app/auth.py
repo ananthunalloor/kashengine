@@ -52,3 +52,25 @@ class AppSession(APIKeyCookie):
                     f"Your account does not include the '{self.feature}' feature.",
                 )
         return user
+
+
+class OpsSession(AppSession):
+    """Require the same staff flag as Django Ops, without subscription restrictions."""
+
+    def authenticate(self, request: HttpRequest, key: str | None):
+        """Reject non-staff sessions before any operational data is queried.
+
+        Args:
+            request: The browser request with the resolved Django user.
+            key: The session cookie read by Ninja.
+
+        Returns:
+            The authenticated staff user, or None for an absent session.
+
+        Raises:
+            ApiError: If session authentication fails or the user is not staff.
+        """
+        user = super().authenticate(request, key)
+        if user is not None and not user.is_staff:
+            raise ApiError("feature_not_available", "Staff access is required for Ops.")
+        return user

@@ -72,7 +72,7 @@ groups, configured quotes, and latest saved report. The latest outlook keeps its
 date, five strongest saved cues and their trading dates, notes, component scores, and baseline/
 small-sample caveats. Reads do not fetch, score, evaluate, or send anything. Bounded summaries
 use local TanStack tables and shared metric colors; full-list links stay inside React.
-The original `/dashboard/` and login redirect remain unchanged; Ops still uses Django.
+The original `/dashboard/` and login redirect remain unchanged.
 
 Account opens `/app/account/` and reads `/api/app/account`, including subscription details,
 feature access, the latest 20 owner-scoped masked token rows, and the full active-token count.
@@ -91,6 +91,25 @@ the page retains the secret and explicitly reports the partial success. When the
 is disabled, creation is denied, but masked metadata and revocation remain available
 intentionally, unlike the legacy page's hidden API section. The original `/account/` remains
 unchanged apart from sharing the token-row limit.
+
+Staff task history opens `/app/ops/runs/`, with details at `/app/ops/runs/{id}/`. The private
+GET endpoints `/api/app/ops/runs` and `/api/app/ops/runs/{id}` use `OpsSession`: the existing
+session/CSRF/rate-limit rules plus the same `is_staff` flag as Django Ops. Non-staff are rejected
+before operational queries; subscriptions and the public API switch do not gate staff reads.
+Direct preview URLs are staff-protected too. Caddy applies `ADMIN_ALLOWED_IPS` to `/app/ops`
+and `/api/app/ops` and their children, not just the original `/ops` routes. Deploy the updated
+proxy configuration alongside this preview.
+
+The TanStack run table searches job labels, task names/IDs, and triggering usernames, with the
+legacy exact job/result/trigger filters, sorting, and `OPS_PAGE_SIZE` pagination (override 1-100).
+All processing happens server-side before pagination; URL state supports reloads and history.
+The list excludes arguments, output, and diagnostics. Detail reads expose the same stored data
+as the legacy staff-only page, rendered as plain text with IST times and the shared legacy
+duration formatter. Waiting/running details poll every three seconds while visible and stop
+when terminal, on errors, or on navigation. Failed refreshes explicitly hide stale operational
+data, with manual retry for recoverable errors. Neither endpoint dispatches a job, calls
+external services, or writes audit events. Job execution and other Ops pages remain Django
+links; `/ops/runs/` and its original details remain available.
 
 The private `/api/app/session` endpoint supplies the current user, allowed features, subscription
 notice, and navigation. It reuses Django's navigation/access rules, accepts session cookies only,

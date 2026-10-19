@@ -101,8 +101,19 @@ def test_caddyfile_has_the_security_settings():
 
 def test_caddyfile_limits_the_ops_pages_like_the_admin_site():
     text = (ROOT / "deploy" / "caddy" / "Caddyfile").read_text()
-    assert "path /admin /admin/* /ops /ops/*" in text
-    assert "not remote_ip {$ADMIN_ALLOWED_IPS" in text
+    rule = text.split("@admin_denied {", 1)[1].split("}", 1)[0]
+    for path in (
+        "/admin",
+        "/admin/*",
+        "/ops",
+        "/ops/*",
+        "/app/ops",
+        "/app/ops/*",
+        "/api/app/ops",
+        "/api/app/ops/*",
+    ):
+        assert path in rule.split()
+    assert "not remote_ip {$ADMIN_ALLOWED_IPS" in rule
 
 
 def site_block_lines() -> list[str]:
@@ -171,6 +182,8 @@ def test_caddyfile_adapts_and_runs_the_admin_limit_first(monkeypatch):
     ]
     texts = [json.dumps(route) for route in handled]
     admin = next(i for i, text in enumerate(texts) if "/ops/*" in text)
+    for path in ("/app/ops", "/app/ops/*", "/api/app/ops", "/api/app/ops/*"):
+        assert path in texts[admin]
     catch_all = next(i for i, route in enumerate(handled) if "match" not in route)
     assert admin < catch_all
 

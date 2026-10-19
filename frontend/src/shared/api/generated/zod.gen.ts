@@ -630,6 +630,83 @@ export const zTokenCreate = z.object({
 });
 
 /**
+ * RunFilters
+ *
+ * Bound search, exact legacy filters, and display-column sorts.
+ */
+export const zRunFilters = z.object({
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
+    q: z.string().max(200).optional().default(''),
+    label: z.string().max(200).optional().default(''),
+    status: z.string().regex(/^(|pending|started|success|failure)$/).optional().default(''),
+    trigger: z.string().regex(/^(|auto|manual)$/).optional().default(''),
+    sort: z.string().regex(/^(|-?(label|started_at|duration_ms|trigger|status))$/).optional().default('')
+});
+
+/**
+ * OpsRunSummary
+ *
+ * Staff-only run metadata without arguments, result, error, or output.
+ */
+export const zOpsRunSummary = z.object({
+    id: z.int(),
+    label: z.string(),
+    status: z.string(),
+    status_label: z.string(),
+    trigger: z.string(),
+    triggered_by: z.string().nullable(),
+    created_at: z.iso.datetime(),
+    started_at: z.iso.datetime().nullable(),
+    finished_at: z.iso.datetime().nullable(),
+    duration_ms: z.int().nullable(),
+    duration: z.string(),
+    is_active: z.boolean()
+});
+
+/**
+ * OpsRunPage
+ *
+ * Server-filtered and paginated retained task runs.
+ */
+export const zOpsRunPage = z.object({
+    items: z.array(zOpsRunSummary),
+    page: z.int(),
+    pages: z.int(),
+    total: z.int(),
+    page_size: z.int(),
+    labels: z.array(z.string()),
+    retention_days: z.int()
+});
+
+/**
+ * OpsRunDetail
+ *
+ * Stored diagnostics, restricted to staff like the legacy Ops detail.
+ */
+export const zOpsRunDetail = z.object({
+    id: z.int(),
+    label: z.string(),
+    status: z.string(),
+    status_label: z.string(),
+    trigger: z.string(),
+    triggered_by: z.string().nullable(),
+    created_at: z.iso.datetime(),
+    started_at: z.iso.datetime().nullable(),
+    finished_at: z.iso.datetime().nullable(),
+    duration_ms: z.int().nullable(),
+    duration: z.string(),
+    is_active: z.boolean(),
+    task_id: z.string(),
+    task_name: z.string(),
+    worker: z.string(),
+    args: z.string(),
+    result: z.string(),
+    error: z.string(),
+    output: z.string()
+});
+
+/**
  * OK
  */
 export const zGetAppSessionResponse = zSession;
@@ -742,3 +819,27 @@ export const zRevokeAppTokenPath = z.object({
  * OK
  */
 export const zRevokeAppTokenResponse = zAccountToken;
+
+export const zListAppOpsRunsQuery = z.object({
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
+    q: z.string().max(200).optional().default(''),
+    label: z.string().max(200).optional().default(''),
+    status: z.string().regex(/^(|pending|started|success|failure)$/).optional().default(''),
+    trigger: z.string().regex(/^(|auto|manual)$/).optional().default(''),
+    sort: z.string().regex(/^(|-?(label|started_at|duration_ms|trigger|status))$/).optional().default('')
+});
+
+/**
+ * OK
+ */
+export const zListAppOpsRunsResponse = zOpsRunPage;
+
+export const zGetAppOpsRunPath = z.object({
+    pk: z.int()
+});
+
+/**
+ * OK
+ */
+export const zGetAppOpsRunResponse = zOpsRunDetail;

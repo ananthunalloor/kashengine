@@ -93,6 +93,47 @@ class TokenCreated(Schema):
     secret: str = Field(description="Copy once; never cache or persist this response.")
 
 
+class OpsRunSummary(Schema):
+    """Staff-only run metadata without arguments, result, error, or output."""
+
+    id: int
+    label: str
+    status: str
+    status_label: str
+    trigger: str
+    triggered_by: str | None
+    created_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+    duration_ms: int | None
+    duration: str
+    is_active: bool
+
+
+class OpsRunDetail(OpsRunSummary):
+    """Stored diagnostics, restricted to staff like the legacy Ops detail."""
+
+    task_id: str
+    task_name: str
+    worker: str
+    args: str
+    result: str
+    error: str
+    output: str
+
+
+class OpsRunPage(Schema):
+    """Server-filtered and paginated retained task runs."""
+
+    items: list[OpsRunSummary]
+    page: int
+    pages: int
+    total: int
+    page_size: int
+    labels: list[str]
+    retention_days: int
+
+
 class ReportSummary(Schema):
     """A report's date and outlook, without the full report text."""
 

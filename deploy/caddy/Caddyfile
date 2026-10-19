@@ -5,7 +5,7 @@
 #   SITE_ADDRESS        Your domain name. A public name gets a Let's Encrypt certificate.
 #                       "localhost" or an IP address gets a certificate from Caddy's own CA.
 #   ACME_EMAIL          Where Let's Encrypt sends notices about the certificate.
-#   ADMIN_ALLOWED_IPS   Who may open /admin/ and /ops/ (IP addresses or ranges, separated by spaces).
+#   ADMIN_ALLOWED_IPS   Who may open admin, Ops, and its React/API previews (addresses or ranges).
 #   DOCS_ALLOWED_IPS    Who may open /docs/ (the developer docs). The default is everyone.
 #   CSP_HEADER          Content-Security-Policy to enforce the policy. Use
 #                       Content-Security-Policy-Report-Only to test it without blocking.
@@ -67,7 +67,7 @@
 	#
 	# 1. The admin site and the Ops pages are open to ADMIN_ALLOWED_IPS only.
 	@admin_denied {
-		path /admin /admin/* /ops /ops/*
+		path /admin /admin/* /ops /ops/* /app/ops /app/ops/* /api/app/ops /api/app/ops/*
 		not remote_ip {$ADMIN_ALLOWED_IPS:0.0.0.0/0 ::/0}
 	}
 	handle @admin_denied {

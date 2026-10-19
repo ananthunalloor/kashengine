@@ -26,6 +26,7 @@ from apps.ipos.models import Ipo
 from apps.markets.evaluation import accuracy_stats
 from apps.markets.trading import today_ist
 from apps.ops import audit
+from apps.ops.models import TaskRun
 from apps.reports.builder import render_text
 from apps.reports.models import Report
 from apps.siteconfig import conf
@@ -120,6 +121,20 @@ def react_ipo(request: HttpRequest, pk: int) -> HttpResponse:
         The uncached application shell, or a 404 for a missing issue.
     """
     get_object_or_404(Ipo.objects.only("id"), pk=pk)
+    return react_app(request)
+
+
+def react_ops_run(request: HttpRequest, pk: int) -> HttpResponse:
+    """Serve a run's preview shell; staff authentication is applied by the URL wrapper.
+
+    Args:
+        request: The staff browser request.
+        pk: Run primary key from the URL.
+
+    Returns:
+        The uncached React shell without operational data, or a 404 for an absent run.
+    """
+    get_object_or_404(TaskRun.objects.only("id"), pk=pk)
     return react_app(request)
 
 

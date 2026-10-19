@@ -19,6 +19,7 @@ from .delivery import router as delivery_router
 from .ipos import router as ipos_router
 from .markets import router as markets_router
 from .news import router as news_router
+from .ops import router as ops_router
 from .reports import router as reports_router
 from .schemas import Session
 from .today import router as today_router
@@ -40,6 +41,7 @@ api.add_router("", companies_router)
 api.add_router("", delivery_router)
 api.add_router("", today_router)
 api.add_router("", account_router)
+api.add_router("", ops_router)
 
 
 @api.exception_handler(AuthenticationError)

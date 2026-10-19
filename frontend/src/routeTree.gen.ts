@@ -20,6 +20,8 @@ import { Route as MarketsIndexRouteImport } from './routes/markets.index'
 import { Route as NewsIndexRouteImport } from './routes/news.index'
 import { Route as ReportsIndexRouteImport } from './routes/reports.index'
 import { Route as ReportsDayRouteImport } from './routes/reports.$day'
+import { Route as OpsRunsIndexRouteImport } from './routes/ops.runs.index'
+import { Route as OpsRunsIdRouteImport } from './routes/ops.runs.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -76,6 +78,16 @@ const ReportsDayRoute = ReportsDayRouteImport.update({
   path: '/reports/$day',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OpsRunsIndexRoute = OpsRunsIndexRouteImport.update({
+  id: '/ops/runs/',
+  path: '/ops/runs/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OpsRunsIdRoute = OpsRunsIdRouteImport.update({
+  id: '/ops/runs/$id',
+  path: '/ops/runs/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -89,6 +101,8 @@ export interface FileRoutesByFullPath {
   '/markets/': typeof MarketsIndexRoute
   '/news/': typeof NewsIndexRoute
   '/reports/': typeof ReportsIndexRoute
+  '/ops/runs/$id': typeof OpsRunsIdRoute
+  '/ops/runs/': typeof OpsRunsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -102,6 +116,8 @@ export interface FileRoutesByTo {
   '/markets': typeof MarketsIndexRoute
   '/news': typeof NewsIndexRoute
   '/reports': typeof ReportsIndexRoute
+  '/ops/runs/$id': typeof OpsRunsIdRoute
+  '/ops/runs': typeof OpsRunsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +132,8 @@ export interface FileRoutesById {
   '/markets/': typeof MarketsIndexRoute
   '/news/': typeof NewsIndexRoute
   '/reports/': typeof ReportsIndexRoute
+  '/ops/runs/$id': typeof OpsRunsIdRoute
+  '/ops/runs/': typeof OpsRunsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,6 +149,8 @@ export interface FileRouteTypes {
     | '/markets/'
     | '/news/'
     | '/reports/'
+    | '/ops/runs/$id'
+    | '/ops/runs/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -144,6 +164,8 @@ export interface FileRouteTypes {
     | '/markets'
     | '/news'
     | '/reports'
+    | '/ops/runs/$id'
+    | '/ops/runs'
   id:
     | '__root__'
     | '/'
@@ -157,6 +179,8 @@ export interface FileRouteTypes {
     | '/markets/'
     | '/news/'
     | '/reports/'
+    | '/ops/runs/$id'
+    | '/ops/runs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -171,6 +195,8 @@ export interface RootRouteChildren {
   MarketsIndexRoute: typeof MarketsIndexRoute
   NewsIndexRoute: typeof NewsIndexRoute
   ReportsIndexRoute: typeof ReportsIndexRoute
+  OpsRunsIdRoute: typeof OpsRunsIdRoute
+  OpsRunsIndexRoute: typeof OpsRunsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -252,6 +278,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsDayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ops/runs/': {
+      id: '/ops/runs/'
+      path: '/ops/runs'
+      fullPath: '/ops/runs/'
+      preLoaderRoute: typeof OpsRunsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ops/runs/$id': {
+      id: '/ops/runs/$id'
+      path: '/ops/runs/$id'
+      fullPath: '/ops/runs/$id'
+      preLoaderRoute: typeof OpsRunsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -267,6 +307,8 @@ const rootRouteChildren: RootRouteChildren = {
   MarketsIndexRoute: MarketsIndexRoute,
   NewsIndexRoute: NewsIndexRoute,
   ReportsIndexRoute: ReportsIndexRoute,
+  OpsRunsIdRoute: OpsRunsIdRoute,
+  OpsRunsIndexRoute: OpsRunsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

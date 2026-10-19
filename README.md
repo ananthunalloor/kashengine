@@ -145,7 +145,7 @@ To test the prod stack on your own computer, set `SITE_ADDRESS=localhost`. Caddy
 | Limits | Caddy closes slow clients, limits the request body to 2 MB, and has no admin API. |
 | Containers | Every container drops all Linux capabilities and cannot gain new ones. Web, worker, beat, and Caddy have a read-only root file system. Logs are rotated. |
 | Secrets | Caddy gets only its four values. It does not get the database password or the Telegram token. |
-| Admin pages | Set `ADMIN_ALLOWED_IPS` to limit `/admin/` and `/ops/` to your IP addresses or VPN range. |
+| Admin pages | Set `ADMIN_ALLOWED_IPS` to limit `/admin/`, `/ops/`, `/app/ops/`, and `/api/app/ops/` to your IP addresses or VPN range. |
 
 Notes:
 
@@ -208,7 +208,7 @@ How it works:
 - The log file is `logs/app.log`. In dev, the server writes it when you run it outside the tests. In prod, web, worker, and beat share it in the `logs` volume. Set `DJANGO_LOG_TO_FILE=false` to turn it off in dev.
 - The `httpx` logger is now at WARNING level. At INFO level it wrote the full Telegram URL, which contains the bot token.
 - The IP address of a login comes from `X-Forwarded-For`. Caddy sets this header, and the web container has no other way in.
-- `ADMIN_ALLOWED_IPS` limits `/ops/` in the same way as `/admin/`.
+- `ADMIN_ALLOWED_IPS` limits `/ops/`, `/app/ops/`, and `/api/app/ops/` in the same way as `/admin/`.
 
 ## Features and subscriptions
 
@@ -351,7 +351,15 @@ expiry, ownership, and audit rules. New secrets appear once in component-local s
 URLs, browser storage, or React Query caches; hide or leave the page to discard them.
 Account remains accessible after subscription expiry. When public API access is disabled,
 creation is denied, but existing tokens can still be viewed and revoked. The original
-`/account/` page remains available; Ops still uses Django.
+`/account/` page remains available.
+
+Staff can preview task history at `/app/ops/runs/` and stored run diagnostics at
+`/app/ops/runs/{id}/`. The TanStack history searches and filters all retained runs on the server
+before pagination, with job/result/trigger filters and URL-preserved sorting and page size.
+Active run details refresh every three seconds and stop on completion or error. Status badges
+distinguish waiting, running, done, and failed runs. These read-only previews use staff-only
+session endpoints under `/api/app/ops/runs`, with the same admin IP restrictions as `/ops/`.
+Job execution and all other Ops controls remain on Django; the original run pages are unchanged.
 
 The other existing pages remain Django-rendered during the incremental migration. Run
 `pnpm --dir frontend build` to create the production bundle and

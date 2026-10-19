@@ -579,6 +579,36 @@ h2 {
   line-height: 1.8;
 }
 
+.ops-run-filters {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+}
+
+.ops-run-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 1.25rem;
+  margin: 0;
+}
+
+.ops-run-facts dt {
+  color: var(--brand-muted);
+  font-size: 0.85rem;
+}
+
+.ops-run-facts dd {
+  margin: 0.35rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.ops-run-error {
+  color: var(--brand-loss);
+}
+
+.report-status[data-tone="warning"] {
+  color: var(--metric-caution);
+  background: var(--metric-caution-soft);
+}
+
 .metric-value {
   display: inline-block;
   border-radius: 0.35rem;

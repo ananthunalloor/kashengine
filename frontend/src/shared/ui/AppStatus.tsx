@@ -30,8 +30,10 @@ export function AppError({
   error,
   withinShell = false,
   section = "Reports",
+  onRetry,
 }: ErrorComponentProps & {
   withinShell?: boolean;
+  onRetry?: () => void;
   section?:
     | "Account"
     | "Today"
@@ -40,7 +42,8 @@ export function AppError({
     | "IPOs"
     | "Markets"
     | "Companies"
-    | "Delivery";
+    | "Delivery"
+    | "Task runs";
 }) {
   const router = useRouter();
   const unauthorized = error instanceof ApiError && error.kind === "unauthorized";
@@ -57,7 +60,9 @@ export function AppError({
           ? "IPO not found"
           : "Page not found"
       : forbidden
-        ? "Not on your account"
+        ? section === "Task runs"
+          ? "Staff access required"
+          : "Not on your account"
         : "Unable to load this page";
   usePageTitle(title);
 
@@ -82,7 +87,8 @@ export function AppError({
           !notFound && (
             <Button
               onClick={() => {
-                void router.invalidate();
+                if (onRetry) onRetry();
+                else void router.invalidate();
               }}
               w="fit-content"
             >
@@ -91,7 +97,15 @@ export function AppError({
           )
         )}
         {withinShell && (
-          <Anchor href={section === "Today" ? "/app/dashboard/" : `/app/${section.toLowerCase()}/`}>
+          <Anchor
+            href={
+              section === "Today"
+                ? "/app/dashboard/"
+                : section === "Task runs"
+                  ? "/app/ops/runs/"
+                  : `/app/${section.toLowerCase()}/`
+            }
+          >
             Back to {section}
           </Anchor>
         )}

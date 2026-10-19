@@ -58,6 +58,12 @@ function AppHome() {
               <LuArrowUpRight aria-hidden="true" />
             </a>
           ))}
+        {session.is_staff && (
+          <a href="/app/ops/runs/">
+            <span>Ops task runs</span>
+            <LuArrowUpRight aria-hidden="true" />
+          </a>
+        )}
       </div>
     </Stack>
   );

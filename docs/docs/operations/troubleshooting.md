@@ -33,7 +33,8 @@ variables or full request URLs when you look for a fault. They can contain secre
 
 ## `/admin/`, `/ops/` or `/docs/` returns 403 "Forbidden"
 
-Caddy returned it. The client address is not in `ADMIN_ALLOWED_IPS` (for `/admin/` and `/ops/`) or
+Caddy returned it. The client address is not in `ADMIN_ALLOWED_IPS`
+(for `/admin/`, `/ops/`, `/app/ops/`, and `/api/app/ops/`) or
 in `DOCS_ALLOWED_IPS` (for `/docs/`). Check the address that Caddy sees in the Caddy log
 (`remote_ip`). With Docker and IPv6 it can be the address of the Docker gateway. Change the
 value in `.env.prod` and recreate `caddy`.

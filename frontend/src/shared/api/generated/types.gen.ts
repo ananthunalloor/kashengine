@@ -1684,6 +1684,222 @@ export type TokenCreate = {
     name: string;
 };
 
+/**
+ * RunFilters
+ *
+ * Bound search, exact legacy filters, and display-column sorts.
+ */
+export type RunFilters = {
+    /**
+     * Page
+     *
+     * Requested page; out-of-range values are clamped.
+     */
+    page?: number;
+    /**
+     * Page Size
+     *
+     * Rows per page, 1-100.
+     */
+    page_size?: number | null;
+    /**
+     * Q
+     */
+    q?: string;
+    /**
+     * Label
+     */
+    label?: string;
+    /**
+     * Status
+     */
+    status?: string;
+    /**
+     * Trigger
+     */
+    trigger?: string;
+    /**
+     * Sort
+     */
+    sort?: string;
+};
+
+/**
+ * OpsRunPage
+ *
+ * Server-filtered and paginated retained task runs.
+ */
+export type OpsRunPage = {
+    /**
+     * Items
+     */
+    items: Array<OpsRunSummary>;
+    /**
+     * Page
+     */
+    page: number;
+    /**
+     * Pages
+     */
+    pages: number;
+    /**
+     * Total
+     */
+    total: number;
+    /**
+     * Page Size
+     */
+    page_size: number;
+    /**
+     * Labels
+     */
+    labels: Array<string>;
+    /**
+     * Retention Days
+     */
+    retention_days: number;
+};
+
+/**
+ * OpsRunSummary
+ *
+ * Staff-only run metadata without arguments, result, error, or output.
+ */
+export type OpsRunSummary = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Status Label
+     */
+    status_label: string;
+    /**
+     * Trigger
+     */
+    trigger: string;
+    /**
+     * Triggered By
+     */
+    triggered_by: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Started At
+     */
+    started_at: string | null;
+    /**
+     * Finished At
+     */
+    finished_at: string | null;
+    /**
+     * Duration Ms
+     */
+    duration_ms: number | null;
+    /**
+     * Duration
+     */
+    duration: string;
+    /**
+     * Is Active
+     */
+    is_active: boolean;
+};
+
+/**
+ * OpsRunDetail
+ *
+ * Stored diagnostics, restricted to staff like the legacy Ops detail.
+ */
+export type OpsRunDetail = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Status Label
+     */
+    status_label: string;
+    /**
+     * Trigger
+     */
+    trigger: string;
+    /**
+     * Triggered By
+     */
+    triggered_by: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Started At
+     */
+    started_at: string | null;
+    /**
+     * Finished At
+     */
+    finished_at: string | null;
+    /**
+     * Duration Ms
+     */
+    duration_ms: number | null;
+    /**
+     * Duration
+     */
+    duration: string;
+    /**
+     * Is Active
+     */
+    is_active: boolean;
+    /**
+     * Task Id
+     */
+    task_id: string;
+    /**
+     * Task Name
+     */
+    task_name: string;
+    /**
+     * Worker
+     */
+    worker: string;
+    /**
+     * Args
+     */
+    args: string;
+    /**
+     * Result
+     */
+    result: string;
+    /**
+     * Error
+     */
+    error: string;
+    /**
+     * Output
+     */
+    output: string;
+};
+
 export type GetAppSessionData = {
     body?: never;
     path?: never;
@@ -2305,3 +2521,119 @@ export type RevokeAppTokenResponses = {
 };
 
 export type RevokeAppTokenResponse = RevokeAppTokenResponses[keyof RevokeAppTokenResponses];
+
+export type ListAppOpsRunsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page
+         *
+         * Requested page; out-of-range values are clamped.
+         */
+        page?: number;
+        /**
+         * Page Size
+         *
+         * Rows per page, 1-100.
+         */
+        page_size?: number | null;
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * Label
+         */
+        label?: string;
+        /**
+         * Status
+         */
+        status?: string;
+        /**
+         * Trigger
+         */
+        trigger?: string;
+        /**
+         * Sort
+         */
+        sort?: string;
+    };
+    url: '/api/app/ops/runs';
+};
+
+export type ListAppOpsRunsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type ListAppOpsRunsError = ListAppOpsRunsErrors[keyof ListAppOpsRunsErrors];
+
+export type ListAppOpsRunsResponses = {
+    /**
+     * OK
+     */
+    200: OpsRunPage;
+};
+
+export type ListAppOpsRunsResponse = ListAppOpsRunsResponses[keyof ListAppOpsRunsResponses];
+
+export type GetAppOpsRunData = {
+    body?: never;
+    path: {
+        /**
+         * Pk
+         */
+        pk: number;
+    };
+    query?: never;
+    url: '/api/app/ops/runs/{pk}';
+};
+
+export type GetAppOpsRunErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Not Found
+     */
+    404: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type GetAppOpsRunError = GetAppOpsRunErrors[keyof GetAppOpsRunErrors];
+
+export type GetAppOpsRunResponses = {
+    /**
+     * OK
+     */
+    200: OpsRunDetail;
+};
+
+export type GetAppOpsRunResponse = GetAppOpsRunResponses[keyof GetAppOpsRunResponses];

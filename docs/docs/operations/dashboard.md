@@ -18,6 +18,16 @@ The Ops pages are at `/ops/`. Caddy lets only `ADMIN_ALLOWED_IPS` reach them. In
 A staff user cannot change anything, also when the user sends a POST request. Hiding a link is
 not the control. The view checks the role.
 
+### React task-history preview
+
+Staff also have a read-only preview at `/app/ops/runs/` and `/app/ops/runs/{id}/`.
+The TanStack history supports server-side search, job/result/trigger filters, sorting, and
+pagination with bookmarkable URLs. Detail pages show stored metadata and diagnostics as plain
+text; active runs refresh every three seconds until completion or an error. Staff access is
+checked on every private API request before reading any run data. `ADMIN_ALLOWED_IPS` also
+covers these preview pages and `/api/app/ops/`. Job execution and all other controls still use
+the original Ops pages.
+
 ## Pages
 
 | Page | What it shows | What a superuser can do |
