@@ -279,8 +279,8 @@ pnpm --dir frontend dev
 
 Open `http://localhost:8000/app/` while signed in to view the authenticated React shell.
 The preview loads navigation, feature permissions, subscription notices, and the staff flag
-from the session-only private API at `/api/app/session`. Reports, News, IPOs, Markets, and Companies open React previews at
-`/app/reports/`, `/app/news/`, `/app/ipos/`, `/app/markets/`, and `/app/companies/`; other links still open the existing Django pages. The shell includes a mobile menu,
+from the session-only private API at `/api/app/session`. Reports, News, IPOs, Markets, Companies, and Delivery open React previews at
+`/app/reports/`, `/app/news/`, `/app/ipos/`, `/app/markets/`, `/app/companies/`, and `/app/delivery/`; other links still open the existing Django pages. The shell includes a mobile menu,
 a persistent light/dark toggle, and CSRF-protected logout.
 An expired session returns to login; API errors display a retryable error page.
 
@@ -312,6 +312,12 @@ ordering, pagination, source links, and last-fetched dates in IST. Search is deb
 in the URL for bookmarks and browser history. The session-only `/api/app/companies` endpoint
 uses the existing company query and enforces company feature/subscription rules; scraped data
 and aliases are not exposed. The original `/companies/` page remains unchanged.
+
+The Delivery preview at `/app/delivery/` shows the newest 50 send attempts, configuration chat
+count, channels, results, and IST timestamps. Report links stay inside React and are shown only
+when Reports is available. The session-only `/api/app/delivery` endpoint enforces Delivery access,
+excludes recipient identifiers and bot credentials, and returns diagnostics only to staff.
+Reading the preview never sends messages; the original `/delivery/` page remains unchanged.
 
 React shares the landing page's purple accent, white surfaces, sans-serif typography, and rounded
 cards through `static/css/brand-tokens.css`. Light mode is the default; a saved dark-mode choice

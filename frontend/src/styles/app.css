@@ -295,7 +295,8 @@ h2 {
   grid-template-columns: minmax(0, 1fr);
 }
 
-.company-facts {
+.company-facts,
+.delivery-facts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
   gap: 1rem;
@@ -303,12 +304,14 @@ h2 {
   font-size: 0.875rem;
 }
 
-.company-facts dt {
+.company-facts dt,
+.delivery-facts dt {
   color: var(--brand-muted);
   margin-bottom: 0.35rem;
 }
 
-.company-facts dd {
+.company-facts dd,
+.delivery-facts dd {
   overflow-wrap: anywhere;
 }
 

@@ -11,9 +11,9 @@ function AppHome() {
         React preview
       </Title>
       <Text maw={640}>
-        Your account's available sections are in the navigation. Reports, News, IPOs, Markets, and
-        Companies now have React previews. Other sections still open the existing pages while their
-        React replacements are built and checked for parity.
+        Your account's available sections are in the navigation. Reports, News, IPOs, Markets,
+        Companies, and Delivery now have React previews. Other sections still open the existing
+        pages while their React replacements are built and checked for parity.
       </Text>
     </Stack>
   );

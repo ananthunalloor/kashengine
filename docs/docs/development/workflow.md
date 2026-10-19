@@ -110,6 +110,14 @@ navigation. Last-fetched dates use IST, and source links accept only absolute HT
 Direct preview and API requests enforce Companies access rules. Reads never refresh company
 data, and the original `/companies/` page remains unchanged.
 
+Delivery opens `/app/delivery/`, using the private `/api/app/delivery` endpoint and the same
+`latest_deliveries` query as the original page (newest 50 attempts). Configuration exposes only
+the count of nonempty Telegram chats, never chat IDs or bot credentials. Recipients are not
+serialized, and diagnostics are staff-only. Attempts without a report retain the existing
+"Test" label, including deleted reports. Report links target the React detail route and are
+omitted when the Reports feature is unavailable. The preview has no send/retry-write actions;
+reading never sends messages. Both routes enforce Delivery access; `/delivery/` is unchanged.
+
 After changing the private schemas:
 
 ```bash

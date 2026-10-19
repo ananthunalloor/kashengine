@@ -724,6 +724,64 @@
           }
         ]
       }
+    },
+    "/api/app/delivery": {
+      "get": {
+        "operationId": "get_app_delivery",
+        "summary": "Read the latest delivery attempts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Expose the same latest attempts as the web page, without recipient identifiers.",
+        "tags": [
+          "Delivery"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -2033,6 +2091,97 @@
           "total"
         ],
         "title": "CompanyPage",
+        "type": "object"
+      },
+      "DeliveryItem": {
+        "description": "A send attempt associated with a report, or a test without a saved report.",
+        "properties": {
+          "id": {
+            "description": "Delivery attempt primary key.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "channel": {
+            "description": "Human-readable delivery channel.",
+            "title": "Channel",
+            "type": "string"
+          },
+          "status": {
+            "description": "Delivery status key: sent or failed.",
+            "title": "Status",
+            "type": "string"
+          },
+          "status_label": {
+            "description": "Human-readable delivery status.",
+            "title": "Status Label",
+            "type": "string"
+          },
+          "created_at": {
+            "description": "Time of the delivery attempt.",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Failure diagnostic for staff only; otherwise null.",
+            "title": "Error"
+          },
+          "report_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Report date, or null when no report remains.",
+            "title": "Report Date"
+          }
+        },
+        "required": [
+          "id",
+          "channel",
+          "status",
+          "status_label",
+          "created_at",
+          "error",
+          "report_date"
+        ],
+        "title": "DeliveryItem",
+        "type": "object"
+      },
+      "DeliveryPage": {
+        "description": "The delivery overview, without chat IDs, recipients, or bot credentials.",
+        "properties": {
+          "chat_count": {
+            "description": "Number of configured nonempty Telegram chat IDs.",
+            "title": "Chat Count",
+            "type": "integer"
+          },
+          "items": {
+            "description": "Newest 50 send attempts, newest first.",
+            "items": {
+              "$ref": "#/components/schemas/DeliveryItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "chat_count",
+          "items"
+        ],
+        "title": "DeliveryPage",
         "type": "object"
       }
     },

@@ -237,3 +237,16 @@ class CompanyPage(Schema):
     page: int = Field(description="Resolved page number, starting at one.")
     pages: int = Field(description="Total pages; one when empty.")
     total: int = Field(description="Total matching companies.")
+
+
+class DeliveryItem(ReportDelivery):
+    """A send attempt associated with a report, or a test without a saved report."""
+
+    report_date: dt.date | None = Field(description="Report date, or null when no report remains.")
+
+
+class DeliveryPage(Schema):
+    """The delivery overview, without chat IDs, recipients, or bot credentials."""
+
+    chat_count: int = Field(description="Number of configured nonempty Telegram chat IDs.")
+    items: list[DeliveryItem] = Field(description="Newest 50 send attempts, newest first.")

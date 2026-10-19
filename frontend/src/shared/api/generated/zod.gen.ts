@@ -382,6 +382,31 @@ export const zCompanyPage = z.object({
 });
 
 /**
+ * DeliveryItem
+ *
+ * A send attempt associated with a report, or a test without a saved report.
+ */
+export const zDeliveryItem = z.object({
+    id: z.int(),
+    channel: z.string(),
+    status: z.string(),
+    status_label: z.string(),
+    created_at: z.iso.datetime(),
+    error: z.string().nullable(),
+    report_date: z.iso.date().nullable()
+});
+
+/**
+ * DeliveryPage
+ *
+ * The delivery overview, without chat IDs, recipients, or bot credentials.
+ */
+export const zDeliveryPage = z.object({
+    chat_count: z.int(),
+    items: z.array(zDeliveryItem)
+});
+
+/**
  * OK
  */
 export const zGetAppSessionResponse = zSession;
@@ -452,3 +477,8 @@ export const zListAppCompaniesQuery = z.object({
  * OK
  */
 export const zListAppCompaniesResponse = zCompanyPage;
+
+/**
+ * OK
+ */
+export const zGetAppDeliveryResponse = zDeliveryPage;

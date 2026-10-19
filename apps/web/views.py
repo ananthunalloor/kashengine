@@ -40,7 +40,6 @@ if TYPE_CHECKING:
 NEWS_FILTERS = ("q", "sentiment", "source", "page")
 IPO_FILTERS = ("q", "status", "verdict", "category", "page")
 COMPANY_FILTERS = ("q", "page")
-DELIVERY_LOG_ROWS = 50  # How many log rows the delivery page shows.
 
 
 class Login(LoginView):
@@ -213,7 +212,7 @@ def company_list(request):
 def delivery(request):
     """The delivery page: the last send attempts."""
     context = {
-        "logs": DeliveryLog.objects.select_related("report")[:DELIVERY_LOG_ROWS],
+        "logs": queries.latest_deliveries(),
         "chat_count": len(configured_chat_ids()),
         "today": today_ist(),
     }

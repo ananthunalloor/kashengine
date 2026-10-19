@@ -35,6 +35,7 @@ urlpatterns = [
     path("app/ipos/<int:pk>/", views.react_ipo, name="react_ipo"),
     path("app/markets/", views.react_app, name="react_markets"),
     path("app/companies/", views.react_app, name="react_companies"),
+    path("app/delivery/", views.react_app, name="react_delivery"),
     path("dashboard/", views.dashboard, name="dashboard"),
     path("login/", views.Login.as_view(), name="login"),
     path("logout/", views.Logout.as_view(), name="logout"),

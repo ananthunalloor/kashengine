@@ -49,7 +49,7 @@ FEATURES: tuple[Feature, ...] = (
         "delivery",
         "Delivery",
         "The page with the Telegram send attempts.",
-        frozenset({"delivery"}),
+        frozenset({"delivery", "react_delivery"}),
     ),
 )
 

@@ -2,10 +2,11 @@
 
 from datetime import date, datetime, timedelta
 
-from django.db.models import Case, IntegerField, Q, Value, When
+from django.db.models import Case, IntegerField, Q, QuerySet, Value, When
 from django.utils import timezone
 
 from apps.companies.models import Company
+from apps.delivery.models import DeliveryLog
 from apps.ipos.models import Ipo
 from apps.markets.evaluation import accuracy_stats
 from apps.markets.instruments import all_instruments
@@ -35,6 +36,12 @@ CATEGORY_FILTERS = {"mainboard": "Mainboard", "sme": "SME"}
 NEWS_WINDOW_HOURS = 36
 DASHBOARD_ITEMS = 4
 HOURS_BEFORE_DAYS = 48  # An age below this is shown in hours. A larger age is shown in days.
+DELIVERY_LOG_ROWS = 50
+
+
+def latest_deliveries() -> QuerySet[DeliveryLog]:
+    """The newest 50 send attempts, with their reports, in the existing display order."""
+    return DeliveryLog.objects.select_related("report")[:DELIVERY_LOG_ROWS]
 
 
 def latest_quotes() -> list[dict]:

@@ -1096,6 +1096,76 @@ export type CompanyPage = {
     total: number;
 };
 
+/**
+ * DeliveryItem
+ *
+ * A send attempt associated with a report, or a test without a saved report.
+ */
+export type DeliveryItem = {
+    /**
+     * Id
+     *
+     * Delivery attempt primary key.
+     */
+    id: number;
+    /**
+     * Channel
+     *
+     * Human-readable delivery channel.
+     */
+    channel: string;
+    /**
+     * Status
+     *
+     * Delivery status key: sent or failed.
+     */
+    status: string;
+    /**
+     * Status Label
+     *
+     * Human-readable delivery status.
+     */
+    status_label: string;
+    /**
+     * Created At
+     *
+     * Time of the delivery attempt.
+     */
+    created_at: string;
+    /**
+     * Error
+     *
+     * Failure diagnostic for staff only; otherwise null.
+     */
+    error: string | null;
+    /**
+     * Report Date
+     *
+     * Report date, or null when no report remains.
+     */
+    report_date: string | null;
+};
+
+/**
+ * DeliveryPage
+ *
+ * The delivery overview, without chat IDs, recipients, or bot credentials.
+ */
+export type DeliveryPage = {
+    /**
+     * Chat Count
+     *
+     * Number of configured nonempty Telegram chat IDs.
+     */
+    chat_count: number;
+    /**
+     * Items
+     *
+     * Newest 50 send attempts, newest first.
+     */
+    items: Array<DeliveryItem>;
+};
+
 export type GetAppSessionData = {
     body?: never;
     path?: never;
@@ -1475,3 +1545,36 @@ export type ListAppCompaniesResponses = {
 };
 
 export type ListAppCompaniesResponse = ListAppCompaniesResponses[keyof ListAppCompaniesResponses];
+
+export type GetAppDeliveryData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/app/delivery';
+};
+
+export type GetAppDeliveryErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type GetAppDeliveryError = GetAppDeliveryErrors[keyof GetAppDeliveryErrors];
+
+export type GetAppDeliveryResponses = {
+    /**
+     * OK
+     */
+    200: DeliveryPage;
+};
+
+export type GetAppDeliveryResponse = GetAppDeliveryResponses[keyof GetAppDeliveryResponses];
