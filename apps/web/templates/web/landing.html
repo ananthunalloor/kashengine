@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <meta name="description" content="Make sense of Indian markets with Kash Engine. Explore scored news, market outlooks, IPO research, company data, and daily reports in one place.">
-  <title>Kash Engine · Less noise. More perspective.</title>
+  <title>Archived · Kash Engine · Less noise. More perspective.</title>
   <link rel="stylesheet" href="{% static 'css/landing.css' %}">
 </head>
 <body>
+  <aside role="note" class="container">Archived Django interface — superuser access only. This is not the current application. <a href="{{ main_site_url }}/">Open the current application</a>.</aside>
   <a class="skip-link" href="#main">Skip to content</a>
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <symbol id="arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
@@ -81,7 +82,7 @@
         <article class="capability-card"><div class="card-top"><span class="capability-icon rose"><svg class="icon" aria-hidden="true"><use href="#report"/></svg></span><span class="card-category">05 / GET THE PICTURE</span></div><h3>Your daily market brief</h3><p>Bring the outlook, important stories, and IPO watchlist together in one readable report. Revisit any day.</p><div class="card-tags"><span>Daily digest</span><span>Report archive</span></div><details><summary>Explore report capabilities <span aria-hidden="true">+</span></summary><p>Browse past reports by date and move between daily editions. Each report brings together the available news, market signals, and IPO information.</p><a href="{% url 'web:reports' %}">Open reports <span aria-hidden="true">→</span></a></details></article>
         <article class="capability-card"><div class="card-top"><span class="capability-icon teal"><svg class="icon" aria-hidden="true"><use href="#send"/></svg></span><span class="card-category">06 / STAY IN THE LOOP</span></div><h3>From the engine to you</h3><p>Get the daily report through configured Telegram delivery, and check whether each send made it through.</p><div class="card-tags"><span>Telegram delivery</span><span>Delivery history</span></div><details><summary>Explore delivery capabilities <span aria-hidden="true">+</span></summary><p>Review send attempts, delivery status, and errors in the delivery log. Telegram destinations and scheduled sending are configured by your administrator.</p><a href="{% url 'web:delivery' %}">Open delivery <span aria-hidden="true">→</span></a></details></article>
       </div>
-      <div class="api-note"><span class="code-icon" aria-hidden="true">&lt;/&gt;</span><p><strong>Prefer to build your own view?</strong> Read the data through our versioned, read-only REST API.</p><a href="{% url 'docs' %}">Explore API docs <svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></a></div>
+      <div class="api-note"><span class="code-icon" aria-hidden="true">&lt;/&gt;</span><p><strong>Prefer to build your own view?</strong> Read the data through our versioned, read-only REST API.</p><a href="{{ main_site_url }}/api/v1/docs">Explore API docs <svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></a></div>
     </section>
 
     <section id="how-it-works" class="workflow-section" aria-labelledby="workflow-title"><div class="container">

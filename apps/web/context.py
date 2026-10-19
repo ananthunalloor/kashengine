@@ -1,5 +1,6 @@
 """Template context for every page of the web app."""
 
+from django.conf import settings
 from django.urls import reverse
 
 from apps.access.middleware import access_for
@@ -17,13 +18,20 @@ SECTIONS = (
 )
 
 
-def web_settings(request) -> dict:
-    """Values that every template needs: the Datastar script and the main menu."""
+def navigation_for(request) -> list[dict]:
+    """Build the same permission-aware menu for templates and the React session API.
+
+    Args:
+        request: The request with its authenticated user and optional route match.
+
+    Returns:
+        Visible navigation links, including the current-section marker for templates.
+    """
     match = getattr(request, "resolver_match", None)
     current = match.url_name if match and match.namespace == "web" else None
     user = getattr(request, "user", None)
     if user is None or not user.is_authenticated:
-        return {"datastar_src": conf.DATASTAR_SRC, "nav": [], "features": frozenset(), "notice": ""}
+        return []
     access = access_for(request)
     nav = [
         {"label": label, "url": reverse(name), "active": current in names}
@@ -34,9 +42,27 @@ def web_settings(request) -> dict:
     if user.is_staff:
         in_ops = bool(match and match.namespace == "ops")
         nav.append({"label": "Ops", "url": reverse("ops:overview"), "active": in_ops})
+    return nav
+
+
+def web_settings(request) -> dict:
+    """Values that every template needs: the Datastar script and the main menu."""
+    user = getattr(request, "user", None)
+    if user is None or not user.is_authenticated:
+        return {
+            "archived": getattr(request, "is_archive", False),
+            "main_site_url": f"{request.scheme}://{settings.SITE_ADDRESS}",
+            "datastar_src": conf.DATASTAR_SRC,
+            "nav": [],
+            "features": frozenset(),
+            "notice": "",
+        }
+    access = access_for(request)
     return {
+        "archived": getattr(request, "is_archive", False),
+        "main_site_url": f"{request.scheme}://{settings.SITE_ADDRESS}",
         "datastar_src": conf.DATASTAR_SRC,
-        "nav": nav,
+        "nav": navigation_for(request),
         "features": access.allowed,
         "notice": access.notice(),
     }

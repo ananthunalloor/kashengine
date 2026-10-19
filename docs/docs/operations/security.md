@@ -47,7 +47,7 @@ IP address it uses its own CA. These are the controls in `deploy/caddy/Caddyfile
 
 Caddy runs the `handle` blocks in the order written. The first match wins. The order is:
 
-1. `/admin` and `/ops` for an address outside `ADMIN_ALLOWED_IPS` get `403`.
+1. `/admin`, `/ops`, `/app/ops`, and `/api/app/ops` (including children) for an address outside `ADMIN_ALLOWED_IPS` get `403`.
 2. `/docs` for an address outside `DOCS_ALLOWED_IPS` gets `403`.
 3. `/docs` goes to `docs:8080`. Caddy does not remove the prefix.
 4. Everything else goes to `web:8000`.
@@ -93,7 +93,8 @@ to `/tmp` and to the named volumes. `web`, `worker` and `beat` run as the `app` 
 
 ## Access to the admin pages
 
-`ADMIN_ALLOWED_IPS` limits `/admin/` and `/ops/` at Caddy. The value is a list of addresses and
+`ADMIN_ALLOWED_IPS` limits `/admin/`, `/ops/`, `/app/ops/`, and `/api/app/ops/` at Caddy.
+The value is a list of addresses and
 ranges, separated by spaces. The default is everyone, so set it in production.
 
 Test the address that Caddy sees from an allowed client and from a blocked client. Docker IPv6

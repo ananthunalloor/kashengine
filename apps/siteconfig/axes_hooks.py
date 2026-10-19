@@ -7,6 +7,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 
 from apps.ops.requestinfo import client_ip as validated_client_ip
+from apps.web.public_preview import preview_response
 
 from . import conf
 
@@ -33,4 +34,6 @@ def lockout(
     """The page for a locked-out address. It tells nothing about users or limits."""
     wait = cooloff(request)
     minutes = math.ceil(wait.total_seconds() / 60) if wait else None
+    if not getattr(request, "is_archive", False) and not request.path.startswith("/admin/"):
+        return preview_response(request, page="lockout", status=429, minutes=minutes)
     return render(request, "web/locked_out.html", {"minutes": minutes}, status=429)

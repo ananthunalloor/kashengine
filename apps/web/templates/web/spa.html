@@ -1,0 +1,16 @@
+{% load django_vite %}<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Kash Engine</title>
+    {% vite_hmr_client %}
+    {% vite_react_refresh %}
+    {% vite_asset 'src/main.tsx' %}
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>This application requires JavaScript. Enable JavaScript to use Kash Engine.</noscript>
+  </body>
+</html>

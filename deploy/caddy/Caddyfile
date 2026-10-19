@@ -4,12 +4,12 @@
 # Settings come from the environment (see docker-compose.prod.yml and .env.prod.example):
 #   SITE_ADDRESS        Your domain name. A public name gets a Let's Encrypt certificate.
 #                       "localhost" or an IP address gets a certificate from Caddy's own CA.
+#   OLD_SITE_ADDRESS    Hostname of the archived, superuser-only Django interface.
 #   ACME_EMAIL          Where Let's Encrypt sends notices about the certificate.
-#   ADMIN_ALLOWED_IPS   Who may open /admin/ and /ops/ (IP addresses or ranges, separated by spaces).
+#   ADMIN_ALLOWED_IPS   Who may open admin, Ops, its private API, and the entire archive.
 #   DOCS_ALLOWED_IPS    Who may open /docs/ (the developer docs). The default is everyone.
 #   CSP_HEADER          Content-Security-Policy to enforce the policy. Use
 #                       Content-Security-Policy-Report-Only to test it without blocking.
-
 {
 	# No admin API. This closes a port and a way to change the config at run time.
 	admin off
@@ -41,17 +41,17 @@
 	}
 	@application_path not path /docs /docs/*
 	header @application_path {
-		{$CSP_HEADER:Content-Security-Policy} "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		{$CSP_HEADER:Content-Security-Policy} "default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
 		Cross-Origin-Resource-Policy same-origin
 	}
 
 	# Allow bounded snapshots only on the superuser restore endpoint (including form overhead).
-	@backup_import path /ops/backups/import/
+	@backup_import path /api/app/ops/actions/backups/import/
 	request_body @backup_import {
 		max_size 141MiB
 	}
-	@small_forms not path /ops/backups/import/
+	@small_forms not path /api/app/ops/actions/backups/import/
 	request_body @small_forms {
 		max_size 2MB
 	}
@@ -67,7 +67,7 @@
 	#
 	# 1. The admin site and the Ops pages are open to ADMIN_ALLOWED_IPS only.
 	@admin_denied {
-		path /admin /admin/* /ops /ops/*
+		path /admin /admin/* /ops /ops/* /api/app/ops /api/app/ops/*
 		not remote_ip {$ADMIN_ALLOWED_IPS:0.0.0.0/0 ::/0}
 	}
 	handle @admin_denied {
@@ -95,6 +95,38 @@
 		reverse_proxy web:8000 {
 			header_down -Server
 		}
+	}
+}
+
+# The legacy interface is isolated by hostname and by Django's superuser gate.
+{$OLD_SITE_ADDRESS:old.localhost} {
+	encode zstd gzip
+	header {
+		{$CSP_HEADER:Content-Security-Policy} "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		X-Robots-Tag "noindex, nofollow, noarchive"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		Cross-Origin-Resource-Policy same-origin
+	}
+	@archive_import path /ops/backups/import/
+	request_body @archive_import {
+		max_size 141MiB
+	}
+	@archive_forms not path /ops/backups/import/
+	request_body @archive_forms {
+		max_size 2MB
+	}
+	@archive_denied not remote_ip {$ADMIN_ALLOWED_IPS:0.0.0.0/0 ::/0}
+	handle @archive_denied {
+		respond "Forbidden" 403
+	}
+	handle {
+		reverse_proxy web:8000 {
+			header_down -Server
+		}
+	}
+	log {
+		output stdout
+		format json
 	}
 }
 

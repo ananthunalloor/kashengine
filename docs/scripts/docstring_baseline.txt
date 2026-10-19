@@ -308,7 +308,6 @@ apps/web/datastar.py::signals_json
 apps/web/decorators.py::post_only.wrapper
 apps/web/queries.py::_age
 apps/web/queries.py::_day
-apps/web/queries.py::_ipo_groups
 apps/web/queries.py::company_queryset
 apps/web/queries.py::dashboard_data
 apps/web/queries.py::ipo_facts
@@ -327,8 +326,6 @@ apps/web/templatetags/web_extras.py::rupees
 apps/web/templatetags/web_extras.py::signed
 apps/web/templatetags/web_extras.py::times
 apps/web/templatetags/web_extras.py::tone
-apps/web/urls.py::IsoDateConverter.to_python
-apps/web/urls.py::IsoDateConverter.to_url
 apps/web/views.py::_account_context
 apps/web/views.py::_filter_view
 apps/web/views.py::_page

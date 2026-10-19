@@ -1,4 +1,4 @@
-"""Write the OpenAPI document of an API version to a file or to standard output.
+"""Write an OpenAPI document to a file or to standard output.
 
 The committed file `docs/openapi/v1.json` comes from this command. A test fails when the file
 is older than the code. The Docusaurus build reads the file to make the API reference pages.
@@ -11,9 +11,10 @@ from typing import Any
 
 from django.core.management.base import BaseCommand, CommandError
 
+from apps.api.app.api import api as api_app
 from apps.api.v1.api import api as api_v1
 
-APIS = {"v1": api_v1}
+APIS = {"v1": api_v1, "app": api_app}
 
 
 def render(version: str = "v1") -> str:
@@ -23,7 +24,7 @@ def render(version: str = "v1") -> str:
     of two spaces, so a Git diff shows only real changes.
 
     Args:
-        version: The major version, for example `v1`.
+        version: The major version, for example `v1`, or `app` for the private UI API.
 
     Returns:
         The JSON text.
@@ -41,12 +42,12 @@ class Command(BaseCommand):
     help = "Write the OpenAPI document of an API version."
 
     def add_arguments(self, parser: ArgumentParser) -> None:
-        """Add the options `--api-version` and `--output`.
+        """Add `--api-version` (also `--api`) and `--output`.
 
         Args:
             parser: The parser of the command.
         """
-        parser.add_argument("--api-version", default="v1", choices=sorted(APIS))
+        parser.add_argument("--api-version", "--api", default="v1", choices=sorted(APIS))
         parser.add_argument("--output", help="File to write. The default is standard output.")
 
     def handle(self, *args: Any, **options: Any) -> None:

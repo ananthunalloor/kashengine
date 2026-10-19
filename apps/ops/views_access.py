@@ -8,7 +8,8 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, redirect
+from django.template.response import TemplateResponse
 from django.utils import timezone
 
 from apps.access import features, service
@@ -84,16 +85,18 @@ def subscription_list(request: HttpRequest) -> HttpResponse:
         .order_by("username")
     )
     rows = [{"user": user, **summary(user, now)} for user in users]
+    all_rows = rows
     counts = {key: sum(1 for r in rows if r["state"] == key) for key, _label in STATE_FILTERS[1:]}
     if chosen:
         rows = [r for r in rows if r["state"] == chosen]
     context = {
         "rows": rows,
+        "all_rows": all_rows,
         "counts": [(key, label, counts[key]) for key, label in STATE_FILTERS[1:]],
         "chosen": chosen,
         "section": "subscriptions",
     }
-    return render(request, "ops/subscriptions.html", context)
+    return TemplateResponse(request, "ops/subscriptions.html", context)
 
 
 @superuser_post_required

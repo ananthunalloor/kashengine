@@ -7,6 +7,7 @@ from .base import BASE_DIR, LOG_DIR, LOG_FILE, LOGGING, env
 
 DEBUG = True
 ALLOWED_HOSTS = ["*"]
+DJANGO_VITE["default"]["dev_mode"] = env.bool("DJANGO_VITE_DEV_MODE", default=True)
 
 DATABASES = {
     "default": env.db("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),

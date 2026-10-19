@@ -1,13 +1,45 @@
 {
   "name": "kash-engine-frontend",
   "private": true,
-  "description": "Builds static/css/app.css from the templates. Run from this folder.",
+  "packageManager": "pnpm@10.12.1",
   "scripts": {
-    "build": "tailwindcss -i app.css -o ../static/css/app.css --minify",
-    "watch": "tailwindcss -i app.css -o ../static/css/app.css --watch"
+    "dev": "vite",
+    "build": "vite build && tsc -b",
+    "build:legacy-css": "tailwindcss -i styles/legacy.css -o ../static/css/app.css --minify",
+    "watch:legacy-css": "tailwindcss -i styles/legacy.css -o ../static/css/app.css --watch",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "format": "oxfmt src vite.config.ts vitest.config.ts openapi-ts.config.ts",
+    "format:check": "oxfmt --check src vite.config.ts vitest.config.ts openapi-ts.config.ts",
+    "api:generate": "openapi-ts",
+    "api:check": "openapi-ts && git diff --exit-code -- src/shared/api/generated"
+  },
+  "dependencies": {
+    "@tanstack/react-table": "^8.21.3",
+    "react-icons": "^5.5.0",
+    "@mantine/core": "^8.2.0",
+    "@mantine/hooks": "^8.2.0",
+    "@tanstack/react-query": "^5.83.0",
+    "@tanstack/react-router": "^1.130.17",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zod": "^4.1.0"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.3",
-    "tailwindcss": "^4.3.3"
+    "@tanstack/router-plugin": "^1.130.17",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.7",
+    "@hey-api/openapi-ts": "0.99.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/jest-dom": "6.9.1",
+    "@vitejs/plugin-react": "^5.0.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.6",
+    "vitest": "^3.2.4",
+    "jsdom": "^26.1.0",
+    "oxfmt": "0.73.0"
   }
 }

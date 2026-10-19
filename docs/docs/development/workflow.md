@@ -56,6 +56,264 @@ cd docs && npm run reference:check && npm run build
 [Pre-commit](https://pre-commit.com) runs Ruff, the file checks and `ty` before each commit.
 CI (`.github/workflows/ci.yml`) runs all the checks above for each pull request.
 
+## React migration
+
+React serves all product pages at their canonical URLs, including `/`, `/login/`,
+`/dashboard/`, and `/ops/`. The old `/app/` prefix no longer resolves. Django Admin and
+documentation interfaces remain unchanged. Start Vite with
+`pnpm --dir frontend dev` alongside Django, or use the frontend service in the dev Compose file.
+
+`ArchiveMiddleware` selects `config.legacy_urls` only for the exact, validated
+`OLD_SITE_ADDRESS` hostname (default `old.${SITE_ADDRESS}`, or `old.localhost` in dev).
+Before any archived view or action runs, it requires an active superuser. Only the archive
+login form is public, and its authentication form rejects ordinary staff and members.
+Rejected non-superuser credentials also emit Django's failure signal for axes lockout counting.
+The archive retains live writes, confirmations, and CSRF protection; it is not a database
+snapshot. Every response is private/no-store and noindex/nofollow/noarchive. Templates display
+an Archived banner. Session/CSRF cookies remain host-only, with a separate archive login.
+Caddy serves both hosts and applies `ADMIN_ALLOWED_IPS` to the entire archive.
+
+The main URLconf contains only React page views and private/public APIs; legacy POST paths
+are not exposed on the main hostname. Ops API adapters resolve their allowlists explicitly
+against `config.legacy_urls`, retaining the original domain handlers without reopening them
+as browser endpoints. Archived renderer/domain unit tests use an isolated test URLconf;
+`apps/web/tests/test_archive.py` exercises the actual deployed host and role boundary.
+
+Public screens use the separate `src/public.tsx` Vite entry, not the authenticated router:
+anonymous visitors never request the private session endpoint. Django passes a small,
+`json_script`-escaped presentation object validated by Zod; no credentials or private market
+data are included. The login form submits directly to Django's `LoginView`, preserving CSRF,
+safe `next` validation, axes signals, and session rotation. Invalid submissions never echo
+passwords or usernames. Axes returns the React lockout screen at the real 429 response; feature
+and Ops permission failures return the React access screen with 403. Legacy responses retain
+their original templates. No standalone route can simulate or bypass a permission or lockout.
+Logout remains the existing CSRF-protected POST with a React `next` destination.
+The route-inventory regression test in `apps/web/tests/test_public_preview.py` checks every
+original product page/action against its React counterpart so new pages cannot be overlooked.
+Production uses the Vite manifest and built assets included in the Python image.
+
+Today opens `/dashboard/`, backed by the session-only `/api/app/today` endpoint.
+It requires an active subscription when that rule is enabled, but is not a separate feature:
+Markets, News, IPOs, and Reports sections are independently authorized before their queries
+run. Disabled sections return null, not hidden data. The page preserves the existing
+36-hour news window, ranking/deduplication, four-story/group limits, mutually exclusive IPO
+groups, configured quotes, and latest saved report. The latest outlook keeps its actual target
+date, five strongest saved cues and their trading dates, notes, component scores, and baseline/
+small-sample caveats. Reads do not fetch, score, evaluate, or send anything. Bounded summaries
+use local TanStack tables and shared metric colors; full-list links stay inside React.
+The default login destination is `/dashboard/`.
+
+Account opens `/account/` and reads `/api/app/account`, including subscription details,
+feature access, the latest 20 owner-scoped masked token rows, and the full active-token count.
+Its TanStack tables provide local search, filters, sorting, and pagination over these bounded
+rows. The page and endpoint remain available after subscription expiry. POST
+`/api/app/account/tokens` creates a token; POST `/api/app/account/tokens/{id}/revoke` revokes
+only the current user's token. Both require session-cookie authentication and CSRF, reuse
+existing token services, and audit only masked prefixes. Token names and contact text are
+rendered as text, not HTML. No hash or password stamp is serialized.
+
+The creation response contains a one-time secret and is marked `private, no-store`. The client
+uses imperative writes rather than cached React Query mutations, with no automatic retries;
+the secret lives only in component-local state until hidden or unmounted. It never enters
+query caches, URLs, or browser storage. If creation succeeds but metadata refresh fails,
+the page retains the secret and explicitly reports the partial success. When the public API
+is disabled, creation is denied, but masked metadata and revocation remain available
+intentionally, unlike the archived page's hidden API section.
+
+Staff task history opens `/ops/runs/`, with details at `/ops/runs/{id}/`. The private
+GET endpoints `/api/app/ops/runs` and `/api/app/ops/runs/{id}` use `OpsSession`: the existing
+session/CSRF/rate-limit rules plus the same `is_staff` flag as Django Ops. Non-staff are rejected
+before operational queries; subscriptions and the public API switch do not gate staff reads.
+Direct URLs are staff-protected too. Caddy applies `ADMIN_ALLOWED_IPS` to `/ops`
+and `/api/app/ops` and their children, and to the entire archive hostname.
+
+The TanStack run table searches job labels, task names/IDs, and triggering usernames, with the
+legacy exact job/result/trigger filters, sorting, and `OPS_PAGE_SIZE` pagination (override 1-100).
+All processing happens server-side before pagination; URL state supports reloads and history.
+The list excludes arguments, output, and diagnostics. Detail reads expose the same stored data
+as the legacy staff-only page, rendered as plain text with IST times and the shared legacy
+duration formatter. Waiting/running details poll every three seconds while visible and stop
+when terminal, on errors, or on navigation. Failed refreshes explicitly hide stale operational
+data, with manual retry for recoverable errors. Neither endpoint dispatches a job, calls
+external services, or writes audit events. Job execution is available in the full React Ops
+workspace; original template renderers are available only on the archive hostname.
+
+The audit trail opens `/ops/audit/` and reads `GET /api/app/ops/audit` with the
+same `OpsSession` staff check and Caddy IP restrictions. All legacy display fields are retained:
+time, recorded actor name, action, target, detail, and nullable address. Names come from the
+event snapshot rather than the current user record, so renames/deletions do not change history.
+The API serializes only these fields and the event ID, not user/session/token objects.
+
+Search matches all text display fields and addresses. Exact actor/action filters use globally
+distinct choices, independent of the current search. Whitelisted display-column sorting uses
+nulls-last ordering and stable ID ties; default ordering remains newest-first. Pagination uses
+`OPS_PAGE_SIZE` with an optional 1-100 override. The TanStack table keeps filters, search, sort,
+and page size in the URL. Detail text is escaped and preserves line breaks, never HTML.
+Background permission or refresh errors hide stale audit rows and display explicit recovery.
+The page is read-only, has no polling, and never creates audit events.
+
+The full Ops workspace starts at `/ops/`: Overview, Jobs, Logs, Metrics, Users and user
+details/access/subscriptions, Subscriptions, Logins/lockouts, Settings and every setting group,
+Schedule/add/edit, Feeds, Instruments, Configuration, and Backups. Runs/Audit retain their
+dedicated endpoints. Legacy `/ops/` pages and actions are isolated on the archive hostname.
+
+Ops uses a scoped square-edged console layout with icon navigation. Status badges combine
+labels and icons with green success, red failure, and amber warning colors in both themes;
+action notices use the same semantics, including after redirects. Jobs shows seven-day
+totals and separate per-job counts, completed-run success rates, and formatted average/maximum
+durations. Metrics uses the same statistics formatter; no-run rates are not shown as 0% success.
+Page titles update the browser title without focusing headings or adding heading `tabindex`.
+Keyboard focus on controls, the skip link, and the one-time token panel is preserved.
+
+The React entry points mount the skip link only after the application stylesheet is loaded,
+so unstyled skip-link text cannot flash during a document load. Main navigation, account menu,
+and Ops links use router navigation instead of reloading the document. Route content has a
+short entrance animation, disabled for reduced-motion preferences; the shell stays mounted.
+
+`GET /api/app/ops/pages/{path}` resolves only a fixed Ops page allowlist. Django views return
+`TemplateResponse` so the legacy HTML and explicit JSON presenters share the same context and
+domain queries without parsing or embedding server-rendered HTML. The typed page contract
+contains only selected display cells, native field descriptors, safe links, charts, and actions,
+never arbitrary model dumps. Field descriptors preserve prefixes, repeated feature checkboxes,
+validation, defaults, and reset controls. Password widgets always serialize empty values.
+
+`POST /api/app/ops/actions/{path}` resolves a separate fixed action allowlist and invokes the
+existing decorated handler, preserving all domain validation, dispatch/busy checks, audit events,
+self/last-superuser protections, managed backup schedule rules, and transaction behavior.
+It requires a superuser, a browser session, and CSRF; reads still require staff (Backups requires
+superuser). Redirects and Django notifications become typed outcomes in React, invalid forms
+remain editable with field errors, and snapshot exports remain streaming attachments. A restore
+keeps the existing typed RESTORE confirmation and signs out before any subsequent refetch.
+Session termination uses an opaque HMAC identifier rather than exposing usable session keys.
+No action is automatically retried or optimistically reported as saved. Form submissions are
+imperative: credentials/uploads are not retained in Query/mutation caches, storage, or URLs.
+
+Users, subscriptions, login events, schedules, feeds, and instruments use TanStack server tables
+with complete-list search/filter/sort before pagination (1–100 rows); state is in the route URL.
+Fixed job registries, health checks, metric series, and explicitly labeled recent-history
+snapshots use local TanStack search/pagination. Metrics have accessible SVG daily-series charts
+and exact values in tables. Overview polls every 15 seconds; opt-in live logs every 5 seconds,
+only while visible, stopping on errors. Logs retain the existing redacted, bounded tail
+(up to 1000 entries). Failed refreshes hide stale operational data. Static styles retain the
+landing palette, dark mode, and strict CSP without runtime style injection.
+The entrypoint configures Zod's `jitless` mode before constructing schemas so even its
+optional eval capability probe does not trigger a CSP violation.
+
+The private `/api/app/session` endpoint supplies the current user, allowed features, subscription
+notice, and navigation. It reuses Django's navigation/access rules, accepts session cookies only,
+and rejects Authorization headers. It is available even when the public API is disabled, and
+has a separate per-user request budget (`APP_API_RATE_LIMIT_PER_MINUTE`, default 300).
+It returns `401` rather than redirecting anonymous callers and marks every response `no-store`.
+Unsafe private API methods use Ninja's CSRF-enabled cookie authentication.
+
+The header's initials avatar opens a non-modal account popover with the current session's
+username, email, role, subscription state, Account link, and CSRF-protected logout form.
+Email is returned only for the current authenticated session, with an empty value when unset.
+The popover focuses its Account link on opening, closes on Escape (restoring avatar focus),
+outside pointer/focus, or route changes, and uses static CSS rather than runtime style injection.
+The icon-only sun/moon control keeps an accessible label and a next-theme tooltip.
+
+The browser client validates session responses against generated Zod schemas, sends CSRF tokens
+for writes, and redirects expired sessions to Django login with the current return URL.
+Reports opens `/reports/`, with a paginated list and detail pages at `/reports/YYYY-MM-DD/`.
+The page uses `/api/app/reports` and `/api/app/reports/{day}` with session-only, Reports-feature
+authentication. It retains the original text-rendering and score-formatting helpers, adjacent
+reports, and delivery history. Delivery recipients are excluded; only staff receive error details.
+News opens `/news/` and reads
+the session-only `/api/app/news` endpoint. It reuses `news_queryset` and `news_sources`, preserving
+search over headlines and summaries, score thresholds, source choices, and the web page size.
+Article links open in a new tab with `noopener noreferrer`; non-HTTP(S) links render as text.
+Scores and explanations are plain text, with publication times displayed in IST. Search is
+debounced by 300 ms, selects apply immediately, and filter changes reset pagination. Query
+parameters preserve filters across bookmarks and browser history. All product navigation now
+stays in React. Direct URLs and API requests both enforce access rules.
+
+IPOs opens `/ipos/`, with issue details at `/ipos/{id}/`. The private `/api/app/ipos` and
+`/api/app/ipos/{id}` endpoints reuse `ipo_queryset`, `ipo_facts`, and existing number-formatting
+helpers. The default Active list excludes listed issues and preserves the original status
+ordering. Search, board, verdict, and status filters are stored in the URL; search is debounced
+and filter changes reset pagination. Saved verdict signals, original units, missing values,
+metric freshness, and scored timestamps are preserved. No read endpoint refreshes metrics or
+recalculates a verdict.
+
+Markets opens `/markets/`. Its private `/api/app/markets` endpoint reuses `accuracy_stats`,
+`latest_quotes`, and `prediction_history` (newest 30), with existing percentage and strength
+formatting. The page preserves the common-direction baseline, small-sample warning, pending
+count, and all four evaluation states. Saved closes always show their exchange-local trading
+date; missing changes are not displayed as zero. Both page and API enforce the Markets
+feature and subscription rules. No read refreshes prices or evaluates results.
+
+Companies opens `/companies/`, backed by the session-only `/api/app/companies` endpoint.
+It reuses `company_queryset` for name/symbol/sector search and alphabetical ordering. Only
+directory display fields are returned, not aliases or scraped data. Search and pagination live
+in the URL; debounced typing preserves focus, resets the page, and cancels pending updates on
+navigation. Last-fetched dates use IST, and source links accept only absolute HTTP(S) URLs.
+Direct page and API requests enforce Companies access rules. Reads never refresh company
+data.
+
+Delivery opens `/delivery/`, using the private `/api/app/delivery` endpoint and the same
+`latest_deliveries` query as the original page (newest 50 attempts). Configuration exposes only
+the count of nonempty Telegram chats, never chat IDs or bot credentials. Recipients are not
+serialized, and diagnostics are staff-only. Attempts without a report retain the existing
+"Test" label, including deleted reports. Report links target the React detail route and are
+omitted when the Reports feature is unavailable. The page has no send/retry-write actions;
+reading never sends messages. Both page and API enforce Delivery access.
+
+### Table and icon conventions
+
+Use the shared `DataTable` (`frontend/src/shared/ui/DataTable.tsx`) for tabular lists, with
+React Icons imported from `react-icons/lu`. Decorative SVGs are hidden from assistive technology;
+icon-only actions retain accessible names. Sorting uses keyboard-accessible header buttons and
+`aria-sort`. Table panels contain their own horizontal scrolling region and pagination.
+
+Reports, News, IPOs, and Companies use manual TanStack pagination/filtering/sorting. The private
+API validates a per-resource sort allowlist and optional `page_size` (1-100), applies filters and
+stable sorting to the full queryset, then paginates. Empty sorting retains the legacy ordering;
+nulls sort last in both directions. IPO GMP sorts by its percentage, not rupee amount or display
+text. Search/filter/sort/page-size changes reset to page one and cancel pending search timers.
+URL search schemas preserve bookmarks and back/forward navigation. Do not locally sort or filter
+one server page as if it were the whole dataset.
+
+Bounded overviews (latest 30 predictions, latest 50 delivery attempts), configured market closes,
+and detail tables use local TanStack row models. Keep the history limits visible, sort formatted
+numeric values via numeric accessors, and preserve missing values rather than inventing zeroes.
+The API continues to redact diagnostics for members and exclude recipient identifiers.
+
+Use `MetricValue` for signed changes/differences, IPO sentiment scores, and prediction strength
+in tables and detail views. Gains are green, losses red, and zero/missing values neutral; retain
+the original signs and units. Signed scores use the displayed neutral midpoint of 5.5/10.
+Strength is independent of direction: green at 6.4/10 or above (the existing 0.6 high-confidence
+cutoff), amber below, with a visible `StrengthLegend`. Never color a price, subscription multiple,
+or relevance value as though it were a signed gain. News relevance uses `MetricValue` with
+`kind="relevance"`: green at 6.4/10 or above, amber below, and missing values neutral.
+Its labels explain high/lower relevance rather than positive/negative market direction.
+Colors support both themes.
+
+After changing the private schemas:
+
+```bash
+uv run python manage.py export_openapi --api app --output frontend/openapi/app.json
+pnpm --dir frontend api:generate
+pnpm --dir frontend format:check
+pnpm --dir frontend test
+pnpm --dir frontend build
+uv run pytest -q apps/api/tests/test_app*.py
+```
+
+Do not put UI-only endpoints in `/api/v1/`: its public compatibility contract is unchanged.
+CI checks the committed private OpenAPI document and generated TypeScript/Zod output separately.
+
+The shared theme provider disables Mantine's runtime style elements. Use static CSS for
+responsive layout instead of Mantine's AppShell or responsive style props: those generate
+`<style>` elements that the enforced `style-src 'self'` policy rejects. Mantine's static
+stylesheet supplies the default theme variables; inline style attributes remain permitted by
+the existing `style-src-attr` policy. Never relax CSP to make a component render.
+
+Landing and React share `static/css/brand-tokens.css`: update the shared palette there, not in
+two independent themes. The landing stylesheet aliases these tokens, and Vite bundles them into
+the React stylesheet. React adds dark-mode overrides in `frontend/src/styles/app.css`; new users
+start in the landing page's light theme and existing saved preferences are respected.
+
 ## Database migrations
 
 - Change the model, then run `makemigrations`. Read the migration.

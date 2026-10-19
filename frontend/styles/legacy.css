@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 /* Where Tailwind looks for class names. */
-@source "../apps/web/templates";
-@source "../apps/web/templatetags";
-@source "../apps/ops/templates";
-@source "../apps/ops/templatetags";
+@source "../../apps/web/templates";
+@source "../../apps/web/templatetags";
+@source "../../apps/ops/templates";
+@source "../../apps/ops/templatetags";
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 

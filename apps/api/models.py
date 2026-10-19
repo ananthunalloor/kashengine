@@ -5,7 +5,7 @@ database keeps only a SHA-256 hash of it, so a database leak does not give worki
 """
 
 from datetime import datetime
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 from django.conf import settings
 from django.db import models
@@ -82,7 +82,7 @@ class ApiToken(models.Model):
         return self.revoked_at is None and not self.is_expired(now)
 
     @property
-    def state(self) -> str:
+    def state(self) -> Literal["active", "expired", "revoked"]:
         """`active`, `expired` or `revoked`. A revoked token is `revoked` even if it also ended."""
         if self.revoked_at is not None:
             return "revoked"

@@ -8,16 +8,18 @@ from datetime import date
 from typing import TYPE_CHECKING, cast
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_not_required
+from django.contrib.auth.decorators import login_not_required, login_required
 from django.contrib.auth.views import LoginView, LogoutView
 from django.core.paginator import Paginator
-from django.http import HttpRequest, HttpResponse
+from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 
 from apps.access import features
 from apps.access.middleware import access_for
 from apps.api import tokens
+from apps.api.app.ops_pages import PAGES, target
 from apps.api.models import ApiToken
 from apps.delivery.models import DeliveryLog
 from apps.delivery.service import configured_chat_ids
@@ -25,13 +27,15 @@ from apps.ipos.models import Ipo
 from apps.markets.evaluation import accuracy_stats
 from apps.markets.trading import today_ist
 from apps.ops import audit
+from apps.ops.models import TaskRun
 from apps.reports.builder import render_text
 from apps.reports.models import Report
 from apps.siteconfig import conf
 
 from . import queries
 from .datastar import is_datastar, querystring, read_filters, read_page, signals_json
-from .decorators import post_only
+from .decorators import post_only, safe_only
+from .public_preview import page_not_found
 
 if TYPE_CHECKING:
     from django.contrib.auth.base_user import AbstractBaseUser
@@ -39,7 +43,6 @@ if TYPE_CHECKING:
 NEWS_FILTERS = ("q", "sentiment", "source", "page")
 IPO_FILTERS = ("q", "status", "verdict", "category", "page")
 COMPANY_FILTERS = ("q", "page")
-DELIVERY_LOG_ROWS = 50  # How many log rows the delivery page shows.
 
 
 class Login(LoginView):
@@ -77,9 +80,92 @@ def landing(request: HttpRequest) -> HttpResponse:
     return render(request, "web/landing.html")
 
 
+@never_cache
+@login_required(login_url="web:login")
+@safe_only
+def react_app(request: HttpRequest) -> HttpResponse:
+    """Serve the authenticated React application shell.
+
+    Args:
+        request: The incoming request.
+
+    Returns:
+        The rendered application shell.
+    """
+    return render(request, "web/spa.html")
+
+
+@login_required(login_url="web:login")
+@safe_only
+def react_report(request: HttpRequest, day: date) -> HttpResponse:
+    """Serve the Reports preview at a valid report URL without exposing its data.
+
+    Args:
+        request: The authenticated browser request.
+        day: The report date parsed from the URL.
+
+    Returns:
+        The uncached application shell, or a 404 for an absent report.
+    """
+    get_object_or_404(Report.objects.only("id"), date=day)
+    return react_app(request)
+
+
 def dashboard(request):
     """The home page: today's outlook, news, IPOs, and quotes."""
     return render(request, "web/dashboard.html", queries.dashboard_data())
+
+
+@login_required(login_url="web:login")
+@safe_only
+def react_ipo(request: HttpRequest, pk: int) -> HttpResponse:
+    """Serve the IPO preview for an existing issue.
+
+    Args:
+        request: The authenticated browser request.
+        pk: IPO primary key from the URL.
+
+    Returns:
+        The uncached application shell, or a 404 for a missing issue.
+    """
+    get_object_or_404(Ipo.objects.only("id"), pk=pk)
+    return react_app(request)
+
+
+@login_required(login_url="web:login")
+@safe_only
+def react_ops_page(request: HttpRequest, **kwargs) -> HttpResponse:
+    """Serve a staff Ops preview; the private API validates the requested page.
+
+    Args:
+        request: The staff browser request.
+        **kwargs: Named arguments retained by the canonical Ops URL pattern.
+
+    Returns:
+        The uncached React shell without operational data.
+    """
+    try:
+        if request.path not in {"/ops/runs/", "/ops/audit/"}:
+            target(request.path.removeprefix("/ops/"), PAGES)
+    except Http404:
+        return page_not_found(request)
+    return react_app(request)
+
+
+@login_required(login_url="web:login")
+@safe_only
+def react_ops_run(request: HttpRequest, pk: int) -> HttpResponse:
+    """Serve a run's preview shell; staff authentication is applied by the URL wrapper.
+
+    Args:
+        request: The staff browser request.
+        pk: Run primary key from the URL.
+
+    Returns:
+        The uncached React shell without operational data, or a 404 for an absent run.
+    """
+    get_object_or_404(TaskRun.objects.only("id"), pk=pk)
+    return react_app(request)
 
 
 def report_list(request):
@@ -171,14 +257,11 @@ def company_list(request):
 def delivery(request):
     """The delivery page: the last send attempts."""
     context = {
-        "logs": DeliveryLog.objects.select_related("report")[:DELIVERY_LOG_ROWS],
+        "logs": queries.latest_deliveries(),
         "chat_count": len(configured_chat_ids()),
         "today": today_ist(),
     }
     return render(request, "web/delivery.html", context)
-
-
-TOKEN_ROWS = 20  # How many tokens (active and old) the account page lists.
 
 
 def _account_context(request: HttpRequest, **extra) -> dict:
@@ -193,7 +276,7 @@ def _account_context(request: HttpRequest, **extra) -> dict:
         }
         for feature in features.FEATURES
     ]
-    api_tokens = list(ApiToken.objects.filter(user=request.user)[:TOKEN_ROWS])
+    api_tokens = list(ApiToken.objects.filter(user=request.user)[: queries.ACCOUNT_TOKEN_ROWS])
     return {
         "access": access,
         "sub": sub,

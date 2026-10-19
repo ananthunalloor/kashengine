@@ -19,6 +19,7 @@ services:
       - "127.0.0.1:443:443/udp" # HTTP/3
     environment:
       SITE_ADDRESS: localhost # Caddy signs the certificate with its own local CA.
+      OLD_SITE_ADDRESS: old.localhost
       ACME_EMAIL: dev@localhost # Not used for "localhost", but the Caddyfile needs a value.
       ADMIN_ALLOWED_IPS: "0.0.0.0/0 ::/0"
       DOCS_ALLOWED_IPS: "0.0.0.0/0 ::/0"
@@ -36,10 +37,25 @@ services:
     environment:
       # Make file change detection work on Docker Desktop (Mac and Windows).
       WATCHFILES_FORCE_POLLING: "true"
+      DJANGO_VITE_DEV_MODE: "true"
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
       - .:/app
+
+  frontend:
+    image: node:22-slim
+    working_dir: /app/frontend
+    command: >
+      sh -c "corepack enable &&
+             pnpm install --frozen-lockfile &&
+             pnpm dev --host 0.0.0.0"
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - ./frontend:/app/frontend
+      - ./static/css/brand-tokens.css:/app/static/css/brand-tokens.css:ro
+      - frontend_node_modules:/app/frontend/node_modules
 
   worker:
     build:
@@ -82,3 +98,6 @@ services:
   ollama:
     ports:
       - "127.0.0.1:11434:11434"
+
+volumes:
+  frontend_node_modules:

@@ -4,9 +4,9 @@ A feature is a part of the web app. Every user has all features by default. An a
 a feature from one user on Ops > Users. The middleware checks the feature of each page by the
 name of its URL, so a new page cannot skip the check if its name is in this list.
 
-The pages "Today" (dashboard), the account page, login, and logout are not features. Everybody
-who may use the site can open them. The dashboard hides the parts that belong to a feature that
-the user does not have.
+The pages "Today", the React shell, the account page, login,
+and logout are not features. Everybody who may use the site can open them. The dashboard hides
+the parts that belong to a feature that the user does not have.
 """
 
 from dataclasses import dataclass
@@ -30,7 +30,12 @@ FEATURES: tuple[Feature, ...] = (
         frozenset({"reports", "report"}),
     ),
     Feature("news", "News", "The scored news list.", frozenset({"news"})),
-    Feature("ipos", "IPOs", "The IPO list, the scores, and each IPO.", frozenset({"ipos", "ipo"})),
+    Feature(
+        "ipos",
+        "IPOs",
+        "The IPO list, the scores, and each IPO.",
+        frozenset({"ipos", "ipo"}),
+    ),
     Feature(
         "markets",
         "Markets and outlook",
@@ -55,5 +60,12 @@ BY_URL_NAME: dict[str, Feature] = {
 # The public landing page and pages every signed-in user can open without a subscription.
 # A user can always see and revoke API tokens, so a locked-out user can still stop a token.
 OPEN_URL_NAMES: frozenset[str] = frozenset(
-    {"landing", "login", "logout", "account", "token_create", "token_revoke"}
+    {
+        "landing",
+        "login",
+        "logout",
+        "account",
+        "token_create",
+        "token_revoke",
+    }
 )

@@ -1,6 +1,7 @@
 """URL routes of the API. They are mounted at `/api/`.
 
 Each major version has its own `NinjaAPI` object, so `v2` can be added next to `v1`.
+The session-only `/api/app/` API is private and is not part of the public version contract.
 """
 
 from django.contrib.auth.decorators import login_not_required
@@ -8,6 +9,7 @@ from django.http import HttpRequest, JsonResponse
 from django.urls import URLPattern, URLResolver, include, path
 
 from . import docs
+from .app.api import api as api_app
 from .v1.api import api as api_v1
 from .versions import CURRENT, VERSIONS
 
@@ -59,9 +61,12 @@ def _without_login_redirect(patterns: list) -> list:
 
 _v1_patterns, _v1_app, _v1_namespace = api_v1.urls
 _without_login_redirect(_v1_patterns)
+_app_patterns, _app_app, _app_namespace = api_app.urls
+_without_login_redirect(_app_patterns)
 
 urlpatterns = [
     path("", discovery, name="discovery"),
     path("v1/docs", docs.swagger, name="docs"),
     path("v1/", include((_v1_patterns, _v1_app), namespace=_v1_namespace)),
+    path("app/", include((_app_patterns, _app_app), namespace=_app_namespace)),
 ]

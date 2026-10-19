@@ -8,6 +8,8 @@ It does four things for a request below `/api/`:
 3. It marks every answer as private. Answers depend on the caller.
 4. It adds an `ETag` to JSON answers and answers 304 when the client already has the same data.
 
+The private `/api/app/` uses its own session auth and request budget. It is independent of the
+public API switch and version headers, and its responses are always private and no-store.
 It does nothing for paths outside `/api/`.
 """
 
@@ -98,12 +100,16 @@ class ApiMiddleware:
         if not request.path.startswith(API_PREFIX):
             return self.get_response(request)
         version = _version_of(request.path)
-        if not conf.API_ENABLED:
+        is_app = request.path.startswith("/api/app/")
+        if not is_app and not conf.API_ENABLED:
             response = problem(request, "api_disabled", "The API is turned off.")
             response["Retry-After"] = "300"
         else:
             response = self.get_response(request)
         self._add_headers(request, response, version)
+        if is_app:
+            response["Cache-Control"] = "private, no-store"
+            return response
         return self._conditional(request, response)
 
     @staticmethod

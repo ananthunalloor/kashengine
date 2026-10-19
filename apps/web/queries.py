@@ -2,10 +2,11 @@
 
 from datetime import date, datetime, timedelta
 
-from django.db.models import Case, IntegerField, Q, Value, When
+from django.db.models import Case, IntegerField, Q, QuerySet, Value, When
 from django.utils import timezone
 
 from apps.companies.models import Company
+from apps.delivery.models import DeliveryLog
 from apps.ipos.models import Ipo
 from apps.markets.evaluation import accuracy_stats
 from apps.markets.instruments import all_instruments
@@ -35,6 +36,13 @@ CATEGORY_FILTERS = {"mainboard": "Mainboard", "sme": "SME"}
 NEWS_WINDOW_HOURS = 36
 DASHBOARD_ITEMS = 4
 HOURS_BEFORE_DAYS = 48  # An age below this is shown in hours. A larger age is shown in days.
+DELIVERY_LOG_ROWS = 50
+ACCOUNT_TOKEN_ROWS = 20
+
+
+def latest_deliveries() -> QuerySet[DeliveryLog]:
+    """The newest 50 send attempts, with their reports, in the existing display order."""
+    return DeliveryLog.objects.select_related("report")[:DELIVERY_LOG_ROWS]
 
 
 def latest_quotes() -> list[dict]:
@@ -76,8 +84,16 @@ def prediction_history(limit: int = 30) -> list[Prediction]:
     return list(Prediction.objects.all()[:limit])
 
 
-def _ipo_groups(today: date) -> dict:
-    """The IPO lists for the dashboard. An IPO is in one list only. Dates are real dates."""
+def dashboard_ipos(today: date) -> dict:
+    """The IPO lists for the dashboard. An IPO is in one list only. Dates are real dates.
+
+    Args:
+        today: The current IST date used to select open and upcoming issues.
+
+    Returns:
+        Existing report IPO groups, deduplicated against the likely-good group, with dates
+        converted from ISO strings to date objects.
+    """
     groups = gather_ipos(today, limit=DASHBOARD_ITEMS)
     shown = {item["name"] for item in groups["likely_good"]}
     for key in ("open_now", "upcoming"):
@@ -99,7 +115,7 @@ def dashboard_data(now: datetime | None = None) -> dict:
         "outlook": outlook(Prediction.objects.order_by("-target_date").first()),
         "report": Report.objects.first(),
         "stats": accuracy_stats(),
-        "ipos": _ipo_groups(today),
+        "ipos": dashboard_ipos(today),
         "news": gather_news(now - timedelta(hours=NEWS_WINDOW_HOURS), limit=DASHBOARD_ITEMS),
         "quotes": latest_quotes(),
     }

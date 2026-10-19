@@ -8,6 +8,8 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
+from apps.web.public_preview import preview_response
+
 from . import features
 from .rules import Access
 
@@ -27,6 +29,10 @@ def _refuse(request: HttpRequest, template: str, context: dict) -> HttpResponse:
     """A 403 page. A Datastar request gets a short text, so the page does not break."""
     if request.headers.get(DATASTAR_HEADER):
         return HttpResponse("Not allowed.", status=403, content_type="text/plain")
+    if not getattr(request, "is_archive", False):
+        return preview_response(
+            request, page="access", status=403, feature=context["feature"].label
+        )
     return render(request, template, context, status=403)
 
 

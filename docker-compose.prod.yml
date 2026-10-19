@@ -46,10 +46,11 @@ services:
       - "80:80"
       - "443:443"
       - "443:443/udp" # HTTP/3
-    # Compose reads these values from .env.prod (use --env-file). Caddy gets only these five,
+    # Compose reads these values from .env.prod (use --env-file). Caddy gets only these values,
     # not the database password or the other secrets.
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:?Set SITE_ADDRESS in .env.prod (your domain name)}
+      OLD_SITE_ADDRESS: ${OLD_SITE_ADDRESS:-old.${SITE_ADDRESS}}
       ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in .env.prod (an email address for certificate notices)}
       ADMIN_ALLOWED_IPS: ${ADMIN_ALLOWED_IPS:-0.0.0.0/0 ::/0}
       DOCS_ALLOWED_IPS: ${DOCS_ALLOWED_IPS:-0.0.0.0/0 ::/0}

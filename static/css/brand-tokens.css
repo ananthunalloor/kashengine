@@ -1,0 +1,15 @@
+:root {
+  --brand-font: "Segoe UI", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  --brand-ink: #202436;
+  --brand-muted: #687083;
+  --brand-purple: #6654d9;
+  --brand-purple-hover: #5542c8;
+  --brand-line: #e9eaf0;
+  --brand-surface: #fff;
+  --brand-canvas: #fcfcfe;
+  --brand-soft: #f4f1fe;
+  --brand-gain: #328162;
+  --brand-gain-soft: #edf7f1;
+  --brand-loss: #b3372f;
+  --brand-loss-soft: #fceeed;
+}

@@ -40,7 +40,7 @@ language model. Caddy is the only public service.
 
 | Service | What it does | Network (production) |
 | --- | --- | --- |
-| `caddy` | Terminates TLS. Routes `/docs` to `docs` and all other paths to `web`. Adds security headers. Limits `/admin/` and `/ops/` to `ADMIN_ALLOWED_IPS`. | `edge` and `proxy` |
+| `caddy` | Terminates TLS. Routes `/docs` to `docs` and all other paths to `web`. Adds security headers. Limits `/admin/`, `/ops/`, `/app/ops/`, and `/api/app/ops/` to `ADMIN_ALLOWED_IPS`. | `edge` and `proxy` |
 | `web` | Django. The production command runs `migrate`, then `collectstatic`, then Gunicorn with 3 workers. | `proxy` and `backend` |
 | `worker` | Runs the Celery tasks. | `backend` and `egress` |
 | `beat` | Sends the scheduled tasks. The schedule is in the database (`django-celery-beat`). | `backend` and `egress` |

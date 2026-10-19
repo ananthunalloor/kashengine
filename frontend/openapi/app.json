@@ -1,0 +1,5056 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Kash Engine App API",
+    "version": "0.1.0",
+    "description": ""
+  },
+  "paths": {
+    "/api/app/session": {
+      "get": {
+        "operationId": "get_app_session",
+        "summary": "Get the current browser session and visible navigation",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Return the signed-in user's permissions, even when their subscription has ended.\n\nArgs:\n    request: The authenticated browser request.\n\nReturns:\n    Session details and feature-filtered links using the same rules as Django templates.",
+        "tags": [
+          "Session"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/reports": {
+      "get": {
+        "operationId": "list_app_reports",
+        "summary": "List daily reports for the browser",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "Requested page; out-of-range values are clamped.",
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Requested page; out-of-range values are clamped."
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rows per page, 1-100.",
+              "title": "Page Size"
+            },
+            "required": false,
+            "description": "Rows per page, 1-100."
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "default": "",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "schema": {
+              "default": "",
+              "pattern": "^(|up|down|flat|unknown)$",
+              "title": "Direction",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "default": "",
+              "pattern": "^(|-?(date|prediction|strength))$",
+              "title": "Sort",
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Return a bounded page using the existing web page size and date ordering.",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/reports/{day}": {
+      "get": {
+        "operationId": "get_app_report",
+        "summary": "Read a report and its delivery status",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "day",
+            "schema": {
+              "format": "date",
+              "title": "Day",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Preserve saved-data rendering, adjacent dates, and staff-only delivery diagnostics.",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/news": {
+      "get": {
+        "operationId": "list_app_news",
+        "summary": "Search and filter the browser news feed",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "Requested page; out-of-range values are clamped.",
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Requested page; out-of-range values are clamped."
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rows per page, 1-100.",
+              "title": "Page Size"
+            },
+            "required": false,
+            "description": "Rows per page, 1-100."
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "default": "",
+              "description": "Headline or summary search text.",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            },
+            "required": false,
+            "description": "Headline or summary search text."
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "schema": {
+              "default": "",
+              "description": "Exact source name, or all.",
+              "maxLength": 100,
+              "title": "Source",
+              "type": "string"
+            },
+            "required": false,
+            "description": "Exact source name, or all."
+          },
+          {
+            "in": "query",
+            "name": "sentiment",
+            "schema": {
+              "default": "",
+              "description": "Sentiment category, or empty for all.",
+              "pattern": "^(|positive|negative|neutral|unscored)$",
+              "title": "Sentiment",
+              "type": "string"
+            },
+            "required": false,
+            "description": "Sentiment category, or empty for all."
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "default": "",
+              "pattern": "^(|-?(title|source|published_at|score|relevance))$",
+              "title": "Sort",
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Preserve the existing search, score thresholds, source filters, and display values.",
+        "tags": [
+          "News"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/ipos": {
+      "get": {
+        "operationId": "list_app_ipos",
+        "summary": "Search and filter IPOs for the browser",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "Requested page; out-of-range values are clamped.",
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Requested page; out-of-range values are clamped."
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rows per page, 1-100.",
+              "title": "Page Size"
+            },
+            "required": false,
+            "description": "Rows per page, 1-100."
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "default": "",
+              "description": "IPO name search text.",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            },
+            "required": false,
+            "description": "IPO name search text."
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "default": "",
+              "description": "Issue status; empty means Active (not listed).",
+              "pattern": "^(|open|upcoming|closed|listed|all)$",
+              "title": "Status",
+              "type": "string"
+            },
+            "required": false,
+            "description": "Issue status; empty means Active (not listed)."
+          },
+          {
+            "in": "query",
+            "name": "verdict",
+            "schema": {
+              "default": "",
+              "description": "Verdict, or all.",
+              "pattern": "^(|good|mixed|weak|unknown)$",
+              "title": "Verdict",
+              "type": "string"
+            },
+            "required": false,
+            "description": "Verdict, or all."
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "default": "",
+              "description": "Board, or all.",
+              "pattern": "^(|mainboard|sme)$",
+              "title": "Category",
+              "type": "string"
+            },
+            "required": false,
+            "description": "Board, or all."
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "default": "",
+              "pattern": "^(|-?(name|category|status|dates|price_band|gmp|subscribed|listing_gain|score|verdict))$",
+              "title": "Sort",
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IpoPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Preserve Active ordering, listed history, board and verdict filtering.",
+        "tags": [
+          "IPOs"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/ipos/{pk}": {
+      "get": {
+        "operationId": "get_app_ipo",
+        "summary": "Read an IPO's facts and verdict evidence",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pk",
+            "schema": {
+              "title": "Pk",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IpoDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Use saved scoring evidence, preserve units and freshness, and never recalculate scores.",
+        "tags": [
+          "IPOs"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/markets": {
+      "get": {
+        "operationId": "get_app_markets",
+        "summary": "Read market closes, prediction history, and accuracy",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Markets"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read saved results without fetching quotes or evaluating predictions.",
+        "tags": [
+          "Markets"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/companies": {
+      "get": {
+        "operationId": "list_app_companies",
+        "summary": "Search the company directory",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "Requested page; out-of-range values are clamped.",
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Requested page; out-of-range values are clamped."
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rows per page, 1-100.",
+              "title": "Page Size"
+            },
+            "required": false,
+            "description": "Rows per page, 1-100."
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "default": "",
+              "description": "Name, symbol, or sector search.",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            },
+            "required": false,
+            "description": "Name, symbol, or sector search."
+          },
+          {
+            "in": "query",
+            "name": "sector",
+            "schema": {
+              "default": "",
+              "description": "Exact sector, or all.",
+              "maxLength": 100,
+              "title": "Sector",
+              "type": "string"
+            },
+            "required": false,
+            "description": "Exact sector, or all."
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "default": "",
+              "pattern": "^(|-?(name|symbol|sector|last_updated))$",
+              "title": "Sort",
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read display fields without fetching or exposing scraped company data.",
+        "tags": [
+          "Companies"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/delivery": {
+      "get": {
+        "operationId": "get_app_delivery",
+        "summary": "Read the latest delivery attempts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Expose the same latest attempts as the web page, without recipient identifiers.",
+        "tags": [
+          "Delivery"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/today": {
+      "get": {
+        "operationId": "get_app_today",
+        "summary": "Read the daily overview for the current account's available features",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Today"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Gate each section before reading it; never refresh or evaluate saved data.\n\nArgs:\n    request: The authenticated browser request with feature/subscription access.\n\nReturns:\n    Saved dashboard sections; unavailable features contain no data.\n\nRaises:\n    ApiError: When the current subscription does not permit dashboard access.",
+        "tags": [
+          "Today"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/account": {
+      "get": {
+        "operationId": "get_app_account",
+        "summary": "Read the current user's subscription, feature access, and masked token metadata",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Allow account access even after a subscription ends or the public API is disabled.\n\nArgs:\n    request: The authenticated browser request.\n\nReturns:\n    Current account details with only owner-scoped token metadata.",
+        "tags": [
+          "Account"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/account/tokens": {
+      "post": {
+        "operationId": "create_app_token",
+        "summary": "Create a token and return its secret exactly once",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenCreated"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Reuse issuance limits and audit only the masked prefix.\n\nArgs:\n    request: The authenticated, CSRF-checked browser request.\n    payload: The token's display name.\n\nReturns:\n    A 201 answer containing metadata and the one-time secret.\n\nRaises:\n    ApiError: When the API is off, the name is empty, or the active-token limit is reached.",
+        "tags": [
+          "Account"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/account/tokens/{pk}/revoke": {
+      "post": {
+        "operationId": "revoke_app_token",
+        "summary": "Revoke one token owned by the current user",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pk",
+            "schema": {
+              "title": "Pk",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountToken"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Permit revocation regardless of subscription or public API availability.\n\nArgs:\n    request: The authenticated, CSRF-checked browser request.\n    pk: Token primary key; another owner's token is not found.\n\nReturns:\n    Safe metadata for the revoked token; repeating the action does not audit twice.",
+        "tags": [
+          "Account"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/ops/audit": {
+      "get": {
+        "operationId": "list_app_ops_audit",
+        "summary": "Search the audit trail as staff",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "Requested page; out-of-range values are clamped.",
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Requested page; out-of-range values are clamped."
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rows per page, 1-100.",
+              "title": "Page Size"
+            },
+            "required": false,
+            "description": "Rows per page, 1-100."
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "actor",
+            "schema": {
+              "default": "",
+              "maxLength": 150,
+              "title": "Actor",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "schema": {
+              "default": "",
+              "maxLength": 50,
+              "title": "Action",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "default": "",
+              "pattern": "^(|-?(created_at|actor_name|action|target|ip_address))$",
+              "title": "Sort",
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsAuditPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Search all retained audit records before pagination, without changing them.\n\nArgs:\n    request: The authenticated staff request.\n    filters: Search, recorded actor, action, sorting, and pagination.\n\nReturns:\n    Legacy audit display fields with global actor/action choices and page metadata.",
+        "tags": [
+          "Ops"
+        ],
+        "security": [
+          {
+            "OpsSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/ops/runs": {
+      "get": {
+        "operationId": "list_app_ops_runs",
+        "summary": "Search task runs as staff",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "Requested page; out-of-range values are clamped.",
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Requested page; out-of-range values are clamped."
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rows per page, 1-100.",
+              "title": "Page Size"
+            },
+            "required": false,
+            "description": "Rows per page, 1-100."
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "label",
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Label",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "default": "",
+              "pattern": "^(|pending|started|success|failure)$",
+              "title": "Status",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "trigger",
+            "schema": {
+              "default": "",
+              "pattern": "^(|auto|manual)$",
+              "title": "Trigger",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "default": "",
+              "pattern": "^(|-?(label|started_at|duration_ms|trigger|status))$",
+              "title": "Sort",
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsRunPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Filter and sort all retained runs before pagination.\n\nArgs:\n    request: The authenticated staff request.\n    filters: Search, job, status, trigger, sort, and pagination.\n\nReturns:\n    A bounded page, all job choices, and the configured retention period.",
+        "tags": [
+          "Ops"
+        ],
+        "security": [
+          {
+            "OpsSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/ops/runs/{pk}": {
+      "get": {
+        "operationId": "get_app_ops_run",
+        "summary": "Read one task run and its diagnostics as staff",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pk",
+            "schema": {
+              "title": "Pk",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsRunDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read stored diagnostics with the same permissions as the legacy run detail.\n\nArgs:\n    request: The authenticated staff request.\n    pk: Task-run primary key.\n\nReturns:\n    Summary fields, task identity, worker, arguments, result, error, and output.\n\nRaises:\n    Http404: If the run does not exist.",
+        "tags": [
+          "Ops"
+        ],
+        "security": [
+          {
+            "OpsSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/ops/pages/{path}": {
+      "get": {
+        "operationId": "get_app_ops_page",
+        "summary": "Read an Ops workspace page",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "path",
+            "schema": {
+              "title": "Path",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Reuse the legacy view's context without rendering HTML or serializing models.",
+        "tags": [
+          "Ops workspace"
+        ],
+        "security": [
+          {
+            "OpsSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/ops/actions/{path}": {
+      "post": {
+        "operationId": "post_app_ops_action",
+        "summary": "Perform an existing superuser Ops action",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "path",
+            "schema": {
+              "title": "Path",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsActionResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Keep domain validation/auditing in the original handler; return explicit outcomes.",
+        "tags": [
+          "Ops workspace"
+        ],
+        "security": [
+          {
+            "OpsSession": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "NavigationItem": {
+        "description": "One visible link, calculated using the server's feature and subscription rules.",
+        "properties": {
+          "label": {
+            "description": "Human-readable section name.",
+            "title": "Label",
+            "type": "string"
+          },
+          "url": {
+            "description": "Same-origin path to the existing section.",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "url"
+        ],
+        "title": "NavigationItem",
+        "type": "object"
+      },
+      "Session": {
+        "description": "The current browser user's permissions and navigation.",
+        "properties": {
+          "id": {
+            "description": "User primary key.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "username": {
+            "description": "Signed-in user's display name.",
+            "title": "Username",
+            "type": "string"
+          },
+          "email": {
+            "description": "Signed-in user's email, or empty when not set.",
+            "title": "Email",
+            "type": "string"
+          },
+          "is_staff": {
+            "description": "Whether this user can read Ops pages.",
+            "title": "Is Staff",
+            "type": "boolean"
+          },
+          "is_superuser": {
+            "description": "Whether this user can perform Ops writes.",
+            "title": "Is Superuser",
+            "type": "boolean"
+          },
+          "features": {
+            "description": "Feature keys currently available to this user.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Features",
+            "type": "array"
+          },
+          "subscription_required": {
+            "description": "Whether the site requires a subscription.",
+            "title": "Subscription Required",
+            "type": "boolean"
+          },
+          "subscription_ok": {
+            "description": "Whether subscription rules permit feature access.",
+            "title": "Subscription Ok",
+            "type": "boolean"
+          },
+          "subscription_state": {
+            "description": "Current subscription state, or staff exemption.",
+            "enum": [
+              "trial",
+              "active",
+              "expired",
+              "none",
+              "staff"
+            ],
+            "title": "Subscription State",
+            "type": "string"
+          },
+          "notice": {
+            "description": "Subscription warning; empty when there is no warning.",
+            "title": "Notice",
+            "type": "string"
+          },
+          "navigation": {
+            "description": "Visible links, in menu order.",
+            "items": {
+              "$ref": "#/components/schemas/NavigationItem"
+            },
+            "title": "Navigation",
+            "type": "array"
+          },
+          "logout_url": {
+            "description": "Same-origin Django logout endpoint; requires CSRF POST.",
+            "title": "Logout Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "email",
+          "is_staff",
+          "is_superuser",
+          "features",
+          "subscription_required",
+          "subscription_ok",
+          "subscription_state",
+          "notice",
+          "navigation",
+          "logout_url"
+        ],
+        "title": "Session",
+        "type": "object"
+      },
+      "FieldError": {
+        "description": "One wrong parameter in a `validation_error`.",
+        "properties": {
+          "field": {
+            "description": "The name of the parameter.",
+            "title": "Field",
+            "type": "string"
+          },
+          "message": {
+            "description": "What is wrong.",
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "description": "A short machine-readable reason, for example `int_parsing`.",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "message",
+          "type"
+        ],
+        "title": "FieldError",
+        "type": "object"
+      },
+      "Problem": {
+        "description": "An error answer (RFC 9457). The content type is `application/problem+json`.",
+        "properties": {
+          "type": {
+            "description": "A link to the explanation of the code.",
+            "title": "Type",
+            "type": "string"
+          },
+          "title": {
+            "description": "The HTTP status text.",
+            "title": "Title",
+            "type": "string"
+          },
+          "status": {
+            "description": "The HTTP status code.",
+            "title": "Status",
+            "type": "integer"
+          },
+          "detail": {
+            "description": "What went wrong in this case. Safe to show to a user.",
+            "title": "Detail",
+            "type": "string"
+          },
+          "instance": {
+            "description": "The path of the request.",
+            "title": "Instance",
+            "type": "string"
+          },
+          "code": {
+            "description": "A stable code. Branch on this value, not on `detail`.",
+            "title": "Code",
+            "type": "string"
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FieldError"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The wrong parameters. Only for `validation_error`.",
+            "title": "Errors"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "instance",
+          "code"
+        ],
+        "title": "Problem",
+        "type": "object"
+      },
+      "ReportFilters": {
+        "description": "Search saved report text/date and filter the outlook before pagination.",
+        "properties": {
+          "page": {
+            "default": 1,
+            "description": "Requested page; out-of-range values are clamped.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rows per page, 1-100.",
+            "title": "Page Size"
+          },
+          "q": {
+            "default": "",
+            "maxLength": 100,
+            "title": "Q",
+            "type": "string"
+          },
+          "direction": {
+            "default": "",
+            "pattern": "^(|up|down|flat|unknown)$",
+            "title": "Direction",
+            "type": "string"
+          },
+          "sort": {
+            "default": "",
+            "pattern": "^(|-?(date|prediction|strength))$",
+            "title": "Sort",
+            "type": "string"
+          }
+        },
+        "title": "ReportFilters",
+        "type": "object"
+      },
+      "ReportPage": {
+        "description": "A page of daily reports in newest-first order.",
+        "properties": {
+          "items": {
+            "description": "Reports on this page.",
+            "items": {
+              "$ref": "#/components/schemas/ReportSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "description": "Resolved page number, starting at one.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "description": "Total number of pages; one for an empty list.",
+            "title": "Pages",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total number of reports.",
+            "title": "Total",
+            "type": "integer"
+          },
+          "page_size": {
+            "default": 25,
+            "description": "Resolved number of rows per page.",
+            "title": "Page Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pages",
+          "total"
+        ],
+        "title": "ReportPage",
+        "type": "object"
+      },
+      "ReportSummary": {
+        "description": "A report's date and outlook, without the full report text.",
+        "properties": {
+          "date": {
+            "description": "Trading date of the daily report.",
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "prediction": {
+            "description": "Outlook direction: up, down, flat, or empty if unavailable.",
+            "title": "Prediction",
+            "type": "string"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Formatted 1.0-10.0 signal strength, not a probability.",
+            "title": "Strength"
+          }
+        },
+        "required": [
+          "date",
+          "prediction",
+          "strength"
+        ],
+        "title": "ReportSummary",
+        "type": "object"
+      },
+      "ReportDelivery": {
+        "description": "Delivery status without recipient addresses or member-visible diagnostics.",
+        "properties": {
+          "id": {
+            "description": "Delivery attempt primary key.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "channel": {
+            "description": "Human-readable delivery channel.",
+            "title": "Channel",
+            "type": "string"
+          },
+          "status": {
+            "description": "Delivery status key: sent or failed.",
+            "title": "Status",
+            "type": "string"
+          },
+          "status_label": {
+            "description": "Human-readable delivery status.",
+            "title": "Status Label",
+            "type": "string"
+          },
+          "created_at": {
+            "description": "Time of the delivery attempt.",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Failure diagnostic for staff only; otherwise null.",
+            "title": "Error"
+          }
+        },
+        "required": [
+          "id",
+          "channel",
+          "status",
+          "status_label",
+          "created_at",
+          "error"
+        ],
+        "title": "ReportDelivery",
+        "type": "object"
+      },
+      "ReportDetail": {
+        "description": "The display report and its delivery history.",
+        "properties": {
+          "date": {
+            "description": "Trading date of the daily report.",
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "prediction": {
+            "description": "Outlook direction: up, down, flat, or empty if unavailable.",
+            "title": "Prediction",
+            "type": "string"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Formatted 1.0-10.0 signal strength, not a probability.",
+            "title": "Strength"
+          },
+          "text": {
+            "description": "Display text, reformatted from saved data when available.",
+            "title": "Text",
+            "type": "string"
+          },
+          "deliveries": {
+            "description": "Delivery attempts, newest first.",
+            "items": {
+              "$ref": "#/components/schemas/ReportDelivery"
+            },
+            "title": "Deliveries",
+            "type": "array"
+          },
+          "older": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Date of the nearest older report, if any.",
+            "title": "Older"
+          },
+          "newer": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Date of the nearest newer report, if any.",
+            "title": "Newer"
+          }
+        },
+        "required": [
+          "date",
+          "prediction",
+          "strength",
+          "text",
+          "deliveries",
+          "older",
+          "newer"
+        ],
+        "title": "ReportDetail",
+        "type": "object"
+      },
+      "NewsFilters": {
+        "description": "Bound search input to the same lengths as the existing web filters.",
+        "properties": {
+          "page": {
+            "default": 1,
+            "description": "Requested page; out-of-range values are clamped.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rows per page, 1-100.",
+            "title": "Page Size"
+          },
+          "q": {
+            "default": "",
+            "description": "Headline or summary search text.",
+            "maxLength": 100,
+            "title": "Q",
+            "type": "string"
+          },
+          "source": {
+            "default": "",
+            "description": "Exact source name, or all.",
+            "maxLength": 100,
+            "title": "Source",
+            "type": "string"
+          },
+          "sentiment": {
+            "default": "",
+            "description": "Sentiment category, or empty for all.",
+            "pattern": "^(|positive|negative|neutral|unscored)$",
+            "title": "Sentiment",
+            "type": "string"
+          },
+          "sort": {
+            "default": "",
+            "pattern": "^(|-?(title|source|published_at|score|relevance))$",
+            "title": "Sort",
+            "type": "string"
+          }
+        },
+        "title": "NewsFilters",
+        "type": "object"
+      },
+      "NewsFilterOption": {
+        "description": "One server-supported sentiment filter.",
+        "properties": {
+          "value": {
+            "description": "Filter query value.",
+            "title": "Value",
+            "type": "string"
+          },
+          "label": {
+            "description": "Human-readable filter name.",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "NewsFilterOption",
+        "type": "object"
+      },
+      "NewsItem": {
+        "description": "An article's display fields, excluding scraped text and internal processing state.",
+        "properties": {
+          "id": {
+            "description": "Article primary key.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "title": {
+            "description": "Original article headline, rendered as plain text.",
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "description": "Original source URL; the browser only links HTTP(S) URLs.",
+            "title": "Url",
+            "type": "string"
+          },
+          "source": {
+            "description": "Publisher name.",
+            "title": "Source",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Publication time, when known.",
+            "title": "Published At"
+          },
+          "sentiment": {
+            "description": "Display tone using the existing sentiment thresholds.",
+            "enum": [
+              "positive",
+              "negative",
+              "neutral",
+              "unscored"
+            ],
+            "title": "Sentiment",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Signed sentiment formatted on the 1.0-10.0 scale.",
+            "title": "Score"
+          },
+          "relevance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Relevance formatted on the 1.0-10.0 scale.",
+            "title": "Relevance"
+          },
+          "reason": {
+            "description": "Model explanation, rendered as plain text.",
+            "title": "Reason",
+            "type": "string"
+          },
+          "companies": {
+            "description": "Up to four linked company names.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Companies",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "url",
+          "source",
+          "published_at",
+          "sentiment",
+          "score",
+          "relevance",
+          "reason",
+          "companies"
+        ],
+        "title": "NewsItem",
+        "type": "object"
+      },
+      "NewsPage": {
+        "description": "Filtered news and the available filter options.",
+        "properties": {
+          "items": {
+            "description": "Matching articles in the existing web order.",
+            "items": {
+              "$ref": "#/components/schemas/NewsItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "description": "Resolved page number, starting at one.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "description": "Total pages; one when empty.",
+            "title": "Pages",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total matching articles.",
+            "title": "Total",
+            "type": "integer"
+          },
+          "sources": {
+            "description": "All source names, sorted, independent of the filters.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "sentiments": {
+            "description": "Supported sentiment filters.",
+            "items": {
+              "$ref": "#/components/schemas/NewsFilterOption"
+            },
+            "title": "Sentiments",
+            "type": "array"
+          },
+          "page_size": {
+            "default": 25,
+            "description": "Resolved number of rows per page.",
+            "title": "Page Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pages",
+          "total",
+          "sources",
+          "sentiments"
+        ],
+        "title": "NewsPage",
+        "type": "object"
+      },
+      "IpoFilters": {
+        "description": "Bound IPO search and validate the filters supported by the existing pages.",
+        "properties": {
+          "page": {
+            "default": 1,
+            "description": "Requested page; out-of-range values are clamped.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rows per page, 1-100.",
+            "title": "Page Size"
+          },
+          "q": {
+            "default": "",
+            "description": "IPO name search text.",
+            "maxLength": 100,
+            "title": "Q",
+            "type": "string"
+          },
+          "status": {
+            "default": "",
+            "description": "Issue status; empty means Active (not listed).",
+            "pattern": "^(|open|upcoming|closed|listed|all)$",
+            "title": "Status",
+            "type": "string"
+          },
+          "verdict": {
+            "default": "",
+            "description": "Verdict, or all.",
+            "pattern": "^(|good|mixed|weak|unknown)$",
+            "title": "Verdict",
+            "type": "string"
+          },
+          "category": {
+            "default": "",
+            "description": "Board, or all.",
+            "pattern": "^(|mainboard|sme)$",
+            "title": "Category",
+            "type": "string"
+          },
+          "sort": {
+            "default": "",
+            "pattern": "^(|-?(name|category|status|dates|price_band|gmp|subscribed|listing_gain|score|verdict))$",
+            "title": "Sort",
+            "type": "string"
+          }
+        },
+        "title": "IpoFilters",
+        "type": "object"
+      },
+      "IpoFilterOption": {
+        "description": "A server-supported IPO filter choice.",
+        "properties": {
+          "value": {
+            "description": "Query parameter value.",
+            "title": "Value",
+            "type": "string"
+          },
+          "label": {
+            "description": "Human-readable option label.",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "IpoFilterOption",
+        "type": "object"
+      },
+      "IpoPage": {
+        "description": "Filtered IPOs and all supported filter choices.",
+        "properties": {
+          "items": {
+            "description": "Matching IPOs in the existing web order.",
+            "items": {
+              "$ref": "#/components/schemas/IpoSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "description": "Resolved page number, starting at one.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "description": "Total pages; one for an empty list.",
+            "title": "Pages",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total matching IPOs.",
+            "title": "Total",
+            "type": "integer"
+          },
+          "statuses": {
+            "description": "Status filters, including Active and All.",
+            "items": {
+              "$ref": "#/components/schemas/IpoFilterOption"
+            },
+            "title": "Statuses",
+            "type": "array"
+          },
+          "verdicts": {
+            "description": "Verdict filters.",
+            "items": {
+              "$ref": "#/components/schemas/IpoFilterOption"
+            },
+            "title": "Verdicts",
+            "type": "array"
+          },
+          "categories": {
+            "description": "Board filters.",
+            "items": {
+              "$ref": "#/components/schemas/IpoFilterOption"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "page_size": {
+            "default": 25,
+            "description": "Resolved number of rows per page.",
+            "title": "Page Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pages",
+          "total",
+          "statuses",
+          "verdicts",
+          "categories"
+        ],
+        "title": "IpoPage",
+        "type": "object"
+      },
+      "IpoSummary": {
+        "description": "Display values for one IPO, using the existing web formatting rules.",
+        "properties": {
+          "id": {
+            "description": "IPO primary key.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "description": "IPO company name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "category": {
+            "description": "Human-readable board name.",
+            "title": "Category",
+            "type": "string"
+          },
+          "status": {
+            "description": "Human-readable issue status.",
+            "title": "Status",
+            "type": "string"
+          },
+          "dates": {
+            "description": "Opening and closing dates, or a dash when unknown.",
+            "title": "Dates",
+            "type": "string"
+          },
+          "price_band": {
+            "description": "Upper price band in rupees, or a dash.",
+            "title": "Price Band",
+            "type": "string"
+          },
+          "gmp": {
+            "description": "Grey market premium as a signed percentage, or a dash.",
+            "title": "Gmp",
+            "type": "string"
+          },
+          "subscribed": {
+            "description": "Subscription in times, or a dash.",
+            "title": "Subscribed",
+            "type": "string"
+          },
+          "listing_gain": {
+            "description": "Signed listing gain percentage, or a dash.",
+            "title": "Listing Gain",
+            "type": "string"
+          },
+          "verdict": {
+            "description": "Verdict key; unknown when there is insufficient data.",
+            "title": "Verdict",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Signed score on the 1.0-10.0 scale, if available.",
+            "title": "Score"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "category",
+          "status",
+          "dates",
+          "price_band",
+          "gmp",
+          "subscribed",
+          "listing_gain",
+          "verdict",
+          "score"
+        ],
+        "title": "IpoSummary",
+        "type": "object"
+      },
+      "IpoDetail": {
+        "description": "The issue facts and evidence behind the saved verdict.",
+        "properties": {
+          "id": {
+            "description": "IPO primary key.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "description": "IPO company name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "category": {
+            "description": "Human-readable board name.",
+            "title": "Category",
+            "type": "string"
+          },
+          "status": {
+            "description": "Human-readable issue status.",
+            "title": "Status",
+            "type": "string"
+          },
+          "dates": {
+            "description": "Opening and closing dates, or a dash when unknown.",
+            "title": "Dates",
+            "type": "string"
+          },
+          "price_band": {
+            "description": "Upper price band in rupees, or a dash.",
+            "title": "Price Band",
+            "type": "string"
+          },
+          "gmp": {
+            "description": "Grey market premium as a signed percentage, or a dash.",
+            "title": "Gmp",
+            "type": "string"
+          },
+          "subscribed": {
+            "description": "Subscription in times, or a dash.",
+            "title": "Subscribed",
+            "type": "string"
+          },
+          "listing_gain": {
+            "description": "Signed listing gain percentage, or a dash.",
+            "title": "Listing Gain",
+            "type": "string"
+          },
+          "verdict": {
+            "description": "Verdict key; unknown when there is insufficient data.",
+            "title": "Verdict",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Signed score on the 1.0-10.0 scale, if available.",
+            "title": "Score"
+          },
+          "facts": {
+            "description": "Issue facts, including metric freshness.",
+            "items": {
+              "$ref": "#/components/schemas/IpoFact"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
+          "signals": {
+            "description": "Usable saved scoring inputs.",
+            "items": {
+              "$ref": "#/components/schemas/IpoSignal"
+            },
+            "title": "Signals",
+            "type": "array"
+          },
+          "notes": {
+            "description": "Saved explanation and missing-data notes.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "scored_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Time the verdict was last calculated.",
+            "title": "Scored At"
+          },
+          "source_url": {
+            "description": "Original source URL, or empty when unavailable.",
+            "title": "Source Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "category",
+          "status",
+          "dates",
+          "price_band",
+          "gmp",
+          "subscribed",
+          "listing_gain",
+          "verdict",
+          "score",
+          "facts",
+          "signals",
+          "notes",
+          "scored_at",
+          "source_url"
+        ],
+        "title": "IpoDetail",
+        "type": "object"
+      },
+      "IpoFact": {
+        "description": "A labeled issue fact, formatted with original units and freshness notices.",
+        "properties": {
+          "label": {
+            "description": "Fact label.",
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "description": "Formatted value and freshness text, when applicable.",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "IpoFact",
+        "type": "object"
+      },
+      "IpoSignal": {
+        "description": "One scoring input in its original units and the normalized display scale.",
+        "properties": {
+          "name": {
+            "description": "Signal label: GMP, Subscription, or News.",
+            "title": "Name",
+            "type": "string"
+          },
+          "value": {
+            "description": "Original value formatted with its units.",
+            "title": "Value",
+            "type": "string"
+          },
+          "signal": {
+            "description": "Normalized signed signal on the 1.0-10.0 scale.",
+            "title": "Signal",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "value",
+          "signal"
+        ],
+        "title": "IpoSignal",
+        "type": "object"
+      },
+      "MarketCount": {
+        "description": "A group of evaluated predictions.",
+        "properties": {
+          "n": {
+            "description": "Number of evaluated predictions.",
+            "title": "N",
+            "type": "integer"
+          },
+          "correct": {
+            "description": "Number that were right.",
+            "title": "Correct",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "n",
+          "correct"
+        ],
+        "title": "MarketCount",
+        "type": "object"
+      },
+      "MarketPrediction": {
+        "description": "A saved prediction and its result, without recalculating either.",
+        "properties": {
+          "date": {
+            "description": "Target trading day.",
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "direction": {
+            "description": "Predicted direction: up, down, or flat.",
+            "title": "Direction",
+            "type": "string"
+          },
+          "strength": {
+            "description": "Signal strength on the 1.0-10.0 scale, not a probability.",
+            "title": "Strength",
+            "type": "string"
+          },
+          "actual_direction": {
+            "description": "Actual direction, or empty while unavailable.",
+            "title": "Actual Direction",
+            "type": "string"
+          },
+          "change": {
+            "description": "Signed actual percentage change, or a dash.",
+            "title": "Change",
+            "type": "string"
+          },
+          "result": {
+            "description": "Saved evaluation state.",
+            "enum": [
+              "Right",
+              "Wrong",
+              "No session",
+              "Waiting"
+            ],
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "direction",
+          "strength",
+          "actual_direction",
+          "change",
+          "result"
+        ],
+        "title": "MarketPrediction",
+        "type": "object"
+      },
+      "MarketQuote": {
+        "description": "The latest saved close of a configured instrument.",
+        "properties": {
+          "name": {
+            "description": "Configured instrument display name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "day": {
+            "description": "Exchange-local trading date of this saved close.",
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "close": {
+            "description": "Close formatted to two decimal places.",
+            "title": "Close",
+            "type": "string"
+          },
+          "change": {
+            "description": "Signed percentage change, or a dash when unavailable.",
+            "title": "Change",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "day",
+          "close",
+          "change"
+        ],
+        "title": "MarketQuote",
+        "type": "object"
+      },
+      "MarketStats": {
+        "description": "Saved-result accuracy, using the existing evaluation rules.",
+        "properties": {
+          "total": {
+            "description": "Evaluated predictions, excluding no-session days.",
+            "title": "Total",
+            "type": "integer"
+          },
+          "correct": {
+            "description": "Predictions that were right.",
+            "title": "Correct",
+            "type": "integer"
+          },
+          "accuracy": {
+            "description": "Formatted accuracy percentage, or a dash.",
+            "title": "Accuracy",
+            "type": "string"
+          },
+          "baseline_direction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Most common actual direction.",
+            "title": "Baseline Direction"
+          },
+          "baseline_accuracy": {
+            "description": "Formatted always-common-direction accuracy.",
+            "title": "Baseline Accuracy",
+            "type": "string"
+          },
+          "high_confidence": {
+            "$ref": "#/components/schemas/MarketCount",
+            "description": "Results with strength of at least 0.6."
+          },
+          "recent": {
+            "$ref": "#/components/schemas/MarketCount",
+            "description": "Latest 30 evaluated results."
+          },
+          "pending": {
+            "description": "Predictions waiting for evaluation.",
+            "title": "Pending",
+            "type": "integer"
+          },
+          "enough_results": {
+            "description": "Whether at least 30 results are available.",
+            "title": "Enough Results",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "total",
+          "correct",
+          "accuracy",
+          "baseline_direction",
+          "baseline_accuracy",
+          "high_confidence",
+          "recent",
+          "pending",
+          "enough_results"
+        ],
+        "title": "MarketStats",
+        "type": "object"
+      },
+      "Markets": {
+        "description": "Track record, latest closes, and the newest 30 predictions.",
+        "properties": {
+          "stats": {
+            "$ref": "#/components/schemas/MarketStats",
+            "description": "Accuracy and baseline statistics."
+          },
+          "quotes": {
+            "description": "Latest closes in configured instrument order.",
+            "items": {
+              "$ref": "#/components/schemas/MarketQuote"
+            },
+            "title": "Quotes",
+            "type": "array"
+          },
+          "history": {
+            "description": "Newest 30 predictions, newest first.",
+            "items": {
+              "$ref": "#/components/schemas/MarketPrediction"
+            },
+            "title": "History",
+            "type": "array"
+          }
+        },
+        "required": [
+          "stats",
+          "quotes",
+          "history"
+        ],
+        "title": "Markets",
+        "type": "object"
+      },
+      "CompanyFilters": {
+        "description": "Bound directory search and validate pagination.",
+        "properties": {
+          "page": {
+            "default": 1,
+            "description": "Requested page; out-of-range values are clamped.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rows per page, 1-100.",
+            "title": "Page Size"
+          },
+          "q": {
+            "default": "",
+            "description": "Name, symbol, or sector search.",
+            "maxLength": 100,
+            "title": "Q",
+            "type": "string"
+          },
+          "sector": {
+            "default": "",
+            "description": "Exact sector, or all.",
+            "maxLength": 100,
+            "title": "Sector",
+            "type": "string"
+          },
+          "sort": {
+            "default": "",
+            "pattern": "^(|-?(name|symbol|sector|last_updated))$",
+            "title": "Sort",
+            "type": "string"
+          }
+        },
+        "title": "CompanyFilters",
+        "type": "object"
+      },
+      "CompanyItem": {
+        "description": "Company directory display fields, without scraped data or internal aliases.",
+        "properties": {
+          "id": {
+            "description": "Company primary key.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "description": "Company name, rendered as plain text.",
+            "title": "Name",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "NSE or BSE symbol.",
+            "title": "Symbol",
+            "type": "string"
+          },
+          "sector": {
+            "description": "Sector, or empty when unknown.",
+            "title": "Sector",
+            "type": "string"
+          },
+          "screener_url": {
+            "description": "Source URL; the browser only links HTTP(S) URLs.",
+            "title": "Screener Url",
+            "type": "string"
+          },
+          "last_updated": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last data fetch, or null if never fetched.",
+            "title": "Last Updated"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "symbol",
+          "sector",
+          "screener_url",
+          "last_updated"
+        ],
+        "title": "CompanyItem",
+        "type": "object"
+      },
+      "CompanyPage": {
+        "description": "A page of the company directory, ordered by name.",
+        "properties": {
+          "items": {
+            "description": "Companies matching name, symbol, or sector.",
+            "items": {
+              "$ref": "#/components/schemas/CompanyItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "description": "Resolved page number, starting at one.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "description": "Total pages; one when empty.",
+            "title": "Pages",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total matching companies.",
+            "title": "Total",
+            "type": "integer"
+          },
+          "page_size": {
+            "default": 25,
+            "description": "Resolved number of rows per page.",
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "sectors": {
+            "description": "All nonempty sectors, sorted.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sectors",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pages",
+          "total"
+        ],
+        "title": "CompanyPage",
+        "type": "object"
+      },
+      "DeliveryItem": {
+        "description": "A send attempt associated with a report, or a test without a saved report.",
+        "properties": {
+          "id": {
+            "description": "Delivery attempt primary key.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "channel": {
+            "description": "Human-readable delivery channel.",
+            "title": "Channel",
+            "type": "string"
+          },
+          "status": {
+            "description": "Delivery status key: sent or failed.",
+            "title": "Status",
+            "type": "string"
+          },
+          "status_label": {
+            "description": "Human-readable delivery status.",
+            "title": "Status Label",
+            "type": "string"
+          },
+          "created_at": {
+            "description": "Time of the delivery attempt.",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Failure diagnostic for staff only; otherwise null.",
+            "title": "Error"
+          },
+          "report_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Report date, or null when no report remains.",
+            "title": "Report Date"
+          }
+        },
+        "required": [
+          "id",
+          "channel",
+          "status",
+          "status_label",
+          "created_at",
+          "error",
+          "report_date"
+        ],
+        "title": "DeliveryItem",
+        "type": "object"
+      },
+      "DeliveryPage": {
+        "description": "The delivery overview, without chat IDs, recipients, or bot credentials.",
+        "properties": {
+          "chat_count": {
+            "description": "Number of configured nonempty Telegram chat IDs.",
+            "title": "Chat Count",
+            "type": "integer"
+          },
+          "items": {
+            "description": "Newest 50 send attempts, newest first.",
+            "items": {
+              "$ref": "#/components/schemas/DeliveryItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "chat_count",
+          "items"
+        ],
+        "title": "DeliveryPage",
+        "type": "object"
+      },
+      "Today": {
+        "description": "Feature-filtered daily overview; unavailable sections contain no data.",
+        "properties": {
+          "today": {
+            "description": "Current date in Asia/Kolkata.",
+            "format": "date",
+            "title": "Today",
+            "type": "string"
+          },
+          "markets": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TodayMarkets"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "news": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TodayNews"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ipos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TodayIpos"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReportSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Latest report summary, without its text."
+          }
+        },
+        "required": [
+          "today",
+          "markets",
+          "news",
+          "ipos",
+          "report"
+        ],
+        "title": "Today",
+        "type": "object"
+      },
+      "TodayCue": {
+        "description": "One of the five saved cues with the largest weighted contribution.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "change": {
+            "description": "Signed percentage change, or a dash.",
+            "title": "Change",
+            "type": "string"
+          },
+          "as_of": {
+            "description": "Saved cue trading date, not today's date.",
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "change",
+          "as_of"
+        ],
+        "title": "TodayCue",
+        "type": "object"
+      },
+      "TodayIpo": {
+        "description": "Existing dashboard issue facts, retaining original units and group ordering.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "open_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open Date"
+          },
+          "close_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Close Date"
+          },
+          "price_band": {
+            "title": "Price Band",
+            "type": "string"
+          },
+          "gmp": {
+            "title": "Gmp",
+            "type": "string"
+          },
+          "subscribed": {
+            "title": "Subscribed",
+            "type": "string"
+          },
+          "verdict": {
+            "title": "Verdict",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          }
+        },
+        "required": [
+          "name",
+          "category",
+          "status",
+          "open_date",
+          "close_date",
+          "price_band",
+          "gmp",
+          "subscribed",
+          "verdict",
+          "score"
+        ],
+        "title": "TodayIpo",
+        "type": "object"
+      },
+      "TodayIpos": {
+        "description": "Mutually exclusive dashboard groups, limited to four issues per group.",
+        "properties": {
+          "likely_good": {
+            "items": {
+              "$ref": "#/components/schemas/TodayIpo"
+            },
+            "title": "Likely Good",
+            "type": "array"
+          },
+          "open_now": {
+            "items": {
+              "$ref": "#/components/schemas/TodayIpo"
+            },
+            "title": "Open Now",
+            "type": "array"
+          },
+          "upcoming": {
+            "items": {
+              "$ref": "#/components/schemas/TodayIpo"
+            },
+            "title": "Upcoming",
+            "type": "array"
+          },
+          "days_ahead": {
+            "title": "Days Ahead",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "likely_good",
+          "open_now",
+          "upcoming",
+          "days_ahead"
+        ],
+        "title": "TodayIpos",
+        "type": "object"
+      },
+      "TodayMarkets": {
+        "description": "Markets section; omitted entirely when Markets is unavailable.",
+        "properties": {
+          "outlook": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TodayOutlook"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stats": {
+            "$ref": "#/components/schemas/MarketStats"
+          },
+          "quotes": {
+            "items": {
+              "$ref": "#/components/schemas/MarketQuote"
+            },
+            "title": "Quotes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "outlook",
+          "stats",
+          "quotes"
+        ],
+        "title": "TodayMarkets",
+        "type": "object"
+      },
+      "TodayNews": {
+        "description": "Existing dashboard news counts and up to four stories per sentiment.",
+        "properties": {
+          "since": {
+            "format": "date-time",
+            "title": "Since",
+            "type": "string"
+          },
+          "articles": {
+            "title": "Articles",
+            "type": "integer"
+          },
+          "positive": {
+            "title": "Positive",
+            "type": "integer"
+          },
+          "negative": {
+            "title": "Negative",
+            "type": "integer"
+          },
+          "good": {
+            "items": {
+              "$ref": "#/components/schemas/TodayStory"
+            },
+            "title": "Good",
+            "type": "array"
+          },
+          "bad": {
+            "items": {
+              "$ref": "#/components/schemas/TodayStory"
+            },
+            "title": "Bad",
+            "type": "array"
+          }
+        },
+        "required": [
+          "since",
+          "articles",
+          "positive",
+          "negative",
+          "good",
+          "bad"
+        ],
+        "title": "TodayNews",
+        "type": "object"
+      },
+      "TodayOutlook": {
+        "description": "The latest saved prediction, with its actual target date and evidence.",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "up",
+              "down",
+              "flat"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "strength": {
+            "title": "Strength",
+            "type": "string"
+          },
+          "strength_label": {
+            "title": "Strength Label",
+            "type": "string"
+          },
+          "news_score": {
+            "title": "News Score",
+            "type": "string"
+          },
+          "news_articles": {
+            "title": "News Articles",
+            "type": "integer"
+          },
+          "global_score": {
+            "title": "Global Score",
+            "type": "string"
+          },
+          "cues": {
+            "items": {
+              "$ref": "#/components/schemas/TodayCue"
+            },
+            "title": "Cues",
+            "type": "array"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "date",
+          "direction",
+          "strength",
+          "strength_label",
+          "news_score",
+          "news_articles",
+          "global_score",
+          "cues",
+          "notes"
+        ],
+        "title": "TodayOutlook",
+        "type": "object"
+      },
+      "TodayStory": {
+        "description": "A bounded, deduplicated story from the existing 36-hour news selection.",
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "companies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Companies",
+            "type": "array"
+          }
+        },
+        "required": [
+          "title",
+          "source",
+          "url",
+          "score",
+          "reason",
+          "companies"
+        ],
+        "title": "TodayStory",
+        "type": "object"
+      },
+      "Account": {
+        "description": "Subscription, feature access, and token settings for the current browser user.",
+        "properties": {
+          "username": {
+            "title": "Username",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "trial",
+              "active",
+              "expired",
+              "none",
+              "staff"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "subscription_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subscription Kind"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "days_left": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Left"
+          },
+          "subscription_ok": {
+            "title": "Subscription Ok",
+            "type": "boolean"
+          },
+          "required": {
+            "title": "Required",
+            "type": "boolean"
+          },
+          "price": {
+            "description": "Formatted period price, or empty when not charged.",
+            "title": "Price",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "period_days": {
+            "title": "Period Days",
+            "type": "integer"
+          },
+          "contact": {
+            "title": "Contact",
+            "type": "string"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/AccountFeature"
+            },
+            "title": "Features",
+            "type": "array"
+          },
+          "api_enabled": {
+            "title": "Api Enabled",
+            "type": "boolean"
+          },
+          "api_docs": {
+            "title": "Api Docs",
+            "type": "boolean"
+          },
+          "tokens": {
+            "description": "Newest 20 tokens, including revoked/expired.",
+            "items": {
+              "$ref": "#/components/schemas/AccountToken"
+            },
+            "title": "Tokens",
+            "type": "array"
+          },
+          "active_tokens": {
+            "description": "Active count across all tokens, not just the newest 20.",
+            "title": "Active Tokens",
+            "type": "integer"
+          },
+          "token_limit": {
+            "title": "Token Limit",
+            "type": "integer"
+          },
+          "token_days": {
+            "title": "Token Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "username",
+          "email",
+          "state",
+          "subscription_kind",
+          "ends_at",
+          "days_left",
+          "subscription_ok",
+          "required",
+          "price",
+          "currency",
+          "period_days",
+          "contact",
+          "features",
+          "api_enabled",
+          "api_docs",
+          "tokens",
+          "active_tokens",
+          "token_limit",
+          "token_days"
+        ],
+        "title": "Account",
+        "type": "object"
+      },
+      "AccountFeature": {
+        "description": "Access explanation for one feature, including removed and subscription-locked states.",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "help": {
+            "title": "Help",
+            "type": "string"
+          },
+          "allowed": {
+            "title": "Allowed",
+            "type": "boolean"
+          },
+          "removed": {
+            "title": "Removed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "help",
+          "allowed",
+          "removed"
+        ],
+        "title": "AccountFeature",
+        "type": "object"
+      },
+      "AccountToken": {
+        "description": "Token metadata only; never a hash, password stamp, or full secret.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "display": {
+            "title": "Display",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "state": {
+            "enum": [
+              "active",
+              "expired",
+              "revoked"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "display",
+          "created_at",
+          "last_used_at",
+          "expires_at",
+          "state"
+        ],
+        "title": "AccountToken",
+        "type": "object"
+      },
+      "TokenCreated": {
+        "description": "One-time creation answer, never included in a subsequent account read.",
+        "properties": {
+          "token": {
+            "$ref": "#/components/schemas/AccountToken"
+          },
+          "secret": {
+            "description": "Copy once; never cache or persist this response.",
+            "title": "Secret",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "secret"
+        ],
+        "title": "TokenCreated",
+        "type": "object"
+      },
+      "TokenCreate": {
+        "description": "Token name, validated without reflecting it in an error response.",
+        "properties": {
+          "name": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "TokenCreate",
+        "type": "object"
+      },
+      "AuditFilters": {
+        "description": "Bound audit search, exact actor/action filters, and display-column sorts.",
+        "properties": {
+          "page": {
+            "default": 1,
+            "description": "Requested page; out-of-range values are clamped.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rows per page, 1-100.",
+            "title": "Page Size"
+          },
+          "q": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Q",
+            "type": "string"
+          },
+          "actor": {
+            "default": "",
+            "maxLength": 150,
+            "title": "Actor",
+            "type": "string"
+          },
+          "action": {
+            "default": "",
+            "maxLength": 50,
+            "title": "Action",
+            "type": "string"
+          },
+          "sort": {
+            "default": "",
+            "pattern": "^(|-?(created_at|actor_name|action|target|ip_address))$",
+            "title": "Sort",
+            "type": "string"
+          }
+        },
+        "title": "AuditFilters",
+        "type": "object"
+      },
+      "OpsAuditEvent": {
+        "description": "Staff-only audit display fields, retaining the recorded actor name.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "actor_name": {
+            "title": "Actor Name",
+            "type": "string"
+          },
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "ip_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip Address"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "actor_name",
+          "action",
+          "target",
+          "detail",
+          "ip_address"
+        ],
+        "title": "OpsAuditEvent",
+        "type": "object"
+      },
+      "OpsAuditPage": {
+        "description": "Server-filtered audit history and global filter choices.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OpsAuditEvent"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "title": "Pages",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "actors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Actors",
+            "type": "array"
+          },
+          "actions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Actions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pages",
+          "total",
+          "page_size",
+          "actors",
+          "actions"
+        ],
+        "title": "OpsAuditPage",
+        "type": "object"
+      },
+      "RunFilters": {
+        "description": "Bound search, exact legacy filters, and display-column sorts.",
+        "properties": {
+          "page": {
+            "default": 1,
+            "description": "Requested page; out-of-range values are clamped.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rows per page, 1-100.",
+            "title": "Page Size"
+          },
+          "q": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Q",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Label",
+            "type": "string"
+          },
+          "status": {
+            "default": "",
+            "pattern": "^(|pending|started|success|failure)$",
+            "title": "Status",
+            "type": "string"
+          },
+          "trigger": {
+            "default": "",
+            "pattern": "^(|auto|manual)$",
+            "title": "Trigger",
+            "type": "string"
+          },
+          "sort": {
+            "default": "",
+            "pattern": "^(|-?(label|started_at|duration_ms|trigger|status))$",
+            "title": "Sort",
+            "type": "string"
+          }
+        },
+        "title": "RunFilters",
+        "type": "object"
+      },
+      "OpsRunPage": {
+        "description": "Server-filtered and paginated retained task runs.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OpsRunSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "title": "Pages",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "labels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Labels",
+            "type": "array"
+          },
+          "retention_days": {
+            "title": "Retention Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pages",
+          "total",
+          "page_size",
+          "labels",
+          "retention_days"
+        ],
+        "title": "OpsRunPage",
+        "type": "object"
+      },
+      "OpsRunSummary": {
+        "description": "Staff-only run metadata without arguments, result, error, or output.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_label": {
+            "title": "Status Label",
+            "type": "string"
+          },
+          "trigger": {
+            "title": "Trigger",
+            "type": "string"
+          },
+          "triggered_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Triggered By"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "duration": {
+            "title": "Duration",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "status",
+          "status_label",
+          "trigger",
+          "triggered_by",
+          "created_at",
+          "started_at",
+          "finished_at",
+          "duration_ms",
+          "duration",
+          "is_active"
+        ],
+        "title": "OpsRunSummary",
+        "type": "object"
+      },
+      "OpsRunDetail": {
+        "description": "Stored diagnostics, restricted to staff like the legacy Ops detail.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_label": {
+            "title": "Status Label",
+            "type": "string"
+          },
+          "trigger": {
+            "title": "Trigger",
+            "type": "string"
+          },
+          "triggered_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Triggered By"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "duration": {
+            "title": "Duration",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "task_id": {
+            "title": "Task Id",
+            "type": "string"
+          },
+          "task_name": {
+            "title": "Task Name",
+            "type": "string"
+          },
+          "worker": {
+            "title": "Worker",
+            "type": "string"
+          },
+          "args": {
+            "title": "Args",
+            "type": "string"
+          },
+          "result": {
+            "title": "Result",
+            "type": "string"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "output": {
+            "title": "Output",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "status",
+          "status_label",
+          "trigger",
+          "triggered_by",
+          "created_at",
+          "started_at",
+          "finished_at",
+          "duration_ms",
+          "duration",
+          "is_active",
+          "task_id",
+          "task_name",
+          "worker",
+          "args",
+          "result",
+          "error",
+          "output"
+        ],
+        "title": "OpsRunDetail",
+        "type": "object"
+      },
+      "OpsCell": {
+        "description": "Escaped display content with an optional same-origin link and explicit status tone.",
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "href": {
+            "default": "",
+            "title": "Href",
+            "type": "string"
+          },
+          "tone": {
+            "default": "neutral",
+            "enum": [
+              "neutral",
+              "positive",
+              "negative",
+              "warning"
+            ],
+            "title": "Tone",
+            "type": "string"
+          },
+          "kind": {
+            "default": "text",
+            "enum": [
+              "text",
+              "time"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "OpsCell",
+        "type": "object"
+      },
+      "OpsChartPoint": {
+        "description": "Daily values and failures for an accessible, paired series chart.",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "label",
+          "value",
+          "failed"
+        ],
+        "title": "OpsChartPoint",
+        "type": "object"
+      },
+      "OpsChoice": {
+        "description": "One select option; values are form data, not URLs.",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "OpsChoice",
+        "type": "object"
+      },
+      "OpsColumn": {
+        "description": "A display column whose key is also an allowlisted sort field.",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "key"
+        ],
+        "title": "OpsColumn",
+        "type": "object"
+      },
+      "OpsField": {
+        "description": "A Django-validated field; password values are never serialized.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "kind": {
+            "default": "text",
+            "enum": [
+              "text",
+              "password",
+              "number",
+              "checkbox",
+              "select",
+              "textarea",
+              "date",
+              "time",
+              "file",
+              "hidden"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "value": {
+            "default": "",
+            "title": "Value",
+            "type": "string"
+          },
+          "checked": {
+            "default": false,
+            "title": "Checked",
+            "type": "boolean"
+          },
+          "required": {
+            "default": false,
+            "title": "Required",
+            "type": "boolean"
+          },
+          "help": {
+            "default": "",
+            "title": "Help",
+            "type": "string"
+          },
+          "choices": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OpsChoice"
+            },
+            "title": "Choices",
+            "type": "array"
+          },
+          "errors": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "step": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step"
+          },
+          "max_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Length"
+          }
+        },
+        "required": [
+          "name",
+          "label"
+        ],
+        "title": "OpsField",
+        "type": "object"
+      },
+      "OpsForm": {
+        "description": "An allowlisted administrative action, never an arbitrary URL or task.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "fields": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OpsField"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "errors": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "confirmation": {
+            "default": "",
+            "title": "Confirmation",
+            "type": "string"
+          },
+          "disabled": {
+            "default": false,
+            "title": "Disabled",
+            "type": "boolean"
+          },
+          "download": {
+            "default": false,
+            "title": "Download",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "action",
+          "label"
+        ],
+        "title": "OpsForm",
+        "type": "object"
+      },
+      "OpsPage": {
+        "description": "Safe presentation shared with the existing Ops views, without rendered HTML.",
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/OpsSection"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "refresh_seconds": {
+            "default": 0,
+            "title": "Refresh Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "title",
+          "sections"
+        ],
+        "title": "OpsPage",
+        "type": "object"
+      },
+      "OpsRow": {
+        "description": "Explicit display fields only; model internals are never dumped.",
+        "properties": {
+          "cells": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/OpsCell"
+            },
+            "title": "Cells",
+            "type": "object"
+          },
+          "forms": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OpsForm"
+            },
+            "title": "Forms",
+            "type": "array"
+          },
+          "links": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/NavigationItem"
+            },
+            "title": "Links",
+            "type": "array"
+          }
+        },
+        "required": [
+          "cells"
+        ],
+        "title": "OpsRow",
+        "type": "object"
+      },
+      "OpsSection": {
+        "description": "One native React section: details, a table, validated forms, and links.",
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/OpsCell"
+            },
+            "default": {},
+            "title": "Details",
+            "type": "object"
+          },
+          "table": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpsTable"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "forms": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OpsForm"
+            },
+            "title": "Forms",
+            "type": "array"
+          },
+          "links": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/NavigationItem"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "chart": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OpsChartPoint"
+            },
+            "title": "Chart",
+            "type": "array"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "OpsSection",
+        "type": "object"
+      },
+      "OpsTable": {
+        "description": "A paginated full-list table, or a documented bounded monitoring snapshot.",
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/OpsColumn"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/OpsRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "server": {
+            "default": false,
+            "title": "Server",
+            "type": "boolean"
+          },
+          "page": {
+            "default": 1,
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "default": 1,
+            "title": "Pages",
+            "type": "integer"
+          },
+          "page_size": {
+            "default": 10,
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          },
+          "filters": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Filters",
+            "type": "array"
+          },
+          "filter_choices": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "default": {},
+            "title": "Filter Choices",
+            "type": "object"
+          }
+        },
+        "required": [
+          "columns",
+          "rows"
+        ],
+        "title": "OpsTable",
+        "type": "object"
+      },
+      "OpsActionResult": {
+        "description": "Action outcome, with invalid forms kept in React and no automatic retry.",
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/OpsMessage"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "redirect": {
+            "default": "",
+            "title": "Redirect",
+            "type": "string"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpsPage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "ok",
+          "messages"
+        ],
+        "title": "OpsActionResult",
+        "type": "object"
+      },
+      "OpsMessage": {
+        "description": "An existing Django action's explicit success, warning, or error notification.",
+        "properties": {
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "level",
+          "text"
+        ],
+        "title": "OpsMessage",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "AppSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sessionid"
+      },
+      "OpsSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sessionid"
+      }
+    }
+  },
+  "servers": []
+}

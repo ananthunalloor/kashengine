@@ -8,6 +8,20 @@ PASSWORD = "pw-ops-test-1"
 
 
 @pytest.fixture(autouse=True)
+def legacy_domain_unit_context(settings, request):
+    """Exercise original domain actions in isolation; test_archive covers host authorization."""
+    if request.node.path.name == "test_react_workspace.py":
+        return
+    settings.ROOT_URLCONF = "apps.web.tests.legacy_urls"
+    settings.MIDDLEWARE = [
+        "apps.web.tests.legacy_urls.LegacyRendererContext"
+        if item == "apps.web.archive.ArchiveMiddleware"
+        else item
+        for item in settings.MIDDLEWARE
+    ]
+
+
+@pytest.fixture(autouse=True)
 def fast_password_hashing(settings):
     """The real hasher is slow on purpose. The tests do not need it."""
     settings.PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]

@@ -6,7 +6,16 @@ from apps.access import features
 
 # Pages that are not a feature. They are open to every signed-in user (login, logout, account),
 # or they are the dashboard, which hides the parts of removed features itself.
-NOT_FEATURES = features.OPEN_URL_NAMES | {"dashboard"}
+NOT_FEATURES = features.OPEN_URL_NAMES | {
+    "dashboard",
+    "react_dashboard",
+    "react_ops_runs",
+    "react_ops_run",
+    "react_ops_audit",
+    "react_ops",
+    "react_ops_backups",
+    "react_ops_page",
+}
 
 
 def _web_url_names() -> set[str]:

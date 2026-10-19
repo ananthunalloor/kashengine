@@ -1,44 +1,24 @@
-"""URL routes of the web pages."""
+"""Canonical React product URLs; templates are isolated in the archive URLconf."""
 
-from datetime import date
+from django.urls import path
 
-from django.urls import path, register_converter
-
-from . import views
-
-
-class IsoDateConverter:
-    """A date in the URL, like 2026-10-07."""
-
-    regex = r"\d{4}-\d{2}-\d{2}"
-
-    def to_python(self, value: str) -> date:
-        """Parse the URL text into a date."""
-        return date.fromisoformat(value)  # A date like 2026-02-30 raises ValueError: a 404.
-
-    def to_url(self, value: date | str) -> str:
-        """Write a date as URL text."""
-        return value.isoformat() if isinstance(value, date) else str(value)
-
-
-register_converter(IsoDateConverter, "date")
+from . import public_preview, views
+from .legacy_urls import IsoDateConverter  # noqa: F401  # Registers the shared date converter.
 
 app_name = "web"
 
 urlpatterns = [
-    path("", views.landing, name="landing"),
-    path("dashboard/", views.dashboard, name="dashboard"),
-    path("login/", views.Login.as_view(), name="login"),
+    path("", public_preview.landing, name="landing"),
+    path("login/", public_preview.PreviewLogin.as_view(), name="login"),
     path("logout/", views.Logout.as_view(), name="logout"),
-    path("reports/", views.report_list, name="reports"),
-    path("reports/<date:day>/", views.report_detail, name="report"),
-    path("news/", views.news_list, name="news"),
-    path("ipos/", views.ipo_list, name="ipos"),
-    path("ipos/<int:pk>/", views.ipo_detail, name="ipo"),
-    path("markets/", views.markets, name="markets"),
-    path("companies/", views.company_list, name="companies"),
-    path("delivery/", views.delivery, name="delivery"),
-    path("account/", views.account, name="account"),
-    path("account/tokens/new/", views.token_create, name="token_create"),
-    path("account/tokens/<int:pk>/revoke/", views.token_revoke, name="token_revoke"),
+    path("dashboard/", views.react_app, name="dashboard"),
+    path("account/", views.react_app, name="account"),
+    path("reports/", views.react_app, name="reports"),
+    path("reports/<date:day>/", views.react_report, name="report"),
+    path("news/", views.react_app, name="news"),
+    path("ipos/", views.react_app, name="ipos"),
+    path("ipos/<int:pk>/", views.react_ipo, name="ipo"),
+    path("markets/", views.react_app, name="markets"),
+    path("companies/", views.react_app, name="companies"),
+    path("delivery/", views.react_app, name="delivery"),
 ]
