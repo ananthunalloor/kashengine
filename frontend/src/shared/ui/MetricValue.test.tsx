@@ -56,6 +56,22 @@ it("keeps the full fact text and freshness without interpreting it as HTML", () 
   expect(document.querySelector("b")).toBeNull();
 });
 
+it.each([
+  ["1.0/10", "caution", "Lower relevance"],
+  ["6.3/10", "caution", "Lower relevance"],
+  ["6.4/10", "positive", "High relevance"],
+  ["10.0/10", "positive", "High relevance"],
+  [null, "neutral", "Not available"],
+  ["-", "neutral", "Not available"],
+  ["0.0/10", "neutral", "Not available"],
+  ["11.0/10", "neutral", "Not available"],
+])("colors relevance %s without treating low relevance as negative news", (value, tone, title) => {
+  render(<MetricValue kind="relevance" value={value} />);
+  const metric = screen.getByTitle(title);
+  expect(metric).toHaveAttribute("data-tone", tone);
+  expect(metric).toHaveTextContent(value ?? "\u2013");
+});
+
 it("explains strength colors in words, separately from market direction", () => {
   render(<StrengthLegend />);
   expect(screen.getByText("Strong: 6.4-10.0")).toHaveAttribute("data-tone", "positive");

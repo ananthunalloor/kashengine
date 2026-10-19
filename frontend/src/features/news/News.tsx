@@ -9,6 +9,7 @@ import { newsSearchSchema } from "../../shared/api/news";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { sourceLink } from "../../shared/ui/sourceLink";
 import { DataTable } from "../../shared/ui/DataTable";
+import { MetricValue } from "../../shared/ui/MetricValue";
 
 const publishedDate = new Intl.DateTimeFormat("en-IN", {
   day: "numeric",
@@ -58,7 +59,8 @@ export function News({
         <Text c="dimmed" mt="sm" maw={760}>
           Every article we fetched, with the language model's score and explanation. Sentiment
           ranges from 1.0/10 (very negative for stocks) through 5.5/10 (neutral) to 10.0/10 (very
-          positive). Relevance ranges from 1.0/10 to 10.0/10.
+          positive). Relevance ranges from 1.0/10 to 10.0/10: green at 6.4 or above, amber below,
+          and neutral when unavailable. Relevance is not market direction.
         </Text>
         <Anchor href="/news/" size="sm">
           Compare with the existing News page
@@ -229,7 +231,12 @@ export function News({
                   </span>
                 ),
             },
-            { id: "relevance", label: "Relevance", value: (row) => row.relevance },
+            {
+              id: "relevance",
+              label: "Relevance",
+              value: (row) => row.relevance,
+              render: (row) => <MetricValue kind="relevance" value={row.relevance} />,
+            },
           ]}
           server={{
             page: data.page,

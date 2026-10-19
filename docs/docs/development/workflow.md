@@ -191,7 +191,10 @@ in tables and detail views. Gains are green, losses red, and zero/missing values
 the original signs and units. Signed scores use the displayed neutral midpoint of 5.5/10.
 Strength is independent of direction: green at 6.4/10 or above (the existing 0.6 high-confidence
 cutoff), amber below, with a visible `StrengthLegend`. Never color a price, subscription multiple,
-or relevance value as though it were a signed gain. Colors support both themes.
+or relevance value as though it were a signed gain. News relevance uses `MetricValue` with
+`kind="relevance"`: green at 6.4/10 or above, amber below, and missing values neutral.
+Its labels explain high/lower relevance rather than positive/negative market direction.
+Colors support both themes.
 
 After changing the private schemas:
 

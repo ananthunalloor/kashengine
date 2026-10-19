@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { displayNumber } from "./displayNumber";
 
-type MetricKind = "change" | "strength" | "score";
+type MetricKind = "change" | "strength" | "score" | "relevance";
 
 export function MetricValue({
   value,
@@ -18,9 +18,16 @@ export function MetricValue({
   let tone = "neutral";
   let meaning = "Not available";
   if (available) {
-    if (kind === "strength") {
+    if (kind === "strength" || kind === "relevance") {
       tone = number >= 6.4 ? "positive" : "caution";
-      meaning = number >= 6.4 ? "Strong signal" : "Lower strength";
+      meaning =
+        kind === "relevance"
+          ? number >= 6.4
+            ? "High relevance"
+            : "Lower relevance"
+          : number >= 6.4
+            ? "Strong signal"
+            : "Lower strength";
     } else {
       const midpoint = kind === "score" ? 5.5 : 0;
       tone = number > midpoint ? "positive" : number < midpoint ? "negative" : "neutral";

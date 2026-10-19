@@ -98,6 +98,8 @@ it("shows scored articles, plain-text explanations, source links and IST publica
   expect(screen.getByText("7.3/10")).toHaveAttribute("data-sentiment", "positive");
   expect(screen.getByText(/8:30 am IST/i)).toBeInTheDocument();
   expect(screen.getByRole("cell", { name: "8.2/10" })).toBeInTheDocument();
+  expect(screen.getByText("8.2/10")).toHaveAttribute("data-tone", "positive");
+  expect(screen.getByText("8.2/10")).toHaveAttribute("title", "High relevance");
   expect(screen.getByText("<b>Strong earnings</b>")).toBeInTheDocument();
   expect(document.querySelector(".data-table b")).toBeNull();
   expect(screen.getByText("Example Bank")).toBeInTheDocument();
@@ -108,6 +110,19 @@ it("shows scored articles, plain-text explanations, source links and IST publica
   expect(screen.getByRole("link", { name: /Compare with/ })).toHaveAttribute("href", "/news/");
   expect(screen.getAllByRole("main")).toHaveLength(1);
   expect(document.querySelector("style")).toBeNull();
+});
+
+it.each([
+  ["6.3/10", "caution", "Lower relevance"],
+  ["6.4/10", "positive", "High relevance"],
+  [null, "neutral", "Not available"],
+])("renders relevance %s with the shared metric colors", async (relevance, tone, title) => {
+  await showNews({ data: { ...news, items: [{ ...news.items[0], relevance }] } });
+  const metric = await screen.findByTitle(title);
+  expect(metric).toHaveAttribute("data-metric", "relevance");
+  expect(metric).toHaveAttribute("data-tone", tone);
+  expect(metric).toHaveTextContent(relevance ?? "\u2013");
+  expect(screen.getByText("7.3/10")).toHaveAttribute("data-sentiment", "positive");
 });
 
 it("restores bookmarked filters and preserves them in pagination links", async () => {
