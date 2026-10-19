@@ -1,6 +1,7 @@
 """URL routes of the API. They are mounted at `/api/`.
 
 Each major version has its own `NinjaAPI` object, so `v2` can be added next to `v1`.
+The session-only `/api/app/` API is private and is not part of the public version contract.
 """
 
 from django.contrib.auth.decorators import login_not_required

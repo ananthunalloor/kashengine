@@ -4,10 +4,12 @@ import { createFileRoute } from "@tanstack/react-router";
 function AppHome() {
   return (
     <Stack gap="md" py="xl">
-      <Title order={1}>React UI foundation</Title>
+      <Title order={1} tabIndex={-1}>
+        React preview
+      </Title>
       <Text maw={640}>
-        This authenticated shell is ready for incremental page migration. Existing pages remain
-        available while their React replacements are built and checked for parity.
+        Your account's available sections are in the navigation. These links still open the existing
+        pages while their React replacements are built and checked for parity.
       </Text>
     </Stack>
   );

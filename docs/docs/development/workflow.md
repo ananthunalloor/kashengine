@@ -56,6 +56,44 @@ cd docs && npm run reference:check && npm run build
 [Pre-commit](https://pre-commit.com) runs Ruff, the file checks and `ty` before each commit.
 CI (`.github/workflows/ci.yml`) runs all the checks above for each pull request.
 
+## React migration
+
+The authenticated React preview is served by Django at `/app/`. Existing subscriber and Ops
+pages remain server-rendered until their React replacements reach parity. Start Vite with
+`pnpm --dir frontend dev` alongside Django, or use the frontend service in the dev Compose file.
+Production uses the Vite manifest and built assets included in the Python image.
+
+The private `/api/app/session` endpoint supplies the current user, allowed features, subscription
+notice, and navigation. It reuses Django's navigation/access rules, accepts session cookies only,
+and rejects Authorization headers. It is available even when the public API is disabled, and
+has a separate per-user request budget (`APP_API_RATE_LIMIT_PER_MINUTE`, default 300).
+It returns `401` rather than redirecting anonymous callers and marks every response `no-store`.
+Unsafe private API methods use Ninja's CSRF-enabled cookie authentication.
+
+The browser client validates session responses against generated Zod schemas, sends CSRF tokens
+for writes, and redirects expired sessions to Django login with the current return URL.
+Navigation links currently open the existing Django pages, which still enforce permissions.
+
+After changing the private schemas:
+
+```bash
+uv run python manage.py export_openapi --api app --output frontend/openapi/app.json
+pnpm --dir frontend api:generate
+pnpm --dir frontend format:check
+pnpm --dir frontend test
+pnpm --dir frontend build
+uv run pytest -q apps/api/tests/test_app.py
+```
+
+Do not put UI-only endpoints in `/api/v1/`: its public compatibility contract is unchanged.
+CI checks the committed private OpenAPI document and generated TypeScript/Zod output separately.
+
+The shared theme provider disables Mantine's runtime style elements. Use static CSS for
+responsive layout instead of Mantine's AppShell or responsive style props: those generate
+`<style>` elements that the enforced `style-src 'self'` policy rejects. Mantine's static
+stylesheet supplies the default theme variables; inline style attributes remain permitted by
+the existing `style-src-attr` policy. Never relax CSP to make a component render.
+
 ## Database migrations
 
 - Change the model, then run `makemigrations`. Read the migration.

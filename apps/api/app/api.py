@@ -89,8 +89,8 @@ def get_session(request: HttpRequest):
     return {
         "id": user.pk,
         "username": user.get_username(),
-        "is_staff": user.is_staff,
-        "is_superuser": user.is_superuser,
+        "is_staff": bool(getattr(user, "is_staff", False)),
+        "is_superuser": bool(getattr(user, "is_superuser", False)),
         "features": sorted(access.allowed),
         "subscription_required": conf.SUBSCRIPTIONS_REQUIRED,
         "subscription_ok": access.subscription_ok,

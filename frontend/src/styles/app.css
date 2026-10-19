@@ -16,7 +16,7 @@ body {
 
 .skip-link {
   position: absolute;
-  z-index: 1;
+  z-index: 100;
   top: 0.75rem;
   left: -100vw;
   padding: 0.5rem 0.75rem;
@@ -26,4 +26,63 @@ body {
 
 .skip-link:focus {
   left: 0.75rem;
+}
+
+/* AppShell and Mantine responsive props inject style elements, blocked by our CSP. */
+.app-shell {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  grid-template-rows: 4rem 1fr;
+  min-height: 100vh;
+}
+
+.app-header {
+  grid-column: 1 / -1;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--mantine-color-body);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+
+.app-navigation {
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 4rem;
+  height: calc(100dvh - 4rem);
+  padding: var(--mantine-spacing-sm);
+  overflow-y: auto;
+  background: var(--mantine-color-body);
+  border-right: 1px solid var(--mantine-color-default-border);
+}
+
+.app-main {
+  min-width: 0;
+  padding: var(--mantine-spacing-md);
+}
+
+@media (min-width: 48em) {
+  .app-mobile-only {
+    display: none;
+  }
+}
+
+@media (max-width: 47.99375em) {
+  .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-desktop-only,
+  .app-navigation[data-opened="false"] {
+    display: none;
+  }
+
+  .app-navigation {
+    position: fixed;
+    bottom: 0;
+    width: min(18rem, 100%);
+    height: auto;
+    z-index: 20;
+  }
 }

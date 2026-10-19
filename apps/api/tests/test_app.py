@@ -4,11 +4,14 @@ import json
 from pathlib import Path
 
 import pytest
+from django.middleware.csrf import get_token
 from django.test import Client, RequestFactory
 from django.urls import reverse
+from ninja.errors import HttpError
 
 from apps.access import features
 from apps.access.models import FeatureBlock
+from apps.api.app.api import http_error
 from apps.api.app.auth import AppSession
 from apps.api.management.commands.export_openapi import render
 from apps.siteconfig import conf
@@ -103,6 +106,26 @@ def test_inactive_sessions_cannot_read_the_private_api(client, member):
     assert client.get(SESSION_URL).status_code == 401
 
 
+@pytest.mark.parametrize("superuser", [False, True])
+def test_staff_remains_exempt_from_feature_and_subscription_restrictions(
+    client, staff, expire, settings, superuser
+):
+    settings.SUBSCRIPTIONS_REQUIRED = True
+    conf.invalidate()
+    staff.is_superuser = superuser
+    staff.save(update_fields=["is_superuser"])
+    expire(staff)
+    FeatureBlock.objects.create(user=staff, feature="news")
+    client.force_login(staff)
+
+    body = client.get(SESSION_URL).json()
+
+    assert body["subscription_ok"] is True
+    assert body["subscription_state"] == "staff"
+    assert body["features"] == sorted(features.KEYS)
+    assert "/ops/" in [item["url"] for item in body["navigation"]]
+
+
 def test_private_api_still_works_when_public_api_is_disabled(client, member, settings):
     settings.API_ENABLED = False
     conf.invalidate()
@@ -133,10 +156,27 @@ def test_private_rate_budget_is_separate_from_public_budget(client, member, sett
 def test_session_auth_enforces_csrf_on_unsafe_methods(member):
     request = RequestFactory().post("/api/app/example")
     request.user = member
-    from ninja.errors import HttpError  # noqa: PLC0415
-
     with pytest.raises(HttpError, match="CSRF check Failed"):
         AppSession()(request)
+
+
+def test_session_auth_accepts_valid_csrf_on_unsafe_methods(member):
+    request = RequestFactory().post("/api/app/example")
+    request.user = member
+    request.META["HTTP_X_CSRFTOKEN"] = get_token(request)
+    request.COOKIES["csrftoken"] = request.META["CSRF_COOKIE"]
+
+    assert AppSession()(request) == member
+
+
+def test_csrf_errors_use_the_private_problem_contract():
+    request = RequestFactory().post("/api/app/example")
+
+    response = http_error(request, HttpError(403, "CSRF check Failed"))
+
+    assert response.status_code == 403
+    assert response["Content-Type"] == "application/problem+json"
+    assert json.loads(response.content)["code"] == "csrf_failed"
 
 
 def test_csrf_cookie_supports_existing_django_logout(member):

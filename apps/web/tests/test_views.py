@@ -123,6 +123,7 @@ def test_the_react_shell_is_authenticated_and_mounts_the_app(client_in):
     assert 'id="root"' in response.text
     assert "@vite/client" in response.text
     assert "@react-refresh" in response.text
+    assert "no-store" in response["Cache-Control"]
 
 
 def make_prediction(day=date(2026, 10, 8), direction="up", confidence=0.52, **kwargs):

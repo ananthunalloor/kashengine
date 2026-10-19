@@ -278,10 +278,36 @@ pnpm --dir frontend dev
 ```
 
 Open `http://localhost:8000/app/` while signed in to view the authenticated React shell.
+The preview loads navigation, feature permissions, subscription notices, and the staff flag
+from the session-only private API at `/api/app/session`. Its links still open the existing
+Django pages. It includes a mobile menu, a persistent light/dark toggle, and CSRF-protected logout.
+An expired session returns to login; API errors display a retryable error page.
+
 The existing pages remain Django-rendered during the incremental migration. Run
 `pnpm --dir frontend build` to create the production bundle and
 `pnpm --dir frontend build:legacy-css` to rebuild the stylesheet still used by Django templates.
 The Docker image builds the React bundle automatically.
+
+The private API is independent of the public `/api/v1/` switch and quota. It accepts active
+session cookies only (Authorization headers are rejected), enforces CSRF for unsafe methods,
+and never caches responses. `APP_API_RATE_LIMIT_PER_MINUTE` defaults to 300 requests per user;
+production uses the same Redis-backed counters as the public API, with separate keys.
+Feature and subscription restrictions remain enforced by Django on the linked pages.
+
+After changing private API schemas, regenerate their committed OpenAPI document, TypeScript
+types, and Zod response validators:
+
+```bash
+uv run python manage.py export_openapi --api app --output frontend/openapi/app.json
+pnpm --dir frontend api:generate
+pnpm --dir frontend format:check
+pnpm --dir frontend typecheck
+pnpm --dir frontend test
+uv run pytest -q apps/api/tests/test_app.py
+```
+
+CI verifies both contract files and runs the frontend unit/component tests. The public API
+schema remains separate and unchanged.
 
 Code standards:
 

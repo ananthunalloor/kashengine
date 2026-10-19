@@ -8,6 +8,8 @@ It does four things for a request below `/api/`:
 3. It marks every answer as private. Answers depend on the caller.
 4. It adds an `ETag` to JSON answers and answers 304 when the client already has the same data.
 
+The private `/api/app/` uses its own session auth and request budget. It is independent of the
+public API switch and version headers, and its responses are always private and no-store.
 It does nothing for paths outside `/api/`.
 """
 
