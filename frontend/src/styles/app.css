@@ -27,6 +27,9 @@
   --mantine-primary-color-6: var(--brand-purple);
   --mantine-primary-color-7: var(--brand-purple-hover);
   --mantine-primary-color-contrast: #fff;
+  --brand-gain: #2c795a;
+  --metric-caution: #875600;
+  --metric-caution-soft: #fff5db;
 }
 
 :root[data-mantine-color-scheme] {
@@ -53,6 +56,8 @@
   --brand-gain-soft: #1b362b;
   --brand-loss: #f29f98;
   --brand-loss-soft: #402422;
+  --metric-caution: #f2cc7c;
+  --metric-caution-soft: #3b301b;
   --mantine-color-violet-filled: #6654d9;
   --mantine-color-violet-filled-hover: #5542c8;
   --mantine-primary-color-filled: #6654d9;
@@ -541,6 +546,7 @@ h2 {
 .report-outlook,
 .report-status {
   display: inline-flex;
+  column-gap: 0.25rem;
   padding: 0.3rem 0.6rem;
   border-radius: 0.4rem;
   background: var(--brand-soft);
@@ -571,6 +577,35 @@ h2 {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.875rem;
   line-height: 1.8;
+}
+
+.metric-value {
+  display: inline-block;
+  border-radius: 0.35rem;
+  padding: 0.15rem 0.4rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--brand-muted);
+  background: var(--brand-canvas);
+}
+
+.metric-value[data-tone="positive"] {
+  color: var(--brand-gain);
+  background: var(--brand-gain-soft);
+}
+
+.metric-value[data-tone="negative"] {
+  color: var(--brand-loss);
+  background: var(--brand-loss-soft);
+}
+
+.metric-value[data-tone="caution"] {
+  color: var(--metric-caution);
+  background: var(--metric-caution-soft);
+}
+
+.metric-legend {
+  font-size: 0.75rem;
 }
 
 .report-diagnostic {
@@ -692,6 +727,7 @@ section[aria-labelledby="market-record"] .market-summary dd {
 
 .ipo-verdict {
   display: inline-flex;
+  column-gap: 0.25rem;
   border-radius: 0.4rem;
   padding: 0.3rem 0.6rem;
   font-size: 0.8rem;

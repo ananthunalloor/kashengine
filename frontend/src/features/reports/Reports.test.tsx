@@ -102,6 +102,7 @@ it("loads typed reports and links to real preview routes and the existing pages"
   expect(link).toHaveAttribute("href", "/app/reports/2026-10-07/");
   expect(screen.getByRole("cell", { name: "Up" })).toBeInTheDocument();
   expect(screen.getByRole("cell", { name: "7.3/10" })).toBeInTheDocument();
+  expect(screen.getByText("7.3/10")).toHaveAttribute("data-tone", "positive");
   expect(screen.getByRole("link", { name: /Compare with/ })).toHaveAttribute("href", "/reports/");
   expect(screen.getByRole("link", { name: "Next" })).toHaveAttribute(
     "href",
@@ -111,6 +112,16 @@ it("loads typed reports and links to real preview routes and the existing pages"
   expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
   expect(screen.getAllByRole("main")).toHaveLength(1);
   expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+  expect(screen.getByText("7.3/10")).toHaveAttribute("data-tone", "positive");
+});
+
+it("keeps a lower-strength down outlook separate from strength color in report details", async () => {
+  await showReports({
+    path: "/app/reports/2026-10-07/",
+    detail: { ...report, prediction: "down", strength: "6.3/10" },
+  });
+  expect(await screen.findByText("6.3/10")).toHaveAttribute("data-tone", "caution");
+  expect(screen.getByText(/Down, strength/)).toHaveAttribute("data-tone", "down");
 });
 
 it("navigates to a report without leaving the React application", async () => {

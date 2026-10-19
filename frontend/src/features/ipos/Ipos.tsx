@@ -10,6 +10,7 @@ import { sourceLink } from "../../shared/ui/sourceLink";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { DataTable } from "../../shared/ui/DataTable";
 import { displayNumber } from "../../shared/ui/displayNumber";
+import { MetricValue } from "../../shared/ui/MetricValue";
 
 const scoredDate = new Intl.DateTimeFormat("en-IN", {
   day: "numeric",
@@ -24,7 +25,11 @@ function Verdict({ ipo, withScore = false }: { ipo: IpoSummary; withScore?: bool
   return (
     <span className="ipo-verdict" data-verdict={ipo.verdict}>
       {ipo.verdict.charAt(0).toUpperCase() + ipo.verdict.slice(1)}
-      {withScore && ipo.score !== null && `, score ${ipo.score}`}
+      {withScore && ipo.score !== null && (
+        <>
+          , score <MetricValue kind="score" value={ipo.score} />
+        </>
+      )}
     </span>
   );
 }
@@ -209,16 +214,31 @@ export function Ipos({
             },
             { id: "dates", label: "Dates", value: (row) => row.dates },
             { id: "price_band", label: "Price band", value: (row) => row.price_band },
-            { id: "gmp", label: "GMP", value: (row) => row.gmp },
+            {
+              id: "gmp",
+              label: "GMP",
+              value: (row) => row.gmp,
+              render: (row) => <MetricValue kind="change" value={row.gmp} />,
+            },
             { id: "subscribed", label: "Subscribed", value: (row) => row.subscribed },
-            { id: "listing_gain", label: "Listing gain", value: (row) => row.listing_gain },
+            {
+              id: "listing_gain",
+              label: "Listing gain",
+              value: (row) => row.listing_gain,
+              render: (row) => <MetricValue kind="change" value={row.listing_gain} />,
+            },
             {
               id: "verdict",
               label: "Verdict",
               value: (row) => row.verdict,
               render: (row) => <Verdict ipo={row} />,
             },
-            { id: "score", label: "Score", value: (row) => row.score },
+            {
+              id: "score",
+              label: "Score",
+              value: (row) => row.score,
+              render: (row) => <MetricValue kind="score" value={row.score} />,
+            },
           ]}
           server={{
             page: data.page,
@@ -283,7 +303,15 @@ export function IpoView({ ipo }: { ipo: IpoDetail }) {
             {ipo.facts.map((fact) => (
               <div key={fact.label}>
                 <dt>{fact.label}</dt>
-                <dd>{fact.value}</dd>
+                <dd>
+                  {fact.label === "GMP" || fact.label === "Listing gain" ? (
+                    <MetricValue kind="change" value={fact.value.replace(/^(?:₹|Rs\s*)/, "")}>
+                      {fact.value}
+                    </MetricValue>
+                  ) : (
+                    fact.value
+                  )}
+                </dd>
               </div>
             ))}
           </dl>
@@ -312,12 +340,26 @@ export function IpoView({ ipo }: { ipo: IpoDetail }) {
               label="Saved scoring inputs"
               columns={[
                 { id: "name", label: "Signal", value: (row) => row.name },
-                { id: "value", label: "Value", value: (row) => row.value, sortable: false },
+                {
+                  id: "value",
+                  label: "Value",
+                  value: (row) => row.value,
+                  sortable: false,
+                  render: (row) =>
+                    row.name === "GMP" || row.name === "News" ? (
+                      <MetricValue
+                        kind={row.name === "GMP" ? "change" : "score"}
+                        value={row.value}
+                      />
+                    ) : (
+                      row.value
+                    ),
+                },
                 {
                   id: "signal",
                   label: "Signal (1-10)",
                   value: (row) => displayNumber(row.signal),
-                  render: (row) => row.signal,
+                  render: (row) => <MetricValue kind="score" value={row.signal} />,
                 },
               ]}
             />

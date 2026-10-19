@@ -149,7 +149,9 @@ it("shows issue cards, metrics and preview-only navigation", async () => {
   expect(await screen.findByRole("heading", { level: 1, name: "IPOs" })).toHaveFocus();
   expect(screen.getByRole("link", { name: "Example Ltd" })).toHaveAttribute("href", "/app/ipos/1/");
   expect(screen.getByText("0.0x")).toBeInTheDocument();
-  expect(screen.getByText("+20.0%")).toBeInTheDocument();
+  expect(screen.getByText("+20.0%")).toHaveAttribute("data-tone", "positive");
+  expect(screen.getByText("8.2/10")).toHaveAttribute("data-tone", "positive");
+  expect(screen.getByText("0.0x")).not.toHaveAttribute("data-tone");
   expect(screen.getByRole("link", { name: /Compare with/ })).toHaveAttribute("href", "/ipos/");
   expect(screen.getByRole("link", { name: "IPOs", current: "page" })).toHaveAttribute(
     "href",
@@ -166,8 +168,10 @@ it("navigates to saved facts and evidence without leaving React", async () => {
   expect(await screen.findByRole("heading", { name: "The issue" })).toBeInTheDocument();
   expect(router.state.location.pathname).toBe("/ipos/1/");
   expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
-  expect(screen.getByText("Good, score 8.2/10")).toBeInTheDocument();
-  expect(screen.getByText(/updated 3 days ago/)).toBeInTheDocument();
+  expect(screen.getByText(/Good, score/)).toHaveTextContent("Good, score 8.2/10");
+  expect(screen.getByText(/updated 3 days ago/)).toHaveAttribute("data-tone", "positive");
+  expect(screen.getByText("7.8/10")).toHaveAttribute("data-tone", "positive");
+  expect(screen.getByText("1.0/10")).toHaveAttribute("data-tone", "negative");
   expect(screen.getByRole("table", { name: "Saved scoring inputs" })).toHaveTextContent("7.8/10");
   expect(screen.getByText("<b>Stale metric</b>")).toBeInTheDocument();
   expect(document.querySelector(".ipo-detail-grid b")).toBeNull();
@@ -177,6 +181,29 @@ it("navigates to saved facts and evidence without leaving React", async () => {
     "noopener noreferrer",
   );
   expect(screen.getAllByRole("main")).toHaveLength(1);
+});
+
+it("colors negative listing gains, GMP and saved news scores without coloring prices", async () => {
+  await showIpos({
+    path: "/app/ipos/1/",
+    detail: {
+      ...ipo,
+      score: "4.2/10",
+      facts: [
+        { label: "GMP", value: "\u20b9-12 (-12.0%) (updated 2 hours ago)" },
+        { label: "Listing gain", value: "-3.2%" },
+        { label: "Price band", value: "\u20b9100" },
+      ],
+      signals: [{ name: "News", value: "4.8/10", signal: "4.8/10" }],
+    },
+  });
+  expect(await screen.findByText(/updated 2 hours ago/)).toHaveAttribute("data-tone", "negative");
+  expect(screen.getByText("-3.2%")).toHaveAttribute("data-tone", "negative");
+  expect(screen.getByText("4.2/10")).toHaveAttribute("data-tone", "negative");
+  expect(screen.getAllByText("4.8/10").every((node) => node.dataset.tone === "negative")).toBe(
+    true,
+  );
+  expect(screen.getByText("\u20b9100")).not.toHaveAttribute("data-tone");
 });
 
 it("restores all bookmarked filters and retains them in pagination", async () => {

@@ -123,7 +123,10 @@ it("shows saved track record, baseline, sample warning, closes and all result st
   expect(screen.getByText("24500.00")).toBeInTheDocument();
   for (const state of ["Right", "Wrong", "No session", "Waiting"])
     expect(screen.getByRole("cell", { name: state })).toBeInTheDocument();
-  expect(screen.getByText("6.4/10")).toBeInTheDocument();
+  expect(screen.getByText("6.4/10")).toHaveAttribute("data-tone", "positive");
+  expect(screen.getByText("+1.25%")).toHaveAttribute("data-tone", "positive");
+  expect(screen.getAllByText("0.00%").every((node) => node.dataset.tone === "neutral")).toBe(true);
+  expect(screen.getAllByText("1.0/10").every((node) => node.dataset.tone === "caution")).toBe(true);
   expect(screen.getByText(/not a probability/)).toBeInTheDocument();
   expect(screen.getAllByText("16 Oct 2026")).toHaveLength(2);
   expect(screen.getByRole("cell", { name: "<b>Nifty 50</b>" })).toBeInTheDocument();
@@ -135,6 +138,20 @@ it("shows saved track record, baseline, sample warning, closes and all result st
     "/app/markets/",
   );
   expect(document.querySelector("style")).toBeNull();
+});
+
+it("colors a loss red while keeping a strong down prediction green", async () => {
+  await showMarkets({
+    body: {
+      ...data,
+      quotes: [{ ...data.quotes[0], change: "\u22121.25%" }],
+      history: [{ ...data.history[0], direction: "down", strength: "9.1/10", change: "-1.50%" }],
+    },
+  });
+  expect(await screen.findByText("\u22121.25%")).toHaveAttribute("data-tone", "negative");
+  expect(screen.getByText("-1.50%")).toHaveAttribute("data-tone", "negative");
+  expect(screen.getByText("9.1/10")).toHaveAttribute("data-tone", "positive");
+  expect(screen.getByText("Down")).toHaveAttribute("data-tone", "down");
 });
 
 it("shows missing data without suggesting zero accuracy and hides staff actions", async () => {

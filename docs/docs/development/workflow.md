@@ -138,6 +138,13 @@ and detail tables use local TanStack row models. Keep the history limits visible
 numeric values via numeric accessors, and preserve missing values rather than inventing zeroes.
 The API continues to redact diagnostics for members and exclude recipient identifiers.
 
+Use `MetricValue` for signed changes/differences, IPO sentiment scores, and prediction strength
+in tables and detail views. Gains are green, losses red, and zero/missing values neutral; retain
+the original signs and units. Signed scores use the displayed neutral midpoint of 5.5/10.
+Strength is independent of direction: green at 6.4/10 or above (the existing 0.6 high-confidence
+cutoff), amber below, with a visible `StrengthLegend`. Never color a price, subscription multiple,
+or relevance value as though it were a signed gain. Colors support both themes.
+
 After changing the private schemas:
 
 ```bash

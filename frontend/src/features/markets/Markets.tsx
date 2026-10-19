@@ -5,6 +5,7 @@ import type { Markets as MarketsData } from "../../shared/api/generated/types.ge
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { DataTable } from "../../shared/ui/DataTable";
 import { displayNumber } from "../../shared/ui/displayNumber";
+import { MetricValue, StrengthLegend } from "../../shared/ui/MetricValue";
 
 const tradingDate = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
@@ -114,7 +115,7 @@ export function Markets({ data, isStaff }: { data: MarketsData; isStaff: boolean
                 id: "change",
                 label: "Change",
                 value: (row) => displayNumber(row.change),
-                render: (row) => row.change,
+                render: (row) => <MetricValue kind="change" value={row.change} />,
               },
               {
                 id: "day",
@@ -135,7 +136,7 @@ export function Markets({ data, isStaff }: { data: MarketsData; isStaff: boolean
         </Title>
         <Text c="dimmed" size="sm" mt="sm" mb="md">
           The latest 30 predictions. Strength runs from 1.0/10 (weakest) to 10.0/10 (strongest). It
-          is not a probability of being right.
+          is not a probability of being right. <StrengthLegend />
         </Text>
         {history.length ? (
           <DataTable
@@ -171,7 +172,7 @@ export function Markets({ data, isStaff }: { data: MarketsData; isStaff: boolean
                 id: "strength",
                 label: "Strength",
                 value: (row) => displayNumber(row.strength),
-                render: (row) => row.strength,
+                render: (row) => <MetricValue kind="strength" value={row.strength} />,
               },
               {
                 id: "actual_direction",
@@ -183,7 +184,7 @@ export function Markets({ data, isStaff }: { data: MarketsData; isStaff: boolean
                 id: "change",
                 label: "Change",
                 value: (row) => displayNumber(row.change),
-                render: (row) => row.change,
+                render: (row) => <MetricValue kind="change" value={row.change} />,
               },
               {
                 id: "result",

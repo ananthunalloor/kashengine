@@ -6,6 +6,7 @@ import { LuFileText, LuSearch, LuX } from "react-icons/lu";
 import type { ReportDetail, ReportPage, ReportSummary } from "../../shared/api/generated/types.gen";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { DataTable } from "../../shared/ui/DataTable";
+import { MetricValue, StrengthLegend } from "../../shared/ui/MetricValue";
 import { reportSearchSchema } from "../../shared/api/reports";
 import type { ReportSearch } from "../../shared/api/reports";
 
@@ -34,7 +35,11 @@ export function ReportOutlook({ report }: { report: ReportSummary }) {
   return (
     <span className="report-outlook" data-tone={report.prediction}>
       {directions[report.prediction] ?? report.prediction}
-      {report.strength !== null && `, strength ${report.strength}`}
+      {report.strength !== null && (
+        <>
+          , strength <MetricValue kind="strength" value={report.strength} />
+        </>
+      )}
     </span>
   );
 }
@@ -74,7 +79,7 @@ export function ReportsList({
         <Text c="dimmed" mt="sm" maw={720}>
           Daily reports sent on Telegram. Scores use a 1.0-10.0 scale; older reports with saved data
           are reformatted for viewing without changing the original text. Signal strength is not a
-          probability of being right.
+          probability of being right. <StrengthLegend />
         </Text>
         <Anchor href="/reports/" size="sm">
           Compare with the existing Reports pages
@@ -161,7 +166,12 @@ export function ReportsList({
                 "Not available"
               ),
           },
-          { id: "strength", label: "Strength", value: (row) => row.strength },
+          {
+            id: "strength",
+            label: "Strength",
+            value: (row) => row.strength,
+            render: (row) => <MetricValue kind="strength" value={row.strength} />,
+          },
         ]}
         server={{
           page: data.page,
@@ -220,6 +230,11 @@ export function ReportView({ report }: { report: ReportDetail }) {
         <Text mt="sm" component="div">
           <ReportOutlook report={report} />
         </Text>
+        {report.strength !== null && (
+          <Text size="sm" c="dimmed" mt="sm">
+            <StrengthLegend />
+          </Text>
+        )}
       </header>
       <article aria-label="Report text" className="report-text">
         {report.text}
