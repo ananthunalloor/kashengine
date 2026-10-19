@@ -11,7 +11,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required, login_required
 from django.contrib.auth.views import LoginView, LogoutView
 from django.core.paginator import Paginator
-from django.http import HttpRequest, HttpResponse
+from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
@@ -19,6 +19,7 @@ from django.views.decorators.cache import never_cache
 from apps.access import features
 from apps.access.middleware import access_for
 from apps.api import tokens
+from apps.api.app.ops_pages import PAGES, target
 from apps.api.models import ApiToken
 from apps.delivery.models import DeliveryLog
 from apps.delivery.service import configured_chat_ids
@@ -34,6 +35,7 @@ from apps.siteconfig import conf
 from . import queries
 from .datastar import is_datastar, querystring, read_filters, read_page, signals_json
 from .decorators import post_only
+from .public_preview import page_not_found
 
 if TYPE_CHECKING:
     from django.contrib.auth.base_user import AbstractBaseUser
@@ -138,6 +140,10 @@ def react_ops_page(request: HttpRequest, section: str) -> HttpResponse:
     Returns:
         The uncached React shell without operational data.
     """
+    try:
+        target(f"{section}/", PAGES)
+    except Http404:
+        return page_not_found(request)
     return react_app(request)
 
 

@@ -8,6 +8,7 @@ import { sessionQuery } from "../shared/api/session";
 import { zOpsMessage } from "../shared/api/generated/zod.gen";
 import { ApplicationShell } from "../shared/ui/ApplicationShell";
 import { AppError, AppLoading } from "../shared/ui/AppStatus";
+import { PageNotFound } from "../shared/ui/PageNotFound";
 
 function RootLayout() {
   const { data: session } = useSuspenseQuery(sessionQuery);
@@ -42,5 +43,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   component: RootLayout,
   pendingComponent: AppLoading,
   errorComponent: AppError,
+  notFoundComponent: PageNotFound,
   pendingMs: 150,
 });

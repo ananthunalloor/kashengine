@@ -6,6 +6,7 @@ from django.http import HttpRequest, HttpResponse
 from django.middleware.csrf import get_token
 from django.shortcuts import render
 from django.views.decorators.cache import never_cache
+from django.views.defaults import page_not_found as django_page_not_found
 from django.views.defaults import permission_denied as django_permission_denied
 
 
@@ -90,3 +91,19 @@ def permission_denied(request: HttpRequest, exception: Exception) -> HttpRespons
     if request.path.startswith("/app/"):
         return preview_response(request, page="access", status=403, feature="This page")
     return django_permission_denied(request, exception)
+
+
+@login_not_required
+def page_not_found(request: HttpRequest, exception: Exception | None = None) -> HttpResponse:
+    """Render unknown browser URLs without redirecting or revealing resolver details.
+
+    Args:
+        request: The incoming request for an undefined URL or missing resource.
+        exception: The original missing-page exception, if invoked as an error handler.
+
+    Returns:
+        A themed React page with HTTP 404, retaining Django's API fallback.
+    """
+    if request.path.startswith("/api/"):
+        return django_page_not_found(request, exception)
+    return preview_response(request, page="not-found", status=404)

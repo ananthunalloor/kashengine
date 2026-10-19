@@ -283,6 +283,10 @@ Preview authentication, logout, and subscription redirects stay within React.
 The original `/`, `/login/`, subscriber and Ops URLs remain unchanged. Django Admin,
 API documentation, and the documentation site are intentionally outside this migration.
 
+Undefined browser URLs display a themed React 404 with home/dashboard recovery links and
+retain HTTP 404 (also for anonymous visitors). React navigation has the same catch-all
+screen. Existing API error handling and protected-route permissions remain unchanged.
+
 The React application is developed in `frontend/`. Install the pinned pnpm release with
 Corepack, then run the Django server and Vite server together:
 

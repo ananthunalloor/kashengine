@@ -16,9 +16,10 @@ import {
 import { z } from "zod";
 
 import { usePageTitle } from "../../shared/ui/usePageTitle";
+import { PageNotFound } from "../../shared/ui/PageNotFound";
 
 export const publicPageSchema = z.object({
-  page: z.enum(["landing", "login", "access", "lockout"]),
+  page: z.enum(["landing", "login", "access", "lockout", "not-found"]),
   authenticated: z.boolean(),
   csrf: z.string(),
   next: z.string().default(""),
@@ -338,7 +339,9 @@ export function PublicPage({ data }: { data: PublicData }) {
         ? "Log in"
         : data.page === "access"
           ? "Not on your account"
-          : "Too many tries";
+          : data.page === "not-found"
+            ? "Page not found"
+            : "Too many tries";
   usePageTitle(title);
   return (
     <div className="public-site">
@@ -376,6 +379,8 @@ export function PublicPage({ data }: { data: PublicData }) {
           <Landing authenticated={data.authenticated} />
         ) : data.page === "login" ? (
           <Login data={data} />
+        ) : data.page === "not-found" ? (
+          <PageNotFound />
         ) : (
           <section className="public-auth" aria-labelledby="status-title">
             <h1 id="status-title" tabIndex={-1}>
