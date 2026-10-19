@@ -16,7 +16,7 @@ application. Restrict access to them and encrypt them.
 | PostgreSQL data | All records: news, scores, companies, IPOs, quotes, predictions, reports, users, API token hashes, settings, schedule, feeds, instruments, task runs, login events, audit events | Volume `postgres_data` |
 | `DJANGO_SECRET_KEY` and `SETTINGS_ENCRYPTION_KEY` | They decrypt the secrets that are saved on the dashboard (the Telegram bot token) | `.env.prod` |
 | `.env.prod` | All first values and the secrets | The server |
-| `minio_data` | Object storage data; MinIO admin credentials are in the shared environment file | Named volume |
+| `minio_data` | Silo object storage data; the historical volume name is retained for upgrades. Credentials use the `MINIO_ROOT_*` names for compatibility. | Named volume |
 | `caddy_data` | TLS keys and certificates. Optional: Caddy can get new ones. | Volume `caddy_data` |
 | `ollama_data` | Downloaded models. Optional: you can download them again. | Volume `ollama_data` |
 | Source revision | The code must match the database schema | Git |
@@ -160,7 +160,7 @@ is performed. Monitor the last successful run and storage capacity externally.
 
 Configure an existing private bucket, optional object prefix, region, and access/secret key.
 Leave the endpoint empty for Amazon S3. For an external compatible provider, enter its **HTTPS**
-endpoint and required region. The bundled MinIO service has one explicit private HTTP exception,
+endpoint and required region. The bundled Silo service has one explicit private HTTP exception,
 described below. Only a superuser can change these settings. Credentials are encrypted in
 the database with the existing settings encryption key; password fields never show saved values.
 Leave them blank to keep them, or use **Clear saved S3 credentials** when disabling/changing them.
@@ -173,11 +173,11 @@ Network calls run in the worker, not the web server. The supplied production wor
 the `egress` network. Add your provider to any external firewall allow-list. Rebuild the application
 image after deploying the new `boto3` dependency.
 
-### Bundled MinIO service
+### Bundled Silo service
 
-MinIO is included by default in development and production. Its S3 API is compatible with the
+Silo is included by default in development and production. Its S3 API is compatible with the
 backup uploader; no separate backup implementation is needed. The image is release-pinned.
-Review upstream maintenance/security updates when upgrading the deployment.
+Review Silo maintenance/security updates when upgrading the deployment.
 
 Before your first `docker compose up`, create your usual application environment file:
 
@@ -191,14 +191,20 @@ chmod 600 .env.prod
 ```
 
 If the environment file already exists, edit it instead of replacing it. Set unique
-`MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` values in `.env.dev` or `.env.prod`. Generate random values
-with `python -c "import secrets; print(secrets.token_urlsafe(32))"`. Blank values fail startup
-instead of using MinIO's built-in default login. Both `minio` and the one-shot `minio-init`
+`MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` values in `.env.dev` or `.env.prod`. Silo retains these
+variable names for compatibility. Generate random values with
+`python -c "import secrets; print(secrets.token_urlsafe(32))"`. Blank values fail startup instead of
+using a built-in default login. Both `silo` and the one-shot `silo-init`
 service use the same environment file as the application: `.env.dev` in development and
 `.env.prod` in production. These services therefore receive the shared file's other variables too;
 keep that file restricted. Caddy and docs still do not receive it.
 
-The initializer waits for MinIO readiness, then creates two **private** buckets:
+Before switching an existing installation, back up the object data and stop the old stack with
+`docker compose down --remove-orphans` (include the same `--env-file` and `-f` flags used to start
+production). Do not add `-v`: Silo reuses the existing `minio_data` volume. Never run both servers
+against that volume at the same time.
+
+The initializer waits for Silo readiness, then creates two **private** buckets:
 
 - `kashengine-backups`: encrypted database snapshots.
 - `kashengine-reports`: reserved for future report PDFs.
@@ -213,17 +219,17 @@ In development, the S3 API is at `http://127.0.0.1:9000` and the console is at
 `http://127.0.0.1:9001`, bound to loopback only. Sign into the console with the admin credentials
 to provision a dedicated backup access key. In production neither port is published; the service
 is only on the internal `backend` network, with no internet route. Do not open the console to the
-internet. For production administration, run the bundled `mc` inside the MinIO container (its root
+internet. For production administration, run the bundled `mc` inside the Silo container (its root
 credentials are already available there), or use a temporary loopback-only Compose port override
 and an SSH tunnel.
 
 For example, initialize an admin client in the container:
 
 ```bash
-docker compose exec minio sh -ec '
-  mc --config-dir /tmp/minio-admin alias set storage http://127.0.0.1:9000 \
+docker compose exec silo sh -ec '
+  mc --config-dir /tmp/silo-admin alias set storage http://127.0.0.1:9000 \
     "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
-  mc --config-dir /tmp/minio-admin admin info storage
+  mc --config-dir /tmp/silo-admin admin info storage
 '
 ```
 
@@ -238,28 +244,30 @@ In **Ops > Backups**, set:
 | Field | Value |
 | --- | --- |
 | Destination | S3 / S3-compatible bucket |
-| Endpoint | `http://minio:9000` |
+| Endpoint | `http://silo:9000` |
 | Bucket | `kashengine-backups` |
 | Prefix | `kashengine` |
 | Region | `us-east-1` |
-| Access / secret key | Dedicated MinIO upload credential |
+| Access / secret key | Dedicated S3 upload credential |
 
-The worker resolves the Docker service name `minio`. Do not put `localhost` in its endpoint:
-that points to the worker itself. Only the exact endpoint `http://minio:9000` is allowed over
-HTTP; all external endpoints still require HTTPS. S3-compatible endpoints use path-style bucket
-addressing. The backup is encrypted **before** it crosses this private HTTP connection; S3
-credentials and metadata still rely on Docker network isolation. Use external HTTPS storage if
+The worker resolves the Docker service name `silo`. Do not put `localhost` in its endpoint:
+that points to the worker itself. Only the exact endpoint `http://silo:9000` is allowed over
+HTTP; all external endpoints still require HTTPS. Existing saved configurations using
+`http://minio:9000` are redirected to Silo automatically. S3-compatible endpoints use path-style
+bucket addressing. The backup is encrypted **before** it crosses this private HTTP connection;
+S3 credentials and metadata still rely on Docker network isolation. Use external HTTPS storage if
 the host/network is not trusted.
 
 Set `BACKUP_ENCRYPTION_KEY`, enable the daily schedule, and run a test backup as described above.
-The MinIO service being enabled does not automatically enable database backups or choose it as
+The Silo service being enabled does not automatically enable database backups or choose it as
 the destination.
 
-Objects persist in the named volume `minio_data`. Do not run `docker compose down -v` if you want
-to retain them. A single-node MinIO instance on the application host is **not off-host disaster
+Objects persist in the existing named volume `minio_data`; keeping this volume name allows Silo
+to reuse data from the former MinIO service. Do not run `docker compose down -v` if you want to
+retain them. A single-node Silo instance on the application host is **not off-host disaster
 recovery**: replicate/copy backups to another machine or provider, or select external S3 for the
 automated backup destination. Protect the volume separately. Database snapshots do not include
-MinIO objects, including future PDF reports. A future report archive needs object backup and
+Silo objects, including future PDF reports. A future report archive needs object backup and
 database/object consistency procedures in addition to database recovery.
 
 ### Local / mounted drive folder

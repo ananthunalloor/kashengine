@@ -21,9 +21,9 @@
 <p class="mb-4">Celery Beat and a worker must be running. Local folders must already exist and
   be writable in the worker container (mount your drive there). External S3 requires HTTPS and permission
   to upload objects to the chosen bucket and prefix. Saved S3 credentials are encrypted and never displayed.</p>
-<p class="mb-4">For bundled MinIO, choose S3 storage, endpoint <code>http://minio:9000</code>,
+<p class="mb-4">For bundled Silo, choose S3 storage, endpoint <code>http://silo:9000</code>,
   bucket <code>kashengine-backups</code>, and region <code>us-east-1</code>. Use a dedicated
-  upload-only MinIO access key, not the root login. Only this private endpoint is allowed over HTTP;
+  upload-only S3 access key, not the root login. Only this private endpoint is allowed over HTTP;
   backup files remain encrypted.</p>
 {% if last_backup %}
 <p class="mb-4">Last run: <a href="{% url 'ops:run' last_backup.pk %}">{{ last_backup.get_status_display }}</a>

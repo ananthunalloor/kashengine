@@ -25,31 +25,31 @@ services:
       timeout: 5s
       retries: 10
 
-  minio:
-    image: quay.io/minio/minio:RELEASE.2025-04-08T15-41-24Z
+  silo:
+    image: docker.io/pgsty/silo:RELEASE.2026-10-18T00-00-00Z
     entrypoint: ["/bin/sh", "-ec"]
     command:
       - |
         : "$${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in .env.dev or .env.prod}"
         : "$${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env.dev or .env.prod}"
-        exec minio server /data --console-address ":9001"
+        exec silo server /data --console-address ":9001"
     volumes:
       - minio_data:/data
     healthcheck:
-      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:9000/minio/health/ready"]
+      test: ["CMD", "silo", "healthcheck", "ready"]
       interval: 5s
       timeout: 3s
       retries: 10
       start_period: 10s
 
   # Creates private buckets once; restarting it never deletes or overwrites existing objects.
-  minio-init:
-    image: quay.io/minio/minio:RELEASE.2025-04-08T15-41-24Z
+  silo-init:
+    image: docker.io/pgsty/silo:RELEASE.2026-10-18T00-00-00Z
     entrypoint: ["/bin/sh", "/initialize.sh"]
     volumes:
-      - ./deploy/minio/initialize.sh:/initialize.sh:ro
+      - ./deploy/silo/initialize.sh:/initialize.sh:ro
     depends_on:
-      minio:
+      silo:
         condition: service_healthy
     restart: "no"
 
@@ -131,4 +131,5 @@ volumes:
   ollama_data:
   caddy_data:
   caddy_config:
+  # Keep this historical volume name so existing MinIO data is reused by Silo.
   minio_data:

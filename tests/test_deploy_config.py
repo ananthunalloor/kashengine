@@ -255,9 +255,9 @@ def test_dev_has_no_port_on_all_interfaces(dev_config):
             assert port["host_ip"] == "127.0.0.1", f"{name} publishes {port['published']} publicly"
 
 
-def test_minio_is_private_persistent_and_initialized_in_prod(prod_config):
+def test_silo_is_private_persistent_and_initialized_in_prod(prod_config):
     services = prod_config["services"]
-    storage = services["minio"]
+    storage = services["silo"]
     assert set(storage["networks"]) == {"backend"}
     assert storage["read_only"] is True
     assert not storage.get("ports")
@@ -265,18 +265,19 @@ def test_minio_is_private_persistent_and_initialized_in_prod(prod_config):
         volume["source"] == "minio_data" and volume["target"] == "/data"
         for volume in storage["volumes"]
     )
-    initializer = services["minio-init"]
+    assert storage["healthcheck"]["test"] == ["CMD", "silo", "healthcheck", "ready"]
+    initializer = services["silo-init"]
     assert set(initializer["networks"]) == {"backend"}
     assert initializer["restart"] == "no"
     assert initializer["read_only"] is True
-    assert initializer["depends_on"]["minio"]["condition"] == "service_healthy"
+    assert initializer["depends_on"]["silo"]["condition"] == "service_healthy"
     assert not initializer.get("ports")
     assert storage["image"] == initializer["image"]
-    assert ":RELEASE." in storage["image"]
+    assert storage["image"] == "docker.io/pgsty/silo:RELEASE.2026-10-18T00-00-00Z"
 
 
-def test_minio_dev_ports_are_loopback_only(dev_config):
-    ports = dev_config["services"]["minio"]["ports"]
+def test_silo_dev_ports_are_loopback_only(dev_config):
+    ports = dev_config["services"]["silo"]["ports"]
     assert {port["published"] for port in ports} == {"9000", "9001"}
     assert {port["host_ip"] for port in ports} == {"127.0.0.1"}
 
@@ -285,23 +286,23 @@ def test_minio_dev_ports_are_loopback_only(dev_config):
     ("config_name", "env_file"),
     [("dev", ".env.dev"), ("prod", ".env.prod")],
 )
-def test_minio_uses_the_application_environment_file(request, config_name, env_file):
+def test_silo_uses_the_application_environment_file(request, config_name, env_file):
     config = request.getfixturevalue(config_name)
-    for service in ("minio", "minio-init"):
+    for service in ("silo", "silo-init"):
         assert config["services"][service]["env_file"] == env_file
 
 
 @pytest.mark.parametrize("config_name", ["dev_config", "prod_config"])
-def test_minio_receives_shared_environment_credentials(request, config_name):
+def test_silo_receives_shared_environment_credentials(request, config_name):
     config = request.getfixturevalue(config_name)
-    for service in ("minio", "minio-init"):
+    for service in ("silo", "silo-init"):
         environment = config["services"][service]["environment"]
         assert environment["MINIO_ROOT_USER"] == "test-minio-user"
         assert environment["MINIO_ROOT_PASSWORD"] == "test-minio-password"
 
 
-def test_minio_initialization_remains_idempotent():
-    script = (ROOT / "deploy" / "minio" / "initialize.sh").read_text()
+def test_silo_initialization_remains_idempotent():
+    script = (ROOT / "deploy" / "silo" / "initialize.sh").read_text()
     assert "set -eu" in script
     assert "mb --ignore-existing storage/kashengine-backups" in script
     assert "mb --ignore-existing storage/kashengine-reports" in script

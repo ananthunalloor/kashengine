@@ -1,4 +1,4 @@
-"""Opt-in end-to-end verification against an isolated, initialized MinIO test service."""
+"""Opt-in end-to-end verification against an isolated, initialized Silo test service."""
 
 import os
 from unittest.mock import patch
@@ -17,16 +17,16 @@ from apps.siteconfig import crypto
 pytestmark = [
     pytest.mark.django_db(transaction=True),
     pytest.mark.skipif(
-        not os.environ.get("TEST_BACKUP_MINIO_ENDPOINT"),
-        reason="Set TEST_BACKUP_MINIO_ENDPOINT for an isolated, initialized MinIO test service.",
+        not os.environ.get("TEST_BACKUP_SILO_ENDPOINT"),
+        reason="Set TEST_BACKUP_SILO_ENDPOINT for an isolated, initialized Silo test service.",
     ),
 ]
 
 
-def test_real_minio_encrypted_backup_private_buckets_and_restore(boss, settings):
-    endpoint = os.environ["TEST_BACKUP_MINIO_ENDPOINT"]
-    access = os.environ["TEST_BACKUP_MINIO_ACCESS_KEY"]
-    secret = os.environ["TEST_BACKUP_MINIO_SECRET_KEY"]
+def test_real_silo_encrypted_backup_private_buckets_and_restore(boss, settings):
+    endpoint = os.environ["TEST_BACKUP_SILO_ENDPOINT"]
+    access = os.environ["TEST_BACKUP_SILO_ACCESS_KEY"]
+    secret = os.environ["TEST_BACKUP_SILO_SECRET_KEY"]
     settings.BACKUP_ENCRYPTION_KEY = Fernet.generate_key().decode()
     storage = boto3.client(
         "s3",
@@ -44,19 +44,19 @@ def test_real_minio_encrypted_backup_private_buckets_and_restore(boss, settings)
             pk=1,
             enabled=True,
             destination="s3",
-            endpoint_url="http://minio:9000",
+            endpoint_url="http://silo:9000",
             bucket="kashengine-backups",
             prefix="integration",
             access_key_encrypted=crypto.encrypt(access),
             secret_key_encrypted=crypto.encrypt(secret),
         )
         backup_automation.save_configuration(config, boss)
-        Company.objects.create(symbol="MINIO", name="MinIO test company")
+        Company.objects.create(symbol="SILO", name="Silo test company")
         # Only transport is redirected to the test server's loopback-published port.
         factory = boto3.client
 
         def connect(service, **kwargs):
-            assert kwargs["endpoint_url"] == "http://minio:9000"
+            assert kwargs["endpoint_url"] == "http://silo:9000"
             assert kwargs["config"].s3 == {"addressing_style": "path"}
             return factory(service, **{**kwargs, "endpoint_url": endpoint})
 
@@ -67,12 +67,12 @@ def test_real_minio_encrypted_backup_private_buckets_and_restore(boss, settings)
         with response["Body"] as body:
             encrypted = body.read()
         assert encrypted.startswith(backups.ENCRYPTED_HEADER)
-        assert b"MinIO test company" not in encrypted
+        assert b"Silo test company" not in encrypted
         assert response["ContentType"] == "application/octet-stream"
         assert httpx.get(f"{endpoint}/kashengine-backups/{key}", timeout=10).status_code == 403
         assert httpx.get(f"{endpoint}/kashengine-reports/", timeout=10).status_code == 403
         Company.objects.create(symbol="REMOVE", name="Remove")
         backups.restore_database(encrypted, boss, confirmation="RESTORE")
-        assert list(Company.objects.values_list("symbol", flat=True)) == ["MINIO"]
+        assert list(Company.objects.values_list("symbol", flat=True)) == ["SILO"]
     finally:
         storage.close()
