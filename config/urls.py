@@ -21,7 +21,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("health/", health, name="health"),
     path("api/", include("apps.api.urls")),
-    path("ops/", include("apps.ops.urls")),
+    path("ops/", include("apps.ops.react_urls")),
     path("", include("apps.web.urls")),
     re_path(r"^(?!api/).*$", page_not_found),
 ]

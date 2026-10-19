@@ -41,7 +41,7 @@ afterEach(() => {
 });
 
 async function showReports({
-  path = "/app/reports/",
+  path = "/reports/",
   list = page,
   detail = report,
   status = 200,
@@ -78,7 +78,7 @@ async function showReports({
   clients.push(client);
   const router = createRouter({
     routeTree,
-    basepath: "/app",
+    basepath: "/",
     trailingSlash: "always",
     history: createMemoryHistory({ initialEntries: [path] }),
     context: { queryClient: client },
@@ -99,15 +99,12 @@ it("loads typed reports and links to real preview routes and the existing pages"
   await showReports();
   expect(await screen.findByRole("heading", { name: "Reports", level: 1 })).toBeInTheDocument();
   const link = screen.getByRole("link", { name: /Wednesday, 7 October 2026/ });
-  expect(link).toHaveAttribute("href", "/app/reports/2026-10-07/");
+  expect(link).toHaveAttribute("href", "/reports/2026-10-07/");
   expect(screen.getByRole("cell", { name: "Up" })).toBeInTheDocument();
   expect(screen.getByRole("cell", { name: "7.3/10" })).toBeInTheDocument();
   expect(screen.getByText("7.3/10")).toHaveAttribute("data-tone", "positive");
   expect(screen.getByRole("link", { name: /Compare with/ })).toHaveAttribute("href", "/reports/");
-  expect(screen.getByRole("link", { name: "Next" })).toHaveAttribute(
-    "href",
-    "/app/reports/?page=2",
-  );
+  expect(screen.getByRole("link", { name: "Next" })).toHaveAttribute("href", "/reports/?page=2");
   expect(screen.queryByRole("link", { name: "Previous" })).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
   expect(screen.getAllByRole("main")).toHaveLength(1);
@@ -117,7 +114,7 @@ it("loads typed reports and links to real preview routes and the existing pages"
 
 it("keeps a lower-strength down outlook separate from strength color in report details", async () => {
   await showReports({
-    path: "/app/reports/2026-10-07/",
+    path: "/reports/2026-10-07/",
     detail: { ...report, prediction: "down", strength: "6.3/10" },
   });
   expect(await screen.findByText("6.3/10")).toHaveAttribute("data-tone", "caution");
@@ -134,29 +131,29 @@ it("navigates to a report without leaving the React application", async () => {
   expect(screen.getByText(/8:30 am IST/i)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Older:/ })).toHaveAttribute(
     "href",
-    "/app/reports/2026-10-05/",
+    "/reports/2026-10-05/",
   );
   expect(screen.getByRole("link", { name: /Newer:/ })).toHaveAttribute(
     "href",
-    "/app/reports/2026-10-09/",
+    "/reports/2026-10-09/",
   );
   expect(screen.getAllByRole("main")).toHaveLength(1);
   expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
 });
 
 it("supports bookmarked pagination and omits out-of-range controls", async () => {
-  await showReports({ path: "/app/reports/?page=2", list: { ...page, page: 2 } });
+  await showReports({ path: "/reports/?page=2", list: { ...page, page: 2 } });
   expect(await screen.findByText("Page 2 of 2")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Previous" })).toHaveAttribute(
     "href",
-    "/app/reports/?page=1",
+    "/reports/?page=1",
   );
   expect(screen.queryByRole("link", { name: "Next" })).not.toBeInTheDocument();
   expect(fetch).toHaveBeenCalledWith("/api/app/reports?page=2", expect.anything());
 });
 
 it("searches and filters reports before paging and preserves server sorting", async () => {
-  const router = await showReports({ path: "/app/reports/?page=2&sort=-strength&page_size=10" });
+  const router = await showReports({ path: "/reports/?page=2&sort=-strength&page_size=10" });
   const search = await screen.findByRole("searchbox", { name: "Search reports" });
   search.focus();
   fireEvent.change(search, { target: { value: "banks" } });
@@ -197,7 +194,7 @@ it.each([false, true])("renders the empty state with staff hint = %s", async (st
 
 it("supports direct detail loading and an unsent report", async () => {
   await showReports({
-    path: "/app/reports/2026-10-07/",
+    path: "/reports/2026-10-07/",
     detail: { ...report, deliveries: [], older: null, newer: null, prediction: "", strength: null },
   });
   expect(await screen.findByText("This report was not sent.")).toBeInTheDocument();
@@ -216,7 +213,7 @@ it.each([403, 404])(
     expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back to Reports" })).toHaveAttribute(
       "href",
-      "/app/reports/",
+      "/reports/",
     );
   },
 );

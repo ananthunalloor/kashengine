@@ -326,8 +326,6 @@ apps/web/templatetags/web_extras.py::rupees
 apps/web/templatetags/web_extras.py::signed
 apps/web/templatetags/web_extras.py::times
 apps/web/templatetags/web_extras.py::tone
-apps/web/urls.py::IsoDateConverter.to_python
-apps/web/urls.py::IsoDateConverter.to_url
 apps/web/views.py::_account_context
 apps/web/views.py::_filter_view
 apps/web/views.py::_page

@@ -155,7 +155,7 @@ def test_bearer_and_inactive_sessions_cannot_read_runs(client, staff, runs, auth
 
 
 def test_preview_routes_are_staff_only_and_legacy_remains(client, member, staff, runs):
-    for path in ["/app/ops/runs/", f"/app/ops/runs/{runs[0].pk}/"]:
+    for path in ["/ops/runs/", f"/ops/runs/{runs[0].pk}/"]:
         assert client.get(path).status_code == 302
         client.force_login(member)
         assert client.get(path).status_code == 403
@@ -166,6 +166,6 @@ def test_preview_routes_are_staff_only_and_legacy_remains(client, member, staff,
         assert "no-store" in response["Cache-Control"]
         client.logout()
     client.force_login(staff)
-    assert client.get("/app/ops/runs/999999/").status_code == 404
-    assert b'id="root"' not in client.get("/ops/runs/").content
+    assert client.get("/ops/runs/999999/").status_code == 404
+    assert "web/spa.html" in [t.name for t in client.get("/ops/runs/").templates]
     assert client.post(URL).status_code == 405

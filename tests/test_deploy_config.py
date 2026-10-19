@@ -75,6 +75,7 @@ def test_caddy_gets_no_app_secrets(prod):
     assert "env_file" not in caddy
     assert set(caddy["environment"]) == {
         "SITE_ADDRESS",
+        "OLD_SITE_ADDRESS",
         "ACME_EMAIL",
         "ADMIN_ALLOWED_IPS",
         "DOCS_ALLOWED_IPS",
@@ -107,13 +108,29 @@ def test_caddyfile_limits_the_ops_pages_like_the_admin_site():
         "/admin/*",
         "/ops",
         "/ops/*",
-        "/app/ops",
-        "/app/ops/*",
         "/api/app/ops",
         "/api/app/ops/*",
     ):
         assert path in rule.split()
     assert "not remote_ip {$ADMIN_ALLOWED_IPS" in rule
+
+
+def test_archive_has_its_own_host_policy_and_whole_site_ip_gate(prod, dev):
+    text = (ROOT / "deploy" / "caddy" / "Caddyfile").read_text()
+    main, archive = text.split("# The legacy interface is isolated", 1)
+    assert "'unsafe-eval'" not in main
+    assert "cdn.jsdelivr.net" not in main
+    assert "{$OLD_SITE_ADDRESS:old.localhost}" in archive
+    assert "X-Robots-Tag" in archive
+    assert "noindex, nofollow, noarchive" in archive
+    assert "@archive_denied not remote_ip {$ADMIN_ALLOWED_IPS" in archive
+    assert archive.index("handle @archive_denied") < archive.index("\thandle {\n")
+    assert "/api/app/ops/actions/backups/import/" in main
+    assert "max_size 141MiB" in archive
+    assert prod["services"]["caddy"]["environment"]["OLD_SITE_ADDRESS"] == (
+        "${OLD_SITE_ADDRESS:-old.${SITE_ADDRESS}}"
+    )
+    assert dev["services"]["caddy"]["environment"]["OLD_SITE_ADDRESS"] == "old.localhost"
 
 
 def site_block_lines() -> list[str]:
@@ -182,7 +199,7 @@ def test_caddyfile_adapts_and_runs_the_admin_limit_first(monkeypatch):
     ]
     texts = [json.dumps(route) for route in handled]
     admin = next(i for i, text in enumerate(texts) if "/ops/*" in text)
-    for path in ("/app/ops", "/app/ops/*", "/api/app/ops", "/api/app/ops/*"):
+    for path in ("/ops", "/ops/*", "/api/app/ops", "/api/app/ops/*"):
         assert path in texts[admin]
     catch_all = next(i for i, route in enumerate(handled) if "match" not in route)
     assert admin < catch_all

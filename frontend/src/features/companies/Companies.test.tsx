@@ -39,7 +39,7 @@ afterEach(() => {
 });
 
 async function showCompanies({
-  path = "/app/companies/",
+  path = "/companies/",
   body = data,
   status = 200,
   staff = false,
@@ -69,7 +69,7 @@ async function showCompanies({
   clients.push(client);
   const router = createRouter({
     routeTree,
-    basepath: "/app",
+    basepath: "/",
     trailingSlash: "always",
     history: createMemoryHistory({ initialEntries: [path] }),
     context: { queryClient: client },
@@ -104,14 +104,14 @@ it("shows directory fields, safe source links, IST dates and preview navigation"
   expect(screen.getByRole("link", { name: /Compare with/ })).toHaveAttribute("href", "/companies/");
   expect(screen.getByRole("link", { name: "Companies", current: "page" })).toHaveAttribute(
     "href",
-    "/app/companies/",
+    "/companies/",
   );
   expect(screen.getAllByRole("main")).toHaveLength(1);
   expect(document.querySelector("style")).toBeNull();
 });
 
 it("restores bookmarked search, debounces typing, resets page and keeps focus", async () => {
-  const router = await showCompanies({ path: "/app/companies/?q=bank&page=2" });
+  const router = await showCompanies({ path: "/companies/?q=bank&page=2" });
   const input = await screen.findByRole("searchbox");
   expect(input).toHaveValue("bank");
   input.focus();
@@ -139,11 +139,11 @@ it("submits immediately and cancels pending typing on clear", async () => {
 
 it("preserves search while paging and restores it on back navigation", async () => {
   const router = await showCompanies({
-    path: "/app/companies/?q=bank&page=2",
+    path: "/companies/?q=bank&page=2",
     body: { ...data, page: 2 },
   });
   const next = await screen.findByRole("link", { name: "Next" });
-  expect(next).toHaveAttribute("href", "/app/companies/?q=bank&page=3");
+  expect(next).toHaveAttribute("href", "/companies/?q=bank&page=3");
   fireEvent.click(next);
   await waitFor(() => expect(router.state.location.search).toMatchObject({ q: "bank", page: 3 }));
   router.history.back();
@@ -164,7 +164,7 @@ it.each([false, true])(
 it("hides import guidance for a filtered empty result", async () => {
   await showCompanies({
     staff: true,
-    path: "/app/companies/?q=unmatched",
+    path: "/companies/?q=unmatched",
     body: { items: [], total: 0, page: 1, pages: 1 },
   });
   expect(await screen.findByText(/No company matches/)).toBeInTheDocument();
@@ -186,7 +186,7 @@ it.each([401, 403])("handles %s access errors within the shell", async (status) 
   );
   expect(screen.getByRole("link", { name: "Back to Companies" })).toHaveAttribute(
     "href",
-    "/app/companies/",
+    "/companies/",
   );
   expect(screen.getAllByRole("main")).toHaveLength(1);
 });
@@ -206,7 +206,7 @@ it("surfaces malformed responses and retries successfully", async () => {
 
 it("sends server sorting, page size and exact sector filters and restores them from the URL", async () => {
   const router = await showCompanies({
-    path: "/app/companies/?q=bank&page=2&sort=-symbol&page_size=10&sector=Finance",
+    path: "/companies/?q=bank&page=2&sort=-symbol&page_size=10&sector=Finance",
     body: { ...data, page_size: 10, sectors: ["Finance", "Tools"] },
   });
   expect(await screen.findByRole("columnheader", { name: "Symbol" })).toHaveAttribute(

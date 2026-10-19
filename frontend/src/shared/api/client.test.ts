@@ -139,7 +139,7 @@ it("extracts only the exact CSRF cookie", () => {
 });
 
 it("keeps the current path, filters, and fragment in the sign-in return URL", () => {
-  const url = loginUrl({ pathname: "/app/", search: "?q=banks", hash: "#recent" });
-  expect(new URL(url, "http://localhost").pathname).toBe("/app/login/");
-  expect(new URL(url, "http://localhost").searchParams.get("next")).toBe("/app/?q=banks#recent");
+  const url = loginUrl({ pathname: "/", search: "?q=banks", hash: "#recent" });
+  expect(new URL(url, "http://localhost").pathname).toBe("/login/");
+  expect(new URL(url, "http://localhost").searchParams.get("next")).toBe("/?q=banks#recent");
 });

@@ -23,7 +23,7 @@ def test_landing_is_public_and_explains_the_capabilities(client):
     assert "Illustrative preview" in response.text
     assert "Not financial advice." in response.text
     assert f'href="{reverse("web:login")}"' in response.text
-    assert f'href="{reverse("docs")}"' in response.text
+    assert "/api/v1/docs" in response.text
 
 
 def test_dashboard_still_requires_login(client):

@@ -47,7 +47,7 @@ def test_session_and_feature_are_required(client, member, make_token, auth, issu
     response = client.get(path)
     assert response.status_code == 403
     assert response.json()["code"] == "feature_not_available"
-    assert client.get(f"/app/ipos/{issues[0].pk}/" if detail else "/app/ipos/").status_code == 403
+    assert client.get(f"/ipos/{issues[0].pk}/" if detail else "/ipos/").status_code == 403
 
 
 @pytest.mark.parametrize("is_staff", [False, True])
@@ -192,19 +192,19 @@ def test_invalid_filters_are_problems(client, member, params):
 
 def test_preview_routes_and_original_pages(client, member):
     ipo = Ipo.objects.create(name="Compare me")
-    assert client.get("/app/ipos/").status_code == 302
-    assert client.get(f"/app/ipos/{ipo.pk}/").status_code == 302
+    assert client.get("/ipos/").status_code == 302
+    assert client.get(f"/ipos/{ipo.pk}/").status_code == 302
     client.force_login(member)
-    for path in ("/app/ipos/", f"/app/ipos/{ipo.pk}/"):
+    for path in ("/ipos/", f"/ipos/{ipo.pk}/"):
         response = client.get(path)
         assert response.status_code == 200
         assert 'id="root"' in response.text
         assert "no-store" in response["Cache-Control"]
-    assert "web/ipos.html" in [t.name for t in client.get("/ipos/").templates]
-    assert "web/ipo_detail.html" in [t.name for t in client.get(f"/ipos/{ipo.pk}/").templates]
+    assert "web/spa.html" in [t.name for t in client.get("/ipos/").templates]
+    assert "web/spa.html" in [t.name for t in client.get(f"/ipos/{ipo.pk}/").templates]
     assert client.get(f"{URL}/999999").json()["code"] == "not_found"
     assert client.get(f"{URL}/invalid").status_code == 422
-    assert client.get("/app/ipos/999999/").status_code == 404
+    assert client.get("/ipos/999999/").status_code == 404
 
 
 def test_empty_list(client, member):

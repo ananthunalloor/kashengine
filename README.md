@@ -108,7 +108,7 @@ You need a server with Docker, a domain name, and 16 GB RAM or more (for the pro
 
 1. Point the DNS record of your domain to the server. Open ports 80 and 443 (TCP) and 443 (UDP) on the firewall.
 
-2. Make the env file and put real values in it. Set `SITE_ADDRESS`, `ACME_EMAIL`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, and all the `change-me` values:
+2. Make the env file and put real values in it. Set `SITE_ADDRESS`, `OLD_SITE_ADDRESS`, `ACME_EMAIL`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, and all the `change-me` values. Point both hostnames at the server and include both in the allowed hosts and trusted origins:
 
    ```bash
    cp .env.prod.example .env.prod
@@ -145,7 +145,7 @@ To test the prod stack on your own computer, set `SITE_ADDRESS=localhost`. Caddy
 | Limits | Caddy closes slow clients, limits the request body to 2 MB, and has no admin API. |
 | Containers | Every container drops all Linux capabilities and cannot gain new ones. Web, worker, beat, and Caddy have a read-only root file system. Logs are rotated. |
 | Secrets | Caddy gets only its four values. It does not get the database password or the Telegram token. |
-| Admin pages | Set `ADMIN_ALLOWED_IPS` to limit `/admin/`, `/ops/`, `/app/ops/`, and `/api/app/ops/` to your IP addresses or VPN range. |
+| Admin pages | Set `ADMIN_ALLOWED_IPS` to limit `/admin/`, `/ops/`, `/ops/`, and `/api/app/ops/` to your IP addresses or VPN range. |
 
 Notes:
 
@@ -181,7 +181,7 @@ use the new display format; already-sent Telegram messages are not edited.
 
 ## Ops pages
 
-The Ops pages are for admins. The complete React preview is at `/app/ops/`; the original
+The Ops pages are for admins. The complete React workspace is at `/ops/`; the original
 `/ops/` pages and URLs remain available. Staff can inspect operations; database backups require
 a superuser even for viewing. Only superusers can make changes (start jobs, manage users,
 settings, schedules, feeds, instruments, and backups). Other users get a 403 response.
@@ -213,7 +213,7 @@ How it works:
 - The log file is `logs/app.log`. In dev, the server writes it when you run it outside the tests. In prod, web, worker, and beat share it in the `logs` volume. Set `DJANGO_LOG_TO_FILE=false` to turn it off in dev.
 - The `httpx` logger is now at WARNING level. At INFO level it wrote the full Telegram URL, which contains the bot token.
 - The IP address of a login comes from `X-Forwarded-For`. Caddy sets this header, and the web container has no other way in.
-- `ADMIN_ALLOWED_IPS` limits `/ops/`, `/app/ops/`, and `/api/app/ops/` in the same way as `/admin/`.
+- `ADMIN_ALLOWED_IPS` limits `/ops/`, `/ops/`, and `/api/app/ops/` in the same way as `/admin/`.
 
 ## Features and subscriptions
 
@@ -273,15 +273,35 @@ uv run pytest                   # test (a warning fails the run)
 uv run pre-commit install       # turn on commit hooks (ruff, ruff format, ty)
 ```
 
-All product pages now have React equivalents. The public landing preview is at
-`/app/landing/`, and the login preview is at `/app/login/`. The landing page preserves the
+React is the main UI at the original URLs: `/`, `/login/`, `/dashboard/`, `/news/`, and
+the other subscriber and `/ops/` pages. The former `/app/` prefix has been removed.
+The landing page preserves the
 capabilities, illustrative market brief, workflow, research limitations, and shared purple
 light/dark theme. Login uses native POSTs to Django's existing authentication and django-axes;
 passwords are never serialized into presentation data or client caches. Real feature/permission
-denials and login lockouts render React with their original 403/429 statuses in the preview.
-Preview authentication, logout, and subscription redirects stay within React.
-The original `/`, `/login/`, subscriber and Ops URLs remain unchanged. Django Admin,
+denials and login lockouts render React with their original 403/429 statuses.
+Authentication, logout, and subscription redirects stay within React. Django Admin,
 API documentation, and the documentation site are intentionally outside this migration.
+
+### Archived Django interface
+
+The original Django-template UI is available only at `https://old.<your-domain>/`
+(`https://old.localhost/` in development). Every legacy page and action requires an active
+superuser; ordinary staff and members receive 403. Anonymous visitors are sent to the archive's
+login form, which accepts only active superusers and retains CSRF and django-axes protection.
+Sessions and CSRF cookies are host-only: sign in separately on the archive.
+
+All archived pages show an **Archived Django interface — superuser access only** notice,
+use private/no-store responses, and send `X-Robots-Tag: noindex, nofollow, noarchive`.
+Existing actions still operate on the live database; **archived does not mean read-only**.
+The archive does not mount the APIs, Django Admin, docs, or React routes. The whole archive
+also respects `ADMIN_ALLOWED_IPS` at Caddy.
+
+Set `OLD_SITE_ADDRESS=old.your-domain.com` (defaults to `old.${SITE_ADDRESS}`), add its DNS
+record pointing to this server, and include it in `DJANGO_ALLOWED_HOSTS` and
+`DJANGO_CSRF_TRUSTED_ORIGINS`. Rebuild/redeploy Caddy and web with the updated Compose files.
+Do not set a shared parent-domain session or CSRF cookie. Local development uses
+`old.localhost`; add a local hosts entry if your resolver does not support `.localhost`.
 
 Undefined browser URLs display a themed React 404 with home/dashboard recovery links and
 retain HTTP 404 (also for anonymous visitors). React navigation has the same catch-all
@@ -296,47 +316,45 @@ pnpm --dir frontend install --frozen-lockfile
 pnpm --dir frontend dev
 ```
 
-Open `http://localhost:8000/app/` while signed in to view the authenticated React shell.
-The preview loads navigation, feature permissions, subscription notices, and the staff flag
-from the session-only private API at `/api/app/session`. Reports, News, IPOs, Markets, Companies, and Delivery open React previews at
-`/app/reports/`, `/app/news/`, `/app/ipos/`, `/app/markets/`, `/app/companies/`, and `/app/delivery/`; other links still open the existing Django pages. The shell includes a mobile menu,
+Open `http://localhost:8000/` for the landing page, then sign in to the React dashboard.
+The application loads navigation, feature permissions, subscription notices, and the staff flag
+from the session-only private API at `/api/app/session`. Reports, News, IPOs, Markets, Companies, and Delivery open React pages at
+`/reports/`, `/news/`, `/ipos/`, `/markets/`, `/companies/`, and `/delivery/`. The shell includes a mobile menu,
 a persistent light/dark toggle, and CSRF-protected logout.
 An expired session returns to login; API errors display a retryable error page.
 
-The Reports preview includes paginated history, full text, delivery status, and adjacent-report
-navigation, using `/api/app/reports` and `/api/app/reports/{day}`. The original `/reports/` pages
-remain unchanged for comparison. Both versions enforce the same Reports access rules; delivery
+The Reports page includes paginated history, full text, delivery status, and adjacent-report
+navigation, using `/api/app/reports` and `/api/app/reports/{day}`. Reports access rules are preserved; delivery
 recipients are never exposed and delivery errors are staff-only.
 
-The News preview preserves headline/summary search, source and sentiment filters, pagination,
+The News page preserves headline/summary search, source and sentiment filters, pagination,
 model explanations, company names, and the existing 1.0-10.0 score scale. Filters live in the URL
 for bookmarks and back/forward navigation. Search updates after a short debounce; Apply and Clear
-filters are also available. `/api/app/news` uses the same feature and subscription rules as `/news/`,
-which remains unchanged for comparison.
+filters are also available. `/api/app/news` and `/news/` enforce the same feature and subscription rules.
 
-The IPO preview includes Active and listed history, search, board/verdict/status filters,
-pagination, and issue detail pages at `/app/ipos/{id}/`. Facts retain the original units and
+The IPO page includes Active and listed history, search, board/verdict/status filters,
+pagination, and issue detail pages at `/ipos/{id}/`. Facts retain the original units and
 freshness notices; verdict evidence uses saved scores rather than recalculating them.
 The session-only `/api/app/ipos` and `/api/app/ipos/{id}` endpoints enforce the IPO feature and
-subscription rules. Existing `/ipos/` pages remain unchanged for comparison.
+subscription rules.
 
-The Markets preview at `/app/markets/` shows the existing accuracy/baseline statistics, latest
+The Markets page at `/markets/` shows the existing accuracy/baseline statistics, latest
 saved instrument closes with their trading dates, and the newest 30 predictions. Right, Wrong,
 Waiting, and No session remain distinct; strength is not a probability. Its session-only
 `/api/app/markets` endpoint reuses the existing queries and evaluation statistics without
-downloading prices or evaluating predictions. The original `/markets/` page remains unchanged.
+downloading prices or evaluating predictions.
 
-The Companies preview at `/app/companies/` preserves name/symbol/sector search, alphabetical
+The Companies page at `/companies/` preserves name/symbol/sector search, alphabetical
 ordering, pagination, source links, and last-fetched dates in IST. Search is debounced and stored
 in the URL for bookmarks and browser history. The session-only `/api/app/companies` endpoint
 uses the existing company query and enforces company feature/subscription rules; scraped data
-and aliases are not exposed. The original `/companies/` page remains unchanged.
+and aliases are not exposed.
 
-The Delivery preview at `/app/delivery/` shows the newest 50 send attempts, configuration chat
+The Delivery page at `/delivery/` shows the newest 50 send attempts, configuration chat
 count, channels, results, and IST timestamps. Report links stay inside React and are shown only
 when Reports is available. The session-only `/api/app/delivery` endpoint enforces Delivery access,
 excludes recipient identifiers and bot credentials, and returns diagnostics only to staff.
-Reading the preview never sends messages; the original `/delivery/` page remains unchanged.
+Reading the page never sends messages.
 
 React shares the landing page's purple accent, white surfaces, sans-serif typography, and rounded
 cards through `static/css/brand-tokens.css`. Light mode is the default; a saved dark-mode choice
@@ -354,45 +372,44 @@ Markets history and Delivery deliberately remain limited to the latest 30 predic
 attempts; their local search, filters, sorting, and pagination are labeled with those limits.
 No table fetches external data, recalculates scores, sends messages, or exposes recipient fields.
 
-Today now has a React preview at `/app/dashboard/`, with a feature-filtered private endpoint at
+Today is served by React at `/dashboard/`, with a feature-filtered private endpoint at
 `/api/app/today`. It shows the latest saved outlook and its actual target date, strength and
 component scores, up to five saved cues, accuracy/baseline warnings, the strongest stories from
 the last 36 hours, grouped IPOs, saved closes, and the latest report link. Disabled sections are
 excluded by the server. News and IPO groups retain their existing four-item limits; the tables
 search/filter/sort those bounded summaries, with links to the full React lists.
-The original `/dashboard/` and login landing behavior remain unchanged.
+Successful logins open `/dashboard/` unless a safe same-host return URL was supplied.
 
-Account opens `/app/account/`, showing subscription details, feature access, and a searchable,
+Account opens `/account/`, showing subscription details, feature access, and a searchable,
 filterable TanStack table of the latest 20 masked API tokens. Its private `/api/app/account`
 endpoint counts all active tokens for issuance limits. Session-only, CSRF-protected POST actions
 at `/api/app/account/tokens` and `/api/app/account/tokens/{id}/revoke` reuse existing issuance,
 expiry, ownership, and audit rules. New secrets appear once in component-local state, never in
 URLs, browser storage, or React Query caches; hide or leave the page to discard them.
 Account remains accessible after subscription expiry. When public API access is disabled,
-creation is denied, but existing tokens can still be viewed and revoked. The original
-`/account/` page remains available.
+creation is denied, but existing tokens can still be viewed and revoked.
 
 The React header includes an initials avatar with an account popover (username, email, role,
 subscription status, Account details, and secure logout), plus an icon-only theme toggle.
 Both controls work on mobile and desktop and retain keyboard-accessible labels and focus behavior.
 
-Staff can preview task history at `/app/ops/runs/` and stored run diagnostics at
-`/app/ops/runs/{id}/`. The TanStack history searches and filters all retained runs on the server
+Staff can view task history at `/ops/runs/` and stored run diagnostics at
+`/ops/runs/{id}/`. The TanStack history searches and filters all retained runs on the server
 before pagination, with job/result/trigger filters and URL-preserved sorting and page size.
 Active run details refresh every three seconds and stop on completion or error. Status badges
-distinguish waiting, running, done, and failed runs. These read-only previews use staff-only
+distinguish waiting, running, done, and failed runs. These read-only pages use staff-only
 session endpoints under `/api/app/ops/runs`, with the same admin IP restrictions as `/ops/`.
-Job execution and all other Ops controls now also have React pages under `/app/ops/`;
-the original run pages are unchanged.
+Job execution and all other Ops controls now also have React pages under `/ops/`;
+the original template pages are restricted to superusers on the archive hostname.
 
-The read-only Ops audit preview is at `/app/ops/audit/`, backed by staff-only
+The read-only Ops audit page is at `/ops/audit/`, backed by staff-only
 `GET /api/app/ops/audit`. Its TanStack table searches recorded names, actions, targets, details,
 and addresses across all retained records before pagination. Exact recorded-admin/action filters,
 sorting, and page size are preserved in the URL. Actor names survive account renames/deletion;
 details render as plain text, with timestamps in IST. Audit reads never create or alter events.
-The original `/ops/audit/` remains available, with the same staff and admin IP restrictions.
+The original audit template is available only on the superuser archive.
 
-The full Ops preview includes Overview, Jobs, Logs, Metrics, Users/access/subscriptions,
+The full Ops workspace includes Overview, Jobs, Logs, Metrics, Users/access/subscriptions,
 Logins/lockouts, Settings, Schedule, Feeds, Instruments, Configuration, and Backups.
 Superuser actions reuse the original backend handlers, confirmations, validations, and audit
 logging through private session/CSRF endpoints. Secret settings are never echoed; backup
@@ -400,7 +417,7 @@ restore retains its maintenance warnings, typed confirmation, and sign-out. Full
 server-side TanStack search, filters, sorting, and pagination; metric and recent-history
 snapshots are explicitly bounded. The landing theme and strict CSP apply throughout.
 
-Original pages remain Django-rendered and available during the preview rollout. Run
+Archived pages remain Django-rendered on the old subdomain only. Run
 `pnpm --dir frontend build` to create the production bundle and
 `pnpm --dir frontend build:legacy-css` to rebuild the stylesheet still used by Django templates.
 The Docker image builds the React bundle automatically.

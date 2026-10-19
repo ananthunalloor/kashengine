@@ -55,7 +55,7 @@ afterEach(() => {
 
 async function showRuns({
   staff = true,
-  path = "/app/ops/runs/",
+  path = "/ops/runs/",
   status = 200,
   malformed = false,
   rows = [pending, success],
@@ -117,7 +117,7 @@ async function showRuns({
   clients.push(client);
   const router = createRouter({
     routeTree,
-    basepath: "/app",
+    basepath: "/",
     trailingSlash: "always",
     history: createMemoryHistory({ initialEntries: [path] }),
     context: { queryClient: client },
@@ -145,7 +145,7 @@ async function showRuns({
   };
 }
 
-it.each(["/app/ops/runs/", "/app/ops/runs/1/"])(
+it.each(["/ops/runs/", "/ops/runs/1/"])(
   "blocks non-staff route %s before fetching data",
   async (path) => {
     const { fetchMock } = await showRuns({ staff: false, path });
@@ -158,7 +158,7 @@ it.each(["/app/ops/runs/", "/app/ops/runs/1/"])(
     ).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back to Task runs" })).toHaveAttribute(
       "href",
-      "/app/ops/runs/",
+      "/ops/runs/",
     );
   },
 );
@@ -189,7 +189,7 @@ it("shows staff history, retention, missing times, zero duration, and semantic s
   expect(document.title).toBe("Task runs | Kash Engine");
   expect(screen.getByRole("link", { name: "Task runs", current: "page" })).toHaveAttribute(
     "href",
-    "/app/ops/runs/",
+    "/ops/runs/",
   );
   expect(screen.getByText(/deleted after 45 days/)).toBeInTheDocument();
   expect(screen.getByText("An admin (deleted)")).toBeInTheDocument();
@@ -203,7 +203,7 @@ it("shows staff history, retention, missing times, zero duration, and semantic s
 });
 
 it("sends server search, exact filters, sorting and page size in bookmarked URL state", async () => {
-  const { router, fetchMock } = await showRuns({ path: "/app/ops/runs/?page=2&page_size=1" });
+  const { router, fetchMock } = await showRuns({ path: "/ops/runs/?page=2&page_size=1" });
   expect(await screen.findByRole("link", { name: "reports.build" })).toBeInTheDocument();
   fireEvent.change(screen.getByRole("combobox", { name: "Result" }), {
     target: { value: "pending" },
@@ -263,7 +263,7 @@ it("sends server search, exact filters, sorting and page size in bookmarked URL 
 });
 
 it("paginates server results and navigates to details without leaving React", async () => {
-  const { router } = await showRuns({ path: "/app/ops/runs/?page_size=1" });
+  const { router } = await showRuns({ path: "/ops/runs/?page_size=1" });
   fireEvent.click(await screen.findByRole("link", { name: "Next" }));
   expect(await screen.findByRole("link", { name: "reports.build" })).toBeInTheDocument();
   expect(router.state.location.pathname).toBe("/ops/runs/");
@@ -273,7 +273,7 @@ it("paginates server results and navigates to details without leaving React", as
 });
 
 it("renders stored diagnostics only as text, metadata and pending guidance", async () => {
-  await showRuns({ path: "/app/ops/runs/1/" });
+  await showRuns({ path: "/ops/runs/1/" });
   expect(await screen.findByRole("heading", { name: "news.fetch", level: 1 })).toHaveFocus();
   expect(screen.getByText(detail.args)).toBeInTheDocument();
   expect(screen.getByText(detail.result)).toBeInTheDocument();
@@ -282,13 +282,13 @@ it("renders stored diagnostics only as text, metadata and pending guidance", asy
   expect(screen.getByText("task-123")).toBeInTheDocument();
   expect(screen.getByText("worker-one")).toBeInTheDocument();
   expect(screen.getByText(/job waits for a worker/)).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Ops Overview" })).toHaveAttribute("href", "/app/ops/");
+  expect(screen.getByRole("link", { name: "Ops Overview" })).toHaveAttribute("href", "/ops/");
   expect(document.querySelector("pre img, pre script, dd b")).toBeNull();
   expect(screen.getAllByText("\u2013").length).toBeGreaterThan(1);
 });
 
 it("polls active runs every three seconds, stops at completion, and supports manual refresh", async () => {
-  const { fetchMock, changeRun } = await showRuns({ path: "/app/ops/runs/1/" });
+  const { fetchMock, changeRun } = await showRuns({ path: "/ops/runs/1/" });
   await screen.findByRole("heading", { name: "news.fetch" });
   vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
   // Recreate the observer interval under the controlled clock.
@@ -310,7 +310,7 @@ it("polls active runs every three seconds, stops at completion, and supports man
 });
 
 it("hides cached diagnostics and stops polling when staff access is revoked", async () => {
-  const { failDetail, fetchMock } = await showRuns({ path: "/app/ops/runs/1/" });
+  const { failDetail, fetchMock } = await showRuns({ path: "/ops/runs/1/" });
   await screen.findByText(detail.output);
   failDetail(403);
   fireEvent.click(await screen.findByRole("button", { name: "Refresh now" }));
@@ -323,7 +323,7 @@ it("hides cached diagnostics and stops polling when staff access is revoked", as
 });
 
 it("reports background refresh errors explicitly and allows recovery without stale diagnostics", async () => {
-  const { failDetail } = await showRuns({ path: "/app/ops/runs/1/" });
+  const { failDetail } = await showRuns({ path: "/ops/runs/1/" });
   await screen.findByText(detail.output);
   failDetail(500);
   fireEvent.click(await screen.findByRole("button", { name: "Refresh now" }));
@@ -341,7 +341,7 @@ it.each([401, 403, 404, 429, 500])(
     expect(await screen.findByRole("alert")).toHaveTextContent("Ops history unavailable.");
     expect(screen.getByRole("link", { name: "Back to Task runs" })).toHaveAttribute(
       "href",
-      "/app/ops/runs/",
+      "/ops/runs/",
     );
     expect(screen.queryByRole("table", { name: "Task runs" })).not.toBeInTheDocument();
     if (status === 401)
@@ -349,10 +349,7 @@ it.each([401, 403, 404, 429, 500])(
   },
 );
 
-it.each(["/app/ops/runs/", "/app/ops/runs/1/"])(
-  "rejects malformed response on %s",
-  async (path) => {
-    await showRuns({ path, malformed: true });
-    expect(await screen.findByRole("alert")).toHaveTextContent(/response does not match this app/);
-  },
-);
+it.each(["/ops/runs/", "/ops/runs/1/"])("rejects malformed response on %s", async (path) => {
+  await showRuns({ path, malformed: true });
+  expect(await screen.findByRole("alert")).toHaveTextContent(/response does not match this app/);
+});

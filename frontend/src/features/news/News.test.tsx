@@ -42,7 +42,7 @@ afterEach(() => {
   clients.length = 0;
 });
 
-async function showNews({ path = "/app/news/", data = news, status = 200, staff = false } = {}) {
+async function showNews({ path = "/news/", data = news, status = 200, staff = false } = {}) {
   document.cookie = "csrftoken=news-test-csrf; path=/";
   vi.stubGlobal("scrollTo", vi.fn());
   vi.stubGlobal(
@@ -70,7 +70,7 @@ async function showNews({ path = "/app/news/", data = news, status = 200, staff 
   clients.push(client);
   const router = createRouter({
     routeTree,
-    basepath: "/app",
+    basepath: "/",
     trailingSlash: "always",
     history: createMemoryHistory({ initialEntries: [path] }),
     context: { queryClient: client },
@@ -105,7 +105,7 @@ it("shows scored articles, plain-text explanations, source links and IST publica
   expect(screen.getByText("Example Bank")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "News", current: "page" })).toHaveAttribute(
     "href",
-    "/app/news/",
+    "/news/",
   );
   expect(screen.getByRole("link", { name: /Compare with/ })).toHaveAttribute("href", "/news/");
   expect(screen.getAllByRole("main")).toHaveLength(1);
@@ -127,7 +127,7 @@ it.each([
 
 it("restores bookmarked filters and preserves them in pagination links", async () => {
   await showNews({
-    path: "/app/news/?q=bank&source=Mint&sentiment=positive&page=2",
+    path: "/news/?q=bank&source=Mint&sentiment=positive&page=2",
     data: { ...news, page: 2 },
   });
   expect(await screen.findByRole("searchbox", { name: "Search" })).toHaveValue("bank");
@@ -149,7 +149,7 @@ it("restores bookmarked filters and preserves them in pagination links", async (
 });
 
 it("debounces typing, resets pagination, and updates the URL", async () => {
-  const router = await showNews({ path: "/app/news/?page=2" });
+  const router = await showNews({ path: "/news/?page=2" });
   const input = await screen.findByRole("searchbox", { name: "Search" });
   input.focus();
   fireEvent.change(input, { target: { value: "b" } });
@@ -175,7 +175,7 @@ it("applies score and source changes immediately and restores them on back navig
 });
 
 it("applies on submit, clears filters, and cancels pending search input", async () => {
-  const router = await showNews({ path: "/app/news/?source=Mint&sentiment=positive&page=2" });
+  const router = await showNews({ path: "/news/?source=Mint&sentiment=positive&page=2" });
   fireEvent.change(await screen.findByRole("searchbox"), { target: { value: "banks" } });
   fireEvent.submit(screen.getByRole("searchbox").closest("form")!);
   await waitFor(() => expect(router.state.location.search.q).toBe("banks"));
@@ -199,7 +199,7 @@ it.each([false, true])("keeps empty-state operational hints staff-only: %s", asy
 it("does not show operational hints for empty filtered results", async () => {
   await showNews({
     staff: true,
-    path: "/app/news/?q=nothing",
+    path: "/news/?q=nothing",
     data: { ...news, items: [], total: 0, pages: 1 },
   });
   expect(await screen.findByText(/No article matches/)).toBeInTheDocument();
@@ -237,7 +237,7 @@ it("provides a News-specific recovery link for permission errors", async () => {
   await waitFor(() =>
     expect(screen.getByRole("heading", { name: "Not on your account" })).toBeInTheDocument(),
   );
-  expect(screen.getByRole("link", { name: "Back to News" })).toHaveAttribute("href", "/app/news/");
+  expect(screen.getByRole("link", { name: "Back to News" })).toHaveAttribute("href", "/news/");
   expect(screen.queryByRole("link", { name: "Back to Reports" })).not.toBeInTheDocument();
   expect(screen.getAllByRole("main")).toHaveLength(1);
 });
@@ -252,7 +252,7 @@ it("rejects contract drift visibly", async () => {
 
 it("uses server sorting and page size without losing news filters", async () => {
   const router = await showNews({
-    path: "/app/news/?q=bank&source=Mint&sentiment=positive&page=2",
+    path: "/news/?q=bank&source=Mint&sentiment=positive&page=2",
   });
   fireEvent.click(await screen.findByRole("button", { name: "Sentiment" }));
   await waitFor(() =>

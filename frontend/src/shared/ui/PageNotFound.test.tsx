@@ -20,10 +20,10 @@ it("renders the public 404 with safe recovery links and no session fetch", () =>
   );
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Page not found");
   expect(screen.getByText("404")).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Go to home" })).toHaveAttribute("href", "/app/landing/");
+  expect(screen.getByRole("link", { name: "Go to home" })).toHaveAttribute("href", "/");
   expect(screen.getByRole("link", { name: "Open dashboard" })).toHaveAttribute(
     "href",
-    "/app/dashboard/",
+    "/dashboard/",
   );
   expect(document.title).toBe("Page not found | Kash Engine");
   expect(fetch).not.toHaveBeenCalled();
@@ -42,8 +42,8 @@ it("catches unmatched React navigation without replacing the application shell",
   );
   const router = createRouter({
     routeTree,
-    basepath: "/app",
-    history: createMemoryHistory({ initialEntries: ["/app/not-a-real-page/"] }),
+    basepath: "/",
+    history: createMemoryHistory({ initialEntries: ["/not-a-real-page/"] }),
     context: { queryClient: client },
   });
   const view = render(

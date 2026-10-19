@@ -104,20 +104,20 @@ export function AppError({
           <Anchor
             href={
               section === "Operations"
-                ? "/app/ops/"
+                ? "/ops/"
                 : section === "Today"
-                  ? "/app/dashboard/"
+                  ? "/dashboard/"
                   : section === "Task runs"
-                    ? "/app/ops/runs/"
+                    ? "/ops/runs/"
                     : section === "Audit"
-                      ? "/app/ops/audit/"
-                      : `/app/${section.toLowerCase()}/`
+                      ? "/ops/audit/"
+                      : `/${section.toLowerCase()}/`
             }
           >
             Back to {section}
           </Anchor>
         )}
-        <Anchor href="/app/account/">Open your account</Anchor>
+        <Anchor href="/account/">Open your account</Anchor>
       </Stack>
     </Container>
   );

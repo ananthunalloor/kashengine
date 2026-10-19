@@ -14,6 +14,8 @@ environ.Env.read_env(BASE_DIR / ".env.dev", overwrite=False)
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 DEBUG = False
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[])
+SITE_ADDRESS = env("SITE_ADDRESS", default="localhost")
+OLD_SITE_ADDRESS = env("OLD_SITE_ADDRESS", default=f"old.{SITE_ADDRESS}")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -42,6 +44,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "apps.web.archive.ArchiveMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",

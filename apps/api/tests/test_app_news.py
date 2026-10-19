@@ -36,7 +36,7 @@ def test_news_requires_a_session_and_the_feature(client, member, make_token, aut
     response = client.get(URL)
     assert response.status_code == 403
     assert response.json()["code"] == "feature_not_available"
-    assert client.get("/app/news/").status_code == 403
+    assert client.get("/news/").status_code == 403
 
 
 def test_expired_subscription_cannot_read_news(client, member, settings, expire):
@@ -45,7 +45,7 @@ def test_expired_subscription_cannot_read_news(client, member, settings, expire)
     expire(member)
     client.force_login(member)
     assert client.get(URL).json()["code"] == "subscription_required"
-    assert client.get("/app/news/").status_code == 302
+    assert client.get("/news/").status_code == 302
 
 
 def test_staff_remains_exempt_and_public_api_switch_is_independent(client, staff, settings, expire):
@@ -128,13 +128,13 @@ def test_invalid_filters_are_explicit_problem_responses(client, member, params):
 
 
 def test_empty_news_has_options_and_preserves_original_page(client, member):
-    assert client.get("/app/news/").status_code == 302
+    assert client.get("/news/").status_code == 302
     client.force_login(member)
-    response = client.get("/app/news/")
+    response = client.get("/news/")
     assert response.status_code == 200
     assert 'id="root"' in response.text
     assert "no-store" in response["Cache-Control"]
-    assert "web/news.html" in [template.name for template in client.get("/news/").templates]
+    assert "web/spa.html" in [template.name for template in client.get("/news/").templates]
     body = client.get(URL).json()
     assert body["items"] == []
     assert body["page"] == body["pages"] == 1

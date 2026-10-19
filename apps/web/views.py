@@ -34,7 +34,7 @@ from apps.siteconfig import conf
 
 from . import queries
 from .datastar import is_datastar, querystring, read_filters, read_page, signals_json
-from .decorators import post_only
+from .decorators import post_only, safe_only
 from .public_preview import page_not_found
 
 if TYPE_CHECKING:
@@ -81,7 +81,8 @@ def landing(request: HttpRequest) -> HttpResponse:
 
 
 @never_cache
-@login_required(login_url="web:react_login")
+@login_required(login_url="web:login")
+@safe_only
 def react_app(request: HttpRequest) -> HttpResponse:
     """Serve the authenticated React application shell.
 
@@ -94,7 +95,8 @@ def react_app(request: HttpRequest) -> HttpResponse:
     return render(request, "web/spa.html")
 
 
-@login_required(login_url="web:react_login")
+@login_required(login_url="web:login")
+@safe_only
 def react_report(request: HttpRequest, day: date) -> HttpResponse:
     """Serve the Reports preview at a valid report URL without exposing its data.
 
@@ -114,7 +116,8 @@ def dashboard(request):
     return render(request, "web/dashboard.html", queries.dashboard_data())
 
 
-@login_required(login_url="web:react_login")
+@login_required(login_url="web:login")
+@safe_only
 def react_ipo(request: HttpRequest, pk: int) -> HttpResponse:
     """Serve the IPO preview for an existing issue.
 
@@ -129,25 +132,28 @@ def react_ipo(request: HttpRequest, pk: int) -> HttpResponse:
     return react_app(request)
 
 
-@login_required(login_url="web:react_login")
-def react_ops_page(request: HttpRequest, section: str) -> HttpResponse:
+@login_required(login_url="web:login")
+@safe_only
+def react_ops_page(request: HttpRequest, **kwargs) -> HttpResponse:
     """Serve a staff Ops preview; the private API validates the requested page.
 
     Args:
         request: The staff browser request.
-        section: The requested Ops section within the preview.
+        **kwargs: Named arguments retained by the canonical Ops URL pattern.
 
     Returns:
         The uncached React shell without operational data.
     """
     try:
-        target(f"{section}/", PAGES)
+        if request.path not in {"/ops/runs/", "/ops/audit/"}:
+            target(request.path.removeprefix("/ops/"), PAGES)
     except Http404:
         return page_not_found(request)
     return react_app(request)
 
 
-@login_required(login_url="web:react_login")
+@login_required(login_url="web:login")
+@safe_only
 def react_ops_run(request: HttpRequest, pk: int) -> HttpResponse:
     """Serve a run's preview shell; staff authentication is applied by the URL wrapper.
 

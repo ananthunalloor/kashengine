@@ -100,12 +100,12 @@ export function AccountMenu({ session, pathname }: { session: Session; pathname:
           )}
           {session.notice && <p className="account-popover-note">{session.notice}</p>}
           <div className="account-popover-actions">
-            <a href="/app/account/" ref={accountLink} onClick={() => setOpened(false)}>
+            <a href="/account/" ref={accountLink} onClick={() => setOpened(false)}>
               <LuCircleUserRound aria-hidden="true" /> Account details
             </a>
             <form action={session.logout_url} method="post">
               <input type="hidden" name="csrfmiddlewaretoken" value={token ?? ""} />
-              <input type="hidden" name="next" value="/app/login/" />
+              <input type="hidden" name="next" value="/login/" />
               <button type="submit" disabled={!token}>
                 <LuLogOut aria-hidden="true" /> Log out
               </button>

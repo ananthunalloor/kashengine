@@ -89,7 +89,7 @@ const capabilities = [
 
 function Brand() {
   return (
-    <a href="/app/landing/" className="app-brand" aria-label="Kash Engine home">
+    <a href="/" className="app-brand" aria-label="Kash Engine home">
       <span className="app-brand-mark" aria-hidden="true">
         k.
       </span>
@@ -100,8 +100,8 @@ function Brand() {
   );
 }
 
-function Landing({ authenticated }: Pick<PublicData, "authenticated">) {
-  const destination = authenticated ? "/app/dashboard/" : "/app/login/";
+export function Landing({ authenticated }: Pick<PublicData, "authenticated">) {
+  const destination = authenticated ? "/dashboard/" : "/login/";
   return (
     <>
       <section className="public-hero" aria-labelledby="hero-title">
@@ -192,7 +192,7 @@ function Landing({ authenticated }: Pick<PublicData, "authenticated">) {
               <details>
                 <summary>Explore {path} capabilities</summary>
                 <p>{detail}</p>
-                <a href={`/app/${path}/`}>
+                <a href={`/${path}/`}>
                   Open {path} <LuArrowRight aria-hidden="true" />
                 </a>
               </details>
@@ -302,12 +302,7 @@ function Login({ data }: { data: PublicData }) {
           The user name or the password is not correct. Try again.
         </p>
       )}
-      <form
-        method="post"
-        action="/app/login/"
-        onSubmit={() => setPending(true)}
-        aria-busy={pending}
-      >
+      <form method="post" action="/login/" onSubmit={() => setPending(true)} aria-busy={pending}>
         <input type="hidden" name="csrfmiddlewaretoken" value={data.csrf} />
         <input type="hidden" name="next" value={data.next} />
         <label htmlFor="username">User name</label>
@@ -364,10 +359,7 @@ export function PublicPage({ data }: { data: PublicData }) {
             {theme === "dark" ? <LuSun aria-hidden="true" /> : <LuMoon aria-hidden="true" />}
           </button>
           {data.page !== "login" && (
-            <a
-              className="public-header-link"
-              href={data.authenticated ? "/app/dashboard/" : "/app/login/"}
-            >
+            <a className="public-header-link" href={data.authenticated ? "/dashboard/" : "/login/"}>
               {data.authenticated ? "Open dashboard" : "Log in"}
               <LuArrowRight aria-hidden="true" />
             </a>
@@ -389,10 +381,10 @@ export function PublicPage({ data }: { data: PublicData }) {
             {data.page === "access" ? (
               <>
                 <p>
-                  {data.feature} is not on for your account. See the{" "}
-                  <a href="/app/account/">Account</a> page to learn what you have, or ask the admin.
+                  {data.feature} is not on for your account. See the <a href="/account/">Account</a>{" "}
+                  page to learn what you have, or ask the admin.
                 </p>
-                <a href="/app/dashboard/">Back to Today</a>
+                <a href="/dashboard/">Back to Today</a>
               </>
             ) : (
               <>
@@ -402,7 +394,7 @@ export function PublicPage({ data }: { data: PublicData }) {
                     ? `Try again in about ${data.minutes} minute${data.minutes === 1 ? "" : "s"}.`
                     : "Ask an admin to unlock the address."}
                 </p>
-                <a href="/app/login/">Back to the login</a>
+                <a href="/login/">Back to the login</a>
               </>
             )}
           </section>
@@ -415,7 +407,7 @@ export function PublicPage({ data }: { data: PublicData }) {
           Not financial advice. Predictions can be wrong. GMP is unofficial. Always do your own
           research.
         </p>
-        <a href="/">Open the existing landing page</a>
+        <a href="/docs/">Documentation</a>
       </footer>
     </div>
   );

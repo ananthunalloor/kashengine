@@ -15,9 +15,9 @@ pytestmark = pytest.mark.django_db
         "/undefined/",
         "/undefined/deep/page/",
         "/app/undefined/",
-        "/app/reports/not-a-date/",
+        "/reports/not-a-date/",
         "/not-defined-without-slash",
-        "/app/landing/extra/",
+        "/extra/",
         "/<script>alert(1)</script>/",
     ],
 )
@@ -41,7 +41,7 @@ def test_unknown_page_methods_do_not_become_successes(client, method):
 def test_authenticated_undefined_ops_paths_are_not_success_shells(client, django_user_model):
     user = django_user_model.objects.create_superuser("not-found-staff", password="test-only")
     client.force_login(user)
-    for path in ["/app/ops/undefined/", "/app/ops/users/invalid/", "/app/ops/jobs/x/run/"]:
+    for path in ["/ops/undefined/", "/ops/users/invalid/", "/ops/jobs/x/run/"]:
         response = client.get(path)
         assert response.status_code == 404
         assert presentation(response)["page"] == "not-found"
@@ -51,7 +51,7 @@ def test_missing_resources_use_the_same_404_in_production(client, django_user_mo
     settings.DEBUG = False
     user = django_user_model.objects.create_superuser("missing-resource", password="test-only")
     client.force_login(user)
-    for path in ["/app/ipos/999999/", "/app/reports/2000-01-01/", "/app/ops/runs/999999/"]:
+    for path in ["/ipos/999999/", "/reports/2000-01-01/", "/ops/runs/999999/"]:
         response = client.get(path)
         assert response.status_code == 404
         assert presentation(response)["page"] == "not-found"
@@ -60,7 +60,7 @@ def test_missing_resources_use_the_same_404_in_production(client, django_user_mo
 def test_existing_routes_and_api_errors_are_not_swallowed(client, settings):
     settings.DEBUG = False
     assert client.get("/health/").json() == {"status": "ok"}
-    assert client.get(reverse("web:react_landing")).status_code == 200
+    assert client.get(reverse("web:landing")).status_code == 200
     assert client.get("/api/app/session").status_code == 401
     response = client.get("/api/nonexistent/")
     assert response.status_code == 404

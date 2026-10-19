@@ -107,10 +107,10 @@ def test_every_page_works_with_no_data(client_in, name):
 
 
 def test_the_react_shell_needs_a_login(client):
-    response = client.get(reverse("web:react_app"))
+    response = client.get(reverse("web:dashboard"))
 
     assert response.status_code == 302
-    assert response["Location"].startswith(reverse("web:react_login"))
+    assert response["Location"].startswith(reverse("web:login"))
 
 
 @override_settings(
@@ -118,7 +118,7 @@ def test_the_react_shell_needs_a_login(client):
     SUBSCRIPTIONS_REQUIRED=True,
 )
 def test_the_react_shell_is_authenticated_and_mounts_the_app(client_in):
-    response = client_in.get(reverse("web:react_app"))
+    response = client_in.get(reverse("web:dashboard"))
 
     assert response.status_code == 200
     assert 'id="root"' in response.text
@@ -129,20 +129,20 @@ def test_the_react_shell_is_authenticated_and_mounts_the_app(client_in):
 
 def test_reports_preview_keeps_existing_pages_and_checks_direct_urls(client_in, user):
     Report.objects.create(date=date(2026, 10, 7), text="Daily brief")
-    for path in ("/app/reports/", "/app/reports/2026-10-07/"):
+    for path in ("/reports/", "/reports/2026-10-07/"):
         response = client_in.get(path)
         assert response.status_code == 200
         assert 'id="root"' in response.text
         assert "no-store" in response["Cache-Control"]
-    assert "Daily brief" in client_in.get("/reports/2026-10-07/").text
-    assert client_in.get("/app/reports/2026-02-30/").status_code == 404
-    assert client_in.get("/app/reports/2026-10-08/").status_code == 404
+    assert "Daily brief" not in client_in.get("/reports/2026-10-07/").text
+    assert client_in.get("/reports/2026-02-30/").status_code == 404
+    assert client_in.get("/reports/2026-10-08/").status_code == 404
     FeatureBlock.objects.create(user=user, feature="reports")
-    assert client_in.get("/app/reports/").status_code == 403
-    assert client_in.get("/app/reports/2026-10-07/").status_code == 403
+    assert client_in.get("/reports/").status_code == 403
+    assert client_in.get("/reports/2026-10-07/").status_code == 403
 
 
-@pytest.mark.parametrize("path", ["/app/reports/", "/app/reports/2026-10-07/"])
+@pytest.mark.parametrize("path", ["/reports/", "/reports/2026-10-07/"])
 def test_reports_preview_requires_login(client, path):
     assert client.get(path).status_code == 302
 

@@ -135,9 +135,9 @@ async function showToday({
   clients.push(client);
   const router = createRouter({
     routeTree,
-    basepath: "/app",
+    basepath: "/",
     trailingSlash: "always",
-    history: createMemoryHistory({ initialEntries: ["/app/dashboard/"] }),
+    history: createMemoryHistory({ initialEntries: ["/dashboard/"] }),
     context: { queryClient: client },
     defaultPendingMinMs: 0,
   });
@@ -158,7 +158,7 @@ it("renders the dated overview, evidence, baseline and colored values without in
   expect(document.title).toBe("Today | Kash Engine");
   expect(screen.getByRole("link", { name: "Today", current: "page" })).toHaveAttribute(
     "href",
-    "/app/dashboard/",
+    "/dashboard/",
   );
   expect(screen.getByText("The Nifty 50 is likely to fall.")).toBeInTheDocument();
   expect(screen.getByText(/Outlook for/)).toHaveTextContent("Friday, 16 October 2026");
@@ -280,7 +280,7 @@ it.each([403, 429, 500])("shows a visible Today recovery state for %s", async (s
   expect(await screen.findByRole("alert")).toHaveTextContent("Today unavailable.");
   expect(screen.getByRole("link", { name: "Back to Today" })).toHaveAttribute(
     "href",
-    "/app/dashboard/",
+    "/dashboard/",
   );
   expect(!!screen.queryByRole("button", { name: "Try again" })).toBe(status !== 403);
 });

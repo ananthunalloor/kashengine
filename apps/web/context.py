@@ -1,5 +1,6 @@
 """Template context for every page of the web app."""
 
+from django.conf import settings
 from django.urls import reverse
 
 from apps.access.middleware import access_for
@@ -48,9 +49,18 @@ def web_settings(request) -> dict:
     """Values that every template needs: the Datastar script and the main menu."""
     user = getattr(request, "user", None)
     if user is None or not user.is_authenticated:
-        return {"datastar_src": conf.DATASTAR_SRC, "nav": [], "features": frozenset(), "notice": ""}
+        return {
+            "archived": getattr(request, "is_archive", False),
+            "main_site_url": f"{request.scheme}://{settings.SITE_ADDRESS}",
+            "datastar_src": conf.DATASTAR_SRC,
+            "nav": [],
+            "features": frozenset(),
+            "notice": "",
+        }
     access = access_for(request)
     return {
+        "archived": getattr(request, "is_archive", False),
+        "main_site_url": f"{request.scheme}://{settings.SITE_ADDRESS}",
         "datastar_src": conf.DATASTAR_SRC,
         "nav": navigation_for(request),
         "features": access.allowed,

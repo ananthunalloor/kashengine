@@ -17,7 +17,7 @@ URL = "/api/app/delivery"
 
 def test_session_feature_and_bearer_rules(client, member, make_token, auth):
     assert client.get(URL).status_code == 401
-    assert client.get("/app/delivery/").status_code == 302
+    assert client.get("/delivery/").status_code == 302
     client.force_login(member)
     _, secret = make_token(member)
     assert client.get(URL, headers=auth(secret)).status_code == 401
@@ -25,7 +25,7 @@ def test_session_feature_and_bearer_rules(client, member, make_token, auth):
     response = client.get(URL)
     assert response.status_code == 403
     assert response.json()["code"] == "feature_not_available"
-    assert client.get("/app/delivery/").status_code == 403
+    assert client.get("/delivery/").status_code == 403
 
 
 @pytest.mark.parametrize("is_staff", [False, True])
@@ -39,7 +39,7 @@ def test_subscription_staff_exemption_and_public_switch(client, member, expire, 
     client.force_login(member)
     response = client.get(URL)
     assert response.status_code == (200 if is_staff else 403)
-    assert client.get("/app/delivery/").status_code == (200 if is_staff else 302)
+    assert client.get("/delivery/").status_code == (200 if is_staff else 302)
     if not is_staff:
         assert response.json()["code"] == "subscription_required"
 
@@ -109,7 +109,7 @@ def test_delivery_stays_available_without_reports_feature(client, member):
     FeatureBlock.objects.create(user=member, feature="reports")
     client.force_login(member)
     assert client.get(URL).status_code == 200
-    assert client.get("/app/delivery/").status_code == 200
+    assert client.get("/delivery/").status_code == 200
 
 
 def test_empty_preview_and_original_page(client, member, settings):
@@ -117,11 +117,8 @@ def test_empty_preview_and_original_page(client, member, settings):
     conf.invalidate()
     client.force_login(member)
     assert client.get(URL).json() == {"chat_count": 0, "items": []}
-    preview = client.get("/app/delivery/")
+    preview = client.get("/delivery/")
     assert preview.status_code == 200
     assert b'id="root"' in preview.content
     assert "no-store" in preview["Cache-Control"]
-    original = client.get("/delivery/")
-    assert original.status_code == 200
-    assert b'id="root"' not in original.content
-    assert b"Nothing was sent yet." in original.content
+    assert "web/delivery.html" not in [t.name for t in preview.templates]

@@ -13,14 +13,12 @@ import { useRef } from "react";
 import type { ReactNode } from "react";
 import {
   LuActivity,
-  LuArrowUpRight,
   LuBuilding2,
   LuChartNoAxesCombined,
   LuCircleUserRound,
   LuClipboardList,
   LuFileText,
   LuHouse,
-  LuLayoutDashboard,
   LuMoon,
   LuNewspaper,
   LuSend,
@@ -76,7 +74,7 @@ export function ApplicationShell({
               aria-expanded={opened}
               aria-controls="app-navigation"
             />
-            <a href="/app/" className="app-brand" aria-label="Kash Engine">
+            <a href="/" className="app-brand" aria-label="Kash Engine">
               <span className="app-brand-mark" aria-hidden="true">
                 k.
               </span>
@@ -129,28 +127,9 @@ export function ApplicationShell({
         </div>
         <p className="navigation-label">Workspace</p>
         <nav aria-label="Main">
-          <NavLink
-            href="/app/"
-            label="React preview"
-            active={pathname === "/app/"}
-            aria-current={pathname === "/app/" ? "page" : undefined}
-            onClick={close}
-            leftSection={<LuLayoutDashboard aria-hidden="true" />}
-          />
           {session.navigation.map((item) => {
-            const migrated = [
-              "/dashboard/",
-              "/account/",
-              "/reports/",
-              "/news/",
-              "/ipos/",
-              "/markets/",
-              "/companies/",
-              "/delivery/",
-              "/ops/",
-            ].includes(item.url);
-            const url = migrated ? `/app${item.url}` : item.url;
-            const active = pathname === url || (migrated && pathname.startsWith(url));
+            const url = item.url;
+            const active = pathname === url || pathname.startsWith(url);
             const Icon = navigationIcons[item.url] ?? LuSettings2;
             return (
               <NavLink
@@ -161,26 +140,25 @@ export function ApplicationShell({
                 aria-current={active ? "page" : undefined}
                 onClick={close}
                 leftSection={<Icon aria-hidden="true" />}
-                rightSection={!migrated && <LuArrowUpRight aria-hidden="true" />}
               />
             );
           })}
-          {session.is_staff && !pathname.startsWith("/app/ops/") && (
+          {session.is_staff && !pathname.startsWith("/ops/") && (
             <NavLink
-              href="/app/ops/runs/"
+              href="/ops/runs/"
               label="Task runs"
-              active={pathname.startsWith("/app/ops/runs/")}
-              aria-current={pathname.startsWith("/app/ops/runs/") ? "page" : undefined}
+              active={pathname.startsWith("/ops/runs/")}
+              aria-current={pathname.startsWith("/ops/runs/") ? "page" : undefined}
               onClick={close}
               leftSection={<LuActivity aria-hidden="true" />}
             />
           )}
-          {session.is_staff && !pathname.startsWith("/app/ops/") && (
+          {session.is_staff && !pathname.startsWith("/ops/") && (
             <NavLink
-              href="/app/ops/audit/"
+              href="/ops/audit/"
               label="Audit trail"
-              active={pathname.startsWith("/app/ops/audit/")}
-              aria-current={pathname.startsWith("/app/ops/audit/") ? "page" : undefined}
+              active={pathname.startsWith("/ops/audit/")}
+              aria-current={pathname.startsWith("/ops/audit/") ? "page" : undefined}
               onClick={close}
               leftSection={<LuClipboardList aria-hidden="true" />}
             />
@@ -188,18 +166,18 @@ export function ApplicationShell({
         </nav>
       </aside>
       <main className="app-main" id="main" tabIndex={-1}>
-        {session.is_staff && pathname.startsWith("/app/ops/") && (
+        {session.is_staff && pathname.startsWith("/ops/") && (
           <OpsNavigation superuser={session.is_superuser} pathname={pathname} />
         )}
         {session.notice && (
           <Alert color="yellow" title="Your subscription" role="status" mb="md">
-            {session.notice} <Anchor href="/app/account/">See your account</Anchor>.
+            {session.notice} <Anchor href="/account/">See your account</Anchor>.
           </Alert>
         )}
         {children}
         <Text component="footer" size="xs" c="dimmed" mt="xl" py="lg">
           Market signals are informational, not investment advice. GMP is unofficial data.{" "}
-          <Anchor href="/app/landing/">About Kash Engine</Anchor>
+          <Anchor href="/">About Kash Engine</Anchor>
         </Text>
       </main>
     </div>

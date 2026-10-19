@@ -28,7 +28,7 @@ def csrf_client(user):
 
 def test_auth_preview_cache_and_legacy_parity(client, member, make_token, auth):
     assert client.get(URL).status_code == 401
-    assert client.get("/app/account/").status_code == 302
+    assert client.get("/account/").status_code == 302
     client.force_login(member)
     _, secret = make_token(member)
     assert client.get(URL, headers=auth(secret)).status_code == 401
@@ -53,11 +53,11 @@ def test_auth_preview_cache_and_legacy_parity(client, member, make_token, auth):
         }
         for row in context["rows"]
     ]
-    preview = client.get("/app/account/")
+    preview = client.get("/account/")
     assert preview.status_code == 200
     assert b'id="root"' in preview.content
     assert "no-store" in preview["Cache-Control"]
-    assert b'id="root"' not in client.get("/account/").content
+    assert "web/account.html" not in [t.name for t in preview.templates]
 
 
 @pytest.mark.parametrize("state", ["trial", "active", "expired", "none", "staff"])
@@ -85,7 +85,7 @@ def test_subscription_states_and_removed_features(client, member, settings, stat
     news = next(feature for feature in body["features"] if feature["key"] == "news")
     assert news["allowed"] == (state == "staff")
     assert news["removed"] == (state != "staff")
-    assert client.get("/app/account/").status_code == 200
+    assert client.get("/account/").status_code == 200
 
 
 def test_token_metadata_excludes_secrets_hashes_and_other_users(client, member, staff):
@@ -260,4 +260,4 @@ def test_expired_account_can_manage_tokens_and_disabled_api_can_still_revoke(
         == 503
     )
     assert client.post(f"{CREATE}/{row.pk}/revoke", headers=headers).status_code == 200
-    assert client.get("/app/account/").status_code == 200
+    assert client.get("/account/").status_code == 200

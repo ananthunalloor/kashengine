@@ -18,7 +18,7 @@ URL = "/api/app/markets"
 
 def test_session_feature_and_bearer_rejection(client, member, make_token, auth):
     assert client.get(URL).status_code == 401
-    assert client.get("/app/markets/").status_code == 302
+    assert client.get("/markets/").status_code == 302
     client.force_login(member)
     _, secret = make_token(member)
     assert client.get(URL, headers=auth(secret)).status_code == 401
@@ -26,7 +26,7 @@ def test_session_feature_and_bearer_rejection(client, member, make_token, auth):
     response = client.get(URL)
     assert response.status_code == 403
     assert response.json()["code"] == "feature_not_available"
-    assert client.get("/app/markets/").status_code == 403
+    assert client.get("/markets/").status_code == 403
 
 
 @pytest.mark.parametrize("staff", [False, True])
@@ -40,10 +40,10 @@ def test_subscription_staff_and_public_api_independence(client, member, expire, 
     client.force_login(member)
     response = client.get(URL)
     assert response.status_code == (200 if staff else 403)
-    preview = client.get("/app/markets/")
+    preview = client.get("/markets/")
     assert preview.status_code == (200 if staff else 302)
     if not staff:
-        assert preview.url == "/app/account/"
+        assert preview.url == "/account/"
     if not staff:
         assert client.get(URL).json()["code"] == "subscription_required"
 
@@ -62,14 +62,11 @@ def test_empty_state_private_cache_and_original_page(client, member):
     assert body["stats"]["accuracy"] == body["stats"]["baseline_accuracy"] == "–"
     assert body["stats"]["baseline_direction"] is None
     assert not body["stats"]["enough_results"]
-    preview = client.get("/app/markets/")
+    preview = client.get("/markets/")
     assert preview.status_code == 200
     assert b'id="root"' in preview.content
     assert "no-store" in preview["Cache-Control"]
-    original = client.get("/markets/")
-    assert original.status_code == 200
-    assert b'id="root"' not in original.content
-    assert b"Track record" in original.content
+    assert "web/markets.html" not in [t.name for t in preview.templates]
 
 
 def test_results_formatting_statistics_and_read_only(client, member):

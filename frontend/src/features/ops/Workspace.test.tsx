@@ -56,7 +56,7 @@ const page = zOpsPage.parse({
 });
 
 async function show({
-  path = "/app/ops/feeds/",
+  path = "/ops/feeds/",
   staff = true,
   superuser = true,
   status = 200,
@@ -75,7 +75,7 @@ async function show({
         JSON.stringify({
           ok: true,
           messages: [{ level: "success", text: "Saved feed." }],
-          redirect: "/app/ops/feeds/",
+          redirect: "/ops/feeds/",
         }),
         { headers: { "Content-Type": "application/json" } },
       );
@@ -91,7 +91,7 @@ async function show({
   clients.push(client);
   const router = createRouter({
     routeTree,
-    basepath: "/app",
+    basepath: "/",
     trailingSlash: "always",
     history: createMemoryHistory({ initialEntries: [path] }),
     context: { queryClient: client },
@@ -186,7 +186,7 @@ it("hides stale tables after permission revocation", async () => {
 });
 
 it("maps overview and nested edit paths to their real page endpoints", async () => {
-  const { router, fetchMock } = await show({ path: "/app/ops/" });
+  const { router, fetchMock } = await show({ path: "/ops/" });
   await screen.findByRole("heading", { level: 1, name: "News feeds" });
   expect(fetchMock.mock.calls.some(([url]) => url.includes("/pages/overview/"))).toBe(true);
   await act(async () => {
@@ -211,7 +211,7 @@ it("preserves action notifications across React navigation", async () => {
         ? {
             ok: true,
             messages: [{ level: "success", text: "Schedule saved by React." }],
-            redirect: "/app/ops/schedule/",
+            redirect: "/ops/schedule/",
           }
         : page;
     return new Response(JSON.stringify(body), {
@@ -342,7 +342,7 @@ it("handles failed snapshot downloads as explicit feedback instead of a success-
           JSON.stringify({
             ok: false,
             messages: [{ level: "error", text: "Export failed." }],
-            redirect: "/app/ops/backups/",
+            redirect: "/ops/backups/",
           }),
           { headers: { "Content-Type": "application/json" } },
         ),

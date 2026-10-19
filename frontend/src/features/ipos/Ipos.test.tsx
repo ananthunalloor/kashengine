@@ -55,7 +55,7 @@ const list: IpoPage = {
 const clients: QueryClient[] = [];
 
 it("sorts IPO metrics on the server and retains board/status filters across size changes", async () => {
-  const router = await showIpos({ path: "/app/ipos/?category=sme&status=listed&page=2" });
+  const router = await showIpos({ path: "/ipos/?category=sme&status=listed&page=2" });
   fireEvent.click(await screen.findByRole("button", { name: "GMP" }));
   await waitFor(() =>
     expect(router.state.location.search).toMatchObject({
@@ -86,7 +86,7 @@ afterEach(() => {
 });
 
 async function showIpos({
-  path = "/app/ipos/",
+  path = "/ipos/",
   page = list,
   detail = ipo,
   status = 200,
@@ -127,7 +127,7 @@ async function showIpos({
   clients.push(client);
   const router = createRouter({
     routeTree,
-    basepath: "/app",
+    basepath: "/",
     trailingSlash: "always",
     history: createMemoryHistory({ initialEntries: [path] }),
     context: { queryClient: client },
@@ -147,7 +147,7 @@ async function showIpos({
 it("shows issue cards, metrics and preview-only navigation", async () => {
   await showIpos();
   expect(await screen.findByRole("heading", { level: 1, name: "IPOs" })).toHaveFocus();
-  expect(screen.getByRole("link", { name: "Example Ltd" })).toHaveAttribute("href", "/app/ipos/1/");
+  expect(screen.getByRole("link", { name: "Example Ltd" })).toHaveAttribute("href", "/ipos/1/");
   expect(screen.getByText("0.0x")).toBeInTheDocument();
   expect(screen.getByText("+20.0%")).toHaveAttribute("data-tone", "positive");
   expect(screen.getByText("8.2/10")).toHaveAttribute("data-tone", "positive");
@@ -155,7 +155,7 @@ it("shows issue cards, metrics and preview-only navigation", async () => {
   expect(screen.getByRole("link", { name: /Compare with/ })).toHaveAttribute("href", "/ipos/");
   expect(screen.getByRole("link", { name: "IPOs", current: "page" })).toHaveAttribute(
     "href",
-    "/app/ipos/",
+    "/ipos/",
   );
   expect(screen.getByRole("combobox", { name: "Status" })).toHaveValue("");
   expect(screen.getAllByRole("main")).toHaveLength(1);
@@ -185,7 +185,7 @@ it("navigates to saved facts and evidence without leaving React", async () => {
 
 it("colors negative listing gains, GMP and saved news scores without coloring prices", async () => {
   await showIpos({
-    path: "/app/ipos/1/",
+    path: "/ipos/1/",
     detail: {
       ...ipo,
       score: "4.2/10",
@@ -208,7 +208,7 @@ it("colors negative listing gains, GMP and saved news scores without coloring pr
 
 it("restores all bookmarked filters and retains them in pagination", async () => {
   await showIpos({
-    path: "/app/ipos/?q=Example&status=listed&verdict=good&category=sme&page=2",
+    path: "/ipos/?q=Example&status=listed&verdict=good&category=sme&page=2",
     page: { ...list, page: 2 },
   });
   expect(await screen.findByRole("searchbox")).toHaveValue("Example");
@@ -223,7 +223,7 @@ it("restores all bookmarked filters and retains them in pagination", async () =>
 });
 
 it("debounces search, resets page, and applies board/verdict/status filters", async () => {
-  const router = await showIpos({ path: "/app/ipos/?page=2" });
+  const router = await showIpos({ path: "/ipos/?page=2" });
   const input = await screen.findByRole("searchbox");
   input.focus();
   fireEvent.change(input, { target: { value: "Ex" } });
@@ -244,7 +244,7 @@ it("debounces search, resets page, and applies board/verdict/status filters", as
 });
 
 it("clears pending typing and resets to Active", async () => {
-  const router = await showIpos({ path: "/app/ipos/?status=all&verdict=good&category=sme" });
+  const router = await showIpos({ path: "/ipos/?status=all&verdict=good&category=sme" });
   fireEvent.change(await screen.findByRole("searchbox"), { target: { value: "pending" } });
   fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
   await waitFor(() =>
@@ -270,7 +270,7 @@ it.each([false, true])("keeps empty-list hints staff-only: %s", async (staff) =>
 
 it("handles unscored issues and unsafe source links without inventing values", async () => {
   await showIpos({
-    path: "/app/ipos/1/",
+    path: "/ipos/1/",
     detail: {
       ...ipo,
       verdict: "unknown",
@@ -289,7 +289,7 @@ it("handles unscored issues and unsafe source links without inventing values", a
 });
 
 it.each([403, 404])("shows IPO-specific recovery for %s", async (status) => {
-  await showIpos({ path: "/app/ipos/1/", status });
+  await showIpos({ path: "/ipos/1/", status });
   await waitFor(() =>
     expect(
       screen.getByRole("heading", {
@@ -297,12 +297,12 @@ it.each([403, 404])("shows IPO-specific recovery for %s", async (status) => {
       }),
     ).toBeInTheDocument(),
   );
-  expect(screen.getByRole("link", { name: "Back to IPOs" })).toHaveAttribute("href", "/app/ipos/");
+  expect(screen.getByRole("link", { name: "Back to IPOs" })).toHaveAttribute("href", "/ipos/");
   expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
 });
 
 it("rejects detail contract drift visibly", async () => {
-  await showIpos({ path: "/app/ipos/1/", detail: { ...ipo, scored_at: "invalid" } });
+  await showIpos({ path: "/ipos/1/", detail: { ...ipo, scored_at: "invalid" } });
   await waitFor(() =>
     expect(screen.getByRole("heading", { name: "Unable to load this page" })).toBeInTheDocument(),
   );

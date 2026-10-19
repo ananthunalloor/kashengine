@@ -38,7 +38,7 @@ afterEach(() => {
 
 async function showAudit({
   staff = true,
-  path = "/app/ops/audit/",
+  path = "/ops/audit/",
   status = 200,
   malformed = false,
   rows = events,
@@ -95,7 +95,7 @@ async function showAudit({
   clients.push(client);
   const router = createRouter({
     routeTree,
-    basepath: "/app",
+    basepath: "/",
     trailingSlash: "always",
     history: createMemoryHistory({ initialEntries: [path] }),
     context: { queryClient: client },
@@ -118,7 +118,7 @@ it("shows legacy audit fields, recorded actors, masked details, IPv6 and IST dat
   expect(document.title).toBe("Audit trail | Kash Engine");
   expect(screen.getByRole("link", { name: "Audit trail", current: "page" })).toHaveAttribute(
     "href",
-    "/app/ops/audit/",
+    "/ops/audit/",
   );
   const table = within(screen.getByRole("table", { name: "Audit trail" }));
   expect(table.getByRole("cell", { name: "Deleted admin" })).toBeInTheDocument();
@@ -145,7 +145,7 @@ it("rejects non-staff before fetching audit rows or advertising the navigation l
 
 it("restores bookmarks, paginates on the server and retains filter/sort state", async () => {
   const { router, fetchMock } = await showAudit({
-    path: "/app/ops/audit/?page=2&page_size=1&sort=-created_at",
+    path: "/ops/audit/?page=2&page_size=1&sort=-created_at",
   });
   expect(await screen.findByRole("heading", { name: "Audit trail" })).toBeInTheDocument();
   expect(document.title).toBe("Audit trail - page 2 | Kash Engine");
@@ -166,7 +166,7 @@ it("restores bookmarks, paginates on the server and retains filter/sort state", 
 });
 
 it("searches and changes exact filters, resetting pagination and preserving pending search", async () => {
-  const { router, fetchMock } = await showAudit({ path: "/app/ops/audit/?page=2&page_size=1" });
+  const { router, fetchMock } = await showAudit({ path: "/ops/audit/?page=2&page_size=1" });
   const input = await screen.findByRole("searchbox", { name: "Search audit records" });
   fireEvent.change(input, { target: { value: " news " } });
   fireEvent.change(screen.getByRole("combobox", { name: "Recorded admin" }), {
@@ -241,7 +241,7 @@ it("submits immediately and cancels pending search when clearing filters", async
 });
 
 it("keeps obsolete filter values visible for bookmark recovery", async () => {
-  await showAudit({ path: "/app/ops/audit/?actor=old&action=obsolete" });
+  await showAudit({ path: "/ops/audit/?actor=old&action=obsolete" });
   expect(await screen.findByRole("combobox", { name: "Recorded admin" })).toHaveValue("old");
   expect(screen.getByRole("combobox", { name: "Action" })).toHaveValue("obsolete");
   expect(screen.getByText("No audit records match these filters.")).toBeInTheDocument();
@@ -298,7 +298,7 @@ it.each([401, 403, 429, 500])("provides Audit recovery for HTTP %s", async (stat
   expect(await screen.findByRole("alert")).toHaveTextContent("Audit unavailable.");
   expect(screen.getByRole("link", { name: "Back to Audit" })).toHaveAttribute(
     "href",
-    "/app/ops/audit/",
+    "/ops/audit/",
   );
   if (status === 401)
     expect(screen.getByRole("link", { name: "Go to sign in" })).toBeInTheDocument();

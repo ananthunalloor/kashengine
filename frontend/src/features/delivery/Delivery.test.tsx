@@ -87,9 +87,9 @@ async function showDelivery({
   clients.push(client);
   const router = createRouter({
     routeTree,
-    basepath: "/app",
+    basepath: "/",
     trailingSlash: "always",
-    history: createMemoryHistory({ initialEntries: ["/app/delivery/"] }),
+    history: createMemoryHistory({ initialEntries: ["/delivery/"] }),
     context: { queryClient: client },
     defaultPendingMinMs: 0,
   });
@@ -119,7 +119,7 @@ it("shows configuration count, channels, test/report attempts and IST times", as
   expect(screen.getByRole("link", { name: /Compare with/ })).toHaveAttribute("href", "/delivery/");
   expect(screen.getByRole("link", { name: "Delivery", current: "page" })).toHaveAttribute(
     "href",
-    "/app/delivery/",
+    "/delivery/",
   );
   expect(screen.getAllByRole("main")).toHaveLength(1);
   expect(document.querySelector("style")).toBeNull();
@@ -128,7 +128,7 @@ it("shows configuration count, channels, test/report attempts and IST times", as
 it("navigates to the React report detail without leaving the app", async () => {
   const router = await showDelivery();
   const link = await screen.findByRole("link", { name: "16 Oct 2026" });
-  expect(link).toHaveAttribute("href", "/app/reports/2026-10-16/");
+  expect(link).toHaveAttribute("href", "/reports/2026-10-16/");
   fireEvent.click(link);
   expect(await screen.findByText("Saved report")).toBeInTheDocument();
   expect(router.state.location.pathname).toBe("/reports/2026-10-16/");
@@ -183,7 +183,7 @@ it.each([401, 403])("surfaces %s access failures inside the shell", async (statu
   );
   expect(screen.getByRole("link", { name: "Back to Delivery" })).toHaveAttribute(
     "href",
-    "/app/delivery/",
+    "/delivery/",
   );
   expect(screen.getAllByRole("main")).toHaveLength(1);
 });

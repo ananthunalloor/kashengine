@@ -19,8 +19,8 @@ function showShell(value: Session = session) {
 it("renders the server-provided links without inventing access", () => {
   showShell();
   expect(screen.getByRole("navigation", { name: "Main" })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("href", "/app/reports/");
-  expect(screen.getByRole("link", { name: "Today" })).toHaveAttribute("href", "/app/dashboard/");
+  expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("href", "/reports/");
+  expect(screen.getByRole("link", { name: "Today" })).toHaveAttribute("href", "/dashboard/");
   expect(screen.queryByRole("link", { name: "News" })).not.toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "Ops" })).not.toBeInTheDocument();
   expect(screen.getByRole("main")).toHaveAttribute("id", "main");
@@ -39,7 +39,7 @@ it("shows subscription notices and keeps account navigation for locked users", (
   });
   expect(screen.getByRole("status")).toHaveTextContent("Your access has ended.");
   expect(screen.queryByRole("link", { name: "Reports" })).not.toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Account" })).toHaveAttribute("href", "/app/account/");
+  expect(screen.getByRole("link", { name: "Account" })).toHaveAttribute("href", "/account/");
 });
 
 it("uses a CSRF-protected POST for logout", () => {
@@ -51,7 +51,7 @@ it("uses a CSRF-protected POST for logout", () => {
   expect(form).toHaveAttribute("method", "post");
   expect(form).toHaveAttribute("action", "/logout/");
   expect(form?.querySelector("input")).toHaveValue("shell-csrf");
-  expect(form?.querySelector('input[name="next"]')).toHaveValue("/app/login/");
+  expect(form?.querySelector('input[name="next"]')).toHaveValue("/login/");
   expect(button).toBeEnabled();
   document.cookie = "csrftoken=; Max-Age=0; path=/";
 });
@@ -90,7 +90,7 @@ it("shows account identity and details in a keyboard-dismissable popover", () =>
   expect(popover).toHaveTextContent("Trial");
   expect(popover).toHaveTextContent("A subscription is not currently required.");
   const link = screen.getByRole("link", { name: "Account details" });
-  expect(link).toHaveAttribute("href", "/app/account/");
+  expect(link).toHaveAttribute("href", "/account/");
   expect(link).toHaveFocus();
   fireEvent.keyDown(link, { key: "Escape" });
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -146,7 +146,7 @@ it("closes account details when the route changes", () => {
   fireEvent.click(screen.getByRole("button", { name: "Account menu for member" }));
   view.rerender(
     <ThemeProvider>
-      <ApplicationShell session={session} pathname="/app/account/">
+      <ApplicationShell session={session} pathname="/account/">
         <h1>Account</h1>
       </ApplicationShell>
     </ThemeProvider>,

@@ -22,7 +22,7 @@ URL = "/api/app/today"
 
 def test_requires_browser_session_and_rejects_bearer(client, member, make_token, auth):
     assert client.get(URL).status_code == 401
-    assert client.get("/app/dashboard/").status_code == 302
+    assert client.get("/dashboard/").status_code == 302
     client.force_login(member)
     _, secret = make_token(member)
     assert client.get(URL, headers=auth(secret)).status_code == 401
@@ -39,11 +39,11 @@ def test_subscription_and_public_api_independence(client, member, expire, settin
     client.force_login(member)
     response = client.get(URL)
     assert response.status_code == (200 if staff else 403)
-    preview = client.get("/app/dashboard/")
+    preview = client.get("/dashboard/")
     assert preview.status_code == (200 if staff else 302)
     if not staff:
         assert response.json()["code"] == "subscription_required"
-        assert preview.url == "/app/account/"
+        assert preview.url == "/account/"
 
 
 def test_empty_state_cache_and_legacy_page(client, member):
@@ -59,14 +59,11 @@ def test_empty_state_cache_and_legacy_page(client, member):
     assert body["news"]["good"] == body["news"]["bad"] == []
     assert body["ipos"]["open_now"] == body["ipos"]["upcoming"] == []
     assert body["report"] is None
-    preview = client.get("/app/dashboard/")
+    preview = client.get("/dashboard/")
     assert preview.status_code == 200
     assert b'id="root"' in preview.content
     assert "no-store" in preview["Cache-Control"]
-    original = client.get("/dashboard/")
-    assert original.status_code == 200
-    assert b'id="root"' not in original.content
-    assert b"No outlook yet" in original.content
+    assert "web/dashboard.html" not in [t.name for t in preview.templates]
 
 
 @pytest.mark.parametrize("feature", ["markets", "news", "ipos", "reports"])
@@ -98,7 +95,7 @@ def test_no_features_is_an_empty_overview_not_an_error(client, member, data):
         "ipos": None,
         "report": None,
     }
-    assert client.get("/app/dashboard/").status_code == 200
+    assert client.get("/dashboard/").status_code == 200
 
 
 def test_saved_outlook_actual_target_dates_cues_and_no_writes(client, member, data):

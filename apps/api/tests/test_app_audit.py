@@ -9,7 +9,7 @@ from apps.siteconfig import conf
 
 pytestmark = pytest.mark.django_db
 URL = "/api/app/ops/audit"
-PREVIEW = "/app/ops/audit/"
+PREVIEW = "/ops/audit/"
 
 
 @pytest.fixture
@@ -76,7 +76,7 @@ def test_staff_parity_cache_read_only_and_legacy(client, staff, events, settings
     assert preview.status_code == 200
     assert b'id="root"' in preview.content
     assert "no-store" in preview["Cache-Control"]
-    assert b'id="root"' not in client.get("/ops/audit/").content
+    assert "ops/audit.html" not in [t.name for t in preview.templates]
     assert client.post(URL).status_code == 405
     assert list(AuditEvent.objects.values()) == before
 

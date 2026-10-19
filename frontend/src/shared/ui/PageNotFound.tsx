@@ -14,11 +14,11 @@ export function PageNotFound() {
         This page does not exist or may have moved. Check the address or use one of the links below.
       </p>
       <div className="public-actions">
-        <a className="public-button" href="/app/landing/">
+        <a className="public-button" href="/">
           <LuHouse aria-hidden="true" />
           Go to home
         </a>
-        <a href="/app/dashboard/">
+        <a href="/dashboard/">
           <LuArrowLeft aria-hidden="true" />
           Open dashboard
         </a>

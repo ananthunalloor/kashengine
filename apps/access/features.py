@@ -4,7 +4,7 @@ A feature is a part of the web app. Every user has all features by default. An a
 a feature from one user on Ops > Users. The middleware checks the feature of each page by the
 name of its URL, so a new page cannot skip the check if its name is in this list.
 
-The pages "Today" (dashboard and its React preview), the React shell, the account page, login,
+The pages "Today", the React shell, the account page, login,
 and logout are not features. Everybody who may use the site can open them. The dashboard hides
 the parts that belong to a feature that the user does not have.
 """
@@ -27,29 +27,27 @@ FEATURES: tuple[Feature, ...] = (
         "reports",
         "Daily reports",
         "The list of daily reports and each report.",
-        frozenset({"reports", "report", "react_reports", "react_report"}),
+        frozenset({"reports", "report"}),
     ),
-    Feature("news", "News", "The scored news list.", frozenset({"news", "react_news"})),
+    Feature("news", "News", "The scored news list.", frozenset({"news"})),
     Feature(
         "ipos",
         "IPOs",
         "The IPO list, the scores, and each IPO.",
-        frozenset({"ipos", "ipo", "react_ipos", "react_ipo"}),
+        frozenset({"ipos", "ipo"}),
     ),
     Feature(
         "markets",
         "Markets and outlook",
         "The prediction, its history and accuracy, and the quotes. The outlook on Today.",
-        frozenset({"markets", "react_markets"}),
+        frozenset({"markets"}),
     ),
-    Feature(
-        "companies", "Companies", "The company list.", frozenset({"companies", "react_companies"})
-    ),
+    Feature("companies", "Companies", "The company list.", frozenset({"companies"})),
     Feature(
         "delivery",
         "Delivery",
         "The page with the Telegram send attempts.",
-        frozenset({"delivery", "react_delivery"}),
+        frozenset({"delivery"}),
     ),
 )
 
@@ -64,14 +62,10 @@ BY_URL_NAME: dict[str, Feature] = {
 OPEN_URL_NAMES: frozenset[str] = frozenset(
     {
         "landing",
-        "react_landing",
-        "react_login",
         "login",
         "logout",
         "account",
         "token_create",
         "token_revoke",
-        "react_app",
-        "react_account",
     }
 )

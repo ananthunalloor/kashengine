@@ -47,7 +47,7 @@ def test_all_pages_are_typed_and_legacy_still_renders(boss_client, offline, path
     assert "ETag" not in response
     legacy = "/ops/" if path == "overview/" else f"/ops/{path}"
     assert boss_client.get(legacy).status_code == 200
-    preview = "/app/ops/" if path == "overview/" else f"/app/ops/{path}"
+    preview = "/ops/" if path == "overview/" else f"/ops/{path}"
     assert b'id="root"' in boss_client.get(preview).content
 
 
@@ -70,7 +70,7 @@ def test_permission_matrix_and_action_allowlist(
     assert member_client.get(f"{BASE}pages/jobs/").status_code == 403
     assert staff_client.get(f"{BASE}pages/jobs/").status_code == 200
     assert staff_client.get(f"{BASE}pages/backups/").status_code == 403
-    assert staff_client.get("/app/ops/backups/").status_code == 403
+    assert staff_client.get("/ops/backups/").status_code == 403
     assert staff_client.post(f"{BASE}actions/feeds/", {}).status_code == 403
     assert boss_client.get(f"{BASE}pages/feeds/1/delete/").status_code == 404
     assert boss_client.post(f"{BASE}actions/users/", {}).status_code == 404
@@ -115,7 +115,7 @@ def test_feed_actions_stay_in_react_and_audit_once(boss_client):
     )
     assert response.status_code == 200, response.content
     assert response.json()["ok"] is True
-    assert response.json()["redirect"] == "/app/ops/feeds/"
+    assert response.json()["redirect"] == "/ops/feeds/"
     assert AuditEvent.objects.count() == before + 1
     feed = NewsFeed.objects.get(name="<b>Feed</b>")
     response = boss_client.post(f"{BASE}actions/feeds/{feed.pk}/toggle/")
@@ -183,7 +183,7 @@ def test_job_confirm_busy_and_dispatch_feedback(boss_client, queue):
     assert boss_client.post(endpoint).json()["ok"] is False
     response = boss_client.post(endpoint, {"confirm": "yes"})
     assert response.json()["ok"] is True
-    assert response.json()["redirect"].startswith("/app/ops/runs/")
+    assert response.json()["redirect"].startswith("/ops/runs/")
     assert len(queue) == 1
     assert boss_client.post(endpoint, {"confirm": "yes"}).json()["messages"]
 

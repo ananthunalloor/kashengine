@@ -29,7 +29,7 @@ def _refuse(request: HttpRequest, template: str, context: dict) -> HttpResponse:
     """A 403 page. A Datastar request gets a short text, so the page does not break."""
     if request.headers.get(DATASTAR_HEADER):
         return HttpResponse("Not allowed.", status=403, content_type="text/plain")
-    if request.path.startswith("/app/"):
+    if not getattr(request, "is_archive", False):
         return preview_response(
             request, page="access", status=403, feature=context["feature"].label
         )
@@ -58,9 +58,7 @@ class AccessMiddleware:
         if not access.subscription_ok:
             if request.headers.get(DATASTAR_HEADER):
                 return _refuse(request, "", {})
-            return redirect(
-                reverse("web:react_account" if request.path.startswith("/app/") else "web:account")
-            )
+            return redirect(reverse("web:account"))
         feature = features.BY_URL_NAME.get(name or "")
         if feature and not access.can(feature.key):
             return _refuse(request, "web/no_access.html", {"feature": feature})

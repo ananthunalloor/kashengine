@@ -24,14 +24,14 @@ def companies():
 
 def test_session_feature_and_token_rules(client, member, make_token, auth):
     assert client.get(URL).status_code == 401
-    assert client.get("/app/companies/").status_code == 302
+    assert client.get("/companies/").status_code == 302
     client.force_login(member)
     _, secret = make_token(member)
     assert client.get(URL, headers=auth(secret)).status_code == 401
     FeatureBlock.objects.create(user=member, feature="companies")
     assert client.get(URL).json()["code"] == "feature_not_available"
     assert client.get(URL).status_code == 403
-    assert client.get("/app/companies/").status_code == 403
+    assert client.get("/companies/").status_code == 403
 
 
 @pytest.mark.parametrize("is_staff", [False, True])
@@ -46,7 +46,7 @@ def test_subscription_and_staff_exemption(client, member, expire, settings, is_s
     client.force_login(member)
     response = client.get(URL)
     assert response.status_code == (200 if is_staff else 403)
-    assert client.get("/app/companies/").status_code == (200 if is_staff else 302)
+    assert client.get("/companies/").status_code == (200 if is_staff else 302)
     if not is_staff:
         assert response.json()["code"] == "subscription_required"
 
@@ -123,11 +123,8 @@ def test_display_only_fields_and_read_only_behavior(client, member):
 
 def test_preview_and_legacy_remain_separate(client, member):
     client.force_login(member)
-    preview = client.get("/app/companies/")
+    preview = client.get("/companies/")
     assert preview.status_code == 200
     assert b'id="root"' in preview.content
     assert "no-store" in preview["Cache-Control"]
-    legacy = client.get("/companies/")
-    assert legacy.status_code == 200
-    assert b'id="root"' not in legacy.content
-    assert b"Search by name, symbol, or sector" in legacy.content
+    assert "web/companies.html" not in [t.name for t in preview.templates]

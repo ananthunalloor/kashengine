@@ -17,7 +17,7 @@ function RootLayout() {
   const notice = z.object({ opsNotice: z.array(zOpsMessage).optional() }).safeParse(historyState);
 
   return (
-    <ApplicationShell session={session} pathname={`/app${pathname}`}>
+    <ApplicationShell session={session} pathname={pathname}>
       {notice.success && notice.data.opsNotice?.length ? (
         <div role="status">
           {notice.data.opsNotice.map((message, index) => (

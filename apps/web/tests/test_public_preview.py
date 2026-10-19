@@ -13,7 +13,7 @@ from apps.access.models import FeatureBlock, Subscription
 from apps.api.app.ops_pages import ACTIONS, PAGES
 from apps.ops.urls import urlpatterns as ops_patterns
 from apps.siteconfig import service
-from apps.web.urls import urlpatterns as web_patterns
+from apps.web.legacy_urls import urlpatterns as web_patterns
 
 pytestmark = pytest.mark.django_db
 PASSWORD = "preview-test-password"
@@ -34,7 +34,7 @@ def member(django_user_model):
     return django_user_model.objects.create_user("preview-member", password=PASSWORD)
 
 
-@pytest.mark.parametrize(("path", "page"), [("/app/landing/", "landing"), ("/app/login/", "login")])
+@pytest.mark.parametrize(("path", "page"), [("/", "landing"), ("/login/", "login")])
 def test_public_previews_are_anonymous_uncached_and_set_csrf(client, path, page):
     response = client.get(path)
     data = presentation(response)
@@ -52,26 +52,24 @@ def test_landing_stays_public_after_expiry(client, member):
     service.save({"SUBSCRIPTIONS_REQUIRED": True})
     Subscription.objects.filter(user=member).update(ends_at=timezone.now() - timedelta(days=1))
     client.force_login(member)
-    response = client.get("/app/landing/")
+    response = client.get("/")
     assert response.status_code == 200
     assert presentation(response)["authenticated"] is True
 
 
-@pytest.mark.parametrize("next_path", ["", "/app/news/?q=banks", "https://untrusted.invalid/"])
+@pytest.mark.parametrize("next_path", ["", "/news/?q=banks", "https://untrusted.invalid/"])
 def test_login_uses_django_safe_redirects(client, member, next_path):
     response = client.post(
-        "/app/login/", {"username": member.username, "password": PASSWORD, "next": next_path}
+        "/login/", {"username": member.username, "password": PASSWORD, "next": next_path}
     )
     assert response.status_code == 302
-    assert response["Location"] == (
-        next_path if next_path.startswith("/app/") else "/app/dashboard/"
-    )
+    assert response["Location"] == (next_path if next_path.startswith("/") else "/dashboard/")
     assert client.session["_auth_user_id"] == str(member.pk)
 
 
 def test_invalid_login_never_serializes_credentials(client, member):
     response = client.post(
-        "/app/login/", {"username": member.username, "password": "secret-invalid-password"}
+        "/login/", {"username": member.username, "password": "secret-invalid-password"}
     )
     assert response.status_code == 200
     assert presentation(response)["invalid"] is True
@@ -82,73 +80,69 @@ def test_invalid_login_never_serializes_credentials(client, member):
 def test_real_csrf_login_and_post_only_logout(member):
     client = Client(enforce_csrf_checks=True)
     assert (
-        client.post("/app/login/", {"username": member.username, "password": PASSWORD}).status_code
+        client.post("/login/", {"username": member.username, "password": PASSWORD}).status_code
         == 403
     )
-    data = presentation(client.get("/app/login/"))
+    data = presentation(client.get("/login/"))
     response = client.post(
-        "/app/login/",
+        "/login/",
         {"username": member.username, "password": PASSWORD, "csrfmiddlewaretoken": data["csrf"]},
     )
     assert response.status_code == 302
     assert client.get("/logout/").status_code == 405
-    assert client.post("/logout/", {"next": "/app/login/"}).status_code == 403
+    assert client.post("/logout/", {"next": "/login/"}).status_code == 403
     response = client.post(
         "/logout/",
-        {"next": "/app/login/", "csrfmiddlewaretoken": client.cookies["csrftoken"].value},
+        {"next": "/login/", "csrfmiddlewaretoken": client.cookies["csrftoken"].value},
     )
     assert response.status_code == 302
-    assert response["Location"] == "/app/login/"
+    assert response["Location"] == "/login/"
     assert "_auth_user_id" not in client.session
 
 
 @pytest.mark.parametrize("minutes", [1, 30])
 def test_real_axes_lockout_is_react_and_still_blocks_valid_credentials(client, member, minutes):
     service.save({"LOGIN_FAILURE_LIMIT": 1, "LOGIN_COOLOFF_MINUTES": minutes})
-    response = client.post("/app/login/", {"username": member.username, "password": "wrong"})
+    response = client.post("/login/", {"username": member.username, "password": "wrong"})
     data = presentation(response)
     assert response.status_code == 429
     assert data["page"] == "lockout"
     assert data["minutes"] == (minutes or None)
     assert member.username not in response.text
     assert "wrong" not in response.text
-    response = client.post("/app/login/", {"username": member.username, "password": PASSWORD})
+    response = client.post("/login/", {"username": member.username, "password": PASSWORD})
     assert response.status_code == 429
     assert presentation(response)["page"] == "lockout"
     assert "_auth_user_id" not in client.session
 
 
-def test_preview_feature_denial_keeps_real_403_and_legacy_template(client, member):
+def test_feature_denial_keeps_real_403_without_exposing_legacy_template(client, member):
     FeatureBlock.objects.create(user=member, feature="news")
     client.force_login(member)
-    preview = client.get("/app/news/")
+    preview = client.get("/news/")
     assert preview.status_code == 403
     assert presentation(preview)["feature"] == "News"
-    legacy = client.get("/news/")
-    assert legacy.status_code == 403
-    assert "web/no_access.html" in [template.name for template in legacy.templates]
+    assert "web/no_access.html" not in [template.name for template in preview.templates]
 
 
 def test_preview_subscription_expiry_stays_in_react(client, member):
     service.save({"SUBSCRIPTIONS_REQUIRED": True})
     Subscription.objects.filter(user=member).update(ends_at=timezone.now() - timedelta(days=1))
     client.force_login(member)
-    assert client.get("/app/news/")["Location"] == "/app/account/"
+    assert client.get("/news/")["Location"] == "/account/"
     assert client.get("/news/")["Location"] == "/account/"
 
 
-@pytest.mark.parametrize(
-    "path", ["/app/", "/app/reports/", "/app/ops/", "/app/ops/users/1/", "/app/ipos/1/"]
-)
+@pytest.mark.parametrize("path", ["/dashboard/", "/reports/", "/ops/", "/ops/users/1/", "/ipos/1/"])
 def test_preview_authentication_redirects_to_react_login(client, path):
     response = client.get(path)
     assert response.status_code == 302
-    assert response["Location"] == f"/app/login/?next={path}"
+    assert response["Location"] == f"/login/?next={path}"
 
 
 def test_ops_permission_denial_has_react_403(client, member):
     client.force_login(member)
-    response = client.get("/app/ops/")
+    response = client.get("/ops/")
     assert response.status_code == 403
     assert presentation(response)["page"] == "access"
 
@@ -156,19 +150,19 @@ def test_ops_permission_denial_has_react_403(client, member):
 def test_all_legacy_product_pages_and_actions_have_react_equivalents():
     # Guard additions to the original URL inventory, not just the current preview routes.
     equivalents = {
-        "landing": "/app/landing/",
-        "login": "/app/login/",
+        "landing": "/",
+        "login": "/login/",
         "logout": "/logout/",
-        "dashboard": "/app/dashboard/",
-        "reports": "/app/reports/",
-        "report": "/app/reports/2026-10-19/",
-        "news": "/app/news/",
-        "ipos": "/app/ipos/",
-        "ipo": "/app/ipos/1/",
-        "markets": "/app/markets/",
-        "companies": "/app/companies/",
-        "delivery": "/app/delivery/",
-        "account": "/app/account/",
+        "dashboard": "/dashboard/",
+        "reports": "/reports/",
+        "report": "/reports/2026-10-19/",
+        "news": "/news/",
+        "ipos": "/ipos/",
+        "ipo": "/ipos/1/",
+        "markets": "/markets/",
+        "companies": "/companies/",
+        "delivery": "/delivery/",
+        "account": "/account/",
         "token_create": "/api/app/account/tokens",
         "token_revoke": "/api/app/account/tokens/1/revoke",
     }

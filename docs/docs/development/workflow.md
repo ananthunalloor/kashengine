@@ -58,11 +58,26 @@ CI (`.github/workflows/ci.yml`) runs all the checks above for each pull request.
 
 ## React migration
 
-The authenticated React preview is served by Django at `/app/`. All product pages have React
-equivalents, including the public landing page at `/app/landing/` and login at `/app/login/`.
-Legacy URLs remain server-rendered during the preview rollout. Django Admin and documentation
-interfaces remain unchanged. Start Vite with
+React serves all product pages at their canonical URLs, including `/`, `/login/`,
+`/dashboard/`, and `/ops/`. The old `/app/` prefix no longer resolves. Django Admin and
+documentation interfaces remain unchanged. Start Vite with
 `pnpm --dir frontend dev` alongside Django, or use the frontend service in the dev Compose file.
+
+`ArchiveMiddleware` selects `config.legacy_urls` only for the exact, validated
+`OLD_SITE_ADDRESS` hostname (default `old.${SITE_ADDRESS}`, or `old.localhost` in dev).
+Before any archived view or action runs, it requires an active superuser. Only the archive
+login form is public, and its authentication form rejects ordinary staff and members.
+Rejected non-superuser credentials also emit Django's failure signal for axes lockout counting.
+The archive retains live writes, confirmations, and CSRF protection; it is not a database
+snapshot. Every response is private/no-store and noindex/nofollow/noarchive. Templates display
+an Archived banner. Session/CSRF cookies remain host-only, with a separate archive login.
+Caddy serves both hosts and applies `ADMIN_ALLOWED_IPS` to the entire archive.
+
+The main URLconf contains only React page views and private/public APIs; legacy POST paths
+are not exposed on the main hostname. Ops API adapters resolve their allowlists explicitly
+against `config.legacy_urls`, retaining the original domain handlers without reopening them
+as browser endpoints. Archived renderer/domain unit tests use an isolated test URLconf;
+`apps/web/tests/test_archive.py` exercises the actual deployed host and role boundary.
 
 Public screens use the separate `src/public.tsx` Vite entry, not the authenticated router:
 anonymous visitors never request the private session endpoint. Django passes a small,
@@ -77,21 +92,21 @@ The route-inventory regression test in `apps/web/tests/test_public_preview.py` c
 original product page/action against its React counterpart so new pages cannot be overlooked.
 Production uses the Vite manifest and built assets included in the Python image.
 
-Today opens `/app/dashboard/`, backed by the session-only `/api/app/today` endpoint.
+Today opens `/dashboard/`, backed by the session-only `/api/app/today` endpoint.
 It requires an active subscription when that rule is enabled, but is not a separate feature:
 Markets, News, IPOs, and Reports sections are independently authorized before their queries
-run. Disabled sections return null, not hidden data. The preview preserves the existing
+run. Disabled sections return null, not hidden data. The page preserves the existing
 36-hour news window, ranking/deduplication, four-story/group limits, mutually exclusive IPO
 groups, configured quotes, and latest saved report. The latest outlook keeps its actual target
 date, five strongest saved cues and their trading dates, notes, component scores, and baseline/
 small-sample caveats. Reads do not fetch, score, evaluate, or send anything. Bounded summaries
 use local TanStack tables and shared metric colors; full-list links stay inside React.
-The original `/dashboard/` and login redirect remain unchanged.
+The default login destination is `/dashboard/`.
 
-Account opens `/app/account/` and reads `/api/app/account`, including subscription details,
+Account opens `/account/` and reads `/api/app/account`, including subscription details,
 feature access, the latest 20 owner-scoped masked token rows, and the full active-token count.
 Its TanStack tables provide local search, filters, sorting, and pagination over these bounded
-rows. The preview and endpoint remain available after subscription expiry. POST
+rows. The page and endpoint remain available after subscription expiry. POST
 `/api/app/account/tokens` creates a token; POST `/api/app/account/tokens/{id}/revoke` revokes
 only the current user's token. Both require session-cookie authentication and CSRF, reuse
 existing token services, and audit only masked prefixes. Token names and contact text are
@@ -103,16 +118,14 @@ the secret lives only in component-local state until hidden or unmounted. It nev
 query caches, URLs, or browser storage. If creation succeeds but metadata refresh fails,
 the page retains the secret and explicitly reports the partial success. When the public API
 is disabled, creation is denied, but masked metadata and revocation remain available
-intentionally, unlike the legacy page's hidden API section. The original `/account/` remains
-unchanged apart from sharing the token-row limit.
+intentionally, unlike the archived page's hidden API section.
 
-Staff task history opens `/app/ops/runs/`, with details at `/app/ops/runs/{id}/`. The private
+Staff task history opens `/ops/runs/`, with details at `/ops/runs/{id}/`. The private
 GET endpoints `/api/app/ops/runs` and `/api/app/ops/runs/{id}` use `OpsSession`: the existing
 session/CSRF/rate-limit rules plus the same `is_staff` flag as Django Ops. Non-staff are rejected
 before operational queries; subscriptions and the public API switch do not gate staff reads.
-Direct preview URLs are staff-protected too. Caddy applies `ADMIN_ALLOWED_IPS` to `/app/ops`
-and `/api/app/ops` and their children, not just the original `/ops` routes. Deploy the updated
-proxy configuration alongside this preview.
+Direct URLs are staff-protected too. Caddy applies `ADMIN_ALLOWED_IPS` to `/ops`
+and `/api/app/ops` and their children, and to the entire archive hostname.
 
 The TanStack run table searches job labels, task names/IDs, and triggering usernames, with the
 legacy exact job/result/trigger filters, sorting, and `OPS_PAGE_SIZE` pagination (override 1-100).
@@ -123,9 +136,9 @@ duration formatter. Waiting/running details poll every three seconds while visib
 when terminal, on errors, or on navigation. Failed refreshes explicitly hide stale operational
 data, with manual retry for recoverable errors. Neither endpoint dispatches a job, calls
 external services, or writes audit events. Job execution is available in the full React Ops
-workspace; `/ops/runs/` and its original details remain available.
+workspace; original template renderers are available only on the archive hostname.
 
-The audit trail preview opens `/app/ops/audit/` and reads `GET /api/app/ops/audit` with the
+The audit trail opens `/ops/audit/` and reads `GET /api/app/ops/audit` with the
 same `OpsSession` staff check and Caddy IP restrictions. All legacy display fields are retained:
 time, recorded actor name, action, target, detail, and nullable address. Names come from the
 event snapshot rather than the current user record, so renames/deletions do not change history.
@@ -137,12 +150,12 @@ nulls-last ordering and stable ID ties; default ordering remains newest-first. P
 `OPS_PAGE_SIZE` with an optional 1-100 override. The TanStack table keeps filters, search, sort,
 and page size in the URL. Detail text is escaped and preserves line breaks, never HTML.
 Background permission or refresh errors hide stale audit rows and display explicit recovery.
-The page is read-only, has no polling, and never creates audit events. `/ops/audit/` is unchanged.
+The page is read-only, has no polling, and never creates audit events.
 
-The full Ops preview now starts at `/app/ops/`: Overview, Jobs, Logs, Metrics, Users and user
+The full Ops workspace starts at `/ops/`: Overview, Jobs, Logs, Metrics, Users and user
 details/access/subscriptions, Subscriptions, Logins/lockouts, Settings and every setting group,
 Schedule/add/edit, Feeds, Instruments, Configuration, and Backups. Runs/Audit retain their
-dedicated endpoints. All old `/ops/` routes still work; no default-route cutover has occurred.
+dedicated endpoints. Legacy `/ops/` pages and actions are isolated on the archive hostname.
 
 `GET /api/app/ops/pages/{path}` resolves only a fixed Ops page allowlist. Django views return
 `TemplateResponse` so the legacy HTML and explicit JSON presenters share the same context and
@@ -189,51 +202,49 @@ The icon-only sun/moon control keeps an accessible label and a next-theme toolti
 
 The browser client validates session responses against generated Zod schemas, sends CSRF tokens
 for writes, and redirects expired sessions to Django login with the current return URL.
-Reports opens `/app/reports/`, with a paginated list and detail pages at `/app/reports/YYYY-MM-DD/`.
-The preview uses `/api/app/reports` and `/api/app/reports/{day}` with session-only, Reports-feature
+Reports opens `/reports/`, with a paginated list and detail pages at `/reports/YYYY-MM-DD/`.
+The page uses `/api/app/reports` and `/api/app/reports/{day}` with session-only, Reports-feature
 authentication. It retains the original text-rendering and score-formatting helpers, adjacent
 reports, and delivery history. Delivery recipients are excluded; only staff receive error details.
-The existing `/reports/` pages remain unchanged for comparison. News opens `/app/news/` and reads
+News opens `/news/` and reads
 the session-only `/api/app/news` endpoint. It reuses `news_queryset` and `news_sources`, preserving
 search over headlines and summaries, score thresholds, source choices, and the web page size.
 Article links open in a new tab with `noopener noreferrer`; non-HTTP(S) links render as text.
 Scores and explanations are plain text, with publication times displayed in IST. Search is
 debounced by 300 ms, selects apply immediately, and filter changes reset pagination. Query
-parameters preserve filters across bookmarks and browser history. The original `/news/` page is
-unchanged. Other navigation links still open
-the existing Django pages. Direct preview URLs and API requests both enforce access rules.
+parameters preserve filters across bookmarks and browser history. All product navigation now
+stays in React. Direct URLs and API requests both enforce access rules.
 
-IPOs opens `/app/ipos/`, with issue details at `/app/ipos/{id}/`. The private `/api/app/ipos` and
+IPOs opens `/ipos/`, with issue details at `/ipos/{id}/`. The private `/api/app/ipos` and
 `/api/app/ipos/{id}` endpoints reuse `ipo_queryset`, `ipo_facts`, and existing number-formatting
 helpers. The default Active list excludes listed issues and preserves the original status
 ordering. Search, board, verdict, and status filters are stored in the URL; search is debounced
 and filter changes reset pagination. Saved verdict signals, original units, missing values,
 metric freshness, and scored timestamps are preserved. No read endpoint refreshes metrics or
-recalculates a verdict. The original `/ipos/` list/detail pages are unchanged.
+recalculates a verdict.
 
-Markets opens `/app/markets/`. Its private `/api/app/markets` endpoint reuses `accuracy_stats`,
+Markets opens `/markets/`. Its private `/api/app/markets` endpoint reuses `accuracy_stats`,
 `latest_quotes`, and `prediction_history` (newest 30), with existing percentage and strength
-formatting. The preview preserves the common-direction baseline, small-sample warning, pending
+formatting. The page preserves the common-direction baseline, small-sample warning, pending
 count, and all four evaluation states. Saved closes always show their exchange-local trading
-date; missing changes are not displayed as zero. Both preview and API enforce the Markets
-feature and subscription rules. No read refreshes prices or evaluates results, and the original
-`/markets/` page is unchanged.
+date; missing changes are not displayed as zero. Both page and API enforce the Markets
+feature and subscription rules. No read refreshes prices or evaluates results.
 
-Companies opens `/app/companies/`, backed by the session-only `/api/app/companies` endpoint.
+Companies opens `/companies/`, backed by the session-only `/api/app/companies` endpoint.
 It reuses `company_queryset` for name/symbol/sector search and alphabetical ordering. Only
 directory display fields are returned, not aliases or scraped data. Search and pagination live
 in the URL; debounced typing preserves focus, resets the page, and cancels pending updates on
 navigation. Last-fetched dates use IST, and source links accept only absolute HTTP(S) URLs.
-Direct preview and API requests enforce Companies access rules. Reads never refresh company
-data, and the original `/companies/` page remains unchanged.
+Direct page and API requests enforce Companies access rules. Reads never refresh company
+data.
 
-Delivery opens `/app/delivery/`, using the private `/api/app/delivery` endpoint and the same
+Delivery opens `/delivery/`, using the private `/api/app/delivery` endpoint and the same
 `latest_deliveries` query as the original page (newest 50 attempts). Configuration exposes only
 the count of nonempty Telegram chats, never chat IDs or bot credentials. Recipients are not
 serialized, and diagnostics are staff-only. Attempts without a report retain the existing
 "Test" label, including deleted reports. Report links target the React detail route and are
-omitted when the Reports feature is unavailable. The preview has no send/retry-write actions;
-reading never sends messages. Both routes enforce Delivery access; `/delivery/` is unchanged.
+omitted when the Reports feature is unavailable. The page has no send/retry-write actions;
+reading never sends messages. Both page and API enforce Delivery access.
 
 ### Table and icon conventions
 

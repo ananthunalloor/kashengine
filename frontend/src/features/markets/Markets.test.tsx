@@ -94,9 +94,9 @@ async function showMarkets({
   clients.push(client);
   const router = createRouter({
     routeTree,
-    basepath: "/app",
+    basepath: "/",
     trailingSlash: "always",
-    history: createMemoryHistory({ initialEntries: ["/app/markets/"] }),
+    history: createMemoryHistory({ initialEntries: ["/markets/"] }),
     context: { queryClient: client },
     defaultPendingMinMs: 0,
   });
@@ -135,7 +135,7 @@ it("shows saved track record, baseline, sample warning, closes and all result st
   expect(screen.getByRole("link", { name: /Compare with/ })).toHaveAttribute("href", "/markets/");
   expect(screen.getByRole("link", { name: "Markets", current: "page" })).toHaveAttribute(
     "href",
-    "/app/markets/",
+    "/markets/",
   );
   expect(document.querySelector("style")).toBeNull();
 });
@@ -191,7 +191,7 @@ it.each([401, 403])("handles %s access errors inside the shell", async (status) 
   expect(screen.getAllByRole("main")).toHaveLength(1);
   expect(screen.getByRole("link", { name: "Back to Markets" })).toHaveAttribute(
     "href",
-    "/app/markets/",
+    "/markets/",
   );
 });
 

@@ -56,7 +56,7 @@ def landing(request: HttpRequest) -> HttpResponse:
 class PreviewLogin(LoginView):
     """Use Django's login validation, safe redirects, signals, and axes unchanged."""
 
-    next_page = "/app/dashboard/"
+    next_page = "/dashboard/"
     redirect_authenticated_user = True
 
     def render_to_response(self, context, **response_kwargs):
@@ -88,7 +88,9 @@ def permission_denied(request: HttpRequest, exception: Exception) -> HttpRespons
     Returns:
         A React preview 403 or Django's original legacy 403.
     """
-    if request.path.startswith("/app/"):
+    if not getattr(request, "is_archive", False) and not request.path.startswith(
+        ("/admin/", "/api/")
+    ):
         return preview_response(request, page="access", status=403, feature="This page")
     return django_permission_denied(request, exception)
 
@@ -106,4 +108,6 @@ def page_not_found(request: HttpRequest, exception: Exception | None = None) -> 
     """
     if request.path.startswith("/api/"):
         return django_page_not_found(request, exception)
+    if getattr(request, "is_archive", False):
+        return render(request, "web/archive_status.html", {"missing": True}, status=404)
     return preview_response(request, page="not-found", status=404)

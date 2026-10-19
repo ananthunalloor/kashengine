@@ -116,9 +116,9 @@ async function showAccount({
   clients.push(client);
   const router = createRouter({
     routeTree,
-    basepath: "/app",
+    basepath: "/",
     trailingSlash: "always",
-    history: createMemoryHistory({ initialEntries: ["/app/account/"] }),
+    history: createMemoryHistory({ initialEntries: ["/account/"] }),
     context: { queryClient: client },
     defaultPendingMinMs: 0,
   });
@@ -146,7 +146,7 @@ it("renders subscription, access explanations and masked tokens for locked accou
   expect(document.title).toBe("Account | Kash Engine");
   expect(screen.getByRole("link", { name: "Account", current: "page" })).toHaveAttribute(
     "href",
-    "/app/account/",
+    "/account/",
   );
   expect(screen.getByText("member \u00b7 member@example.test")).toBeInTheDocument();
   expect(screen.getByText(/Your trial ends/)).toHaveTextContent("26 October 2026 (7 days left)");
@@ -198,7 +198,7 @@ it("discards the one-time secret on React navigation and never replays creation"
   await makeToken();
   await screen.findByText(oneTimeSecret);
   await router.navigate({ to: "/" });
-  await screen.findByRole("heading", { name: "React preview", level: 1 });
+  await screen.findByRole("heading", { name: /Less noise/, level: 1 });
   await router.navigate({ to: "/account/" });
   await screen.findByRole("heading", { name: "Your account", level: 1 });
   expect(screen.queryByText(oneTimeSecret)).not.toBeInTheDocument();
@@ -323,7 +323,7 @@ it("rejects contract drift and gives an Account-specific recovery route", async 
   expect(await screen.findByRole("alert")).toHaveTextContent("The Account response does not match");
   expect(screen.getByRole("link", { name: "Back to Account" })).toHaveAttribute(
     "href",
-    "/app/account/",
+    "/account/",
   );
 });
 

@@ -24,8 +24,8 @@ export function OpsNavigation({ superuser, pathname }: { superuser: boolean; pat
         .map(([path, label]) => (
           <a
             key={path}
-            href={`/app/ops/${path}`}
-            aria-current={pathname === `/app/ops/${path}` ? "page" : undefined}
+            href={`/ops/${path}`}
+            aria-current={pathname === `/ops/${path}` ? "page" : undefined}
           >
             {label}
           </a>

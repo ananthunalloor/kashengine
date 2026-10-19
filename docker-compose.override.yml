@@ -19,6 +19,7 @@ services:
       - "127.0.0.1:443:443/udp" # HTTP/3
     environment:
       SITE_ADDRESS: localhost # Caddy signs the certificate with its own local CA.
+      OLD_SITE_ADDRESS: old.localhost
       ACME_EMAIL: dev@localhost # Not used for "localhost", but the Caddyfile needs a value.
       ADMIN_ALLOWED_IPS: "0.0.0.0/0 ::/0"
       DOCS_ALLOWED_IPS: "0.0.0.0/0 ::/0"

@@ -28,13 +28,10 @@ it("renders the anonymous landing without any session API request", () => {
   expect(screen.getAllByRole("article")).toHaveLength(9);
   expect(screen.getByRole("link", { name: /Explore your dashboard/ })).toHaveAttribute(
     "href",
-    "/app/login/",
+    "/login/",
   );
   for (const path of ["news", "markets", "ipos", "companies", "reports", "delivery"]) {
-    expect(screen.getByRole("link", { name: `Open ${path}` })).toHaveAttribute(
-      "href",
-      `/app/${path}/`,
-    );
+    expect(screen.getByRole("link", { name: `Open ${path}` })).toHaveAttribute("href", `/${path}/`);
   }
   expect(screen.getByText("Illustrative preview")).toBeInTheDocument();
   expect(screen.getByText(/Not financial advice/)).toBeInTheDocument();
@@ -46,21 +43,21 @@ it("links signed-in landing visitors directly to React", () => {
   show({ authenticated: true });
   expect(screen.getByRole("link", { name: "Open dashboard" })).toHaveAttribute(
     "href",
-    "/app/dashboard/",
+    "/dashboard/",
   );
   expect(screen.getByRole("link", { name: /Explore your dashboard/ })).toHaveAttribute(
     "href",
-    "/app/dashboard/",
+    "/dashboard/",
   );
 });
 
 it("uses native Django login with CSRF, safe next state and password autocomplete", () => {
-  show({ page: "login", next: "/app/news/?q=banks" });
+  show({ page: "login", next: "/news/?q=banks" });
   const form = screen.getByRole("button", { name: "Log in" }).closest("form")!;
   expect(form).toHaveAttribute("method", "post");
-  expect(form).toHaveAttribute("action", "/app/login/");
+  expect(form).toHaveAttribute("action", "/login/");
   expect(form.querySelector('[name="csrfmiddlewaretoken"]')).toHaveValue("public-csrf");
-  expect(form.querySelector('[name="next"]')).toHaveValue("/app/news/?q=banks");
+  expect(form.querySelector('[name="next"]')).toHaveValue("/news/?q=banks");
   expect(screen.getByLabelText("User name")).toHaveAttribute("autocomplete", "username");
   expect(screen.getByLabelText("Password")).toHaveAttribute("autocomplete", "current-password");
   expect(screen.getByLabelText("Password")).toHaveAttribute("type", "password");
@@ -88,7 +85,7 @@ it.each([null, 1, 30])(
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back to the login" })).toHaveAttribute(
       "href",
-      "/app/login/",
+      "/login/",
     );
     expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
   },
@@ -99,10 +96,10 @@ it("escapes denied feature text and offers React account and dashboard links", (
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Not on your account");
   expect(screen.getByText(/<script>unsafe/)).toBeInTheDocument();
   expect(document.querySelector("script")).toBeNull();
-  expect(screen.getByRole("link", { name: "Account" })).toHaveAttribute("href", "/app/account/");
+  expect(screen.getByRole("link", { name: "Account" })).toHaveAttribute("href", "/account/");
   expect(screen.getByRole("link", { name: "Back to Today" })).toHaveAttribute(
     "href",
-    "/app/dashboard/",
+    "/dashboard/",
   );
 });
 

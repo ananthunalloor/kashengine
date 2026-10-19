@@ -161,7 +161,7 @@ def link(label: str, path: str) -> NavigationItem:
     Returns:
         A React workspace navigation item.
     """
-    return NavigationItem(label=label, url=f"/app/ops/{path}")
+    return NavigationItem(label=label, url=f"/ops/{path}")
 
 
 def action(
@@ -372,7 +372,7 @@ def run_row(run) -> OpsRow:
         A summary row linking to the dedicated React run detail.
     """
     return row(
-        job=cell(run.label, href=f"/app/ops/runs/{run.pk}/"),
+        job=cell(run.label, href=f"/ops/runs/{run.pk}/"),
         status=state(run.status),
         started=run.started_at or run.created_at,
         finished=run.finished_at,
@@ -686,7 +686,7 @@ def _present_subscriptions(request: HttpRequest, name: str, context: dict[str, A
         user = entry["user"]
         sub = entry["sub"]
         item = row(
-            username=cell(user.get_username(), href=f"/app/ops/users/{user.pk}/"),
+            username=cell(user.get_username(), href=f"/ops/users/{user.pk}/"),
             email=user.email,
             role="Superuser" if user.is_superuser else "Staff" if user.is_staff else "Member",
             active=state("On" if user.is_active else "Off"),
@@ -1042,7 +1042,7 @@ def _present_config(request: HttpRequest, name: str, context: dict[str, Any]) ->
                     request,
                     [
                         row(
-                            group=cell(e["title"], href=f"/app/ops/settings/{e['key']}/"),
+                            group=cell(e["title"], href=f"/ops/settings/{e['key']}/"),
                             description=e["help"],
                             values=e["count"],
                             saved=e["saved"],
@@ -1148,7 +1148,7 @@ def _present_schedule(request: HttpRequest, name: str, context: dict[str, Any]) 
             timezone=schedule.timezone,
             next=entry["next_run"],
             state=state("On" if schedule.enabled else "Off"),
-            last=cell(entry["last"].status, href=f"/app/ops/runs/{entry['last'].pk}/")
+            last=cell(entry["last"].status, href=f"/ops/runs/{entry['last'].pk}/")
             if entry["last"]
             else "Never",
         )
@@ -1518,7 +1518,7 @@ def target(path: str, allowed: set[str]):
         raise Http404
     path = "" if path == "overview/" else path
     try:
-        match = resolve(f"/ops/{path}")
+        match = resolve(f"/ops/{path}", urlconf="config.legacy_urls")
     except Resolver404 as exc:
         raise Http404 from exc
     if match.namespace != "ops" or match.url_name not in allowed:
@@ -1539,7 +1539,7 @@ def workspace_redirect(url: str) -> str:
         ValueError: If the original action returns an unexpected destination.
     """
     if url.startswith("/ops/"):
-        return f"/app{url}"
+        return url
     if url == "/login/":
         return url
     raise ValueError(f"Unexpected Ops action redirect: {url}")
