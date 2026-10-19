@@ -71,3 +71,38 @@ class ReportDetail(ReportSummary):
     deliveries: list[ReportDelivery] = Field(description="Delivery attempts, newest first.")
     older: dt.date | None = Field(description="Date of the nearest older report, if any.")
     newer: dt.date | None = Field(description="Date of the nearest newer report, if any.")
+
+
+class NewsItem(Schema):
+    """An article's display fields, excluding scraped text and internal processing state."""
+
+    id: int = Field(description="Article primary key.")
+    title: str = Field(description="Original article headline, rendered as plain text.")
+    url: str = Field(description="Original source URL; the browser only links HTTP(S) URLs.")
+    source: str = Field(description="Publisher name.")
+    published_at: datetime | None = Field(description="Publication time, when known.")
+    sentiment: Literal["positive", "negative", "neutral", "unscored"] = Field(
+        description="Display tone using the existing sentiment thresholds."
+    )
+    score: str | None = Field(description="Signed sentiment formatted on the 1.0-10.0 scale.")
+    relevance: str | None = Field(description="Relevance formatted on the 1.0-10.0 scale.")
+    reason: str = Field(description="Model explanation, rendered as plain text.")
+    companies: list[str] = Field(description="Up to four linked company names.")
+
+
+class NewsFilterOption(Schema):
+    """One server-supported sentiment filter."""
+
+    value: str = Field(description="Filter query value.")
+    label: str = Field(description="Human-readable filter name.")
+
+
+class NewsPage(Schema):
+    """Filtered news and the available filter options."""
+
+    items: list[NewsItem] = Field(description="Matching articles in the existing web order.")
+    page: int = Field(description="Resolved page number, starting at one.")
+    pages: int = Field(description="Total pages; one when empty.")
+    total: int = Field(description="Total matching articles.")
+    sources: list[str] = Field(description="All source names, sorted, independent of the filters.")
+    sentiments: list[NewsFilterOption] = Field(description="Supported sentiment filters.")

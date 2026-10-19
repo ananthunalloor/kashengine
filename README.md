@@ -279,8 +279,8 @@ pnpm --dir frontend dev
 
 Open `http://localhost:8000/app/` while signed in to view the authenticated React shell.
 The preview loads navigation, feature permissions, subscription notices, and the staff flag
-from the session-only private API at `/api/app/session`. Reports opens the React preview at
-`/app/reports/`; other links still open the existing Django pages. The shell includes a mobile menu,
+from the session-only private API at `/api/app/session`. Reports and News open React previews at
+`/app/reports/` and `/app/news/`; other links still open the existing Django pages. The shell includes a mobile menu,
 a persistent light/dark toggle, and CSRF-protected logout.
 An expired session returns to login; API errors display a retryable error page.
 
@@ -288,6 +288,12 @@ The Reports preview includes paginated history, full text, delivery status, and 
 navigation, using `/api/app/reports` and `/api/app/reports/{day}`. The original `/reports/` pages
 remain unchanged for comparison. Both versions enforce the same Reports access rules; delivery
 recipients are never exposed and delivery errors are staff-only.
+
+The News preview preserves headline/summary search, source and sentiment filters, pagination,
+model explanations, company names, and the existing 1.0-10.0 score scale. Filters live in the URL
+for bookmarks and back/forward navigation. Search updates after a short debounce; Apply and Clear
+filters are also available. `/api/app/news` uses the same feature and subscription rules as `/news/`,
+which remains unchanged for comparison.
 
 React shares the landing page's purple accent, white surfaces, sans-serif typography, and rounded
 cards through `static/css/brand-tokens.css`. Light mode is the default; a saved dark-mode choice

@@ -92,9 +92,9 @@ export function ApplicationShell({
             onClick={close}
           />
           {session.navigation.map((item) => {
-            const url = item.url === "/reports/" ? "/app/reports/" : item.url;
-            const active =
-              pathname === url || (url === "/app/reports/" && pathname.startsWith(url));
+            const migrated = ["/reports/", "/news/"].includes(item.url);
+            const url = migrated ? `/app${item.url}` : item.url;
+            const active = pathname === url || (migrated && pathname.startsWith(url));
             return (
               <NavLink
                 key={item.url}

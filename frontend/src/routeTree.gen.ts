@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as NewsIndexRouteImport } from './routes/news.index'
 import { Route as ReportsIndexRouteImport } from './routes/reports.index'
 import { Route as ReportsDayRouteImport } from './routes/reports.$day'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NewsIndexRoute = NewsIndexRouteImport.update({
+  id: '/news/',
+  path: '/news/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReportsIndexRoute = ReportsIndexRouteImport.update({
@@ -32,30 +38,34 @@ const ReportsDayRoute = ReportsDayRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/reports/$day': typeof ReportsDayRoute
+  '/news/': typeof NewsIndexRoute
   '/reports/': typeof ReportsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/reports/$day': typeof ReportsDayRoute
+  '/news': typeof NewsIndexRoute
   '/reports': typeof ReportsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/reports/$day': typeof ReportsDayRoute
+  '/news/': typeof NewsIndexRoute
   '/reports/': typeof ReportsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/reports/$day' | '/reports/'
+  fullPaths: '/' | '/reports/$day' | '/news/' | '/reports/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/reports/$day' | '/reports'
-  id: '__root__' | '/' | '/reports/$day' | '/reports/'
+  to: '/' | '/reports/$day' | '/news' | '/reports'
+  id: '__root__' | '/' | '/reports/$day' | '/news/' | '/reports/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ReportsDayRoute: typeof ReportsDayRoute
+  NewsIndexRoute: typeof NewsIndexRoute
   ReportsIndexRoute: typeof ReportsIndexRoute
 }
 
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/news/': {
+      id: '/news/'
+      path: '/news'
+      fullPath: '/news/'
+      preLoaderRoute: typeof NewsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reports/': {
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ReportsDayRoute: ReportsDayRoute,
+  NewsIndexRoute: NewsIndexRoute,
   ReportsIndexRoute: ReportsIndexRoute,
 }
 export const routeTree = rootRouteImport

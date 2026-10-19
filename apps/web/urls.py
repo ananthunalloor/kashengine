@@ -30,6 +30,7 @@ urlpatterns = [
     path("app/", views.react_app, name="react_app"),
     path("app/reports/", views.react_app, name="react_reports"),
     path("app/reports/<date:day>/", views.react_report, name="react_report"),
+    path("app/news/", views.react_app, name="react_news"),
     path("dashboard/", views.dashboard, name="dashboard"),
     path("login/", views.Login.as_view(), name="login"),
     path("logout/", views.Logout.as_view(), name="logout"),

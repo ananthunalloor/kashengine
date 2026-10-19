@@ -6,7 +6,10 @@ import { loginUrl } from "../api/client";
 import { ApiError } from "../api/errors";
 import { usePageTitle } from "./usePageTitle";
 
-export function AppLoading({ withinShell = false }: { withinShell?: boolean } = {}) {
+export function AppLoading({
+  withinShell = false,
+  label = "reports",
+}: { withinShell?: boolean; label?: string } = {}) {
   return (
     <Container
       component={withinShell ? "section" : "main"}
@@ -17,7 +20,7 @@ export function AppLoading({ withinShell = false }: { withinShell?: boolean } = 
     >
       <Stack align="center" role="status">
         <Loader aria-hidden="true" />
-        <Text>{withinShell ? "Loading reports..." : "Loading your account..."}</Text>
+        <Text>{withinShell ? `Loading ${label}...` : "Loading your account..."}</Text>
       </Stack>
     </Container>
   );
@@ -26,7 +29,8 @@ export function AppLoading({ withinShell = false }: { withinShell?: boolean } = 
 export function AppError({
   error,
   withinShell = false,
-}: ErrorComponentProps & { withinShell?: boolean }) {
+  section = "Reports",
+}: ErrorComponentProps & { withinShell?: boolean; section?: "Reports" | "News" }) {
   const router = useRouter();
   const unauthorized = error instanceof ApiError && error.kind === "unauthorized";
   const notFound = error instanceof ApiError && error.kind === "not-found";
@@ -36,7 +40,9 @@ export function AppError({
   const title = unauthorized
     ? "Sign in to continue"
     : notFound
-      ? "Report not found"
+      ? section === "Reports"
+        ? "Report not found"
+        : "Page not found"
       : forbidden
         ? "Not on your account"
         : "Unable to load this page";
@@ -71,7 +77,11 @@ export function AppError({
             </Button>
           )
         )}
-        {withinShell && <Anchor href="/app/reports/">Back to Reports</Anchor>}
+        {withinShell && (
+          <Anchor href={section === "News" ? "/app/news/" : "/app/reports/"}>
+            Back to {section}
+          </Anchor>
+        )}
         <Anchor href="/account/">Open your account</Anchor>
       </Stack>
     </Container>

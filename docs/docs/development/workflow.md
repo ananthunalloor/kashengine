@@ -76,7 +76,14 @@ Reports opens `/app/reports/`, with a paginated list and detail pages at `/app/r
 The preview uses `/api/app/reports` and `/api/app/reports/{day}` with session-only, Reports-feature
 authentication. It retains the original text-rendering and score-formatting helpers, adjacent
 reports, and delivery history. Delivery recipients are excluded; only staff receive error details.
-The existing `/reports/` pages remain unchanged for comparison. Other navigation links still open
+The existing `/reports/` pages remain unchanged for comparison. News opens `/app/news/` and reads
+the session-only `/api/app/news` endpoint. It reuses `news_queryset` and `news_sources`, preserving
+search over headlines and summaries, score thresholds, source choices, and the web page size.
+Article links open in a new tab with `noopener noreferrer`; non-HTTP(S) links render as text.
+Scores and explanations are plain text, with publication times displayed in IST. Search is
+debounced by 300 ms, selects apply immediately, and filter changes reset pagination. Query
+parameters preserve filters across bookmarks and browser history. The original `/news/` page is
+unchanged. Other navigation links still open
 the existing Django pages. Direct preview URLs and API requests both enforce access rules.
 
 After changing the private schemas:
@@ -87,7 +94,7 @@ pnpm --dir frontend api:generate
 pnpm --dir frontend format:check
 pnpm --dir frontend test
 pnpm --dir frontend build
-uv run pytest -q apps/api/tests/test_app.py apps/api/tests/test_app_reports.py
+uv run pytest -q apps/api/tests/test_app.py apps/api/tests/test_app_reports.py apps/api/tests/test_app_news.py
 ```
 
 Do not put UI-only endpoints in `/api/v1/`: its public compatibility contract is unchanged.

@@ -326,6 +326,170 @@ export type ReportDetail = {
     newer: string | null;
 };
 
+/**
+ * NewsFilters
+ *
+ * Bound search input to the same lengths as the existing web filters.
+ */
+export type NewsFilters = {
+    /**
+     * Q
+     *
+     * Headline or summary search text.
+     */
+    q?: string;
+    /**
+     * Source
+     *
+     * Exact source name, or all.
+     */
+    source?: string;
+    /**
+     * Sentiment
+     *
+     * Sentiment category, or empty for all.
+     */
+    sentiment?: string;
+    /**
+     * Page
+     *
+     * Requested page; out-of-range values are clamped.
+     */
+    page?: number;
+};
+
+/**
+ * NewsFilterOption
+ *
+ * One server-supported sentiment filter.
+ */
+export type NewsFilterOption = {
+    /**
+     * Value
+     *
+     * Filter query value.
+     */
+    value: string;
+    /**
+     * Label
+     *
+     * Human-readable filter name.
+     */
+    label: string;
+};
+
+/**
+ * NewsItem
+ *
+ * An article's display fields, excluding scraped text and internal processing state.
+ */
+export type NewsItem = {
+    /**
+     * Id
+     *
+     * Article primary key.
+     */
+    id: number;
+    /**
+     * Title
+     *
+     * Original article headline, rendered as plain text.
+     */
+    title: string;
+    /**
+     * Url
+     *
+     * Original source URL; the browser only links HTTP(S) URLs.
+     */
+    url: string;
+    /**
+     * Source
+     *
+     * Publisher name.
+     */
+    source: string;
+    /**
+     * Published At
+     *
+     * Publication time, when known.
+     */
+    published_at: string | null;
+    /**
+     * Sentiment
+     *
+     * Display tone using the existing sentiment thresholds.
+     */
+    sentiment: 'positive' | 'negative' | 'neutral' | 'unscored';
+    /**
+     * Score
+     *
+     * Signed sentiment formatted on the 1.0-10.0 scale.
+     */
+    score: string | null;
+    /**
+     * Relevance
+     *
+     * Relevance formatted on the 1.0-10.0 scale.
+     */
+    relevance: string | null;
+    /**
+     * Reason
+     *
+     * Model explanation, rendered as plain text.
+     */
+    reason: string;
+    /**
+     * Companies
+     *
+     * Up to four linked company names.
+     */
+    companies: Array<string>;
+};
+
+/**
+ * NewsPage
+ *
+ * Filtered news and the available filter options.
+ */
+export type NewsPage = {
+    /**
+     * Items
+     *
+     * Matching articles in the existing web order.
+     */
+    items: Array<NewsItem>;
+    /**
+     * Page
+     *
+     * Resolved page number, starting at one.
+     */
+    page: number;
+    /**
+     * Pages
+     *
+     * Total pages; one when empty.
+     */
+    pages: number;
+    /**
+     * Total
+     *
+     * Total matching articles.
+     */
+    total: number;
+    /**
+     * Sources
+     *
+     * All source names, sorted, independent of the filters.
+     */
+    sources: Array<string>;
+    /**
+     * Sentiments
+     *
+     * Supported sentiment filters.
+     */
+    sentiments: Array<NewsFilterOption>;
+};
+
 export type GetAppSessionData = {
     body?: never;
     path?: never;
@@ -446,3 +610,65 @@ export type GetAppReportResponses = {
 };
 
 export type GetAppReportResponse = GetAppReportResponses[keyof GetAppReportResponses];
+
+export type ListAppNewsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Q
+         *
+         * Headline or summary search text.
+         */
+        q?: string;
+        /**
+         * Source
+         *
+         * Exact source name, or all.
+         */
+        source?: string;
+        /**
+         * Sentiment
+         *
+         * Sentiment category, or empty for all.
+         */
+        sentiment?: string;
+        /**
+         * Page
+         *
+         * Requested page; out-of-range values are clamped.
+         */
+        page?: number;
+    };
+    url: '/api/app/news';
+};
+
+export type ListAppNewsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type ListAppNewsError = ListAppNewsErrors[keyof ListAppNewsErrors];
+
+export type ListAppNewsResponses = {
+    /**
+     * OK
+     */
+    200: NewsPage;
+};
+
+export type ListAppNewsResponse = ListAppNewsResponses[keyof ListAppNewsResponses];

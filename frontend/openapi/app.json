@@ -231,6 +231,126 @@
           }
         ]
       }
+    },
+    "/api/app/news": {
+      "get": {
+        "operationId": "list_app_news",
+        "summary": "Search and filter the browser news feed",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "default": "",
+              "description": "Headline or summary search text.",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            },
+            "required": false,
+            "description": "Headline or summary search text."
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "schema": {
+              "default": "",
+              "description": "Exact source name, or all.",
+              "maxLength": 100,
+              "title": "Source",
+              "type": "string"
+            },
+            "required": false,
+            "description": "Exact source name, or all."
+          },
+          {
+            "in": "query",
+            "name": "sentiment",
+            "schema": {
+              "default": "",
+              "description": "Sentiment category, or empty for all.",
+              "pattern": "^(|positive|negative|neutral|unscored)$",
+              "title": "Sentiment",
+              "type": "string"
+            },
+            "required": false,
+            "description": "Sentiment category, or empty for all."
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "Requested page; out-of-range values are clamped.",
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Requested page; out-of-range values are clamped."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Preserve the existing search, score thresholds, source filters, and display values.",
+        "tags": [
+          "News"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -631,6 +751,215 @@
           "newer"
         ],
         "title": "ReportDetail",
+        "type": "object"
+      },
+      "NewsFilters": {
+        "description": "Bound search input to the same lengths as the existing web filters.",
+        "properties": {
+          "q": {
+            "default": "",
+            "description": "Headline or summary search text.",
+            "maxLength": 100,
+            "title": "Q",
+            "type": "string"
+          },
+          "source": {
+            "default": "",
+            "description": "Exact source name, or all.",
+            "maxLength": 100,
+            "title": "Source",
+            "type": "string"
+          },
+          "sentiment": {
+            "default": "",
+            "description": "Sentiment category, or empty for all.",
+            "pattern": "^(|positive|negative|neutral|unscored)$",
+            "title": "Sentiment",
+            "type": "string"
+          },
+          "page": {
+            "default": 1,
+            "description": "Requested page; out-of-range values are clamped.",
+            "title": "Page",
+            "type": "integer"
+          }
+        },
+        "title": "NewsFilters",
+        "type": "object"
+      },
+      "NewsFilterOption": {
+        "description": "One server-supported sentiment filter.",
+        "properties": {
+          "value": {
+            "description": "Filter query value.",
+            "title": "Value",
+            "type": "string"
+          },
+          "label": {
+            "description": "Human-readable filter name.",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "NewsFilterOption",
+        "type": "object"
+      },
+      "NewsItem": {
+        "description": "An article's display fields, excluding scraped text and internal processing state.",
+        "properties": {
+          "id": {
+            "description": "Article primary key.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "title": {
+            "description": "Original article headline, rendered as plain text.",
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "description": "Original source URL; the browser only links HTTP(S) URLs.",
+            "title": "Url",
+            "type": "string"
+          },
+          "source": {
+            "description": "Publisher name.",
+            "title": "Source",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Publication time, when known.",
+            "title": "Published At"
+          },
+          "sentiment": {
+            "description": "Display tone using the existing sentiment thresholds.",
+            "enum": [
+              "positive",
+              "negative",
+              "neutral",
+              "unscored"
+            ],
+            "title": "Sentiment",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Signed sentiment formatted on the 1.0-10.0 scale.",
+            "title": "Score"
+          },
+          "relevance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Relevance formatted on the 1.0-10.0 scale.",
+            "title": "Relevance"
+          },
+          "reason": {
+            "description": "Model explanation, rendered as plain text.",
+            "title": "Reason",
+            "type": "string"
+          },
+          "companies": {
+            "description": "Up to four linked company names.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Companies",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "url",
+          "source",
+          "published_at",
+          "sentiment",
+          "score",
+          "relevance",
+          "reason",
+          "companies"
+        ],
+        "title": "NewsItem",
+        "type": "object"
+      },
+      "NewsPage": {
+        "description": "Filtered news and the available filter options.",
+        "properties": {
+          "items": {
+            "description": "Matching articles in the existing web order.",
+            "items": {
+              "$ref": "#/components/schemas/NewsItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "description": "Resolved page number, starting at one.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "description": "Total pages; one when empty.",
+            "title": "Pages",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total matching articles.",
+            "title": "Total",
+            "type": "integer"
+          },
+          "sources": {
+            "description": "All source names, sorted, independent of the filters.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "sentiments": {
+            "description": "Supported sentiment filters.",
+            "items": {
+              "$ref": "#/components/schemas/NewsFilterOption"
+            },
+            "title": "Sentiments",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pages",
+          "total",
+          "sources",
+          "sentiments"
+        ],
+        "title": "NewsPage",
         "type": "object"
       }
     },

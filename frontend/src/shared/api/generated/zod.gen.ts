@@ -116,6 +116,65 @@ export const zReportDetail = z.object({
 });
 
 /**
+ * NewsFilters
+ *
+ * Bound search input to the same lengths as the existing web filters.
+ */
+export const zNewsFilters = z.object({
+    q: z.string().max(100).optional().default(''),
+    source: z.string().max(100).optional().default(''),
+    sentiment: z.string().regex(/^(|positive|negative|neutral|unscored)$/).optional().default(''),
+    page: z.int().optional().default(1)
+});
+
+/**
+ * NewsFilterOption
+ *
+ * One server-supported sentiment filter.
+ */
+export const zNewsFilterOption = z.object({
+    value: z.string(),
+    label: z.string()
+});
+
+/**
+ * NewsItem
+ *
+ * An article's display fields, excluding scraped text and internal processing state.
+ */
+export const zNewsItem = z.object({
+    id: z.int(),
+    title: z.string(),
+    url: z.string(),
+    source: z.string(),
+    published_at: z.iso.datetime().nullable(),
+    sentiment: z.enum([
+        'positive',
+        'negative',
+        'neutral',
+        'unscored'
+    ]),
+    score: z.string().nullable(),
+    relevance: z.string().nullable(),
+    reason: z.string(),
+    companies: z.array(z.string())
+});
+
+/**
+ * NewsPage
+ *
+ * Filtered news and the available filter options.
+ */
+export const zNewsPage = z.object({
+    items: z.array(zNewsItem),
+    page: z.int(),
+    pages: z.int(),
+    total: z.int(),
+    sources: z.array(z.string()),
+    sentiments: z.array(zNewsFilterOption)
+});
+
+/**
  * OK
  */
 export const zGetAppSessionResponse = zSession;
@@ -137,3 +196,15 @@ export const zGetAppReportPath = z.object({
  * OK
  */
 export const zGetAppReportResponse = zReportDetail;
+
+export const zListAppNewsQuery = z.object({
+    q: z.string().max(100).optional().default(''),
+    source: z.string().max(100).optional().default(''),
+    sentiment: z.string().regex(/^(|positive|negative|neutral|unscored)$/).optional().default(''),
+    page: z.int().optional().default(1)
+});
+
+/**
+ * OK
+ */
+export const zListAppNewsResponse = zNewsPage;
