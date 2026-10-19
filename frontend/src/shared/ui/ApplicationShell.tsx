@@ -92,7 +92,7 @@ export function ApplicationShell({
             onClick={close}
           />
           {session.navigation.map((item) => {
-            const migrated = ["/reports/", "/news/"].includes(item.url);
+            const migrated = ["/reports/", "/news/", "/ipos/"].includes(item.url);
             const url = migrated ? `/app${item.url}` : item.url;
             const active = pathname === url || (migrated && pathname.startsWith(url));
             return (

@@ -30,7 +30,7 @@ export function AppError({
   error,
   withinShell = false,
   section = "Reports",
-}: ErrorComponentProps & { withinShell?: boolean; section?: "Reports" | "News" }) {
+}: ErrorComponentProps & { withinShell?: boolean; section?: "Reports" | "News" | "IPOs" }) {
   const router = useRouter();
   const unauthorized = error instanceof ApiError && error.kind === "unauthorized";
   const notFound = error instanceof ApiError && error.kind === "not-found";
@@ -42,7 +42,9 @@ export function AppError({
     : notFound
       ? section === "Reports"
         ? "Report not found"
-        : "Page not found"
+        : section === "IPOs"
+          ? "IPO not found"
+          : "Page not found"
       : forbidden
         ? "Not on your account"
         : "Unable to load this page";
@@ -77,11 +79,7 @@ export function AppError({
             </Button>
           )
         )}
-        {withinShell && (
-          <Anchor href={section === "News" ? "/app/news/" : "/app/reports/"}>
-            Back to {section}
-          </Anchor>
-        )}
+        {withinShell && <Anchor href={`/app/${section.toLowerCase()}/`}>Back to {section}</Anchor>}
         <Anchor href="/account/">Open your account</Anchor>
       </Stack>
     </Container>

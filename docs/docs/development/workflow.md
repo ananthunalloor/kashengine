@@ -86,6 +86,14 @@ parameters preserve filters across bookmarks and browser history. The original `
 unchanged. Other navigation links still open
 the existing Django pages. Direct preview URLs and API requests both enforce access rules.
 
+IPOs opens `/app/ipos/`, with issue details at `/app/ipos/{id}/`. The private `/api/app/ipos` and
+`/api/app/ipos/{id}` endpoints reuse `ipo_queryset`, `ipo_facts`, and existing number-formatting
+helpers. The default Active list excludes listed issues and preserves the original status
+ordering. Search, board, verdict, and status filters are stored in the URL; search is debounced
+and filter changes reset pagination. Saved verdict signals, original units, missing values,
+metric freshness, and scored timestamps are preserved. No read endpoint refreshes metrics or
+recalculates a verdict. The original `/ipos/` list/detail pages are unchanged.
+
 After changing the private schemas:
 
 ```bash
@@ -94,7 +102,7 @@ pnpm --dir frontend api:generate
 pnpm --dir frontend format:check
 pnpm --dir frontend test
 pnpm --dir frontend build
-uv run pytest -q apps/api/tests/test_app.py apps/api/tests/test_app_reports.py apps/api/tests/test_app_news.py
+uv run pytest -q apps/api/tests/test_app*.py
 ```
 
 Do not put UI-only endpoints in `/api/v1/`: its public compatibility contract is unchanged.

@@ -106,3 +106,63 @@ class NewsPage(Schema):
     total: int = Field(description="Total matching articles.")
     sources: list[str] = Field(description="All source names, sorted, independent of the filters.")
     sentiments: list[NewsFilterOption] = Field(description="Supported sentiment filters.")
+
+
+class IpoSummary(Schema):
+    """Display values for one IPO, using the existing web formatting rules."""
+
+    id: int = Field(description="IPO primary key.")
+    name: str = Field(description="IPO company name.")
+    category: str = Field(description="Human-readable board name.")
+    status: str = Field(description="Human-readable issue status.")
+    dates: str = Field(description="Opening and closing dates, or a dash when unknown.")
+    price_band: str = Field(description="Upper price band in rupees, or a dash.")
+    gmp: str = Field(description="Grey market premium as a signed percentage, or a dash.")
+    subscribed: str = Field(description="Subscription in times, or a dash.")
+    listing_gain: str = Field(description="Signed listing gain percentage, or a dash.")
+    verdict: str = Field(description="Verdict key; unknown when there is insufficient data.")
+    score: str | None = Field(description="Signed score on the 1.0-10.0 scale, if available.")
+
+
+class IpoFilterOption(Schema):
+    """A server-supported IPO filter choice."""
+
+    value: str = Field(description="Query parameter value.")
+    label: str = Field(description="Human-readable option label.")
+
+
+class IpoPage(Schema):
+    """Filtered IPOs and all supported filter choices."""
+
+    items: list[IpoSummary] = Field(description="Matching IPOs in the existing web order.")
+    page: int = Field(description="Resolved page number, starting at one.")
+    pages: int = Field(description="Total pages; one for an empty list.")
+    total: int = Field(description="Total matching IPOs.")
+    statuses: list[IpoFilterOption] = Field(description="Status filters, including Active and All.")
+    verdicts: list[IpoFilterOption] = Field(description="Verdict filters.")
+    categories: list[IpoFilterOption] = Field(description="Board filters.")
+
+
+class IpoFact(Schema):
+    """A labeled issue fact, formatted with original units and freshness notices."""
+
+    label: str = Field(description="Fact label.")
+    value: str = Field(description="Formatted value and freshness text, when applicable.")
+
+
+class IpoSignal(Schema):
+    """One scoring input in its original units and the normalized display scale."""
+
+    name: str = Field(description="Signal label: GMP, Subscription, or News.")
+    value: str = Field(description="Original value formatted with its units.")
+    signal: str = Field(description="Normalized signed signal on the 1.0-10.0 scale.")
+
+
+class IpoDetail(IpoSummary):
+    """The issue facts and evidence behind the saved verdict."""
+
+    facts: list[IpoFact] = Field(description="Issue facts, including metric freshness.")
+    signals: list[IpoSignal] = Field(description="Usable saved scoring inputs.")
+    notes: list[str] = Field(description="Saved explanation and missing-data notes.")
+    scored_at: datetime | None = Field(description="Time the verdict was last calculated.")
+    source_url: str = Field(description="Original source URL, or empty when unavailable.")

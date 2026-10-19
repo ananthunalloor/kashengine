@@ -175,6 +175,108 @@ export const zNewsPage = z.object({
 });
 
 /**
+ * IpoFilters
+ *
+ * Bound IPO search and validate the filters supported by the existing pages.
+ */
+export const zIpoFilters = z.object({
+    q: z.string().max(100).optional().default(''),
+    status: z.string().regex(/^(|open|upcoming|closed|listed|all)$/).optional().default(''),
+    verdict: z.string().regex(/^(|good|mixed|weak|unknown)$/).optional().default(''),
+    category: z.string().regex(/^(|mainboard|sme)$/).optional().default(''),
+    page: z.int().optional().default(1)
+});
+
+/**
+ * IpoFilterOption
+ *
+ * A server-supported IPO filter choice.
+ */
+export const zIpoFilterOption = z.object({
+    value: z.string(),
+    label: z.string()
+});
+
+/**
+ * IpoSummary
+ *
+ * Display values for one IPO, using the existing web formatting rules.
+ */
+export const zIpoSummary = z.object({
+    id: z.int(),
+    name: z.string(),
+    category: z.string(),
+    status: z.string(),
+    dates: z.string(),
+    price_band: z.string(),
+    gmp: z.string(),
+    subscribed: z.string(),
+    listing_gain: z.string(),
+    verdict: z.string(),
+    score: z.string().nullable()
+});
+
+/**
+ * IpoPage
+ *
+ * Filtered IPOs and all supported filter choices.
+ */
+export const zIpoPage = z.object({
+    items: z.array(zIpoSummary),
+    page: z.int(),
+    pages: z.int(),
+    total: z.int(),
+    statuses: z.array(zIpoFilterOption),
+    verdicts: z.array(zIpoFilterOption),
+    categories: z.array(zIpoFilterOption)
+});
+
+/**
+ * IpoFact
+ *
+ * A labeled issue fact, formatted with original units and freshness notices.
+ */
+export const zIpoFact = z.object({
+    label: z.string(),
+    value: z.string()
+});
+
+/**
+ * IpoSignal
+ *
+ * One scoring input in its original units and the normalized display scale.
+ */
+export const zIpoSignal = z.object({
+    name: z.string(),
+    value: z.string(),
+    signal: z.string()
+});
+
+/**
+ * IpoDetail
+ *
+ * The issue facts and evidence behind the saved verdict.
+ */
+export const zIpoDetail = z.object({
+    id: z.int(),
+    name: z.string(),
+    category: z.string(),
+    status: z.string(),
+    dates: z.string(),
+    price_band: z.string(),
+    gmp: z.string(),
+    subscribed: z.string(),
+    listing_gain: z.string(),
+    verdict: z.string(),
+    score: z.string().nullable(),
+    facts: z.array(zIpoFact),
+    signals: z.array(zIpoSignal),
+    notes: z.array(z.string()),
+    scored_at: z.iso.datetime().nullable(),
+    source_url: z.string()
+});
+
+/**
  * OK
  */
 export const zGetAppSessionResponse = zSession;
@@ -208,3 +310,25 @@ export const zListAppNewsQuery = z.object({
  * OK
  */
 export const zListAppNewsResponse = zNewsPage;
+
+export const zListAppIposQuery = z.object({
+    q: z.string().max(100).optional().default(''),
+    status: z.string().regex(/^(|open|upcoming|closed|listed|all)$/).optional().default(''),
+    verdict: z.string().regex(/^(|good|mixed|weak|unknown)$/).optional().default(''),
+    category: z.string().regex(/^(|mainboard|sme)$/).optional().default(''),
+    page: z.int().optional().default(1)
+});
+
+/**
+ * OK
+ */
+export const zListAppIposResponse = zIpoPage;
+
+export const zGetAppIpoPath = z.object({
+    pk: z.int()
+});
+
+/**
+ * OK
+ */
+export const zGetAppIpoResponse = zIpoDetail;

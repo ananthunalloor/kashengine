@@ -110,6 +110,20 @@ def dashboard(request):
     return render(request, "web/dashboard.html", queries.dashboard_data())
 
 
+def react_ipo(request: HttpRequest, pk: int) -> HttpResponse:
+    """Serve the IPO preview for an existing issue.
+
+    Args:
+        request: The authenticated browser request.
+        pk: IPO primary key from the URL.
+
+    Returns:
+        The uncached application shell, or a 404 for a missing issue.
+    """
+    get_object_or_404(Ipo.objects.only("id"), pk=pk)
+    return react_app(request)
+
+
 def report_list(request):
     """The list of daily reports."""
     filters = read_filters(request, ("page",))

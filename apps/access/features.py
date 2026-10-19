@@ -30,7 +30,12 @@ FEATURES: tuple[Feature, ...] = (
         frozenset({"reports", "report", "react_reports", "react_report"}),
     ),
     Feature("news", "News", "The scored news list.", frozenset({"news", "react_news"})),
-    Feature("ipos", "IPOs", "The IPO list, the scores, and each IPO.", frozenset({"ipos", "ipo"})),
+    Feature(
+        "ipos",
+        "IPOs",
+        "The IPO list, the scores, and each IPO.",
+        frozenset({"ipos", "ipo", "react_ipos", "react_ipo"}),
+    ),
     Feature(
         "markets",
         "Markets and outlook",

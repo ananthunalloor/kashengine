@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as IposIndexRouteImport } from './routes/ipos.index'
+import { Route as IposIdRouteImport } from './routes/ipos.$id'
 import { Route as NewsIndexRouteImport } from './routes/news.index'
 import { Route as ReportsIndexRouteImport } from './routes/reports.index'
 import { Route as ReportsDayRouteImport } from './routes/reports.$day'
@@ -17,6 +19,16 @@ import { Route as ReportsDayRouteImport } from './routes/reports.$day'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IposIndexRoute = IposIndexRouteImport.update({
+  id: '/ipos/',
+  path: '/ipos/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IposIdRoute = IposIdRouteImport.update({
+  id: '/ipos/$id',
+  path: '/ipos/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NewsIndexRoute = NewsIndexRouteImport.update({
@@ -37,34 +49,50 @@ const ReportsDayRoute = ReportsDayRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ipos/$id': typeof IposIdRoute
   '/reports/$day': typeof ReportsDayRoute
+  '/ipos/': typeof IposIndexRoute
   '/news/': typeof NewsIndexRoute
   '/reports/': typeof ReportsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ipos/$id': typeof IposIdRoute
   '/reports/$day': typeof ReportsDayRoute
+  '/ipos': typeof IposIndexRoute
   '/news': typeof NewsIndexRoute
   '/reports': typeof ReportsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ipos/$id': typeof IposIdRoute
   '/reports/$day': typeof ReportsDayRoute
+  '/ipos/': typeof IposIndexRoute
   '/news/': typeof NewsIndexRoute
   '/reports/': typeof ReportsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/reports/$day' | '/news/' | '/reports/'
+  fullPaths:
+    '/' | '/ipos/$id' | '/reports/$day' | '/ipos/' | '/news/' | '/reports/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/reports/$day' | '/news' | '/reports'
-  id: '__root__' | '/' | '/reports/$day' | '/news/' | '/reports/'
+  to: '/' | '/ipos/$id' | '/reports/$day' | '/ipos' | '/news' | '/reports'
+  id:
+    | '__root__'
+    | '/'
+    | '/ipos/$id'
+    | '/reports/$day'
+    | '/ipos/'
+    | '/news/'
+    | '/reports/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  IposIdRoute: typeof IposIdRoute
   ReportsDayRoute: typeof ReportsDayRoute
+  IposIndexRoute: typeof IposIndexRoute
   NewsIndexRoute: typeof NewsIndexRoute
   ReportsIndexRoute: typeof ReportsIndexRoute
 }
@@ -76,6 +104,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ipos/': {
+      id: '/ipos/'
+      path: '/ipos'
+      fullPath: '/ipos/'
+      preLoaderRoute: typeof IposIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ipos/$id': {
+      id: '/ipos/$id'
+      path: '/ipos/$id'
+      fullPath: '/ipos/$id'
+      preLoaderRoute: typeof IposIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/news/': {
@@ -104,7 +146,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  IposIdRoute: IposIdRoute,
   ReportsDayRoute: ReportsDayRoute,
+  IposIndexRoute: IposIndexRoute,
   NewsIndexRoute: NewsIndexRoute,
   ReportsIndexRoute: ReportsIndexRoute,
 }

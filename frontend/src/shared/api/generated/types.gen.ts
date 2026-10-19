@@ -490,6 +490,338 @@ export type NewsPage = {
     sentiments: Array<NewsFilterOption>;
 };
 
+/**
+ * IpoFilters
+ *
+ * Bound IPO search and validate the filters supported by the existing pages.
+ */
+export type IpoFilters = {
+    /**
+     * Q
+     *
+     * IPO name search text.
+     */
+    q?: string;
+    /**
+     * Status
+     *
+     * Issue status; empty means Active (not listed).
+     */
+    status?: string;
+    /**
+     * Verdict
+     *
+     * Verdict, or all.
+     */
+    verdict?: string;
+    /**
+     * Category
+     *
+     * Board, or all.
+     */
+    category?: string;
+    /**
+     * Page
+     *
+     * Requested page; out-of-range values are clamped.
+     */
+    page?: number;
+};
+
+/**
+ * IpoFilterOption
+ *
+ * A server-supported IPO filter choice.
+ */
+export type IpoFilterOption = {
+    /**
+     * Value
+     *
+     * Query parameter value.
+     */
+    value: string;
+    /**
+     * Label
+     *
+     * Human-readable option label.
+     */
+    label: string;
+};
+
+/**
+ * IpoPage
+ *
+ * Filtered IPOs and all supported filter choices.
+ */
+export type IpoPage = {
+    /**
+     * Items
+     *
+     * Matching IPOs in the existing web order.
+     */
+    items: Array<IpoSummary>;
+    /**
+     * Page
+     *
+     * Resolved page number, starting at one.
+     */
+    page: number;
+    /**
+     * Pages
+     *
+     * Total pages; one for an empty list.
+     */
+    pages: number;
+    /**
+     * Total
+     *
+     * Total matching IPOs.
+     */
+    total: number;
+    /**
+     * Statuses
+     *
+     * Status filters, including Active and All.
+     */
+    statuses: Array<IpoFilterOption>;
+    /**
+     * Verdicts
+     *
+     * Verdict filters.
+     */
+    verdicts: Array<IpoFilterOption>;
+    /**
+     * Categories
+     *
+     * Board filters.
+     */
+    categories: Array<IpoFilterOption>;
+};
+
+/**
+ * IpoSummary
+ *
+ * Display values for one IPO, using the existing web formatting rules.
+ */
+export type IpoSummary = {
+    /**
+     * Id
+     *
+     * IPO primary key.
+     */
+    id: number;
+    /**
+     * Name
+     *
+     * IPO company name.
+     */
+    name: string;
+    /**
+     * Category
+     *
+     * Human-readable board name.
+     */
+    category: string;
+    /**
+     * Status
+     *
+     * Human-readable issue status.
+     */
+    status: string;
+    /**
+     * Dates
+     *
+     * Opening and closing dates, or a dash when unknown.
+     */
+    dates: string;
+    /**
+     * Price Band
+     *
+     * Upper price band in rupees, or a dash.
+     */
+    price_band: string;
+    /**
+     * Gmp
+     *
+     * Grey market premium as a signed percentage, or a dash.
+     */
+    gmp: string;
+    /**
+     * Subscribed
+     *
+     * Subscription in times, or a dash.
+     */
+    subscribed: string;
+    /**
+     * Listing Gain
+     *
+     * Signed listing gain percentage, or a dash.
+     */
+    listing_gain: string;
+    /**
+     * Verdict
+     *
+     * Verdict key; unknown when there is insufficient data.
+     */
+    verdict: string;
+    /**
+     * Score
+     *
+     * Signed score on the 1.0-10.0 scale, if available.
+     */
+    score: string | null;
+};
+
+/**
+ * IpoDetail
+ *
+ * The issue facts and evidence behind the saved verdict.
+ */
+export type IpoDetail = {
+    /**
+     * Id
+     *
+     * IPO primary key.
+     */
+    id: number;
+    /**
+     * Name
+     *
+     * IPO company name.
+     */
+    name: string;
+    /**
+     * Category
+     *
+     * Human-readable board name.
+     */
+    category: string;
+    /**
+     * Status
+     *
+     * Human-readable issue status.
+     */
+    status: string;
+    /**
+     * Dates
+     *
+     * Opening and closing dates, or a dash when unknown.
+     */
+    dates: string;
+    /**
+     * Price Band
+     *
+     * Upper price band in rupees, or a dash.
+     */
+    price_band: string;
+    /**
+     * Gmp
+     *
+     * Grey market premium as a signed percentage, or a dash.
+     */
+    gmp: string;
+    /**
+     * Subscribed
+     *
+     * Subscription in times, or a dash.
+     */
+    subscribed: string;
+    /**
+     * Listing Gain
+     *
+     * Signed listing gain percentage, or a dash.
+     */
+    listing_gain: string;
+    /**
+     * Verdict
+     *
+     * Verdict key; unknown when there is insufficient data.
+     */
+    verdict: string;
+    /**
+     * Score
+     *
+     * Signed score on the 1.0-10.0 scale, if available.
+     */
+    score: string | null;
+    /**
+     * Facts
+     *
+     * Issue facts, including metric freshness.
+     */
+    facts: Array<IpoFact>;
+    /**
+     * Signals
+     *
+     * Usable saved scoring inputs.
+     */
+    signals: Array<IpoSignal>;
+    /**
+     * Notes
+     *
+     * Saved explanation and missing-data notes.
+     */
+    notes: Array<string>;
+    /**
+     * Scored At
+     *
+     * Time the verdict was last calculated.
+     */
+    scored_at: string | null;
+    /**
+     * Source Url
+     *
+     * Original source URL, or empty when unavailable.
+     */
+    source_url: string;
+};
+
+/**
+ * IpoFact
+ *
+ * A labeled issue fact, formatted with original units and freshness notices.
+ */
+export type IpoFact = {
+    /**
+     * Label
+     *
+     * Fact label.
+     */
+    label: string;
+    /**
+     * Value
+     *
+     * Formatted value and freshness text, when applicable.
+     */
+    value: string;
+};
+
+/**
+ * IpoSignal
+ *
+ * One scoring input in its original units and the normalized display scale.
+ */
+export type IpoSignal = {
+    /**
+     * Name
+     *
+     * Signal label: GMP, Subscription, or News.
+     */
+    name: string;
+    /**
+     * Value
+     *
+     * Original value formatted with its units.
+     */
+    value: string;
+    /**
+     * Signal
+     *
+     * Normalized signed signal on the 1.0-10.0 scale.
+     */
+    signal: string;
+};
+
 export type GetAppSessionData = {
     body?: never;
     path?: never;
@@ -672,3 +1004,117 @@ export type ListAppNewsResponses = {
 };
 
 export type ListAppNewsResponse = ListAppNewsResponses[keyof ListAppNewsResponses];
+
+export type ListAppIposData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Q
+         *
+         * IPO name search text.
+         */
+        q?: string;
+        /**
+         * Status
+         *
+         * Issue status; empty means Active (not listed).
+         */
+        status?: string;
+        /**
+         * Verdict
+         *
+         * Verdict, or all.
+         */
+        verdict?: string;
+        /**
+         * Category
+         *
+         * Board, or all.
+         */
+        category?: string;
+        /**
+         * Page
+         *
+         * Requested page; out-of-range values are clamped.
+         */
+        page?: number;
+    };
+    url: '/api/app/ipos';
+};
+
+export type ListAppIposErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type ListAppIposError = ListAppIposErrors[keyof ListAppIposErrors];
+
+export type ListAppIposResponses = {
+    /**
+     * OK
+     */
+    200: IpoPage;
+};
+
+export type ListAppIposResponse = ListAppIposResponses[keyof ListAppIposResponses];
+
+export type GetAppIpoData = {
+    body?: never;
+    path: {
+        /**
+         * Pk
+         */
+        pk: number;
+    };
+    query?: never;
+    url: '/api/app/ipos/{pk}';
+};
+
+export type GetAppIpoErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Not Found
+     */
+    404: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type GetAppIpoError = GetAppIpoErrors[keyof GetAppIpoErrors];
+
+export type GetAppIpoResponses = {
+    /**
+     * OK
+     */
+    200: IpoDetail;
+};
+
+export type GetAppIpoResponse = GetAppIpoResponses[keyof GetAppIpoResponses];

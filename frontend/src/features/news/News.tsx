@@ -6,6 +6,7 @@ import type { NewsPage } from "../../shared/api/generated/types.gen";
 import type { NewsSearch } from "../../shared/api/news";
 import { newsSearchSchema } from "../../shared/api/news";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
+import { sourceLink } from "../../shared/ui/sourceLink";
 
 const publishedDate = new Intl.DateTimeFormat("en-IN", {
   day: "numeric",
@@ -14,11 +15,6 @@ const publishedDate = new Intl.DateTimeFormat("en-IN", {
   minute: "2-digit",
   timeZone: "Asia/Kolkata",
 });
-
-function sourceLink(url: string): string | undefined {
-  if (!URL.canParse(url)) return undefined;
-  return ["https:", "http:"].includes(new URL(url).protocol) ? url : undefined;
-}
 
 export function News({
   data,

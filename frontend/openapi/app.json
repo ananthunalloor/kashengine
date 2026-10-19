@@ -351,6 +351,227 @@
           }
         ]
       }
+    },
+    "/api/app/ipos": {
+      "get": {
+        "operationId": "list_app_ipos",
+        "summary": "Search and filter IPOs for the browser",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "default": "",
+              "description": "IPO name search text.",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            },
+            "required": false,
+            "description": "IPO name search text."
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "default": "",
+              "description": "Issue status; empty means Active (not listed).",
+              "pattern": "^(|open|upcoming|closed|listed|all)$",
+              "title": "Status",
+              "type": "string"
+            },
+            "required": false,
+            "description": "Issue status; empty means Active (not listed)."
+          },
+          {
+            "in": "query",
+            "name": "verdict",
+            "schema": {
+              "default": "",
+              "description": "Verdict, or all.",
+              "pattern": "^(|good|mixed|weak|unknown)$",
+              "title": "Verdict",
+              "type": "string"
+            },
+            "required": false,
+            "description": "Verdict, or all."
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "default": "",
+              "description": "Board, or all.",
+              "pattern": "^(|mainboard|sme)$",
+              "title": "Category",
+              "type": "string"
+            },
+            "required": false,
+            "description": "Board, or all."
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "Requested page; out-of-range values are clamped.",
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Requested page; out-of-range values are clamped."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IpoPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Preserve Active ordering, listed history, board and verdict filtering.",
+        "tags": [
+          "IPOs"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/ipos/{pk}": {
+      "get": {
+        "operationId": "get_app_ipo",
+        "summary": "Read an IPO's facts and verdict evidence",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pk",
+            "schema": {
+              "title": "Pk",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IpoDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Use saved scoring evidence, preserve units and freshness, and never recalculate scores.",
+        "tags": [
+          "IPOs"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -960,6 +1181,390 @@
           "sentiments"
         ],
         "title": "NewsPage",
+        "type": "object"
+      },
+      "IpoFilters": {
+        "description": "Bound IPO search and validate the filters supported by the existing pages.",
+        "properties": {
+          "q": {
+            "default": "",
+            "description": "IPO name search text.",
+            "maxLength": 100,
+            "title": "Q",
+            "type": "string"
+          },
+          "status": {
+            "default": "",
+            "description": "Issue status; empty means Active (not listed).",
+            "pattern": "^(|open|upcoming|closed|listed|all)$",
+            "title": "Status",
+            "type": "string"
+          },
+          "verdict": {
+            "default": "",
+            "description": "Verdict, or all.",
+            "pattern": "^(|good|mixed|weak|unknown)$",
+            "title": "Verdict",
+            "type": "string"
+          },
+          "category": {
+            "default": "",
+            "description": "Board, or all.",
+            "pattern": "^(|mainboard|sme)$",
+            "title": "Category",
+            "type": "string"
+          },
+          "page": {
+            "default": 1,
+            "description": "Requested page; out-of-range values are clamped.",
+            "title": "Page",
+            "type": "integer"
+          }
+        },
+        "title": "IpoFilters",
+        "type": "object"
+      },
+      "IpoFilterOption": {
+        "description": "A server-supported IPO filter choice.",
+        "properties": {
+          "value": {
+            "description": "Query parameter value.",
+            "title": "Value",
+            "type": "string"
+          },
+          "label": {
+            "description": "Human-readable option label.",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "IpoFilterOption",
+        "type": "object"
+      },
+      "IpoPage": {
+        "description": "Filtered IPOs and all supported filter choices.",
+        "properties": {
+          "items": {
+            "description": "Matching IPOs in the existing web order.",
+            "items": {
+              "$ref": "#/components/schemas/IpoSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "description": "Resolved page number, starting at one.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "description": "Total pages; one for an empty list.",
+            "title": "Pages",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total matching IPOs.",
+            "title": "Total",
+            "type": "integer"
+          },
+          "statuses": {
+            "description": "Status filters, including Active and All.",
+            "items": {
+              "$ref": "#/components/schemas/IpoFilterOption"
+            },
+            "title": "Statuses",
+            "type": "array"
+          },
+          "verdicts": {
+            "description": "Verdict filters.",
+            "items": {
+              "$ref": "#/components/schemas/IpoFilterOption"
+            },
+            "title": "Verdicts",
+            "type": "array"
+          },
+          "categories": {
+            "description": "Board filters.",
+            "items": {
+              "$ref": "#/components/schemas/IpoFilterOption"
+            },
+            "title": "Categories",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pages",
+          "total",
+          "statuses",
+          "verdicts",
+          "categories"
+        ],
+        "title": "IpoPage",
+        "type": "object"
+      },
+      "IpoSummary": {
+        "description": "Display values for one IPO, using the existing web formatting rules.",
+        "properties": {
+          "id": {
+            "description": "IPO primary key.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "description": "IPO company name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "category": {
+            "description": "Human-readable board name.",
+            "title": "Category",
+            "type": "string"
+          },
+          "status": {
+            "description": "Human-readable issue status.",
+            "title": "Status",
+            "type": "string"
+          },
+          "dates": {
+            "description": "Opening and closing dates, or a dash when unknown.",
+            "title": "Dates",
+            "type": "string"
+          },
+          "price_band": {
+            "description": "Upper price band in rupees, or a dash.",
+            "title": "Price Band",
+            "type": "string"
+          },
+          "gmp": {
+            "description": "Grey market premium as a signed percentage, or a dash.",
+            "title": "Gmp",
+            "type": "string"
+          },
+          "subscribed": {
+            "description": "Subscription in times, or a dash.",
+            "title": "Subscribed",
+            "type": "string"
+          },
+          "listing_gain": {
+            "description": "Signed listing gain percentage, or a dash.",
+            "title": "Listing Gain",
+            "type": "string"
+          },
+          "verdict": {
+            "description": "Verdict key; unknown when there is insufficient data.",
+            "title": "Verdict",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Signed score on the 1.0-10.0 scale, if available.",
+            "title": "Score"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "category",
+          "status",
+          "dates",
+          "price_band",
+          "gmp",
+          "subscribed",
+          "listing_gain",
+          "verdict",
+          "score"
+        ],
+        "title": "IpoSummary",
+        "type": "object"
+      },
+      "IpoDetail": {
+        "description": "The issue facts and evidence behind the saved verdict.",
+        "properties": {
+          "id": {
+            "description": "IPO primary key.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "description": "IPO company name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "category": {
+            "description": "Human-readable board name.",
+            "title": "Category",
+            "type": "string"
+          },
+          "status": {
+            "description": "Human-readable issue status.",
+            "title": "Status",
+            "type": "string"
+          },
+          "dates": {
+            "description": "Opening and closing dates, or a dash when unknown.",
+            "title": "Dates",
+            "type": "string"
+          },
+          "price_band": {
+            "description": "Upper price band in rupees, or a dash.",
+            "title": "Price Band",
+            "type": "string"
+          },
+          "gmp": {
+            "description": "Grey market premium as a signed percentage, or a dash.",
+            "title": "Gmp",
+            "type": "string"
+          },
+          "subscribed": {
+            "description": "Subscription in times, or a dash.",
+            "title": "Subscribed",
+            "type": "string"
+          },
+          "listing_gain": {
+            "description": "Signed listing gain percentage, or a dash.",
+            "title": "Listing Gain",
+            "type": "string"
+          },
+          "verdict": {
+            "description": "Verdict key; unknown when there is insufficient data.",
+            "title": "Verdict",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Signed score on the 1.0-10.0 scale, if available.",
+            "title": "Score"
+          },
+          "facts": {
+            "description": "Issue facts, including metric freshness.",
+            "items": {
+              "$ref": "#/components/schemas/IpoFact"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
+          "signals": {
+            "description": "Usable saved scoring inputs.",
+            "items": {
+              "$ref": "#/components/schemas/IpoSignal"
+            },
+            "title": "Signals",
+            "type": "array"
+          },
+          "notes": {
+            "description": "Saved explanation and missing-data notes.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "scored_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Time the verdict was last calculated.",
+            "title": "Scored At"
+          },
+          "source_url": {
+            "description": "Original source URL, or empty when unavailable.",
+            "title": "Source Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "category",
+          "status",
+          "dates",
+          "price_band",
+          "gmp",
+          "subscribed",
+          "listing_gain",
+          "verdict",
+          "score",
+          "facts",
+          "signals",
+          "notes",
+          "scored_at",
+          "source_url"
+        ],
+        "title": "IpoDetail",
+        "type": "object"
+      },
+      "IpoFact": {
+        "description": "A labeled issue fact, formatted with original units and freshness notices.",
+        "properties": {
+          "label": {
+            "description": "Fact label.",
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "description": "Formatted value and freshness text, when applicable.",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "IpoFact",
+        "type": "object"
+      },
+      "IpoSignal": {
+        "description": "One scoring input in its original units and the normalized display scale.",
+        "properties": {
+          "name": {
+            "description": "Signal label: GMP, Subscription, or News.",
+            "title": "Name",
+            "type": "string"
+          },
+          "value": {
+            "description": "Original value formatted with its units.",
+            "title": "Value",
+            "type": "string"
+          },
+          "signal": {
+            "description": "Normalized signed signal on the 1.0-10.0 scale.",
+            "title": "Signal",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "value",
+          "signal"
+        ],
+        "title": "IpoSignal",
         "type": "object"
       }
     },
