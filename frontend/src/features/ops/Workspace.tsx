@@ -295,7 +295,7 @@ export function Workspace({
     setInvalidPage(null);
     if (result.redirect === "/login/") {
       queryClient.clear();
-      window.location.assign("/login/");
+      window.location.assign("/app/login/");
       return;
     }
     await queryClient.invalidateQueries({ queryKey: ["app", "ops"] });

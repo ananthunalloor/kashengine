@@ -30,6 +30,7 @@ export default defineConfig({
       input: {
         index: "./index.html",
         app: "./src/main.tsx",
+        public: "./src/public.tsx",
       },
     },
   },

@@ -273,6 +273,16 @@ uv run pytest                   # test (a warning fails the run)
 uv run pre-commit install       # turn on commit hooks (ruff, ruff format, ty)
 ```
 
+All product pages now have React equivalents. The public landing preview is at
+`/app/landing/`, and the login preview is at `/app/login/`. The landing page preserves the
+capabilities, illustrative market brief, workflow, research limitations, and shared purple
+light/dark theme. Login uses native POSTs to Django's existing authentication and django-axes;
+passwords are never serialized into presentation data or client caches. Real feature/permission
+denials and login lockouts render React with their original 403/429 statuses in the preview.
+Preview authentication, logout, and subscription redirects stay within React.
+The original `/`, `/login/`, subscriber and Ops URLs remain unchanged. Django Admin,
+API documentation, and the documentation site are intentionally outside this migration.
+
 The React application is developed in `frontend/`. Install the pinned pnpm release with
 Corepack, then run the Django server and Vite server together:
 

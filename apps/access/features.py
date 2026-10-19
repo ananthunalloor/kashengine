@@ -64,6 +64,8 @@ BY_URL_NAME: dict[str, Feature] = {
 OPEN_URL_NAMES: frozenset[str] = frozenset(
     {
         "landing",
+        "react_landing",
+        "react_login",
         "login",
         "logout",
         "account",

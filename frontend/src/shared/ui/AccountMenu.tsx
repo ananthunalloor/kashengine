@@ -105,6 +105,7 @@ export function AccountMenu({ session, pathname }: { session: Session; pathname:
             </a>
             <form action={session.logout_url} method="post">
               <input type="hidden" name="csrfmiddlewaretoken" value={token ?? ""} />
+              <input type="hidden" name="next" value="/app/login/" />
               <button type="submit" disabled={!token}>
                 <LuLogOut aria-hidden="true" /> Log out
               </button>

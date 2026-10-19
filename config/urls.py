@@ -5,6 +5,8 @@ from django.contrib.auth.decorators import login_not_required
 from django.http import JsonResponse
 from django.urls import include, path
 
+handler403 = "apps.web.public_preview.permission_denied"
+
 
 @login_not_required
 def health(request):

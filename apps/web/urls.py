@@ -6,7 +6,7 @@ from django.urls import path, register_converter
 
 from apps.ops.permissions import staff_required, superuser_required
 
-from . import views
+from . import public_preview, views
 
 
 class IsoDateConverter:
@@ -29,6 +29,8 @@ app_name = "web"
 
 urlpatterns = [
     path("", views.landing, name="landing"),
+    path("app/landing/", public_preview.landing, name="react_landing"),
+    path("app/login/", public_preview.PreviewLogin.as_view(), name="react_login"),
     path("app/", views.react_app, name="react_app"),
     path("app/dashboard/", views.react_app, name="react_dashboard"),
     path("app/account/", views.react_app, name="react_account"),

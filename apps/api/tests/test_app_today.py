@@ -43,7 +43,7 @@ def test_subscription_and_public_api_independence(client, member, expire, settin
     assert preview.status_code == (200 if staff else 302)
     if not staff:
         assert response.json()["code"] == "subscription_required"
-        assert preview.url == "/account/"
+        assert preview.url == "/app/account/"
 
 
 def test_empty_state_cache_and_legacy_page(client, member):

@@ -110,7 +110,7 @@ def test_the_react_shell_needs_a_login(client):
     response = client.get(reverse("web:react_app"))
 
     assert response.status_code == 302
-    assert response["Location"].startswith(reverse("web:login"))
+    assert response["Location"].startswith(reverse("web:react_login"))
 
 
 @override_settings(

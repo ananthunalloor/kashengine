@@ -43,7 +43,7 @@ def test_subscription_staff_and_public_api_independence(client, member, expire, 
     preview = client.get("/app/markets/")
     assert preview.status_code == (200 if staff else 302)
     if not staff:
-        assert preview.url == "/account/"
+        assert preview.url == "/app/account/"
     if not staff:
         assert client.get(URL).json()["code"] == "subscription_required"
 

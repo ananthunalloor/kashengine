@@ -18,7 +18,7 @@ export function csrfToken(cookie = document.cookie): string | null {
 export function loginUrl(
   current: Pick<Location, "pathname" | "search" | "hash"> = window.location,
 ): string {
-  return `/login/?${new URLSearchParams({ next: current.pathname + current.search + current.hash })}`;
+  return `/app/login/?${new URLSearchParams({ next: current.pathname + current.search + current.hash })}`;
 }
 
 export async function appRequest(

@@ -198,7 +198,8 @@ export function ApplicationShell({
         )}
         {children}
         <Text component="footer" size="xs" c="dimmed" mt="xl" py="lg">
-          Market signals are informational, not investment advice. GMP is unofficial data.
+          Market signals are informational, not investment advice. GMP is unofficial data.{" "}
+          <Anchor href="/app/landing/">About Kash Engine</Anchor>
         </Text>
       </main>
     </div>

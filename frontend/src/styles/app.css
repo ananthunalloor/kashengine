@@ -70,6 +70,319 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.public-site {
+  max-width: 1240px;
+  margin: auto;
+  padding: 0 clamp(1rem, 4vw, 3rem);
+  overflow-wrap: anywhere;
+}
+
+.public-site a:not(.public-button, .app-brand) {
+  color: var(--brand-purple);
+}
+
+.public-site p {
+  color: var(--brand-muted);
+  line-height: 1.7;
+}
+
+.public-site h2 {
+  font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+  line-height: 1.15;
+  font-weight: 650;
+  margin-bottom: 1rem;
+}
+
+.public-site h3 {
+  font-size: 1.2rem;
+  font-weight: 650;
+  margin: 1rem 0 0.65rem;
+}
+
+.public-header,
+.public-actions,
+.public-header nav,
+.public-brief-top,
+.public-api,
+.public-closing {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.public-header {
+  min-height: 88px;
+  flex-wrap: wrap;
+  padding: 1rem 0;
+}
+
+.public-header nav,
+.public-header-link,
+.public-actions {
+  font-size: 0.9rem;
+}
+
+.public-header-link,
+.public-button {
+  display: inline-flex;
+  gap: 0.6rem;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.public-button {
+  padding: 0.9rem 1.2rem;
+  border-radius: 0.8rem;
+  background: var(--mantine-primary-color-filled);
+  color: white;
+}
+
+.public-button:hover {
+  background: var(--mantine-primary-color-filled-hover);
+}
+
+.public-button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.public-hero,
+.public-principles {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(2rem, 6vw, 5rem);
+}
+
+.public-hero {
+  padding: clamp(2rem, 7vw, 6rem) 0;
+}
+
+.public-hero h1 {
+  font-size: clamp(2.8rem, 6.5vw, 5rem);
+  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  margin: 1.3rem 0;
+}
+
+.public-hero h1 span,
+.public-capability-icon {
+  color: var(--brand-purple);
+}
+
+.public-lead {
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+}
+
+.public-notes,
+.public-notes span,
+.public-principles li,
+.public-brief-story,
+.public-telegram {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.public-notes {
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.public-site svg {
+  flex-shrink: 0;
+}
+
+.public-brief,
+.public-card,
+.public-auth {
+  background: var(--brand-surface);
+  border: 1px solid var(--brand-line);
+  border-radius: 1.5rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.public-brief {
+  box-shadow: 0 22px 60px color-mix(in srgb, var(--brand-purple) 12%, transparent);
+}
+
+.public-brief-top {
+  font-size: 0.7rem;
+  margin: 1rem 0;
+}
+
+.public-positive {
+  color: var(--brand-gain);
+  background: var(--brand-gain-soft);
+  padding: 0.3rem 0.5rem;
+  border-radius: 1rem;
+}
+
+.public-chart {
+  width: 100%;
+  margin: 1.25rem 0;
+  fill: none;
+}
+
+.public-chart-grid {
+  stroke: var(--brand-line);
+}
+
+.public-chart-line {
+  stroke: var(--brand-purple);
+  stroke-width: 3;
+}
+
+.public-brief-story,
+.public-telegram {
+  border-top: 1px solid var(--brand-line);
+  padding-top: 1rem;
+  font-size: 0.85rem;
+}
+
+.public-section {
+  padding: 3.5rem 0;
+  border-top: 1px solid var(--brand-line);
+}
+
+.public-capabilities,
+.public-workflow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin-top: 2rem;
+}
+
+.public-capability-icon {
+  width: 2rem;
+  height: 2rem;
+}
+
+.public-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 1.25rem 0;
+}
+
+.public-tags span {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.7rem;
+  border-radius: 0.5rem;
+  background: var(--brand-soft);
+}
+
+.public-card details {
+  padding-top: 1rem;
+  border-top: 1px solid var(--brand-line);
+  font-size: 0.85rem;
+}
+
+.public-card summary {
+  cursor: pointer;
+  color: var(--brand-purple);
+}
+
+.public-card details p {
+  margin: 0.75rem 0;
+}
+
+.public-api,
+.public-closing {
+  background: var(--brand-soft);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  flex-wrap: wrap;
+}
+
+.public-principles ul {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.public-footer {
+  border-top: 1px solid var(--brand-line);
+  margin-top: 4rem;
+  padding: 2rem 0;
+  display: grid;
+  gap: 1rem;
+  font-size: 0.85rem;
+}
+
+.public-auth {
+  max-width: 470px;
+  margin: 3rem auto;
+}
+
+.public-auth h1 {
+  font-size: 2.5rem;
+  font-weight: 650;
+  margin-bottom: 1rem;
+}
+
+.public-auth form {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.public-auth input:not([type="hidden"]) {
+  width: 100%;
+  border: 1px solid var(--brand-line);
+  border-radius: 0.6rem;
+  background: var(--brand-canvas);
+  color: var(--brand-ink);
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.public-auth .public-error {
+  color: var(--brand-loss);
+  background: var(--brand-loss-soft);
+  border-radius: 0.6rem;
+  padding: 0.75rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 900px) {
+  .public-capabilities {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .public-header nav {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 600px) {
+  .public-hero,
+  .public-principles,
+  .public-capabilities,
+  .public-workflow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .public-header,
+  .public-header nav,
+  .public-actions {
+    gap: 0.75rem;
+  }
+
+  .public-header .app-brand {
+    font-size: 1.1rem;
+  }
+}
+
 h1,
 h2 {
   letter-spacing: -0.035em;

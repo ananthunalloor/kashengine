@@ -58,9 +58,23 @@ CI (`.github/workflows/ci.yml`) runs all the checks above for each pull request.
 
 ## React migration
 
-The authenticated React preview is served by Django at `/app/`. Existing subscriber and Ops
-pages remain server-rendered until their React replacements reach parity. Start Vite with
+The authenticated React preview is served by Django at `/app/`. All product pages have React
+equivalents, including the public landing page at `/app/landing/` and login at `/app/login/`.
+Legacy URLs remain server-rendered during the preview rollout. Django Admin and documentation
+interfaces remain unchanged. Start Vite with
 `pnpm --dir frontend dev` alongside Django, or use the frontend service in the dev Compose file.
+
+Public screens use the separate `src/public.tsx` Vite entry, not the authenticated router:
+anonymous visitors never request the private session endpoint. Django passes a small,
+`json_script`-escaped presentation object validated by Zod; no credentials or private market
+data are included. The login form submits directly to Django's `LoginView`, preserving CSRF,
+safe `next` validation, axes signals, and session rotation. Invalid submissions never echo
+passwords or usernames. Axes returns the React lockout screen at the real 429 response; feature
+and Ops permission failures return the React access screen with 403. Legacy responses retain
+their original templates. No standalone route can simulate or bypass a permission or lockout.
+Logout remains the existing CSRF-protected POST with a React `next` destination.
+The route-inventory regression test in `apps/web/tests/test_public_preview.py` checks every
+original product page/action against its React counterpart so new pages cannot be overlooked.
 Production uses the Vite manifest and built assets included in the Python image.
 
 Today opens `/app/dashboard/`, backed by the session-only `/api/app/today` endpoint.

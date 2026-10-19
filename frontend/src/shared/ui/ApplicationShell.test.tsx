@@ -51,6 +51,7 @@ it("uses a CSRF-protected POST for logout", () => {
   expect(form).toHaveAttribute("method", "post");
   expect(form).toHaveAttribute("action", "/logout/");
   expect(form?.querySelector("input")).toHaveValue("shell-csrf");
+  expect(form?.querySelector('input[name="next"]')).toHaveValue("/app/login/");
   expect(button).toBeEnabled();
   document.cookie = "csrftoken=; Max-Age=0; path=/";
 });

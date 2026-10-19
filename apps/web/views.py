@@ -8,7 +8,7 @@ from datetime import date
 from typing import TYPE_CHECKING, cast
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_not_required
+from django.contrib.auth.decorators import login_not_required, login_required
 from django.contrib.auth.views import LoginView, LogoutView
 from django.core.paginator import Paginator
 from django.http import HttpRequest, HttpResponse
@@ -79,6 +79,7 @@ def landing(request: HttpRequest) -> HttpResponse:
 
 
 @never_cache
+@login_required(login_url="web:react_login")
 def react_app(request: HttpRequest) -> HttpResponse:
     """Serve the authenticated React application shell.
 
@@ -91,6 +92,7 @@ def react_app(request: HttpRequest) -> HttpResponse:
     return render(request, "web/spa.html")
 
 
+@login_required(login_url="web:react_login")
 def react_report(request: HttpRequest, day: date) -> HttpResponse:
     """Serve the Reports preview at a valid report URL without exposing its data.
 
@@ -110,6 +112,7 @@ def dashboard(request):
     return render(request, "web/dashboard.html", queries.dashboard_data())
 
 
+@login_required(login_url="web:react_login")
 def react_ipo(request: HttpRequest, pk: int) -> HttpResponse:
     """Serve the IPO preview for an existing issue.
 
@@ -124,6 +127,7 @@ def react_ipo(request: HttpRequest, pk: int) -> HttpResponse:
     return react_app(request)
 
 
+@login_required(login_url="web:react_login")
 def react_ops_page(request: HttpRequest, section: str) -> HttpResponse:
     """Serve a staff Ops preview; the private API validates the requested page.
 
@@ -137,6 +141,7 @@ def react_ops_page(request: HttpRequest, section: str) -> HttpResponse:
     return react_app(request)
 
 
+@login_required(login_url="web:react_login")
 def react_ops_run(request: HttpRequest, pk: int) -> HttpResponse:
     """Serve a run's preview shell; staff authentication is applied by the URL wrapper.
 
