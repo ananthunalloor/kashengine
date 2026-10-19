@@ -166,3 +166,54 @@ class IpoDetail(IpoSummary):
     notes: list[str] = Field(description="Saved explanation and missing-data notes.")
     scored_at: datetime | None = Field(description="Time the verdict was last calculated.")
     source_url: str = Field(description="Original source URL, or empty when unavailable.")
+
+
+class MarketCount(Schema):
+    """A group of evaluated predictions."""
+
+    n: int = Field(description="Number of evaluated predictions.")
+    correct: int = Field(description="Number that were right.")
+
+
+class MarketStats(Schema):
+    """Saved-result accuracy, using the existing evaluation rules."""
+
+    total: int = Field(description="Evaluated predictions, excluding no-session days.")
+    correct: int = Field(description="Predictions that were right.")
+    accuracy: str = Field(description="Formatted accuracy percentage, or a dash.")
+    baseline_direction: str | None = Field(description="Most common actual direction.")
+    baseline_accuracy: str = Field(description="Formatted always-common-direction accuracy.")
+    high_confidence: MarketCount = Field(description="Results with strength of at least 0.6.")
+    recent: MarketCount = Field(description="Latest 30 evaluated results.")
+    pending: int = Field(description="Predictions waiting for evaluation.")
+    enough_results: bool = Field(description="Whether at least 30 results are available.")
+
+
+class MarketQuote(Schema):
+    """The latest saved close of a configured instrument."""
+
+    name: str = Field(description="Configured instrument display name.")
+    day: dt.date = Field(description="Exchange-local trading date of this saved close.")
+    close: str = Field(description="Close formatted to two decimal places.")
+    change: str = Field(description="Signed percentage change, or a dash when unavailable.")
+
+
+class MarketPrediction(Schema):
+    """A saved prediction and its result, without recalculating either."""
+
+    date: dt.date = Field(description="Target trading day.")
+    direction: str = Field(description="Predicted direction: up, down, or flat.")
+    strength: str = Field(description="Signal strength on the 1.0-10.0 scale, not a probability.")
+    actual_direction: str = Field(description="Actual direction, or empty while unavailable.")
+    change: str = Field(description="Signed actual percentage change, or a dash.")
+    result: Literal["Right", "Wrong", "No session", "Waiting"] = Field(
+        description="Saved evaluation state."
+    )
+
+
+class Markets(Schema):
+    """Track record, latest closes, and the newest 30 predictions."""
+
+    stats: MarketStats = Field(description="Accuracy and baseline statistics.")
+    quotes: list[MarketQuote] = Field(description="Latest closes in configured instrument order.")
+    history: list[MarketPrediction] = Field(description="Newest 30 predictions, newest first.")

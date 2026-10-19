@@ -822,6 +822,184 @@ export type IpoSignal = {
     signal: string;
 };
 
+/**
+ * MarketCount
+ *
+ * A group of evaluated predictions.
+ */
+export type MarketCount = {
+    /**
+     * N
+     *
+     * Number of evaluated predictions.
+     */
+    n: number;
+    /**
+     * Correct
+     *
+     * Number that were right.
+     */
+    correct: number;
+};
+
+/**
+ * MarketPrediction
+ *
+ * A saved prediction and its result, without recalculating either.
+ */
+export type MarketPrediction = {
+    /**
+     * Date
+     *
+     * Target trading day.
+     */
+    date: string;
+    /**
+     * Direction
+     *
+     * Predicted direction: up, down, or flat.
+     */
+    direction: string;
+    /**
+     * Strength
+     *
+     * Signal strength on the 1.0-10.0 scale, not a probability.
+     */
+    strength: string;
+    /**
+     * Actual Direction
+     *
+     * Actual direction, or empty while unavailable.
+     */
+    actual_direction: string;
+    /**
+     * Change
+     *
+     * Signed actual percentage change, or a dash.
+     */
+    change: string;
+    /**
+     * Result
+     *
+     * Saved evaluation state.
+     */
+    result: 'Right' | 'Wrong' | 'No session' | 'Waiting';
+};
+
+/**
+ * MarketQuote
+ *
+ * The latest saved close of a configured instrument.
+ */
+export type MarketQuote = {
+    /**
+     * Name
+     *
+     * Configured instrument display name.
+     */
+    name: string;
+    /**
+     * Day
+     *
+     * Exchange-local trading date of this saved close.
+     */
+    day: string;
+    /**
+     * Close
+     *
+     * Close formatted to two decimal places.
+     */
+    close: string;
+    /**
+     * Change
+     *
+     * Signed percentage change, or a dash when unavailable.
+     */
+    change: string;
+};
+
+/**
+ * MarketStats
+ *
+ * Saved-result accuracy, using the existing evaluation rules.
+ */
+export type MarketStats = {
+    /**
+     * Total
+     *
+     * Evaluated predictions, excluding no-session days.
+     */
+    total: number;
+    /**
+     * Correct
+     *
+     * Predictions that were right.
+     */
+    correct: number;
+    /**
+     * Accuracy
+     *
+     * Formatted accuracy percentage, or a dash.
+     */
+    accuracy: string;
+    /**
+     * Baseline Direction
+     *
+     * Most common actual direction.
+     */
+    baseline_direction: string | null;
+    /**
+     * Baseline Accuracy
+     *
+     * Formatted always-common-direction accuracy.
+     */
+    baseline_accuracy: string;
+    /**
+     * Results with strength of at least 0.6.
+     */
+    high_confidence: MarketCount;
+    /**
+     * Latest 30 evaluated results.
+     */
+    recent: MarketCount;
+    /**
+     * Pending
+     *
+     * Predictions waiting for evaluation.
+     */
+    pending: number;
+    /**
+     * Enough Results
+     *
+     * Whether at least 30 results are available.
+     */
+    enough_results: boolean;
+};
+
+/**
+ * Markets
+ *
+ * Track record, latest closes, and the newest 30 predictions.
+ */
+export type Markets = {
+    /**
+     * Accuracy and baseline statistics.
+     */
+    stats: MarketStats;
+    /**
+     * Quotes
+     *
+     * Latest closes in configured instrument order.
+     */
+    quotes: Array<MarketQuote>;
+    /**
+     * History
+     *
+     * Newest 30 predictions, newest first.
+     */
+    history: Array<MarketPrediction>;
+};
+
 export type GetAppSessionData = {
     body?: never;
     path?: never;
@@ -1118,3 +1296,36 @@ export type GetAppIpoResponses = {
 };
 
 export type GetAppIpoResponse = GetAppIpoResponses[keyof GetAppIpoResponses];
+
+export type GetAppMarketsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/app/markets';
+};
+
+export type GetAppMarketsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type GetAppMarketsError = GetAppMarketsErrors[keyof GetAppMarketsErrors];
+
+export type GetAppMarketsResponses = {
+    /**
+     * OK
+     */
+    200: Markets;
+};
+
+export type GetAppMarketsResponse = GetAppMarketsResponses[keyof GetAppMarketsResponses];

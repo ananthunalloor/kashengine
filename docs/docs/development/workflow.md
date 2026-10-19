@@ -94,6 +94,14 @@ and filter changes reset pagination. Saved verdict signals, original units, miss
 metric freshness, and scored timestamps are preserved. No read endpoint refreshes metrics or
 recalculates a verdict. The original `/ipos/` list/detail pages are unchanged.
 
+Markets opens `/app/markets/`. Its private `/api/app/markets` endpoint reuses `accuracy_stats`,
+`latest_quotes`, and `prediction_history` (newest 30), with existing percentage and strength
+formatting. The preview preserves the common-direction baseline, small-sample warning, pending
+count, and all four evaluation states. Saved closes always show their exchange-local trading
+date; missing changes are not displayed as zero. Both preview and API enforce the Markets
+feature and subscription rules. No read refreshes prices or evaluates results, and the original
+`/markets/` page is unchanged.
+
 After changing the private schemas:
 
 ```bash

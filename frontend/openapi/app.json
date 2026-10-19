@@ -572,6 +572,64 @@
           }
         ]
       }
+    },
+    "/api/app/markets": {
+      "get": {
+        "operationId": "get_app_markets",
+        "summary": "Read market closes, prediction history, and accuracy",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Markets"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read saved results without fetching quotes or evaluating predictions.",
+        "tags": [
+          "Markets"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -1565,6 +1623,213 @@
           "signal"
         ],
         "title": "IpoSignal",
+        "type": "object"
+      },
+      "MarketCount": {
+        "description": "A group of evaluated predictions.",
+        "properties": {
+          "n": {
+            "description": "Number of evaluated predictions.",
+            "title": "N",
+            "type": "integer"
+          },
+          "correct": {
+            "description": "Number that were right.",
+            "title": "Correct",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "n",
+          "correct"
+        ],
+        "title": "MarketCount",
+        "type": "object"
+      },
+      "MarketPrediction": {
+        "description": "A saved prediction and its result, without recalculating either.",
+        "properties": {
+          "date": {
+            "description": "Target trading day.",
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "direction": {
+            "description": "Predicted direction: up, down, or flat.",
+            "title": "Direction",
+            "type": "string"
+          },
+          "strength": {
+            "description": "Signal strength on the 1.0-10.0 scale, not a probability.",
+            "title": "Strength",
+            "type": "string"
+          },
+          "actual_direction": {
+            "description": "Actual direction, or empty while unavailable.",
+            "title": "Actual Direction",
+            "type": "string"
+          },
+          "change": {
+            "description": "Signed actual percentage change, or a dash.",
+            "title": "Change",
+            "type": "string"
+          },
+          "result": {
+            "description": "Saved evaluation state.",
+            "enum": [
+              "Right",
+              "Wrong",
+              "No session",
+              "Waiting"
+            ],
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "direction",
+          "strength",
+          "actual_direction",
+          "change",
+          "result"
+        ],
+        "title": "MarketPrediction",
+        "type": "object"
+      },
+      "MarketQuote": {
+        "description": "The latest saved close of a configured instrument.",
+        "properties": {
+          "name": {
+            "description": "Configured instrument display name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "day": {
+            "description": "Exchange-local trading date of this saved close.",
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "close": {
+            "description": "Close formatted to two decimal places.",
+            "title": "Close",
+            "type": "string"
+          },
+          "change": {
+            "description": "Signed percentage change, or a dash when unavailable.",
+            "title": "Change",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "day",
+          "close",
+          "change"
+        ],
+        "title": "MarketQuote",
+        "type": "object"
+      },
+      "MarketStats": {
+        "description": "Saved-result accuracy, using the existing evaluation rules.",
+        "properties": {
+          "total": {
+            "description": "Evaluated predictions, excluding no-session days.",
+            "title": "Total",
+            "type": "integer"
+          },
+          "correct": {
+            "description": "Predictions that were right.",
+            "title": "Correct",
+            "type": "integer"
+          },
+          "accuracy": {
+            "description": "Formatted accuracy percentage, or a dash.",
+            "title": "Accuracy",
+            "type": "string"
+          },
+          "baseline_direction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Most common actual direction.",
+            "title": "Baseline Direction"
+          },
+          "baseline_accuracy": {
+            "description": "Formatted always-common-direction accuracy.",
+            "title": "Baseline Accuracy",
+            "type": "string"
+          },
+          "high_confidence": {
+            "$ref": "#/components/schemas/MarketCount",
+            "description": "Results with strength of at least 0.6."
+          },
+          "recent": {
+            "$ref": "#/components/schemas/MarketCount",
+            "description": "Latest 30 evaluated results."
+          },
+          "pending": {
+            "description": "Predictions waiting for evaluation.",
+            "title": "Pending",
+            "type": "integer"
+          },
+          "enough_results": {
+            "description": "Whether at least 30 results are available.",
+            "title": "Enough Results",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "total",
+          "correct",
+          "accuracy",
+          "baseline_direction",
+          "baseline_accuracy",
+          "high_confidence",
+          "recent",
+          "pending",
+          "enough_results"
+        ],
+        "title": "MarketStats",
+        "type": "object"
+      },
+      "Markets": {
+        "description": "Track record, latest closes, and the newest 30 predictions.",
+        "properties": {
+          "stats": {
+            "$ref": "#/components/schemas/MarketStats",
+            "description": "Accuracy and baseline statistics."
+          },
+          "quotes": {
+            "description": "Latest closes in configured instrument order.",
+            "items": {
+              "$ref": "#/components/schemas/MarketQuote"
+            },
+            "title": "Quotes",
+            "type": "array"
+          },
+          "history": {
+            "description": "Newest 30 predictions, newest first.",
+            "items": {
+              "$ref": "#/components/schemas/MarketPrediction"
+            },
+            "title": "History",
+            "type": "array"
+          }
+        },
+        "required": [
+          "stats",
+          "quotes",
+          "history"
+        ],
+        "title": "Markets",
         "type": "object"
       }
     },

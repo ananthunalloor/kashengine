@@ -14,6 +14,7 @@ from apps.web.context import navigation_for
 
 from .auth import AppSession
 from .ipos import router as ipos_router
+from .markets import router as markets_router
 from .news import router as news_router
 from .reports import router as reports_router
 from .schemas import Session
@@ -30,6 +31,7 @@ errors.install(api)
 api.add_router("", reports_router)
 api.add_router("", news_router)
 api.add_router("", ipos_router)
+api.add_router("", markets_router)
 
 
 @api.exception_handler(AuthenticationError)

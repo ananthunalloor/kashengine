@@ -277,6 +277,75 @@ export const zIpoDetail = z.object({
 });
 
 /**
+ * MarketCount
+ *
+ * A group of evaluated predictions.
+ */
+export const zMarketCount = z.object({
+    n: z.int(),
+    correct: z.int()
+});
+
+/**
+ * MarketPrediction
+ *
+ * A saved prediction and its result, without recalculating either.
+ */
+export const zMarketPrediction = z.object({
+    date: z.iso.date(),
+    direction: z.string(),
+    strength: z.string(),
+    actual_direction: z.string(),
+    change: z.string(),
+    result: z.enum([
+        'Right',
+        'Wrong',
+        'No session',
+        'Waiting'
+    ])
+});
+
+/**
+ * MarketQuote
+ *
+ * The latest saved close of a configured instrument.
+ */
+export const zMarketQuote = z.object({
+    name: z.string(),
+    day: z.iso.date(),
+    close: z.string(),
+    change: z.string()
+});
+
+/**
+ * MarketStats
+ *
+ * Saved-result accuracy, using the existing evaluation rules.
+ */
+export const zMarketStats = z.object({
+    total: z.int(),
+    correct: z.int(),
+    accuracy: z.string(),
+    baseline_direction: z.string().nullable(),
+    baseline_accuracy: z.string(),
+    high_confidence: zMarketCount,
+    recent: zMarketCount,
+    pending: z.int(),
+    enough_results: z.boolean()
+});
+
+/**
+ * Markets
+ *
+ * Track record, latest closes, and the newest 30 predictions.
+ */
+export const zMarkets = z.object({
+    stats: zMarketStats,
+    quotes: z.array(zMarketQuote),
+    history: z.array(zMarketPrediction)
+});
+
+/**
  * OK
  */
 export const zGetAppSessionResponse = zSession;
@@ -332,3 +401,8 @@ export const zGetAppIpoPath = z.object({
  * OK
  */
 export const zGetAppIpoResponse = zIpoDetail;
+
+/**
+ * OK
+ */
+export const zGetAppMarketsResponse = zMarkets;

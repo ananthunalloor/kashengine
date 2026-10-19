@@ -279,8 +279,8 @@ pnpm --dir frontend dev
 
 Open `http://localhost:8000/app/` while signed in to view the authenticated React shell.
 The preview loads navigation, feature permissions, subscription notices, and the staff flag
-from the session-only private API at `/api/app/session`. Reports, News, and IPOs open React previews at
-`/app/reports/`, `/app/news/`, and `/app/ipos/`; other links still open the existing Django pages. The shell includes a mobile menu,
+from the session-only private API at `/api/app/session`. Reports, News, IPOs, and Markets open React previews at
+`/app/reports/`, `/app/news/`, `/app/ipos/`, and `/app/markets/`; other links still open the existing Django pages. The shell includes a mobile menu,
 a persistent light/dark toggle, and CSRF-protected logout.
 An expired session returns to login; API errors display a retryable error page.
 
@@ -300,6 +300,12 @@ pagination, and issue detail pages at `/app/ipos/{id}/`. Facts retain the origin
 freshness notices; verdict evidence uses saved scores rather than recalculating them.
 The session-only `/api/app/ipos` and `/api/app/ipos/{id}` endpoints enforce the IPO feature and
 subscription rules. Existing `/ipos/` pages remain unchanged for comparison.
+
+The Markets preview at `/app/markets/` shows the existing accuracy/baseline statistics, latest
+saved instrument closes with their trading dates, and the newest 30 predictions. Right, Wrong,
+Waiting, and No session remain distinct; strength is not a probability. Its session-only
+`/api/app/markets` endpoint reuses the existing queries and evaluation statistics without
+downloading prices or evaluating predictions. The original `/markets/` page remains unchanged.
 
 React shares the landing page's purple accent, white surfaces, sans-serif typography, and rounded
 cards through `static/css/brand-tokens.css`. Light mode is the default; a saved dark-mode choice

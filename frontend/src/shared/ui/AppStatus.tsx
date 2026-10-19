@@ -30,7 +30,10 @@ export function AppError({
   error,
   withinShell = false,
   section = "Reports",
-}: ErrorComponentProps & { withinShell?: boolean; section?: "Reports" | "News" | "IPOs" }) {
+}: ErrorComponentProps & {
+  withinShell?: boolean;
+  section?: "Reports" | "News" | "IPOs" | "Markets";
+}) {
   const router = useRouter();
   const unauthorized = error instanceof ApiError && error.kind === "unauthorized";
   const notFound = error instanceof ApiError && error.kind === "not-found";
