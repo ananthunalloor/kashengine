@@ -21,11 +21,13 @@ from .models import AuditEvent, BackupConfiguration
 
 TASK_NAME = "ops.backup_database"
 SCHEDULE_NAME = "automated-database-backup"
-MINIO_ENDPOINT = "http://minio:9000"
+SILO_ENDPOINT = "http://silo:9000"
+LEGACY_MINIO_ENDPOINT = "http://minio:9000"
+BUNDLED_ENDPOINTS = {SILO_ENDPOINT, LEGACY_MINIO_ENDPOINT}
 
 
 def validate_s3_endpoint(value: str) -> None:
-    """Allow HTTPS storage and only the bundled MinIO endpoint over private HTTP.
+    """Allow HTTPS storage and only bundled Silo endpoints over private HTTP.
 
     Args:
         value: An endpoint URL, or empty for Amazon S3.
@@ -33,14 +35,14 @@ def validate_s3_endpoint(value: str) -> None:
     Raises:
         backups.BackupError: The endpoint is insecure or contains URL credentials/query data.
     """
-    if not value or value == MINIO_ENDPOINT:
+    if not value or value in BUNDLED_ENDPOINTS:
         return
     try:
         URLValidator(schemes=["https"])(value)
         parsed = urlsplit(value)
     except (ValueError, ValidationError) as exc:
         raise backups.BackupError(
-            "Use HTTPS with a valid URL and port, or http://minio:9000 for bundled MinIO."
+            "Use HTTPS with a valid URL and port, or http://silo:9000 for bundled Silo."
         ) from exc
     if (
         parsed.scheme != "https"
@@ -51,7 +53,7 @@ def validate_s3_endpoint(value: str) -> None:
         or parsed.fragment
     ):
         raise backups.BackupError(
-            "Use HTTPS without URL credentials or query, or http://minio:9000 for bundled MinIO."
+            "Use HTTPS without URL credentials or query, or http://silo:9000 for bundled Silo."
         )
 
 
@@ -141,10 +143,13 @@ def _upload_s3(config: BackupConfiguration, name: str, payload: bytes) -> str:
         raise backups.BackupError("Configure an S3 bucket before running a backup.")
     validate_s3_endpoint(config.endpoint_url)
     key = "/".join(part for part in (config.prefix.strip("/"), name) if part)
+    endpoint_url = config.endpoint_url or None
+    if endpoint_url == LEGACY_MINIO_ENDPOINT:
+        endpoint_url = SILO_ENDPOINT
     try:
         client = boto3.client(
             "s3",
-            endpoint_url=config.endpoint_url or None,
+            endpoint_url=endpoint_url,
             region_name=config.region or "us-east-1",
             aws_access_key_id=_credential(config.access_key_encrypted),
             aws_secret_access_key=_credential(config.secret_key_encrypted),

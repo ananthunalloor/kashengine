@@ -117,18 +117,22 @@ def test_encryption_key_is_masked_by_config_display(backup_key):
     assert configview.display_value("BACKUP_ENCRYPTION_KEY", backup_key) == "set (hidden)"
 
 
-def test_minio_endpoint_is_accepted_by_form_and_shared_validator(backup_key):
+def test_silo_endpoint_is_accepted_by_form_and_shared_validator(backup_key):
     form = BackupConfigurationForm(
         _values(
             destination="s3",
             bucket="kashengine-backups",
-            endpoint_url="http://minio:9000",
+            endpoint_url="http://silo:9000",
             access_key=ACCESS_KEY,
             secret_key=SECRET_KEY,
         )
     )
     assert form.is_valid(), form.errors
     backup_automation.validate_s3_endpoint(form.cleaned_data["endpoint_url"])
+
+
+def test_legacy_minio_endpoint_is_accepted_for_saved_configurations():
+    backup_automation.validate_s3_endpoint("http://minio:9000")
 
 
 @pytest.mark.parametrize(
@@ -271,14 +275,21 @@ def test_completed_and_failed_backups_are_visible_in_run_history(
     assert "disabled" in run.error
 
 
+@pytest.mark.parametrize(
+    ("configured_endpoint", "expected_endpoint"),
+    [
+        ("https://s3.example.com", "https://s3.example.com"),
+        ("http://minio:9000", "http://silo:9000"),
+    ],
+)
 def test_s3_uses_configured_endpoint_region_prefix_and_encrypted_payload(
-    boss, tmp_path, backup_key, monkeypatch
+    boss, tmp_path, backup_key, monkeypatch, configured_endpoint, expected_endpoint
 ):
     config = _config(boss, tmp_path)
     config.destination = "s3"
     config.bucket = "private-backups"
     config.prefix = "database/daily/"
-    config.endpoint_url = "https://s3.example.com"
+    config.endpoint_url = configured_endpoint
     config.region = "custom-region"
     config.access_key_encrypted = crypto.encrypt(ACCESS_KEY)
     config.secret_key_encrypted = crypto.encrypt(SECRET_KEY)
@@ -298,7 +309,7 @@ def test_s3_uses_configured_endpoint_region_prefix_and_encrypted_payload(
         result = backup_automation.run_backup()
         stub.assert_no_pending_responses()
     kwargs = factory.call_args.kwargs
-    assert kwargs["endpoint_url"] == config.endpoint_url
+    assert kwargs["endpoint_url"] == expected_endpoint
     assert kwargs["region_name"] == "custom-region"
     assert kwargs["aws_access_key_id"] == ACCESS_KEY
     assert kwargs["aws_secret_access_key"] == SECRET_KEY

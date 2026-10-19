@@ -89,7 +89,7 @@ class BackupConfigurationForm(forms.ModelForm):
         return value
 
     def clean_endpoint_url(self) -> str:
-        """Validate HTTPS storage or the bundled MinIO endpoint.
+        """Validate HTTPS storage or a bundled Silo endpoint.
 
         Returns:
             A validated endpoint URL, or an empty string for Amazon S3.
