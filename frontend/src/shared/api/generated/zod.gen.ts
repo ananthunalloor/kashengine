@@ -546,6 +546,90 @@ export const zToday = z.object({
 });
 
 /**
+ * AccountFeature
+ *
+ * Access explanation for one feature, including removed and subscription-locked states.
+ */
+export const zAccountFeature = z.object({
+    key: z.string(),
+    label: z.string(),
+    help: z.string(),
+    allowed: z.boolean(),
+    removed: z.boolean()
+});
+
+/**
+ * AccountToken
+ *
+ * Token metadata only; never a hash, password stamp, or full secret.
+ */
+export const zAccountToken = z.object({
+    id: z.int(),
+    name: z.string(),
+    display: z.string(),
+    created_at: z.iso.datetime(),
+    last_used_at: z.iso.datetime().nullable(),
+    expires_at: z.iso.datetime().nullable(),
+    state: z.enum([
+        'active',
+        'expired',
+        'revoked'
+    ])
+});
+
+/**
+ * Account
+ *
+ * Subscription, feature access, and token settings for the current browser user.
+ */
+export const zAccount = z.object({
+    username: z.string(),
+    email: z.string(),
+    state: z.enum([
+        'trial',
+        'active',
+        'expired',
+        'none',
+        'staff'
+    ]),
+    subscription_kind: z.string().nullable(),
+    ends_at: z.iso.datetime().nullable(),
+    days_left: z.int().nullable(),
+    subscription_ok: z.boolean(),
+    required: z.boolean(),
+    price: z.string(),
+    currency: z.string(),
+    period_days: z.int(),
+    contact: z.string(),
+    features: z.array(zAccountFeature),
+    api_enabled: z.boolean(),
+    api_docs: z.boolean(),
+    tokens: z.array(zAccountToken),
+    active_tokens: z.int(),
+    token_limit: z.int(),
+    token_days: z.int()
+});
+
+/**
+ * TokenCreated
+ *
+ * One-time creation answer, never included in a subsequent account read.
+ */
+export const zTokenCreated = z.object({
+    token: zAccountToken,
+    secret: z.string()
+});
+
+/**
+ * TokenCreate
+ *
+ * Token name, validated without reflecting it in an error response.
+ */
+export const zTokenCreate = z.object({
+    name: z.string().min(1).max(60)
+});
+
+/**
  * OK
  */
 export const zGetAppSessionResponse = zSession;
@@ -637,3 +721,24 @@ export const zGetAppDeliveryResponse = zDeliveryPage;
  * OK
  */
 export const zGetAppTodayResponse = zToday;
+
+/**
+ * OK
+ */
+export const zGetAppAccountResponse = zAccount;
+
+export const zCreateAppTokenBody = zTokenCreate;
+
+/**
+ * Created
+ */
+export const zCreateAppTokenResponse = zTokenCreated;
+
+export const zRevokeAppTokenPath = z.object({
+    pk: z.int()
+});
+
+/**
+ * OK
+ */
+export const zRevokeAppTokenResponse = zAccountToken;

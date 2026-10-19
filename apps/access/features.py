@@ -62,5 +62,14 @@ BY_URL_NAME: dict[str, Feature] = {
 # The public landing page and pages every signed-in user can open without a subscription.
 # A user can always see and revoke API tokens, so a locked-out user can still stop a token.
 OPEN_URL_NAMES: frozenset[str] = frozenset(
-    {"landing", "login", "logout", "account", "token_create", "token_revoke", "react_app"}
+    {
+        "landing",
+        "login",
+        "logout",
+        "account",
+        "token_create",
+        "token_revoke",
+        "react_app",
+        "react_account",
+    }
 )

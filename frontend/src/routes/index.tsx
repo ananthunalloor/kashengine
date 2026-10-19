@@ -9,6 +9,7 @@ function AppHome() {
   const { session } = Route.useRouteContext();
   const previews = new Set([
     "/dashboard/",
+    "/account/",
     "/reports/",
     "/news/",
     "/ipos/",
@@ -27,8 +28,8 @@ function AppHome() {
         </Title>
         <Text maw={640} c="dimmed" mt="sm">
           Your account's available sections are in the navigation. Today, Reports, News, IPOs,
-          Markets, Companies, and Delivery now have React previews. Other sections still open the
-          existing pages while their React replacements are built and checked for parity.
+          Markets, Companies, Delivery, and Account now have React previews. Other sections still
+          open the existing pages while their React replacements are built and checked for parity.
         </Text>
       </header>
       <div className="workspace-welcome">

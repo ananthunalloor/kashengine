@@ -43,7 +43,7 @@ it("shows account access failures without retrying a permission denial", () => {
   expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Open your account" })).toHaveAttribute(
     "href",
-    "/account/",
+    "/app/account/",
   );
 });
 

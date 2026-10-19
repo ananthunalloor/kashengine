@@ -343,6 +343,16 @@ excluded by the server. News and IPO groups retain their existing four-item limi
 search/filter/sort those bounded summaries, with links to the full React lists.
 The original `/dashboard/` and login landing behavior remain unchanged.
 
+Account opens `/app/account/`, showing subscription details, feature access, and a searchable,
+filterable TanStack table of the latest 20 masked API tokens. Its private `/api/app/account`
+endpoint counts all active tokens for issuance limits. Session-only, CSRF-protected POST actions
+at `/api/app/account/tokens` and `/api/app/account/tokens/{id}/revoke` reuse existing issuance,
+expiry, ownership, and audit rules. New secrets appear once in component-local state, never in
+URLs, browser storage, or React Query caches; hide or leave the page to discard them.
+Account remains accessible after subscription expiry. When public API access is disabled,
+creation is denied, but existing tokens can still be viewed and revoked. The original
+`/account/` page remains available; Ops still uses Django.
+
 The other existing pages remain Django-rendered during the incremental migration. Run
 `pnpm --dir frontend build` to create the production bundle and
 `pnpm --dir frontend build:legacy-css` to rebuild the stylesheet still used by Django templates.

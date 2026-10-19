@@ -1503,6 +1503,187 @@ export type TodayStory = {
     companies: Array<string>;
 };
 
+/**
+ * Account
+ *
+ * Subscription, feature access, and token settings for the current browser user.
+ */
+export type Account = {
+    /**
+     * Username
+     */
+    username: string;
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * State
+     */
+    state: 'trial' | 'active' | 'expired' | 'none' | 'staff';
+    /**
+     * Subscription Kind
+     */
+    subscription_kind: string | null;
+    /**
+     * Ends At
+     */
+    ends_at: string | null;
+    /**
+     * Days Left
+     */
+    days_left: number | null;
+    /**
+     * Subscription Ok
+     */
+    subscription_ok: boolean;
+    /**
+     * Required
+     */
+    required: boolean;
+    /**
+     * Price
+     *
+     * Formatted period price, or empty when not charged.
+     */
+    price: string;
+    /**
+     * Currency
+     */
+    currency: string;
+    /**
+     * Period Days
+     */
+    period_days: number;
+    /**
+     * Contact
+     */
+    contact: string;
+    /**
+     * Features
+     */
+    features: Array<AccountFeature>;
+    /**
+     * Api Enabled
+     */
+    api_enabled: boolean;
+    /**
+     * Api Docs
+     */
+    api_docs: boolean;
+    /**
+     * Tokens
+     *
+     * Newest 20 tokens, including revoked/expired.
+     */
+    tokens: Array<AccountToken>;
+    /**
+     * Active Tokens
+     *
+     * Active count across all tokens, not just the newest 20.
+     */
+    active_tokens: number;
+    /**
+     * Token Limit
+     */
+    token_limit: number;
+    /**
+     * Token Days
+     */
+    token_days: number;
+};
+
+/**
+ * AccountFeature
+ *
+ * Access explanation for one feature, including removed and subscription-locked states.
+ */
+export type AccountFeature = {
+    /**
+     * Key
+     */
+    key: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Help
+     */
+    help: string;
+    /**
+     * Allowed
+     */
+    allowed: boolean;
+    /**
+     * Removed
+     */
+    removed: boolean;
+};
+
+/**
+ * AccountToken
+ *
+ * Token metadata only; never a hash, password stamp, or full secret.
+ */
+export type AccountToken = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Display
+     */
+    display: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Last Used At
+     */
+    last_used_at: string | null;
+    /**
+     * Expires At
+     */
+    expires_at: string | null;
+    /**
+     * State
+     */
+    state: 'active' | 'expired' | 'revoked';
+};
+
+/**
+ * TokenCreated
+ *
+ * One-time creation answer, never included in a subsequent account read.
+ */
+export type TokenCreated = {
+    token: AccountToken;
+    /**
+     * Secret
+     *
+     * Copy once; never cache or persist this response.
+     */
+    secret: string;
+};
+
+/**
+ * TokenCreate
+ *
+ * Token name, validated without reflecting it in an error response.
+ */
+export type TokenCreate = {
+    /**
+     * Name
+     */
+    name: string;
+};
+
 export type GetAppSessionData = {
     body?: never;
     path?: never;
@@ -2004,3 +2185,123 @@ export type GetAppTodayResponses = {
 };
 
 export type GetAppTodayResponse = GetAppTodayResponses[keyof GetAppTodayResponses];
+
+export type GetAppAccountData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/app/account';
+};
+
+export type GetAppAccountErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type GetAppAccountError = GetAppAccountErrors[keyof GetAppAccountErrors];
+
+export type GetAppAccountResponses = {
+    /**
+     * OK
+     */
+    200: Account;
+};
+
+export type GetAppAccountResponse = GetAppAccountResponses[keyof GetAppAccountResponses];
+
+export type CreateAppTokenData = {
+    body: TokenCreate;
+    path?: never;
+    query?: never;
+    url: '/api/app/account/tokens';
+};
+
+export type CreateAppTokenErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+    /**
+     * Service Unavailable
+     */
+    503: Problem;
+};
+
+export type CreateAppTokenError = CreateAppTokenErrors[keyof CreateAppTokenErrors];
+
+export type CreateAppTokenResponses = {
+    /**
+     * Created
+     */
+    201: TokenCreated;
+};
+
+export type CreateAppTokenResponse = CreateAppTokenResponses[keyof CreateAppTokenResponses];
+
+export type RevokeAppTokenData = {
+    body?: never;
+    path: {
+        /**
+         * Pk
+         */
+        pk: number;
+    };
+    query?: never;
+    url: '/api/app/account/tokens/{pk}/revoke';
+};
+
+export type RevokeAppTokenErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Not Found
+     */
+    404: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type RevokeAppTokenError = RevokeAppTokenErrors[keyof RevokeAppTokenErrors];
+
+export type RevokeAppTokenResponses = {
+    /**
+     * OK
+     */
+    200: AccountToken;
+};
+
+export type RevokeAppTokenResponse = RevokeAppTokenResponses[keyof RevokeAppTokenResponses];

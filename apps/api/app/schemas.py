@@ -32,6 +32,67 @@ class Session(Schema):
     logout_url: str = Field(description="Same-origin Django logout endpoint; requires CSRF POST.")
 
 
+class AccountFeature(Schema):
+    """Access explanation for one feature, including removed and subscription-locked states."""
+
+    key: str
+    label: str
+    help: str
+    allowed: bool
+    removed: bool
+
+
+class AccountToken(Schema):
+    """Token metadata only; never a hash, password stamp, or full secret."""
+
+    id: int
+    name: str
+    display: str
+    created_at: datetime
+    last_used_at: datetime | None
+    expires_at: datetime | None
+    state: Literal["active", "expired", "revoked"]
+
+
+class Account(Schema):
+    """Subscription, feature access, and token settings for the current browser user."""
+
+    username: str
+    email: str
+    state: Literal["trial", "active", "expired", "none", "staff"]
+    subscription_kind: str | None
+    ends_at: datetime | None
+    days_left: int | None
+    subscription_ok: bool
+    required: bool
+    price: str = Field(description="Formatted period price, or empty when not charged.")
+    currency: str
+    period_days: int
+    contact: str
+    features: list[AccountFeature]
+    api_enabled: bool
+    api_docs: bool
+    tokens: list[AccountToken] = Field(description="Newest 20 tokens, including revoked/expired.")
+    active_tokens: int = Field(
+        description="Active count across all tokens, not just the newest 20."
+    )
+    token_limit: int
+    token_days: int
+
+
+class TokenCreate(Schema):
+    """Token name, validated without reflecting it in an error response."""
+
+    name: str = Field(min_length=1, max_length=60)
+
+
+class TokenCreated(Schema):
+    """One-time creation answer, never included in a subsequent account read."""
+
+    token: AccountToken
+    secret: str = Field(description="Copy once; never cache or persist this response.")
+
+
 class ReportSummary(Schema):
     """A report's date and outlook, without the full report text."""
 

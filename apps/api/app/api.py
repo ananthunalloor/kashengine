@@ -12,6 +12,7 @@ from apps.api.v1.common import ERRORS
 from apps.siteconfig import conf
 from apps.web.context import navigation_for
 
+from .account import router as account_router
 from .auth import AppSession
 from .companies import router as companies_router
 from .delivery import router as delivery_router
@@ -38,6 +39,7 @@ api.add_router("", markets_router)
 api.add_router("", companies_router)
 api.add_router("", delivery_router)
 api.add_router("", today_router)
+api.add_router("", account_router)
 
 
 @api.exception_handler(AuthenticationError)

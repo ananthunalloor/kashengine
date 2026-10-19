@@ -32,7 +32,15 @@ export function AppError({
   section = "Reports",
 }: ErrorComponentProps & {
   withinShell?: boolean;
-  section?: "Today" | "Reports" | "News" | "IPOs" | "Markets" | "Companies" | "Delivery";
+  section?:
+    | "Account"
+    | "Today"
+    | "Reports"
+    | "News"
+    | "IPOs"
+    | "Markets"
+    | "Companies"
+    | "Delivery";
 }) {
   const router = useRouter();
   const unauthorized = error instanceof ApiError && error.kind === "unauthorized";
@@ -87,7 +95,7 @@ export function AppError({
             Back to {section}
           </Anchor>
         )}
-        <Anchor href="/account/">Open your account</Anchor>
+        <Anchor href="/app/account/">Open your account</Anchor>
       </Stack>
     </Container>
   );

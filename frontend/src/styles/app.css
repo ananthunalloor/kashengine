@@ -702,6 +702,57 @@ h2 {
   margin-top: 1.5rem;
 }
 
+.account-token-table {
+  margin-top: 1.5rem;
+}
+
+.account-secret,
+.account-revoke,
+.account-action-error {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--brand-line);
+  border-radius: 0.75rem;
+  background: var(--brand-soft);
+}
+
+.account-action-error {
+  color: var(--brand-loss);
+  background: var(--brand-loss-soft);
+}
+
+.account-secret code {
+  display: block;
+  margin-block: 0.75rem;
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+
+.account-token-form {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.account-token-form label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.account-token-form input {
+  display: block;
+  width: min(100%, 20rem);
+  margin-top: 0.4rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--brand-line);
+  border-radius: 0.4rem;
+  background: var(--brand-surface);
+  color: var(--brand-ink);
+  font: inherit;
+}
+
 #market-record + p {
   max-width: 65rem;
 }

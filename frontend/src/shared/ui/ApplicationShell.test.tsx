@@ -39,7 +39,7 @@ it("shows subscription notices and keeps account navigation for locked users", (
   });
   expect(screen.getByRole("status")).toHaveTextContent("Your access has ended.");
   expect(screen.queryByRole("link", { name: "Reports" })).not.toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Account" })).toHaveAttribute("href", "/account/");
+  expect(screen.getByRole("link", { name: "Account" })).toHaveAttribute("href", "/app/account/");
 });
 
 it("uses a CSRF-protected POST for logout", () => {

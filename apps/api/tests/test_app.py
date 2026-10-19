@@ -206,6 +206,9 @@ def test_private_contract_is_separate_and_committed():
         "/api/app/companies",
         "/api/app/delivery",
         "/api/app/today",
+        "/api/app/account",
+        "/api/app/account/tokens",
+        "/api/app/account/tokens/{pk}/revoke",
     }
     assert set(schema["components"]["securitySchemes"]) == {"AppSession"}
     assert "/api/app/session" not in json.loads(render("v1"))["paths"]

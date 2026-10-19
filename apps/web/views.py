@@ -219,9 +219,6 @@ def delivery(request):
     return render(request, "web/delivery.html", context)
 
 
-TOKEN_ROWS = 20  # How many tokens (active and old) the account page lists.
-
-
 def _account_context(request: HttpRequest, **extra) -> dict:
     """The context of the account page. `extra` adds keys, for example a new token."""
     access = access_for(request)
@@ -234,7 +231,7 @@ def _account_context(request: HttpRequest, **extra) -> dict:
         }
         for feature in features.FEATURES
     ]
-    api_tokens = list(ApiToken.objects.filter(user=request.user)[:TOKEN_ROWS])
+    api_tokens = list(ApiToken.objects.filter(user=request.user)[: queries.ACCOUNT_TOKEN_ROWS])
     return {
         "access": access,
         "sub": sub,

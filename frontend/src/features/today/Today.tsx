@@ -58,7 +58,7 @@ export function Today({ data, session }: { data: TodayData; session: Session }) 
             Welcome
           </Title>
           <Text c="dimmed" mt="sm">
-            No feature is on for your account. See the <Anchor href="/account/">Account</Anchor>{" "}
+            No feature is on for your account. See the <Anchor href="/app/account/">Account</Anchor>{" "}
             page.
           </Text>
         </section>

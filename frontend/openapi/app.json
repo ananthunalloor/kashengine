@@ -1001,6 +1001,240 @@
           }
         ]
       }
+    },
+    "/api/app/account": {
+      "get": {
+        "operationId": "get_app_account",
+        "summary": "Read the current user's subscription, feature access, and masked token metadata",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Allow account access even after a subscription ends or the public API is disabled.\n\nArgs:\n    request: The authenticated browser request.\n\nReturns:\n    Current account details with only owner-scoped token metadata.",
+        "tags": [
+          "Account"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/account/tokens": {
+      "post": {
+        "operationId": "create_app_token",
+        "summary": "Create a token and return its secret exactly once",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenCreated"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Reuse issuance limits and audit only the masked prefix.\n\nArgs:\n    request: The authenticated, CSRF-checked browser request.\n    payload: The token's display name.\n\nReturns:\n    A 201 answer containing metadata and the one-time secret.\n\nRaises:\n    ApiError: When the API is off, the name is empty, or the active-token limit is reached.",
+        "tags": [
+          "Account"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/account/tokens/{pk}/revoke": {
+      "post": {
+        "operationId": "revoke_app_token",
+        "summary": "Revoke one token owned by the current user",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pk",
+            "schema": {
+              "title": "Pk",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountToken"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Permit revocation regardless of subscription or public API availability.\n\nArgs:\n    request: The authenticated, CSRF-checked browser request.\n    pk: Token primary key; another owner's token is not found.\n\nReturns:\n    Safe metadata for the revoked token; repeating the action does not audit twice.",
+        "tags": [
+          "Account"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -2939,6 +3173,283 @@
           "companies"
         ],
         "title": "TodayStory",
+        "type": "object"
+      },
+      "Account": {
+        "description": "Subscription, feature access, and token settings for the current browser user.",
+        "properties": {
+          "username": {
+            "title": "Username",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "trial",
+              "active",
+              "expired",
+              "none",
+              "staff"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "subscription_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subscription Kind"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "days_left": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Left"
+          },
+          "subscription_ok": {
+            "title": "Subscription Ok",
+            "type": "boolean"
+          },
+          "required": {
+            "title": "Required",
+            "type": "boolean"
+          },
+          "price": {
+            "description": "Formatted period price, or empty when not charged.",
+            "title": "Price",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "period_days": {
+            "title": "Period Days",
+            "type": "integer"
+          },
+          "contact": {
+            "title": "Contact",
+            "type": "string"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/AccountFeature"
+            },
+            "title": "Features",
+            "type": "array"
+          },
+          "api_enabled": {
+            "title": "Api Enabled",
+            "type": "boolean"
+          },
+          "api_docs": {
+            "title": "Api Docs",
+            "type": "boolean"
+          },
+          "tokens": {
+            "description": "Newest 20 tokens, including revoked/expired.",
+            "items": {
+              "$ref": "#/components/schemas/AccountToken"
+            },
+            "title": "Tokens",
+            "type": "array"
+          },
+          "active_tokens": {
+            "description": "Active count across all tokens, not just the newest 20.",
+            "title": "Active Tokens",
+            "type": "integer"
+          },
+          "token_limit": {
+            "title": "Token Limit",
+            "type": "integer"
+          },
+          "token_days": {
+            "title": "Token Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "username",
+          "email",
+          "state",
+          "subscription_kind",
+          "ends_at",
+          "days_left",
+          "subscription_ok",
+          "required",
+          "price",
+          "currency",
+          "period_days",
+          "contact",
+          "features",
+          "api_enabled",
+          "api_docs",
+          "tokens",
+          "active_tokens",
+          "token_limit",
+          "token_days"
+        ],
+        "title": "Account",
+        "type": "object"
+      },
+      "AccountFeature": {
+        "description": "Access explanation for one feature, including removed and subscription-locked states.",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "help": {
+            "title": "Help",
+            "type": "string"
+          },
+          "allowed": {
+            "title": "Allowed",
+            "type": "boolean"
+          },
+          "removed": {
+            "title": "Removed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "help",
+          "allowed",
+          "removed"
+        ],
+        "title": "AccountFeature",
+        "type": "object"
+      },
+      "AccountToken": {
+        "description": "Token metadata only; never a hash, password stamp, or full secret.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "display": {
+            "title": "Display",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "state": {
+            "enum": [
+              "active",
+              "expired",
+              "revoked"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "display",
+          "created_at",
+          "last_used_at",
+          "expires_at",
+          "state"
+        ],
+        "title": "AccountToken",
+        "type": "object"
+      },
+      "TokenCreated": {
+        "description": "One-time creation answer, never included in a subsequent account read.",
+        "properties": {
+          "token": {
+            "$ref": "#/components/schemas/AccountToken"
+          },
+          "secret": {
+            "description": "Copy once; never cache or persist this response.",
+            "title": "Secret",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "secret"
+        ],
+        "title": "TokenCreated",
+        "type": "object"
+      },
+      "TokenCreate": {
+        "description": "Token name, validated without reflecting it in an error response.",
+        "properties": {
+          "name": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "TokenCreate",
         "type": "object"
       }
     },

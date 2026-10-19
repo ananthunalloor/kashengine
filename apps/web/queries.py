@@ -37,6 +37,7 @@ NEWS_WINDOW_HOURS = 36
 DASHBOARD_ITEMS = 4
 HOURS_BEFORE_DAYS = 48  # An age below this is shown in hours. A larger age is shown in days.
 DELIVERY_LOG_ROWS = 50
+ACCOUNT_TOKEN_ROWS = 20
 
 
 def latest_deliveries() -> QuerySet[DeliveryLog]:

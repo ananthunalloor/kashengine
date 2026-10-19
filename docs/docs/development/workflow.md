@@ -72,7 +72,25 @@ groups, configured quotes, and latest saved report. The latest outlook keeps its
 date, five strongest saved cues and their trading dates, notes, component scores, and baseline/
 small-sample caveats. Reads do not fetch, score, evaluate, or send anything. Bounded summaries
 use local TanStack tables and shared metric colors; full-list links stay inside React.
-The original `/dashboard/` and login redirect remain unchanged; Account and Ops still use Django.
+The original `/dashboard/` and login redirect remain unchanged; Ops still uses Django.
+
+Account opens `/app/account/` and reads `/api/app/account`, including subscription details,
+feature access, the latest 20 owner-scoped masked token rows, and the full active-token count.
+Its TanStack tables provide local search, filters, sorting, and pagination over these bounded
+rows. The preview and endpoint remain available after subscription expiry. POST
+`/api/app/account/tokens` creates a token; POST `/api/app/account/tokens/{id}/revoke` revokes
+only the current user's token. Both require session-cookie authentication and CSRF, reuse
+existing token services, and audit only masked prefixes. Token names and contact text are
+rendered as text, not HTML. No hash or password stamp is serialized.
+
+The creation response contains a one-time secret and is marked `private, no-store`. The client
+uses imperative writes rather than cached React Query mutations, with no automatic retries;
+the secret lives only in component-local state until hidden or unmounted. It never enters
+query caches, URLs, or browser storage. If creation succeeds but metadata refresh fails,
+the page retains the secret and explicitly reports the partial success. When the public API
+is disabled, creation is denied, but masked metadata and revocation remain available
+intentionally, unlike the legacy page's hidden API section. The original `/account/` remains
+unchanged apart from sharing the token-row limit.
 
 The private `/api/app/session` endpoint supplies the current user, allowed features, subscription
 notice, and navigation. It reuses Django's navigation/access rules, accepts session cookies only,

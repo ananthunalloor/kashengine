@@ -146,6 +146,7 @@ export function ApplicationShell({
           {session.navigation.map((item) => {
             const migrated = [
               "/dashboard/",
+              "/account/",
               "/reports/",
               "/news/",
               "/ipos/",
@@ -199,7 +200,7 @@ export function ApplicationShell({
       <main className="app-main" id="main" tabIndex={-1}>
         {session.notice && (
           <Alert color="yellow" title="Your subscription" role="status" mb="md">
-            {session.notice} <Anchor href="/account/">See your account</Anchor>.
+            {session.notice} <Anchor href="/app/account/">See your account</Anchor>.
           </Alert>
         )}
         {children}
