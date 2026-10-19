@@ -10,6 +10,7 @@ from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.access.models import FeatureBlock
 from apps.companies.models import Company
 from apps.delivery.models import DeliveryLog
 from apps.ipos.models import Ipo
@@ -124,6 +125,26 @@ def test_the_react_shell_is_authenticated_and_mounts_the_app(client_in):
     assert "@vite/client" in response.text
     assert "@react-refresh" in response.text
     assert "no-store" in response["Cache-Control"]
+
+
+def test_reports_preview_keeps_existing_pages_and_checks_direct_urls(client_in, user):
+    Report.objects.create(date=date(2026, 10, 7), text="Daily brief")
+    for path in ("/app/reports/", "/app/reports/2026-10-07/"):
+        response = client_in.get(path)
+        assert response.status_code == 200
+        assert 'id="root"' in response.text
+        assert "no-store" in response["Cache-Control"]
+    assert "Daily brief" in client_in.get("/reports/2026-10-07/").text
+    assert client_in.get("/app/reports/2026-02-30/").status_code == 404
+    assert client_in.get("/app/reports/2026-10-08/").status_code == 404
+    FeatureBlock.objects.create(user=user, feature="reports")
+    assert client_in.get("/app/reports/").status_code == 403
+    assert client_in.get("/app/reports/2026-10-07/").status_code == 403
+
+
+@pytest.mark.parametrize("path", ["/app/reports/", "/app/reports/2026-10-07/"])
+def test_reports_preview_requires_login(client, path):
+    assert client.get(path).status_code == 302
 
 
 def make_prediction(day=date(2026, 10, 8), direction="up", confidence=0.52, **kwargs):

@@ -72,7 +72,12 @@ Unsafe private API methods use Ninja's CSRF-enabled cookie authentication.
 
 The browser client validates session responses against generated Zod schemas, sends CSRF tokens
 for writes, and redirects expired sessions to Django login with the current return URL.
-Navigation links currently open the existing Django pages, which still enforce permissions.
+Reports opens `/app/reports/`, with a paginated list and detail pages at `/app/reports/YYYY-MM-DD/`.
+The preview uses `/api/app/reports` and `/api/app/reports/{day}` with session-only, Reports-feature
+authentication. It retains the original text-rendering and score-formatting helpers, adjacent
+reports, and delivery history. Delivery recipients are excluded; only staff receive error details.
+The existing `/reports/` pages remain unchanged for comparison. Other navigation links still open
+the existing Django pages. Direct preview URLs and API requests both enforce access rules.
 
 After changing the private schemas:
 
@@ -82,7 +87,7 @@ pnpm --dir frontend api:generate
 pnpm --dir frontend format:check
 pnpm --dir frontend test
 pnpm --dir frontend build
-uv run pytest -q apps/api/tests/test_app.py
+uv run pytest -q apps/api/tests/test_app.py apps/api/tests/test_app_reports.py
 ```
 
 Do not put UI-only endpoints in `/api/v1/`: its public compatibility contract is unchanged.
@@ -93,6 +98,11 @@ responsive layout instead of Mantine's AppShell or responsive style props: those
 `<style>` elements that the enforced `style-src 'self'` policy rejects. Mantine's static
 stylesheet supplies the default theme variables; inline style attributes remain permitted by
 the existing `style-src-attr` policy. Never relax CSP to make a component render.
+
+Landing and React share `static/css/brand-tokens.css`: update the shared palette there, not in
+two independent themes. The landing stylesheet aliases these tokens, and Vite bundles them into
+the React stylesheet. React adds dark-mode overrides in `frontend/src/styles/app.css`; new users
+start in the landing page's light theme and existing saved preferences are respected.
 
 ## Database migrations
 

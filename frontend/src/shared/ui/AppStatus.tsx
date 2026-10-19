@@ -4,34 +4,54 @@ import { useRouter } from "@tanstack/react-router";
 
 import { loginUrl } from "../api/client";
 import { ApiError } from "../api/errors";
+import { usePageTitle } from "./usePageTitle";
 
-export function AppLoading() {
+export function AppLoading({ withinShell = false }: { withinShell?: boolean } = {}) {
   return (
-    <Container component="main" id="main" py="xl" aria-busy="true" tabIndex={-1}>
+    <Container
+      component={withinShell ? "section" : "main"}
+      id={withinShell ? undefined : "main"}
+      py="xl"
+      aria-busy="true"
+      tabIndex={-1}
+    >
       <Stack align="center" role="status">
         <Loader aria-hidden="true" />
-        <Text>Loading your account...</Text>
+        <Text>{withinShell ? "Loading reports..." : "Loading your account..."}</Text>
       </Stack>
     </Container>
   );
 }
 
-export function AppError({ error }: ErrorComponentProps) {
+export function AppError({
+  error,
+  withinShell = false,
+}: ErrorComponentProps & { withinShell?: boolean }) {
   const router = useRouter();
   const unauthorized = error instanceof ApiError && error.kind === "unauthorized";
+  const notFound = error instanceof ApiError && error.kind === "not-found";
   const forbidden =
     error instanceof ApiError &&
     ["feature_not_available", "subscription_required"].includes(error.code);
+  const title = unauthorized
+    ? "Sign in to continue"
+    : notFound
+      ? "Report not found"
+      : forbidden
+        ? "Not on your account"
+        : "Unable to load this page";
+  usePageTitle(title);
 
   return (
-    <Container component="main" id="main" py="xl" tabIndex={-1}>
+    <Container
+      component={withinShell ? "section" : "main"}
+      id={withinShell ? undefined : "main"}
+      py="xl"
+      tabIndex={-1}
+    >
       <Stack role="alert">
-        <Title order={1}>
-          {unauthorized
-            ? "Sign in to continue"
-            : forbidden
-              ? "Not on your account"
-              : "Unable to load this page"}
+        <Title order={1} tabIndex={-1}>
+          {title}
         </Title>
         <Text>
           {error instanceof ApiError ? error.message : "An unexpected error occurred. Try again."}
@@ -39,7 +59,8 @@ export function AppError({ error }: ErrorComponentProps) {
         {unauthorized ? (
           <Anchor href={loginUrl()}>Go to sign in</Anchor>
         ) : (
-          !forbidden && (
+          !forbidden &&
+          !notFound && (
             <Button
               onClick={() => {
                 void router.invalidate();
@@ -50,6 +71,7 @@ export function AppError({ error }: ErrorComponentProps) {
             </Button>
           )
         )}
+        {withinShell && <Anchor href="/app/reports/">Back to Reports</Anchor>}
         <Anchor href="/account/">Open your account</Anchor>
       </Stack>
     </Container>

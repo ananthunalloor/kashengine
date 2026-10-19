@@ -13,6 +13,7 @@ from apps.siteconfig import conf
 from apps.web.context import navigation_for
 
 from .auth import AppSession
+from .reports import router as reports_router
 from .schemas import Session
 
 api = NinjaAPI(
@@ -24,6 +25,7 @@ api = NinjaAPI(
     openapi_url=None,
 )
 errors.install(api)
+api.add_router("", reports_router)
 
 
 @api.exception_handler(AuthenticationError)

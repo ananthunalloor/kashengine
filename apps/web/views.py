@@ -91,6 +91,20 @@ def react_app(request: HttpRequest) -> HttpResponse:
     return render(request, "web/spa.html")
 
 
+def react_report(request: HttpRequest, day: date) -> HttpResponse:
+    """Serve the Reports preview at a valid report URL without exposing its data.
+
+    Args:
+        request: The authenticated browser request.
+        day: The report date parsed from the URL.
+
+    Returns:
+        The uncached application shell, or a 404 for an absent report.
+    """
+    get_object_or_404(Report.objects.only("id"), date=day)
+    return react_app(request)
+
+
 def dashboard(request):
     """The home page: today's outlook, news, IPOs, and quotes."""
     return render(request, "web/dashboard.html", queries.dashboard_data())

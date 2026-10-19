@@ -1,7 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
-import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { createRootRouteWithContext, Outlet, useRouterState } from "@tanstack/react-router";
 
 import { sessionQuery } from "../shared/api/session";
 import { ApplicationShell } from "../shared/ui/ApplicationShell";
@@ -9,14 +8,10 @@ import { AppError, AppLoading } from "../shared/ui/AppStatus";
 
 function RootLayout() {
   const { data: session } = useSuspenseQuery(sessionQuery);
-
-  useEffect(() => {
-    document.title = "React preview | Kash Engine";
-    document.querySelector<HTMLElement>("#main h1")?.focus();
-  }, []);
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   return (
-    <ApplicationShell session={session}>
+    <ApplicationShell session={session} pathname={`/app${pathname}`}>
       <Outlet />
     </ApplicationShell>
   );

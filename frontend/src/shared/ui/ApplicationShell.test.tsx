@@ -19,7 +19,7 @@ function showShell(value: Session = session) {
 it("renders the server-provided links without inventing access", () => {
   showShell();
   expect(screen.getByRole("navigation", { name: "Main" })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("href", "/reports/");
+  expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("href", "/app/reports/");
   expect(screen.queryByRole("link", { name: "News" })).not.toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "Ops" })).not.toBeInTheDocument();
   expect(screen.getByRole("main")).toHaveAttribute("id", "main");

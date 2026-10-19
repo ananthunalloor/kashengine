@@ -5,6 +5,7 @@ RUN corepack enable
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY frontend/ ./
+COPY static/css/brand-tokens.css /app/static/css/brand-tokens.css
 RUN pnpm build
 
 # One image, two install modes. Set INSTALL_DEV=true for dev.

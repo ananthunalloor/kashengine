@@ -4,14 +4,112 @@
 @import "tailwindcss/preflight.css" layer(base);
 @import "@mantine/core/styles.layer.css";
 @import "tailwindcss/utilities.css" layer(utilities);
+@import "../../../static/css/brand-tokens.css";
 
 :root {
-  color-scheme: light dark;
+  --mantine-font-family: var(--brand-font);
+  --mantine-font-family-headings: var(--brand-font);
+  --mantine-heading-font-weight: 650;
+  --mantine-h1-font-weight: 650;
+  --mantine-h2-font-weight: 650;
+  --mantine-h3-font-weight: 650;
+  --mantine-radius-default: 0.75rem;
+  --mantine-color-violet-filled: var(--brand-purple);
+  --mantine-color-violet-filled-hover: var(--brand-purple-hover);
+  --mantine-color-violet-light: var(--brand-soft);
+  --mantine-color-violet-light-hover: var(--brand-line);
+  --mantine-color-violet-light-color: var(--brand-purple);
+  --mantine-primary-color-filled: var(--brand-purple);
+  --mantine-primary-color-filled-hover: var(--brand-purple-hover);
+  --mantine-primary-color-light: var(--brand-soft);
+  --mantine-primary-color-light-hover: var(--brand-line);
+  --mantine-primary-color-light-color: var(--brand-purple);
+  --mantine-primary-color-6: var(--brand-purple);
+  --mantine-primary-color-7: var(--brand-purple-hover);
+  --mantine-primary-color-contrast: #fff;
+}
+
+:root[data-mantine-color-scheme] {
+  --mantine-color-body: var(--brand-canvas);
+  --mantine-color-text: var(--brand-ink);
+  --mantine-color-dimmed: var(--brand-muted);
+  --mantine-color-anchor: var(--brand-purple);
+  --mantine-color-default: var(--brand-surface);
+  --mantine-color-default-hover: var(--brand-soft);
+  --mantine-color-default-color: var(--brand-ink);
+  --mantine-color-default-border: var(--brand-line);
+}
+
+:root[data-mantine-color-scheme="dark"] {
+  --brand-ink: #eeedf7;
+  --brand-muted: #b1aec7;
+  --brand-purple: #b2a5ff;
+  --brand-purple-hover: #c7bdff;
+  --brand-line: #343044;
+  --brand-surface: #211e2d;
+  --brand-canvas: #17151f;
+  --brand-soft: #302840;
+  --brand-gain: #85cfae;
+  --brand-gain-soft: #1b362b;
+  --brand-loss: #f29f98;
+  --brand-loss-soft: #402422;
+  --mantine-color-violet-filled: #6654d9;
+  --mantine-color-violet-filled-hover: #5542c8;
+  --mantine-primary-color-filled: #6654d9;
+  --mantine-primary-color-filled-hover: #5542c8;
 }
 
 body {
   min-width: 320px;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2 {
+  letter-spacing: -0.035em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand-purple);
+  outline-offset: 4px;
+}
+
+.app-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--brand-ink);
+  text-decoration: none;
+  font-size: 1.35rem;
+  font-weight: 750;
+  letter-spacing: -0.06em;
+}
+
+.app-brand-light {
+  color: var(--brand-muted);
+  font-weight: 400;
+}
+
+.app-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.25rem;
+  border-radius: 0.55rem;
+  background: #6654d9;
+  color: white;
+  font-size: 1.85rem;
+  letter-spacing: -0.15em;
+  padding-right: 0.2rem;
+}
+
+.app-eyebrow {
+  color: var(--brand-purple);
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .skip-link {
@@ -20,7 +118,7 @@ body {
   top: 0.75rem;
   left: -100vw;
   padding: 0.5rem 0.75rem;
-  background: var(--mantine-color-body);
+  background: var(--brand-surface);
   color: var(--mantine-color-text);
 }
 
@@ -41,7 +139,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--mantine-color-body);
+  background: var(--brand-surface);
   border-bottom: 1px solid var(--mantine-color-default-border);
 }
 
@@ -59,7 +157,121 @@ body {
 
 .app-main {
   min-width: 0;
-  padding: var(--mantine-spacing-md);
+  width: 100%;
+  max-width: 76rem;
+  margin-inline: auto;
+  padding: clamp(1rem, 4vw, 3rem);
+}
+
+.app-navigation .mantine-NavLink-root {
+  border-radius: 0.5rem;
+  margin-block: 0.2rem;
+}
+
+.report-list,
+.report-deliveries {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.report-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--brand-line);
+  border-radius: 0.75rem;
+  background: var(--brand-surface);
+}
+
+.report-list li + li {
+  margin-top: 0.75rem;
+}
+
+.report-date {
+  font-weight: 600;
+  color: var(--brand-ink);
+  text-decoration: none;
+}
+
+.report-date:hover {
+  color: var(--brand-purple);
+}
+
+.app-main a:not(.report-date) {
+  color: var(--brand-purple);
+  text-underline-offset: 0.2em;
+}
+
+.report-outlook,
+.report-status {
+  display: inline-flex;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.4rem;
+  background: var(--brand-soft);
+  color: var(--brand-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+[data-tone="up"],
+[data-tone="sent"] {
+  background: var(--brand-gain-soft);
+  color: var(--brand-gain);
+}
+
+[data-tone="down"],
+[data-tone="failed"] {
+  background: var(--brand-loss-soft);
+  color: var(--brand-loss);
+}
+
+.report-text {
+  padding: clamp(1rem, 3vw, 2rem);
+  border: 1px solid var(--brand-line);
+  border-radius: 0.75rem;
+  background: var(--brand-surface);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.8;
+}
+
+.report-deliveries li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding-block: 0.85rem;
+  border-bottom: 1px solid var(--brand-line);
+}
+
+.report-diagnostic {
+  width: 100%;
+  color: var(--brand-loss);
+  overflow-wrap: anywhere;
+}
+
+.report-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 @media (min-width: 48em) {

@@ -174,6 +174,158 @@ export type Problem = {
     errors?: Array<FieldError> | null;
 };
 
+/**
+ * ReportPage
+ *
+ * A page of daily reports in newest-first order.
+ */
+export type ReportPage = {
+    /**
+     * Items
+     *
+     * Reports on this page.
+     */
+    items: Array<ReportSummary>;
+    /**
+     * Page
+     *
+     * Resolved page number, starting at one.
+     */
+    page: number;
+    /**
+     * Pages
+     *
+     * Total number of pages; one for an empty list.
+     */
+    pages: number;
+    /**
+     * Total
+     *
+     * Total number of reports.
+     */
+    total: number;
+};
+
+/**
+ * ReportSummary
+ *
+ * A report's date and outlook, without the full report text.
+ */
+export type ReportSummary = {
+    /**
+     * Date
+     *
+     * Trading date of the daily report.
+     */
+    date: string;
+    /**
+     * Prediction
+     *
+     * Outlook direction: up, down, flat, or empty if unavailable.
+     */
+    prediction: string;
+    /**
+     * Strength
+     *
+     * Formatted 1.0-10.0 signal strength, not a probability.
+     */
+    strength: string | null;
+};
+
+/**
+ * ReportDelivery
+ *
+ * Delivery status without recipient addresses or member-visible diagnostics.
+ */
+export type ReportDelivery = {
+    /**
+     * Id
+     *
+     * Delivery attempt primary key.
+     */
+    id: number;
+    /**
+     * Channel
+     *
+     * Human-readable delivery channel.
+     */
+    channel: string;
+    /**
+     * Status
+     *
+     * Delivery status key: sent or failed.
+     */
+    status: string;
+    /**
+     * Status Label
+     *
+     * Human-readable delivery status.
+     */
+    status_label: string;
+    /**
+     * Created At
+     *
+     * Time of the delivery attempt.
+     */
+    created_at: string;
+    /**
+     * Error
+     *
+     * Failure diagnostic for staff only; otherwise null.
+     */
+    error: string | null;
+};
+
+/**
+ * ReportDetail
+ *
+ * The display report and its delivery history.
+ */
+export type ReportDetail = {
+    /**
+     * Date
+     *
+     * Trading date of the daily report.
+     */
+    date: string;
+    /**
+     * Prediction
+     *
+     * Outlook direction: up, down, flat, or empty if unavailable.
+     */
+    prediction: string;
+    /**
+     * Strength
+     *
+     * Formatted 1.0-10.0 signal strength, not a probability.
+     */
+    strength: string | null;
+    /**
+     * Text
+     *
+     * Display text, reformatted from saved data when available.
+     */
+    text: string;
+    /**
+     * Deliveries
+     *
+     * Delivery attempts, newest first.
+     */
+    deliveries: Array<ReportDelivery>;
+    /**
+     * Older
+     *
+     * Date of the nearest older report, if any.
+     */
+    older: string | null;
+    /**
+     * Newer
+     *
+     * Date of the nearest newer report, if any.
+     */
+    newer: string | null;
+};
+
 export type GetAppSessionData = {
     body?: never;
     path?: never;
@@ -206,3 +358,91 @@ export type GetAppSessionResponses = {
 };
 
 export type GetAppSessionResponse = GetAppSessionResponses[keyof GetAppSessionResponses];
+
+export type ListAppReportsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+    };
+    url: '/api/app/reports';
+};
+
+export type ListAppReportsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type ListAppReportsError = ListAppReportsErrors[keyof ListAppReportsErrors];
+
+export type ListAppReportsResponses = {
+    /**
+     * OK
+     */
+    200: ReportPage;
+};
+
+export type ListAppReportsResponse = ListAppReportsResponses[keyof ListAppReportsResponses];
+
+export type GetAppReportData = {
+    body?: never;
+    path: {
+        /**
+         * Day
+         */
+        day: string;
+    };
+    query?: never;
+    url: '/api/app/reports/{day}';
+};
+
+export type GetAppReportErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Not Found
+     */
+    404: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type GetAppReportError = GetAppReportErrors[keyof GetAppReportErrors];
+
+export type GetAppReportResponses = {
+    /**
+     * OK
+     */
+    200: ReportDetail;
+};
+
+export type GetAppReportResponse = GetAppReportResponses[keyof GetAppReportResponses];

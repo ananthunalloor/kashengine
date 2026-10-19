@@ -1,12 +1,14 @@
+@import "./brand-tokens.css";
+
 :root {
   color-scheme: light;
-  --ink: #202436;
-  --muted: #687083;
-  --purple: #6654d9;
-  --line: #e9eaf0;
-  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  --ink: var(--brand-ink);
+  --muted: var(--brand-muted);
+  --purple: var(--brand-purple);
+  --line: var(--brand-line);
+  font-family: var(--brand-font);
   color: var(--ink);
-  background: #fff;
+  background: var(--brand-surface);
   font-synthesis: none;
 }
 * { box-sizing: border-box; }
@@ -33,7 +35,7 @@ a:focus-visible, summary:focus-visible { outline: 3px solid var(--purple); outli
 .button-small .icon { width: 17px; height: 17px; }
 .button-dark { background: #25283b; color: white; }
 .button-primary { background: var(--purple); color: #fff; box-shadow: 0 4px 9px #6654d91a; }
-.button-primary:hover { background: #5542c8; }
+.button-primary:hover { background: var(--brand-purple-hover); }
 .hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 65px; align-items: center; padding-block: 91px 100px; }
 .eyebrow { display: flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 650; letter-spacing: 1.6px; text-transform: uppercase; color: var(--purple); margin: 0 0 22px; line-height: 1.7; }
 .hero .eyebrow { font-size: 10px; letter-spacing: 1.1px; background: #f4f1fe; border: 1px solid #e9e3fc; display: inline-flex; padding: 5px 10px; border-radius: 25px; }

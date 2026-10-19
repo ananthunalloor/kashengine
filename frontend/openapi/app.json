@@ -63,6 +63,174 @@
           }
         ]
       }
+    },
+    "/api/app/reports": {
+      "get": {
+        "operationId": "list_app_reports",
+        "summary": "List daily reports for the browser",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Return a bounded page using the existing web page size and date ordering.",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/reports/{day}": {
+      "get": {
+        "operationId": "get_app_report",
+        "summary": "Read a report and its delivery status",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "day",
+            "schema": {
+              "format": "date",
+              "title": "Day",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Preserve saved-data rendering, adjacent dates, and staff-only delivery diagnostics.",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -261,6 +429,208 @@
           "code"
         ],
         "title": "Problem",
+        "type": "object"
+      },
+      "ReportPage": {
+        "description": "A page of daily reports in newest-first order.",
+        "properties": {
+          "items": {
+            "description": "Reports on this page.",
+            "items": {
+              "$ref": "#/components/schemas/ReportSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "description": "Resolved page number, starting at one.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "description": "Total number of pages; one for an empty list.",
+            "title": "Pages",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total number of reports.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pages",
+          "total"
+        ],
+        "title": "ReportPage",
+        "type": "object"
+      },
+      "ReportSummary": {
+        "description": "A report's date and outlook, without the full report text.",
+        "properties": {
+          "date": {
+            "description": "Trading date of the daily report.",
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "prediction": {
+            "description": "Outlook direction: up, down, flat, or empty if unavailable.",
+            "title": "Prediction",
+            "type": "string"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Formatted 1.0-10.0 signal strength, not a probability.",
+            "title": "Strength"
+          }
+        },
+        "required": [
+          "date",
+          "prediction",
+          "strength"
+        ],
+        "title": "ReportSummary",
+        "type": "object"
+      },
+      "ReportDelivery": {
+        "description": "Delivery status without recipient addresses or member-visible diagnostics.",
+        "properties": {
+          "id": {
+            "description": "Delivery attempt primary key.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "channel": {
+            "description": "Human-readable delivery channel.",
+            "title": "Channel",
+            "type": "string"
+          },
+          "status": {
+            "description": "Delivery status key: sent or failed.",
+            "title": "Status",
+            "type": "string"
+          },
+          "status_label": {
+            "description": "Human-readable delivery status.",
+            "title": "Status Label",
+            "type": "string"
+          },
+          "created_at": {
+            "description": "Time of the delivery attempt.",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Failure diagnostic for staff only; otherwise null.",
+            "title": "Error"
+          }
+        },
+        "required": [
+          "id",
+          "channel",
+          "status",
+          "status_label",
+          "created_at",
+          "error"
+        ],
+        "title": "ReportDelivery",
+        "type": "object"
+      },
+      "ReportDetail": {
+        "description": "The display report and its delivery history.",
+        "properties": {
+          "date": {
+            "description": "Trading date of the daily report.",
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "prediction": {
+            "description": "Outlook direction: up, down, flat, or empty if unavailable.",
+            "title": "Prediction",
+            "type": "string"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Formatted 1.0-10.0 signal strength, not a probability.",
+            "title": "Strength"
+          },
+          "text": {
+            "description": "Display text, reformatted from saved data when available.",
+            "title": "Text",
+            "type": "string"
+          },
+          "deliveries": {
+            "description": "Delivery attempts, newest first.",
+            "items": {
+              "$ref": "#/components/schemas/ReportDelivery"
+            },
+            "title": "Deliveries",
+            "type": "array"
+          },
+          "older": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Date of the nearest older report, if any.",
+            "title": "Older"
+          },
+          "newer": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Date of the nearest newer report, if any.",
+            "title": "Newer"
+          }
+        },
+        "required": [
+          "date",
+          "prediction",
+          "strength",
+          "text",
+          "deliveries",
+          "older",
+          "newer"
+        ],
+        "title": "ReportDetail",
         "type": "object"
       }
     },

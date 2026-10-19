@@ -6,6 +6,7 @@ import { queryClient } from "./query-client";
 export const router = createRouter({
   routeTree,
   basepath: "/app",
+  trailingSlash: "always",
   defaultPreload: "intent",
   context: { queryClient },
 });

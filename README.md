@@ -279,11 +279,21 @@ pnpm --dir frontend dev
 
 Open `http://localhost:8000/app/` while signed in to view the authenticated React shell.
 The preview loads navigation, feature permissions, subscription notices, and the staff flag
-from the session-only private API at `/api/app/session`. Its links still open the existing
-Django pages. It includes a mobile menu, a persistent light/dark toggle, and CSRF-protected logout.
+from the session-only private API at `/api/app/session`. Reports opens the React preview at
+`/app/reports/`; other links still open the existing Django pages. The shell includes a mobile menu,
+a persistent light/dark toggle, and CSRF-protected logout.
 An expired session returns to login; API errors display a retryable error page.
 
-The existing pages remain Django-rendered during the incremental migration. Run
+The Reports preview includes paginated history, full text, delivery status, and adjacent-report
+navigation, using `/api/app/reports` and `/api/app/reports/{day}`. The original `/reports/` pages
+remain unchanged for comparison. Both versions enforce the same Reports access rules; delivery
+recipients are never exposed and delivery errors are staff-only.
+
+React shares the landing page's purple accent, white surfaces, sans-serif typography, and rounded
+cards through `static/css/brand-tokens.css`. Light mode is the default; a saved dark-mode choice
+is retained. Theme changes use static CSS and do not weaken the Content-Security-Policy.
+
+The other existing pages remain Django-rendered during the incremental migration. Run
 `pnpm --dir frontend build` to create the production bundle and
 `pnpm --dir frontend build:legacy-css` to rebuild the stylesheet still used by Django templates.
 The Docker image builds the React bundle automatically.

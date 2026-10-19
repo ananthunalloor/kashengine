@@ -64,6 +64,76 @@ export const zProblem = z.object({
 });
 
 /**
+ * ReportSummary
+ *
+ * A report's date and outlook, without the full report text.
+ */
+export const zReportSummary = z.object({
+    date: z.iso.date(),
+    prediction: z.string(),
+    strength: z.string().nullable()
+});
+
+/**
+ * ReportPage
+ *
+ * A page of daily reports in newest-first order.
+ */
+export const zReportPage = z.object({
+    items: z.array(zReportSummary),
+    page: z.int(),
+    pages: z.int(),
+    total: z.int()
+});
+
+/**
+ * ReportDelivery
+ *
+ * Delivery status without recipient addresses or member-visible diagnostics.
+ */
+export const zReportDelivery = z.object({
+    id: z.int(),
+    channel: z.string(),
+    status: z.string(),
+    status_label: z.string(),
+    created_at: z.iso.datetime(),
+    error: z.string().nullable()
+});
+
+/**
+ * ReportDetail
+ *
+ * The display report and its delivery history.
+ */
+export const zReportDetail = z.object({
+    date: z.iso.date(),
+    prediction: z.string(),
+    strength: z.string().nullable(),
+    text: z.string(),
+    deliveries: z.array(zReportDelivery),
+    older: z.iso.date().nullable(),
+    newer: z.iso.date().nullable()
+});
+
+/**
  * OK
  */
 export const zGetAppSessionResponse = zSession;
+
+export const zListAppReportsQuery = z.object({
+    page: z.int().optional().default(1)
+});
+
+/**
+ * OK
+ */
+export const zListAppReportsResponse = zReportPage;
+
+export const zGetAppReportPath = z.object({
+    day: z.iso.date()
+});
+
+/**
+ * OK
+ */
+export const zGetAppReportResponse = zReportDetail;

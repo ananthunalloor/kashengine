@@ -4,6 +4,7 @@ from django.conf import settings
 from django.http import HttpRequest
 from ninja.security import APIKeyCookie
 
+from apps.access.middleware import access_for
 from apps.api import ratelimit
 from apps.api.errors import ApiError
 
@@ -12,6 +13,11 @@ class AppSession(APIKeyCookie):
     """Accept active browser sessions, never bearer credentials; enforce CSRF on writes."""
 
     param_name = settings.SESSION_COOKIE_NAME
+
+    def __init__(self, feature: str | None = None) -> None:
+        """Optionally require a feature after authenticating the browser session."""
+        super().__init__()
+        self.feature = feature
 
     def authenticate(self, request: HttpRequest, key: str | None):
         """Check the session without consuming the public API's rate budget.
@@ -34,4 +40,15 @@ class AppSession(APIKeyCookie):
         request.api_rate = ratelimit.hit(  # ty: ignore[unresolved-attribute]
             f"app:user:{user.pk}", limit=settings.APP_API_RATE_LIMIT_PER_MINUTE
         )
+        if self.feature is not None:
+            access = access_for(request)
+            if not access.subscription_ok:
+                raise ApiError(
+                    "subscription_required", "An active trial or subscription is needed."
+                )
+            if not access.can(self.feature):
+                raise ApiError(
+                    "feature_not_available",
+                    f"Your account does not include the '{self.feature}' feature.",
+                )
         return user

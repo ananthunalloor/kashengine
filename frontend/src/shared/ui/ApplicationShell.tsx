@@ -17,7 +17,15 @@ import type { ReactNode } from "react";
 import { csrfToken } from "../api/client";
 import type { Session } from "../api/generated/types.gen";
 
-export function ApplicationShell({ session, children }: { session: Session; children: ReactNode }) {
+export function ApplicationShell({
+  session,
+  children,
+  pathname = window.location.pathname,
+}: {
+  session: Session;
+  children: ReactNode;
+  pathname?: string;
+}) {
   const [opened, { toggle, close }] = useDisclosure();
   // Mantine's transition reset injects a style element, which our CSP blocks.
   const { setColorScheme } = useMantineColorScheme({ keepTransitions: true });
@@ -40,9 +48,14 @@ export function ApplicationShell({ session, children }: { session: Session; chil
               aria-expanded={opened}
               aria-controls="app-navigation"
             />
-            <Anchor href="/app/" underline="never" c="inherit" fw={700} size="lg">
-              Kash Engine
-            </Anchor>
+            <a href="/app/" className="app-brand" aria-label="Kash Engine">
+              <span className="app-brand-mark" aria-hidden="true">
+                k.
+              </span>
+              <span>
+                kash<span className="app-brand-light">engine</span>
+              </span>
+            </a>
           </Group>
           <Group gap="xs">
             <Text size="sm" className="app-desktop-only">
@@ -71,10 +84,28 @@ export function ApplicationShell({ session, children }: { session: Session; chil
         }}
       >
         <nav aria-label="Main">
-          <NavLink href="/app/" label="React preview" active aria-current="page" onClick={close} />
-          {session.navigation.map((item) => (
-            <NavLink key={item.url} href={item.url} label={item.label} onClick={close} />
-          ))}
+          <NavLink
+            href="/app/"
+            label="React preview"
+            active={pathname === "/app/"}
+            aria-current={pathname === "/app/" ? "page" : undefined}
+            onClick={close}
+          />
+          {session.navigation.map((item) => {
+            const url = item.url === "/reports/" ? "/app/reports/" : item.url;
+            const active =
+              pathname === url || (url === "/app/reports/" && pathname.startsWith(url));
+            return (
+              <NavLink
+                key={item.url}
+                href={url}
+                label={item.label}
+                active={active}
+                aria-current={active ? "page" : undefined}
+                onClick={close}
+              />
+            );
+          })}
         </nav>
         <Stack mt="auto" p="xs" gap="xs">
           <Text size="sm" c="dimmed">

@@ -53,6 +53,7 @@ services:
       - "127.0.0.1:5173:5173"
     volumes:
       - ./frontend:/app/frontend
+      - ./static/css/brand-tokens.css:/app/static/css/brand-tokens.css:ro
       - frontend_node_modules:/app/frontend/node_modules
 
   worker:

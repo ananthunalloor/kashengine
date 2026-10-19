@@ -195,6 +195,10 @@ def test_private_contract_is_separate_and_committed():
     committed = Path(__file__).resolve().parents[3] / "frontend" / "openapi" / "app.json"
 
     assert committed.read_text(encoding="utf-8") == render("app")
-    assert set(schema["paths"]) == {SESSION_URL}
+    assert set(schema["paths"]) == {
+        SESSION_URL,
+        "/api/app/reports",
+        "/api/app/reports/{day}",
+    }
     assert set(schema["components"]["securitySchemes"]) == {"AppSession"}
     assert "/api/app/session" not in json.loads(render("v1"))["paths"]
