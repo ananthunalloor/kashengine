@@ -30,6 +30,7 @@ import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { opsPageIcon } from "../../shared/ui/OpsNavigation";
 import { OpsTime } from "./OpsTime";
 import { OpsNotice, OpsStatus } from "./OpsStatus";
+import { AppLink } from "../../shared/ui/AppLink";
 
 function Field({ field, disabled }: { field: OpsField; disabled: boolean }) {
   const id = useId();
@@ -216,7 +217,7 @@ function WorkspaceTable({
         value.tone === "neutral" ? content : <OpsStatus tone={value.tone}>{content}</OpsStatus>;
       return (
         <span className="ops-cell">
-          {value.href ? <a href={value.href}>{display}</a> : display}
+          {value.href ? <AppLink href={value.href}>{display}</AppLink> : display}
         </span>
       );
     },
@@ -238,9 +239,9 @@ function WorkspaceTable({
                 render: (row: OpsRow) => (
                   <div className="ops-row-actions">
                     {row.links.map((link) => (
-                      <a key={link.url} href={link.url}>
+                      <AppLink key={link.url} href={link.url}>
                         {link.label}
-                      </a>
+                      </AppLink>
                     ))}
                     {row.forms.map((form) =>
                       form.fields.some(
@@ -579,7 +580,7 @@ export function Workspace({
             </dl>
           )}
           {section.links.map((link) => (
-            <Anchor key={link.url} href={link.url}>
+            <Anchor component={AppLink} key={link.url} href={link.url}>
               {link.label}
             </Anchor>
           ))}

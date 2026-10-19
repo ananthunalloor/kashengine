@@ -9,6 +9,7 @@ import { DataTable } from "../../shared/ui/DataTable";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { OpsTime } from "./OpsTime";
 import { OpsStatus } from "./OpsStatus";
+import { AppLink } from "../../shared/ui/AppLink";
 
 export function RunStatus({ run }: { run: Pick<OpsRunSummary, "status" | "status_label"> }) {
   return (
@@ -80,7 +81,7 @@ export function Runs({
           {data.retention_days} days.
         </Text>
         <Group mt="sm">
-          <Anchor href="/ops/jobs/" size="sm">
+          <Anchor component={AppLink} href="/ops/jobs/" size="sm">
             Manage jobs in Ops
           </Anchor>
         </Group>

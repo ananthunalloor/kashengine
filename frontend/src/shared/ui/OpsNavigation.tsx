@@ -15,6 +15,7 @@ import {
   LuWalletCards,
   LuWorkflow,
 } from "react-icons/lu";
+import { AppLink } from "./AppLink";
 
 const pages = [
   ["", "Overview", LuGauge],
@@ -44,7 +45,7 @@ export function OpsNavigation({ superuser, pathname }: { superuser: boolean; pat
       {pages
         .filter(([path]) => path !== "backups/" || superuser)
         .map(([path, label, Icon]) => (
-          <a
+          <AppLink
             key={path}
             href={`/ops/${path}`}
             aria-current={
@@ -55,7 +56,7 @@ export function OpsNavigation({ superuser, pathname }: { superuser: boolean; pat
           >
             <Icon aria-hidden="true" />
             {label}
-          </a>
+          </AppLink>
         ))}
     </nav>
   );

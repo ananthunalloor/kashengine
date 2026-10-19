@@ -165,6 +165,11 @@ durations. Metrics uses the same statistics formatter; no-run rates are not show
 Page titles update the browser title without focusing headings or adding heading `tabindex`.
 Keyboard focus on controls, the skip link, and the one-time token panel is preserved.
 
+The React entry points mount the skip link only after the application stylesheet is loaded,
+so unstyled skip-link text cannot flash during a document load. Main navigation, account menu,
+and Ops links use router navigation instead of reloading the document. Route content has a
+short entrance animation, disabled for reduced-motion preferences; the shell stays mounted.
+
 `GET /api/app/ops/pages/{path}` resolves only a fixed Ops page allowlist. Django views return
 `TemplateResponse` so the legacy HTML and explicit JSON presenters share the same context and
 domain queries without parsing or embedding server-rendered HTML. The typed page contract

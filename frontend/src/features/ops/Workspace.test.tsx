@@ -205,6 +205,30 @@ it("maps overview and nested edit paths to their real page endpoints", async () 
   );
 });
 
+it("navigates Ops links within the mounted shell and keeps filter changes out of the page animation", async () => {
+  const { router, fetchMock } = await show();
+  await screen.findByRole("heading", { name: "News feeds", level: 1 });
+  const shell = document.querySelector(".app-shell");
+  const transition = document.querySelector(".page-transition");
+  fireEvent.click(
+    within(screen.getByRole("navigation", { name: "Operations" })).getByRole("link", {
+      name: "Jobs",
+    }),
+  );
+  await waitFor(() => expect(router.state.location.pathname).toBe("/ops/jobs/"));
+  await waitFor(() =>
+    expect(fetchMock.mock.calls.some(([url]) => url.includes("/pages/jobs/"))).toBe(true),
+  );
+  expect(document.querySelector(".app-shell")).toBe(shell);
+  expect(document.querySelector(".page-transition")).not.toBe(transition);
+  const jobsTransition = document.querySelector(".page-transition");
+  fireEvent.change(screen.getByLabelText("Search News feeds"), { target: { value: "query" } });
+  fireEvent.click(screen.getByRole("button", { name: "Search" }));
+  await waitFor(() => expect(router.state.location.search.q).toBe("query"));
+  expect(document.querySelector(".page-transition")).toBe(jobsTransition);
+  expect(document.querySelector("style")).toBeNull();
+});
+
 it("preserves action notifications across React navigation", async () => {
   const { router, fetchMock } = await show();
   await screen.findByRole("button", { name: "Add feed" });

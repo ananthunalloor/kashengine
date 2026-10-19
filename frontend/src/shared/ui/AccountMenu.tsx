@@ -3,6 +3,7 @@ import { LuCircleUserRound, LuLogOut, LuShieldCheck, LuX } from "react-icons/lu"
 
 import { csrfToken } from "../api/client";
 import type { Session } from "../api/generated/types.gen";
+import { AppLink } from "./AppLink";
 
 const subscriptionLabels: Record<Session["subscription_state"], string> = {
   trial: "Trial",
@@ -100,9 +101,9 @@ export function AccountMenu({ session, pathname }: { session: Session; pathname:
           )}
           {session.notice && <p className="account-popover-note">{session.notice}</p>}
           <div className="account-popover-actions">
-            <a href="/account/" ref={accountLink} onClick={() => setOpened(false)}>
+            <AppLink href="/account/" ref={accountLink} onClick={() => setOpened(false)}>
               <LuCircleUserRound aria-hidden="true" /> Account details
-            </a>
+            </AppLink>
             <form action={session.logout_url} method="post">
               <input type="hidden" name="csrfmiddlewaretoken" value={token ?? ""} />
               <input type="hidden" name="next" value="/login/" />

@@ -438,10 +438,27 @@ h2 {
   padding: 0.5rem 0.75rem;
   background: var(--brand-surface);
   color: var(--mantine-color-text);
+  transition: none;
 }
 
 .skip-link:focus {
   left: 0.75rem;
+}
+
+.page-transition {
+  min-width: 0;
+  animation: page-enter 160ms ease-out;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* AppShell and Mantine responsive props inject style elements, blocked by our CSP. */

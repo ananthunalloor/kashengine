@@ -13,6 +13,7 @@ import type { OpsRunDetail } from "../../shared/api/generated/types.gen";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { RunActor, RunStatus } from "./Runs";
 import { OpsTime } from "./OpsTime";
+import { AppLink } from "../../shared/ui/AppLink";
 
 export function RunDetail({
   run,
@@ -54,7 +55,10 @@ export function RunDetail({
         {run.status === "pending" && (
           <Text mt="sm">
             The job waits for a worker. If this does not change, check that a worker is running in{" "}
-            <Anchor href="/ops/">Ops Overview</Anchor>.
+            <Anchor component={AppLink} href="/ops/">
+              Ops Overview
+            </Anchor>
+            .
           </Text>
         )}
         <Group mt="md">

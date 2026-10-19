@@ -32,6 +32,7 @@ import type { IconType } from "react-icons";
 import type { Session } from "../api/generated/types.gen";
 import { AccountMenu } from "./AccountMenu";
 import { OpsNavigation } from "./OpsNavigation";
+import { AppLink } from "./AppLink";
 
 const navigationIcons: Record<string, IconType> = {
   "/dashboard/": LuHouse,
@@ -75,14 +76,14 @@ export function ApplicationShell({
               aria-expanded={opened}
               aria-controls="app-navigation"
             />
-            <a href="/" className="app-brand" aria-label="Kash Engine">
+            <AppLink href="/" className="app-brand" aria-label="Kash Engine">
               <span className="app-brand-mark" aria-hidden="true">
                 k.
               </span>
               <span>
                 kash<span className="app-brand-light">engine</span>
               </span>
-            </a>
+            </AppLink>
           </Group>
           <Group gap="xs">
             <span className="workspace-badge app-desktop-only">
@@ -134,6 +135,7 @@ export function ApplicationShell({
             const Icon = navigationIcons[item.url] ?? LuSettings2;
             return (
               <NavLink
+                component={AppLink}
                 key={item.url}
                 href={url}
                 label={item.label}
@@ -146,6 +148,7 @@ export function ApplicationShell({
           })}
           {session.is_staff && !pathname.startsWith("/ops/") && (
             <NavLink
+              component={AppLink}
               href="/ops/runs/"
               label="Task runs"
               active={pathname.startsWith("/ops/runs/")}
@@ -156,6 +159,7 @@ export function ApplicationShell({
           )}
           {session.is_staff && !pathname.startsWith("/ops/") && (
             <NavLink
+              component={AppLink}
               href="/ops/audit/"
               label="Audit trail"
               active={pathname.startsWith("/ops/audit/")}
@@ -172,13 +176,19 @@ export function ApplicationShell({
         )}
         {session.notice && (
           <Alert color="yellow" title="Your subscription" role="status" mb="md">
-            {session.notice} <Anchor href="/account/">See your account</Anchor>.
+            {session.notice}{" "}
+            <Anchor component={AppLink} href="/account/">
+              See your account
+            </Anchor>
+            .
           </Alert>
         )}
         {children}
         <Text component="footer" size="xs" c="dimmed" mt="xl" py="lg">
           Market signals are informational, not investment advice. GMP is unofficial data.{" "}
-          <Anchor href="/">About Kash Engine</Anchor>
+          <Anchor component={AppLink} href="/">
+            About Kash Engine
+          </Anchor>
         </Text>
       </main>
     </div>

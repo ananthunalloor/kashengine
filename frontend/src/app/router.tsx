@@ -8,6 +8,7 @@ export const router = createRouter({
   basepath: "/",
   trailingSlash: "always",
   defaultPreload: "intent",
+  scrollRestoration: true,
   context: { queryClient },
 });
 

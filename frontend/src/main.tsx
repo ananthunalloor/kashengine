@@ -9,6 +9,7 @@ import { createRoot } from "react-dom/client";
 import { queryClient } from "./app/query-client";
 import { router } from "./app/router";
 import { ThemeProvider } from "./app/ThemeProvider";
+import { SkipLink } from "./shared/ui/SkipLink";
 
 const rootElement = document.getElementById("root");
 
@@ -18,6 +19,7 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
+    <SkipLink />
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />

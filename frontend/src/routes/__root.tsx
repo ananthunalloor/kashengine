@@ -21,7 +21,9 @@ function RootLayout() {
       {notice.success && notice.data.opsNotice?.length ? (
         <OpsNotice messages={notice.data.opsNotice} />
       ) : null}
-      <Outlet />
+      <div className="page-transition" key={pathname}>
+        <Outlet />
+      </div>
     </ApplicationShell>
   );
 }
