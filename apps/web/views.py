@@ -77,6 +77,18 @@ def landing(request: HttpRequest) -> HttpResponse:
     return render(request, "web/landing.html")
 
 
+def react_app(request: HttpRequest) -> HttpResponse:
+    """Serve the authenticated React application shell.
+
+    Args:
+        request: The incoming request.
+
+    Returns:
+        The rendered application shell.
+    """
+    return render(request, "web/spa.html")
+
+
 def dashboard(request):
     """The home page: today's outlook, news, IPOs, and quotes."""
     return render(request, "web/dashboard.html", queries.dashboard_data())

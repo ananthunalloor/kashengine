@@ -36,10 +36,24 @@ services:
     environment:
       # Make file change detection work on Docker Desktop (Mac and Windows).
       WATCHFILES_FORCE_POLLING: "true"
+      DJANGO_VITE_DEV_MODE: "true"
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
       - .:/app
+
+  frontend:
+    image: node:22-slim
+    working_dir: /app/frontend
+    command: >
+      sh -c "corepack enable &&
+             pnpm install --frozen-lockfile &&
+             pnpm dev --host 0.0.0.0"
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - ./frontend:/app/frontend
+      - frontend_node_modules:/app/frontend/node_modules
 
   worker:
     build:
@@ -82,3 +96,6 @@ services:
   ollama:
     ports:
       - "127.0.0.1:11434:11434"
+
+volumes:
+  frontend_node_modules:

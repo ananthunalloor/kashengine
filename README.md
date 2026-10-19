@@ -14,7 +14,7 @@ Early development. Phase 1 (project setup) is done. The features below are plann
 - Predict the next-day market direction
 - Score and list upcoming IPOs
 - Send the daily report with Telegram (email later)
-- Show all data in a web UI (Django, Datastar, Tailwind)
+- Show all data in a web UI (Django templates and a React SPA, with Tailwind for legacy pages)
 - Read the data with a versioned, read-only REST API (`/api/v1/`, with Swagger UI)
 
 ## Stack
@@ -267,6 +267,21 @@ uv run ty check                 # type check
 uv run pytest                   # test (a warning fails the run)
 uv run pre-commit install       # turn on commit hooks (ruff, ruff format, ty)
 ```
+
+The React application is developed in `frontend/`. Install the pinned pnpm release with
+Corepack, then run the Django server and Vite server together:
+
+```bash
+corepack enable
+pnpm --dir frontend install --frozen-lockfile
+pnpm --dir frontend dev
+```
+
+Open `http://localhost:8000/app/` while signed in to view the authenticated React shell.
+The existing pages remain Django-rendered during the incremental migration. Run
+`pnpm --dir frontend build` to create the production bundle and
+`pnpm --dir frontend build:legacy-css` to rebuild the stylesheet still used by Django templates.
+The Docker image builds the React bundle automatically.
 
 Code standards:
 

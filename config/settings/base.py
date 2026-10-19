@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_vite",
     "axes",
     "config.beat.BeatConfig",
     "apps.siteconfig",
@@ -118,6 +119,7 @@ SUBSCRIPTION_CONTACT_TEXT = env(
 API_ENABLED = env.bool("API_ENABLED", default=True)
 API_DOCS_ENABLED = env.bool("API_DOCS_ENABLED", default=True)  # The Swagger UI page.
 API_RATE_LIMIT_PER_MINUTE = env.int("API_RATE_LIMIT_PER_MINUTE", default=60)  # Per token or user.
+APP_API_RATE_LIMIT_PER_MINUTE = env.int("APP_API_RATE_LIMIT_PER_MINUTE", default=300)
 API_AUTH_FAIL_LIMIT_PER_MINUTE = env.int("API_AUTH_FAIL_LIMIT_PER_MINUTE", default=10)  # Per IP.
 API_PAGE_SIZE = env.int("API_PAGE_SIZE", default=25)
 API_PAGE_SIZE_MAX = env.int("API_PAGE_SIZE_MAX", default=100)
@@ -134,6 +136,15 @@ BACKUP_ENCRYPTION_KEY = env("BACKUP_ENCRYPTION_KEY", default="")
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
+STATICFILES_DIRS.append(("app", BASE_DIR / "frontend" / "dist"))
+
+DJANGO_VITE = {
+    "default": {
+        "dev_mode": env.bool("DJANGO_VITE_DEV_MODE", default=DEBUG),
+        "manifest_path": BASE_DIR / "frontend" / "dist" / "manifest.json",
+        "static_url_prefix": "app/",
+    }
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

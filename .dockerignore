@@ -11,6 +11,7 @@ staticfiles/
 media/
 *.patch
 frontend/node_modules
+frontend/dist/
 deploy/
 
 # Docusaurus local build artifacts

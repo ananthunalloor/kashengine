@@ -1,0 +1,276 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Kash Engine App API",
+    "version": "0.1.0",
+    "description": ""
+  },
+  "paths": {
+    "/api/app/session": {
+      "get": {
+        "operationId": "get_app_session",
+        "summary": "Get the current browser session and visible navigation",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Return the signed-in user's permissions, even when their subscription has ended.\n\nArgs:\n    request: The authenticated browser request.\n\nReturns:\n    Session details and feature-filtered links using the same rules as Django templates.",
+        "tags": [
+          "Session"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "NavigationItem": {
+        "description": "One visible link, calculated using the server's feature and subscription rules.",
+        "properties": {
+          "label": {
+            "description": "Human-readable section name.",
+            "title": "Label",
+            "type": "string"
+          },
+          "url": {
+            "description": "Same-origin path to the existing section.",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "url"
+        ],
+        "title": "NavigationItem",
+        "type": "object"
+      },
+      "Session": {
+        "description": "The current browser user's permissions and navigation.",
+        "properties": {
+          "id": {
+            "description": "User primary key.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "username": {
+            "description": "Signed-in user's display name.",
+            "title": "Username",
+            "type": "string"
+          },
+          "is_staff": {
+            "description": "Whether this user can read Ops pages.",
+            "title": "Is Staff",
+            "type": "boolean"
+          },
+          "is_superuser": {
+            "description": "Whether this user can perform Ops writes.",
+            "title": "Is Superuser",
+            "type": "boolean"
+          },
+          "features": {
+            "description": "Feature keys currently available to this user.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Features",
+            "type": "array"
+          },
+          "subscription_required": {
+            "description": "Whether the site requires a subscription.",
+            "title": "Subscription Required",
+            "type": "boolean"
+          },
+          "subscription_ok": {
+            "description": "Whether subscription rules permit feature access.",
+            "title": "Subscription Ok",
+            "type": "boolean"
+          },
+          "subscription_state": {
+            "description": "Current subscription state, or staff exemption.",
+            "enum": [
+              "trial",
+              "active",
+              "expired",
+              "none",
+              "staff"
+            ],
+            "title": "Subscription State",
+            "type": "string"
+          },
+          "notice": {
+            "description": "Subscription warning; empty when there is no warning.",
+            "title": "Notice",
+            "type": "string"
+          },
+          "navigation": {
+            "description": "Visible links, in menu order.",
+            "items": {
+              "$ref": "#/components/schemas/NavigationItem"
+            },
+            "title": "Navigation",
+            "type": "array"
+          },
+          "logout_url": {
+            "description": "Same-origin Django logout endpoint; requires CSRF POST.",
+            "title": "Logout Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "is_staff",
+          "is_superuser",
+          "features",
+          "subscription_required",
+          "subscription_ok",
+          "subscription_state",
+          "notice",
+          "navigation",
+          "logout_url"
+        ],
+        "title": "Session",
+        "type": "object"
+      },
+      "FieldError": {
+        "description": "One wrong parameter in a `validation_error`.",
+        "properties": {
+          "field": {
+            "description": "The name of the parameter.",
+            "title": "Field",
+            "type": "string"
+          },
+          "message": {
+            "description": "What is wrong.",
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "description": "A short machine-readable reason, for example `int_parsing`.",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "message",
+          "type"
+        ],
+        "title": "FieldError",
+        "type": "object"
+      },
+      "Problem": {
+        "description": "An error answer (RFC 9457). The content type is `application/problem+json`.",
+        "properties": {
+          "type": {
+            "description": "A link to the explanation of the code.",
+            "title": "Type",
+            "type": "string"
+          },
+          "title": {
+            "description": "The HTTP status text.",
+            "title": "Title",
+            "type": "string"
+          },
+          "status": {
+            "description": "The HTTP status code.",
+            "title": "Status",
+            "type": "integer"
+          },
+          "detail": {
+            "description": "What went wrong in this case. Safe to show to a user.",
+            "title": "Detail",
+            "type": "string"
+          },
+          "instance": {
+            "description": "The path of the request.",
+            "title": "Instance",
+            "type": "string"
+          },
+          "code": {
+            "description": "A stable code. Branch on this value, not on `detail`.",
+            "title": "Code",
+            "type": "string"
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FieldError"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The wrong parameters. Only for `validation_error`.",
+            "title": "Errors"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "instance",
+          "code"
+        ],
+        "title": "Problem",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "AppSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sessionid"
+      }
+    }
+  },
+  "servers": []
+}

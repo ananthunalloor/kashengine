@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -102,6 +103,26 @@ def test_every_page_works_with_no_data(client_in, name):
 
     assert response.status_code == 200
     assert 'aria-current="page"' in response.text or name == "web:dashboard"
+
+
+def test_the_react_shell_needs_a_login(client):
+    response = client.get(reverse("web:react_app"))
+
+    assert response.status_code == 302
+    assert response["Location"].startswith(reverse("web:login"))
+
+
+@override_settings(
+    DJANGO_VITE={"default": {"dev_mode": True}},
+    SUBSCRIPTIONS_REQUIRED=True,
+)
+def test_the_react_shell_is_authenticated_and_mounts_the_app(client_in):
+    response = client_in.get(reverse("web:react_app"))
+
+    assert response.status_code == 200
+    assert 'id="root"' in response.text
+    assert "@vite/client" in response.text
+    assert "@react-refresh" in response.text
 
 
 def make_prediction(day=date(2026, 10, 8), direction="up", confidence=0.52, **kwargs):

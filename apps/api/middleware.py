@@ -98,12 +98,16 @@ class ApiMiddleware:
         if not request.path.startswith(API_PREFIX):
             return self.get_response(request)
         version = _version_of(request.path)
-        if not conf.API_ENABLED:
+        is_app = request.path.startswith("/api/app/")
+        if not is_app and not conf.API_ENABLED:
             response = problem(request, "api_disabled", "The API is turned off.")
             response["Retry-After"] = "300"
         else:
             response = self.get_response(request)
         self._add_headers(request, response, version)
+        if is_app:
+            response["Cache-Control"] = "private, no-store"
+            return response
         return self._conditional(request, response)
 
     @staticmethod

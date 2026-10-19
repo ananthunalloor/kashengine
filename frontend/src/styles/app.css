@@ -1,0 +1,29 @@
+@layer theme, base, mantine, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "@mantine/core/styles.layer.css";
+@import "tailwindcss/utilities.css" layer(utilities);
+
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+.skip-link {
+  position: absolute;
+  z-index: 1;
+  top: 0.75rem;
+  left: -100vw;
+  padding: 0.5rem 0.75rem;
+  background: var(--mantine-color-body);
+  color: var(--mantine-color-text);
+}
+
+.skip-link:focus {
+  left: 0.75rem;
+}

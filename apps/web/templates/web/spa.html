@@ -1,0 +1,18 @@
+{% load django_vite %}<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Kash Engine</title>
+    {% vite_hmr_client %}
+    {% vite_react_refresh %}
+    {% vite_asset 'src/main.tsx' %}
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Skip to the content</a>
+    <main id="main">
+      <div id="root"></div>
+    </main>
+  </body>
+</html>

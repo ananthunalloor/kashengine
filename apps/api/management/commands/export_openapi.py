@@ -11,9 +11,10 @@ from typing import Any
 
 from django.core.management.base import BaseCommand, CommandError
 
+from apps.api.app.api import api as api_app
 from apps.api.v1.api import api as api_v1
 
-APIS = {"v1": api_v1}
+APIS = {"v1": api_v1, "app": api_app}
 
 
 def render(version: str = "v1") -> str:
@@ -46,7 +47,7 @@ class Command(BaseCommand):
         Args:
             parser: The parser of the command.
         """
-        parser.add_argument("--api-version", default="v1", choices=sorted(APIS))
+        parser.add_argument("--api-version", "--api", default="v1", choices=sorted(APIS))
         parser.add_argument("--output", help="File to write. The default is standard output.")
 
     def handle(self, *args: Any, **options: Any) -> None:

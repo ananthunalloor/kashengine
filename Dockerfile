@@ -1,3 +1,12 @@
+FROM node:22-slim AS frontend-build
+
+WORKDIR /app/frontend
+RUN corepack enable
+COPY frontend/package.json frontend/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY frontend/ ./
+RUN pnpm build
+
 # One image, two install modes. Set INSTALL_DEV=true for dev.
 FROM python:3.13-slim
 
@@ -34,6 +43,7 @@ RUN groupadd --gid "$GID" app \
     && useradd --uid "$UID" --gid "$GID" --create-home --shell /usr/sbin/nologin app
 
 COPY --chown=app:app . .
+COPY --from=frontend-build --chown=app:app /app/frontend/dist ./frontend/dist
 
 # The folders that the app writes to in prod. A new named volume takes its owner from here.
 RUN mkdir -p /app/logs /app/staticfiles \

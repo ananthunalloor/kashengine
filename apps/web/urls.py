@@ -27,6 +27,7 @@ app_name = "web"
 
 urlpatterns = [
     path("", views.landing, name="landing"),
+    path("app/", views.react_app, name="react_app"),
     path("dashboard/", views.dashboard, name="dashboard"),
     path("login/", views.Login.as_view(), name="login"),
     path("logout/", views.Logout.as_view(), name="logout"),
