@@ -46,7 +46,10 @@ def test_bearer_credentials_are_rejected(client, member, make_token, auth, with_
 @pytest.mark.parametrize("role", ["member", "staff", "superuser"])
 def test_session_uses_the_existing_navigation_rules(client, django_user_model, role):
     user = django_user_model.objects.create_user(
-        f"app-{role}", is_staff=role != "member", is_superuser=role == "superuser"
+        f"app-{role}",
+        email=f"{role}@example.test",
+        is_staff=role != "member",
+        is_superuser=role == "superuser",
     )
     client.force_login(user)
     request = RequestFactory().get(SESSION_URL)
@@ -58,6 +61,7 @@ def test_session_uses_the_existing_navigation_rules(client, django_user_model, r
     assert response.status_code == 200
     assert body["id"] == user.pk
     assert body["username"] == user.get_username()
+    assert body["email"] == user.email
     assert body["is_staff"] == user.is_staff
     assert body["is_superuser"] == user.is_superuser
     assert body["features"] == sorted(features.KEYS)

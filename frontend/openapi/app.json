@@ -1662,6 +1662,11 @@
             "title": "Username",
             "type": "string"
           },
+          "email": {
+            "description": "Signed-in user's email, or empty when not set.",
+            "title": "Email",
+            "type": "string"
+          },
           "is_staff": {
             "description": "Whether this user can read Ops pages.",
             "title": "Is Staff",
@@ -1724,6 +1729,7 @@
         "required": [
           "id",
           "username",
+          "email",
           "is_staff",
           "is_superuser",
           "features",

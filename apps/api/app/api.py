@@ -107,6 +107,7 @@ def get_session(request: HttpRequest):
     return {
         "id": user.pk,
         "username": user.get_username(),
+        "email": getattr(user, "email", ""),
         "is_staff": bool(getattr(user, "is_staff", False)),
         "is_superuser": bool(getattr(user, "is_superuser", False)),
         "features": sorted(access.allowed),

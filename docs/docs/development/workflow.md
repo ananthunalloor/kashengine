@@ -132,6 +132,13 @@ has a separate per-user request budget (`APP_API_RATE_LIMIT_PER_MINUTE`, default
 It returns `401` rather than redirecting anonymous callers and marks every response `no-store`.
 Unsafe private API methods use Ninja's CSRF-enabled cookie authentication.
 
+The header's initials avatar opens a non-modal account popover with the current session's
+username, email, role, subscription state, Account link, and CSRF-protected logout form.
+Email is returned only for the current authenticated session, with an empty value when unset.
+The popover focuses its Account link on opening, closes on Escape (restoring avatar focus),
+outside pointer/focus, or route changes, and uses static CSS rather than runtime style injection.
+The icon-only sun/moon control keeps an accessible label and a next-theme tooltip.
+
 The browser client validates session responses against generated Zod schemas, sends CSRF tokens
 for writes, and redirects expired sessions to Django login with the current return URL.
 Reports opens `/app/reports/`, with a paginated list and detail pages at `/app/reports/YYYY-MM-DD/`.

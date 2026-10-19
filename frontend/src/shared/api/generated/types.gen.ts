@@ -43,6 +43,12 @@ export type Session = {
      */
     username: string;
     /**
+     * Email
+     *
+     * Signed-in user's email, or empty when not set.
+     */
+    email: string;
+    /**
      * Is Staff
      *
      * Whether this user can read Ops pages.

@@ -353,6 +353,10 @@ Account remains accessible after subscription expiry. When public API access is 
 creation is denied, but existing tokens can still be viewed and revoked. The original
 `/account/` page remains available.
 
+The React header includes an initials avatar with an account popover (username, email, role,
+subscription status, Account details, and secure logout), plus an icon-only theme toggle.
+Both controls work on mobile and desktop and retain keyboard-accessible labels and focus behavior.
+
 Staff can preview task history at `/app/ops/runs/` and stored run diagnostics at
 `/app/ops/runs/{id}/`. The TanStack history searches and filters all retained runs on the server
 before pagination, with job/result/trigger filters and URL-preserved sorting and page size.

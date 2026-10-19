@@ -2,10 +2,8 @@ import {
   Alert,
   Anchor,
   Burger,
-  Button,
   Group,
   NavLink,
-  Stack,
   Text,
   useComputedColorScheme,
   useMantineColorScheme,
@@ -23,7 +21,6 @@ import {
   LuFileText,
   LuHouse,
   LuLayoutDashboard,
-  LuLogOut,
   LuMoon,
   LuNewspaper,
   LuSend,
@@ -34,8 +31,8 @@ import {
 } from "react-icons/lu";
 import type { IconType } from "react-icons";
 
-import { csrfToken } from "../api/client";
 import type { Session } from "../api/generated/types.gen";
+import { AccountMenu } from "./AccountMenu";
 
 const navigationIcons: Record<string, IconType> = {
   "/dashboard/": LuHouse,
@@ -61,7 +58,6 @@ export function ApplicationShell({
   // Mantine's transition reset injects a style element, which our CSP blocks.
   const { setColorScheme } = useMantineColorScheme({ keepTransitions: true });
   const colorScheme = useComputedColorScheme("light", { getInitialValueInEffect: true });
-  const token = csrfToken();
   const burger = useRef<HTMLButtonElement>(null);
 
   return (
@@ -93,24 +89,20 @@ export function ApplicationShell({
               <LuShieldCheck aria-hidden="true" />
               Private workspace
             </span>
-            <Text size="sm" className="app-desktop-only">
-              {session.username}
-            </Text>
-            <Button
-              variant="default"
-              size="compact-sm"
+            <button
+              type="button"
+              className="header-icon-button"
               onClick={() => setColorScheme(colorScheme === "dark" ? "light" : "dark")}
               aria-label="Toggle color scheme"
-              leftSection={
-                colorScheme === "dark" ? (
-                  <LuSun aria-hidden="true" />
-                ) : (
-                  <LuMoon aria-hidden="true" />
-                )
-              }
+              title={colorScheme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
             >
-              {colorScheme === "dark" ? "Light theme" : "Dark theme"}
-            </Button>
+              {colorScheme === "dark" ? (
+                <LuSun aria-hidden="true" />
+              ) : (
+                <LuMoon aria-hidden="true" />
+              )}
+            </button>
+            <AccountMenu session={session} pathname={pathname} />
           </Group>
         </Group>
       </header>
@@ -192,31 +184,6 @@ export function ApplicationShell({
             />
           )}
         </nav>
-        <Stack mt="auto" p="xs" gap="xs">
-          <span className="account-avatar" aria-hidden="true">
-            {session.username.slice(0, 2).toUpperCase()}
-          </span>
-          <Text size="sm" c="dimmed">
-            Signed in as {session.username}
-          </Text>
-          <form action={session.logout_url} method="post">
-            <input type="hidden" name="csrfmiddlewaretoken" value={token ?? ""} />
-            <Button
-              type="submit"
-              variant="default"
-              fullWidth
-              disabled={!token}
-              leftSection={<LuLogOut aria-hidden="true" />}
-            >
-              Log out
-            </Button>
-          </form>
-          {!token && (
-            <Text size="xs" role="alert">
-              Reload the page to enable secure logout.
-            </Text>
-          )}
-        </Stack>
       </aside>
       <main className="app-main" id="main" tabIndex={-1}>
         {session.notice && (

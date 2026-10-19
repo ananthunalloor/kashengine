@@ -19,6 +19,7 @@ class Session(Schema):
 
     id: int = Field(description="User primary key.")
     username: str = Field(description="Signed-in user's display name.")
+    email: str = Field(description="Signed-in user's email, or empty when not set.")
     is_staff: bool = Field(description="Whether this user can read Ops pages.")
     is_superuser: bool = Field(description="Whether this user can perform Ops writes.")
     features: list[str] = Field(description="Feature keys currently available to this user.")

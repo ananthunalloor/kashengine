@@ -20,6 +20,7 @@ export const zNavigationItem = z.object({
 export const zSession = z.object({
     id: z.int(),
     username: z.string(),
+    email: z.string(),
     is_staff: z.boolean(),
     is_superuser: z.boolean(),
     features: z.array(z.string()),
