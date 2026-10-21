@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.db.models.functions import Coalesce
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from ninja import Field, Query, Router
 
 from apps.api.v1.common import ERRORS_WITH_NOT_FOUND, ERRORS_WITH_VALIDATION
@@ -170,6 +171,36 @@ def list_runs(request: HttpRequest, filters: Query[RunFilters]):
         ),
         "retention_days": conf.OPS_RETENTION_DAYS,
     }
+
+
+@router.post(
+    "/ops/runs/{pk}/stop",
+    response={200: dict, **ERRORS_WITH_NOT_FOUND},
+    operation_id="stop_app_ops_run",
+    summary="Stop an active task run as staff",
+)
+def stop_run(request: HttpRequest, pk: int):
+    """Stop a pending or started task run and mark it failed.
+
+    The request is allowed only for staff, and the Celery worker is instructed to terminate the task
+    so the app does not leave a hung task in the queue.
+    """
+    run = get_object_or_404(TaskRun, pk=pk)
+    if not run.is_active:
+        return {"ok": False, "status": run.status}
+    from config.celery import app  # noqa: PLC0415
+
+    app.control.revoke(run.task_id, terminate=True, signal="SIGKILL")
+    now = timezone.now()
+    run.status = TaskRun.Status.FAILURE
+    run.finished_at = now
+    if run.started_at:
+        run.duration_ms = max(0, int((now - run.started_at).total_seconds() * 1000))
+    else:
+        run.duration_ms = 0
+    run.error = run.error or "The run was stopped by an admin."
+    run.save(update_fields=["status", "finished_at", "duration_ms", "error"])
+    return {"ok": True, "status": run.status}
 
 
 @router.get(

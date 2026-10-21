@@ -258,6 +258,51 @@ def run_detail(request: HttpRequest, pk: int) -> HttpResponse:
     return TemplateResponse(request, template, {"run": run, "section": "runs"})
 
 
+@superuser_post_required
+def run_stop(request: HttpRequest, pk: int) -> HttpResponse:
+    """Stop a current task run and mark it failed if it is still active.
+
+    Celery revokes the task with `terminate=True` so a worker that has already started the job is
+    interrupted. The row is marked as failed immediately so the app does not leave the task in a
+    hung `pending` or `started` state.
+
+    Args:
+        request: The POST request of a superuser.
+        pk: The primary key of the `TaskRun` to stop.
+
+    Returns:
+        A redirect back to the task run page.
+
+    Raises:
+        Http404: If the run does not exist.
+    """
+    run = get_object_or_404(TaskRun, pk=pk)
+    if not run.is_active:
+        messages.error(request, "This task is no longer running.")
+        return redirect("ops:run", pk=pk)
+    try:
+        from config.celery import app  # noqa: PLC0415
+
+        app.control.revoke(run.task_id, terminate=True, signal="SIGKILL")
+    except Exception as exc:  # pragma: no cover - celery failure is operational, not logic
+        messages.error(request, f"Could not stop this task: {exc}")
+        return redirect("ops:run", pk=pk)
+    now = timezone.now()
+    if not run.error:
+        run.error = "The run was stopped by an admin."
+    else:
+        run.error = f"{run.error}\nThe run was stopped by an admin."
+    run.status = TaskRun.Status.FAILURE
+    run.finished_at = now
+    if run.started_at:
+        run.duration_ms = max(0, int((now - run.started_at).total_seconds() * 1000))
+    else:
+        run.duration_ms = 0
+    run.save(update_fields=["status", "finished_at", "duration_ms", "error"])
+    messages.success(request, f"Stopped: {run.label}.")
+    return redirect("ops:run", pk=pk)
+
+
 @staff_required
 def log_view(request: HttpRequest) -> HttpResponse:
     """Show the entries of the log file, newest first, with filters.

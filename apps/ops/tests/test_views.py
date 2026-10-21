@@ -4,6 +4,7 @@ import pytest
 from django.contrib.sessions.models import Session
 from django.test import Client
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.ops import audit
 from apps.ops.models import AuditEvent, LoginEvent, TaskRun
@@ -161,6 +162,36 @@ def test_the_run_page_escapes_the_output(staff_client):
 
     assert "<script>alert(1)</script>" not in page
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in page
+
+
+def test_a_superuser_can_stop_a_running_task(boss_client, monkeypatch):
+    run = TaskRun.objects.create(
+        task_id="stop-1",
+        task_name="x",
+        label="running task",
+        status=TaskRun.Status.STARTED,
+        started_at=timezone.now(),
+        worker="worker-1",
+    )
+    calls = {}
+
+    def fake_revoke(task_id, **kwargs):
+        calls["task_id"] = task_id
+        calls.update(kwargs)
+
+    from config.celery import app  # noqa: PLC0415
+
+    monkeypatch.setattr(app.control, "revoke", fake_revoke)
+
+    response = boss_client.post(reverse("ops:run_stop", args=[run.pk]))
+
+    assert response.status_code == 302
+    assert response.url == reverse("ops:run", args=[run.pk])
+    assert calls["task_id"] == "stop-1"
+    assert calls["terminate"] is True
+    run.refresh_from_db()
+    assert run.status == TaskRun.Status.FAILURE
+    assert "stopped" in run.error.lower()
 
 
 def test_a_missing_run_is_a_404(staff_client):

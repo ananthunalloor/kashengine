@@ -25,6 +25,7 @@ urlpatterns = [
     path("jobs/<slug:key>/run/", views.job_run, name="job_run"),
     path("runs/", views.run_list, name="runs"),
     path("runs/<int:pk>/", views.run_detail, name="run"),
+    path("runs/<int:pk>/stop/", views.run_stop, name="run_stop"),
     path("logs/", views.log_view, name="logs"),
     path("metrics/", views.metric_view, name="metrics"),
     path("users/", views.user_list, name="users"),

@@ -96,3 +96,11 @@ export function runQuery(id: string) {
       query.state.error ? false : query.state.data?.is_active ? 3000 : false,
   });
 }
+
+export async function stopRun(id: string) {
+  const result = await appRequest(`/api/app/ops/runs/${encodeURIComponent(id)}/stop`, {
+    method: "POST",
+  });
+  if (!result || typeof result !== "object") throw new ApiError("contract", "Stop request failed.");
+  return result as { ok: boolean; status?: string };
+}
