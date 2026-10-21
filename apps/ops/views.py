@@ -162,7 +162,7 @@ def job_list(request: HttpRequest) -> HttpResponse:
 
 @superuser_post_required
 def job_run(request: HttpRequest, key: str) -> HttpResponse:
-    """Queue a job that an admin chose, then show its run page.
+    """Queue a job that an admin chose and return to the jobs page.
 
     Only a job in the fixed list `jobs.JOBS_BY_KEY` can run. If the job has a `confirm` text, the
     POST field `confirm` must be `yes`. If not, the view shows an error and starts nothing. If the
@@ -174,7 +174,7 @@ def job_run(request: HttpRequest, key: str) -> HttpResponse:
         key: The key of the job, from the URL.
 
     Returns:
-        A redirect to the run page of the new run, or to the job list.
+        A redirect back to the job list after dispatching the new job, or to the job list on error.
 
     Raises:
         Http404: If no job has this key.
@@ -198,7 +198,7 @@ def job_run(request: HttpRequest, key: str) -> HttpResponse:
         messages.error(request, str(exc))
         return redirect("ops:jobs")
     messages.success(request, f"Started: {job.label}.")
-    return redirect("ops:run", pk=run.pk)
+    return redirect("ops:jobs")
 
 
 @staff_required

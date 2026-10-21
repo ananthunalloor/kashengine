@@ -265,7 +265,7 @@ def test_job_confirm_busy_and_dispatch_feedback(boss_client, queue):
     assert boss_client.post(endpoint).json()["ok"] is False
     response = boss_client.post(endpoint, {"confirm": "yes"})
     assert response.json()["ok"] is True
-    assert response.json()["redirect"].startswith("/ops/runs/")
+    assert response.json()["redirect"] == "/ops/jobs/"
     assert len(queue) == 1
     assert boss_client.post(endpoint, {"confirm": "yes"}).json()["messages"]
 

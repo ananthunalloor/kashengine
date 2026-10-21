@@ -123,9 +123,9 @@ def run_url(key):
 def test_a_superuser_starts_a_job(boss_client, queue):
     response = boss_client.post(run_url("news-fetch"))
 
-    run = TaskRun.objects.get()
+    assert TaskRun.objects.count() == 1
     assert response.status_code == 302
-    assert response.url == reverse("ops:run", args=[run.pk])
+    assert response.url == reverse("ops:jobs")
     assert len(queue) == 1
 
 
