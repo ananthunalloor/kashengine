@@ -10,6 +10,7 @@ from django.urls import URLPattern, URLResolver, include, path
 
 from . import docs
 from .app.api import api as api_app
+from .app.notifications import notifications
 from .v1.api import api as api_v1
 from .versions import CURRENT, VERSIONS
 
@@ -66,6 +67,7 @@ _without_login_redirect(_app_patterns)
 
 urlpatterns = [
     path("", discovery, name="discovery"),
+    path("app/notifications/", notifications, name="app-notifications"),
     path("v1/docs", docs.swagger, name="docs"),
     path("v1/", include((_v1_patterns, _v1_app), namespace=_v1_namespace)),
     path("app/", include((_app_patterns, _app_app), namespace=_app_namespace)),

@@ -5,6 +5,7 @@ import { session } from "../../test/session";
 import { ThemeProvider } from "../../app/ThemeProvider";
 import type { Session } from "../api/generated/types.gen";
 import { ApplicationShell } from "./ApplicationShell";
+import { publishNotification } from "../notifications";
 
 function showShell(value: Session = session) {
   return render(
@@ -152,4 +153,14 @@ it("closes account details when the route changes", () => {
     </ThemeProvider>,
   );
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+it("shows and dismisses global popup notifications", async () => {
+  showShell();
+  publishNotification({ title: "Job completed", message: "news.fetch_feeds", tone: "success" });
+
+  const notification = await screen.findByText("Job completed");
+  expect(notification.closest("[role=status]")).toHaveTextContent("news.fetch_feeds");
+  fireEvent.click(screen.getByRole("button", { name: "Dismiss notification" }));
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
 });

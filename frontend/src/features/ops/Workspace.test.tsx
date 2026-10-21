@@ -248,7 +248,9 @@ it("preserves action notifications across React navigation", async () => {
   });
   fireEvent.submit(screen.getByRole("button", { name: "Add feed" }).closest("form")!);
   await waitFor(() => expect(router.state.location.pathname).toBe("/ops/schedule/"));
-  await waitFor(() => expect(screen.getByText("Schedule saved by React.")).toBeInTheDocument());
+  const notifications = await screen.findAllByText("Schedule saved by React.");
+  expect(notifications).toHaveLength(2);
+  expect(notifications.some((message) => message.closest(".app-toast"))).toBe(true);
   expect(screen.getByText("success").closest(".ops-status")).toHaveClass("ops-tone-positive");
 });
 

@@ -31,6 +31,7 @@ import { opsPageIcon } from "../../shared/ui/OpsNavigation";
 import { OpsTime } from "./OpsTime";
 import { OpsNotice, OpsStatus } from "./OpsStatus";
 import { AppLink } from "../../shared/ui/AppLink";
+import { publishNotification } from "../../shared/notifications";
 
 function Field({ field, disabled }: { field: OpsField; disabled: boolean }) {
   const id = useId();
@@ -144,11 +145,12 @@ export function OpsActionForm({
           element.querySelectorAll<HTMLInputElement>("input[type=password]").forEach((input) => {
             input.value = "";
           });
-          setError(
+          const message =
             error instanceof Error
               ? error.message
-              : "Action failed. Check the audit trail before retrying.",
-          );
+              : "Action failed. Check the audit trail before retrying.";
+          setError(message);
+          publishNotification({ title: "Action failed", message, tone: "error" });
         } finally {
           Array.from(payload.keys()).forEach((key) => payload.delete(key));
           lock.current = false;
@@ -319,6 +321,20 @@ export function Workspace({
   usePageTitle(data?.title ?? "Operations");
   async function onResult(result: OpsActionResult) {
     setResult(result);
+    for (const message of result.messages) {
+      publishNotification({
+        title: message.level === "error" ? "Action failed" : "Action complete",
+        message: message.text,
+        tone:
+          message.level === "error"
+            ? "error"
+            : message.level === "warning"
+              ? "warning"
+              : message.level === "success"
+                ? "success"
+                : "info",
+      });
+    }
     if (result.page) {
       setInvalidPage(result.page);
       return;

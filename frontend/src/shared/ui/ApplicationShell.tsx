@@ -4,12 +4,13 @@ import {
   Burger,
   Group,
   NavLink,
+  Notification,
   Text,
   useComputedColorScheme,
   useMantineColorScheme,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import {
   LuActivity,
@@ -33,6 +34,17 @@ import type { Session } from "../api/generated/types.gen";
 import { AccountMenu } from "./AccountMenu";
 import { OpsNavigation } from "./OpsNavigation";
 import { AppLink } from "./AppLink";
+import { APP_NOTIFICATION_EVENT } from "../notifications";
+import type { AppNotification } from "../notifications";
+
+type DisplayNotification = AppNotification & { id: number };
+
+const toneColors = {
+  success: "green",
+  error: "red",
+  warning: "yellow",
+  info: "blue",
+} as const;
 
 const navigationIcons: Record<string, IconType> = {
   "/dashboard/": LuHouse,
@@ -59,7 +71,28 @@ export function ApplicationShell({
   const { setColorScheme } = useMantineColorScheme({ keepTransitions: true });
   const colorScheme = useComputedColorScheme("light", { getInitialValueInEffect: true });
   const burger = useRef<HTMLButtonElement>(null);
+  const [notifications, setNotifications] = useState<DisplayNotification[]>([]);
   const isOps = pathname.startsWith("/ops/");
+
+  useEffect(() => {
+    function onNotification(event: Event) {
+      const notification = (event as CustomEvent<AppNotification>).detail;
+      const id = Date.now() + Math.random();
+      setNotifications((current) => [...current.slice(-3), { ...notification, id }]);
+    }
+    window.addEventListener(APP_NOTIFICATION_EVENT, onNotification);
+    return () => window.removeEventListener(APP_NOTIFICATION_EVENT, onNotification);
+  }, []);
+
+  useEffect(() => {
+    const timers = notifications.map(({ id }) =>
+      window.setTimeout(
+        () => setNotifications((current) => current.filter((item) => item.id !== id)),
+        8000,
+      ),
+    );
+    return () => timers.forEach(window.clearTimeout);
+  }, [notifications]);
 
   return (
     <div className={`app-shell${isOps ? " ops-shell" : ""}`}>
@@ -191,6 +224,29 @@ export function ApplicationShell({
           </Anchor>
         </Text>
       </main>
+      <div className="app-toast-viewport" aria-label="Notifications">
+        {notifications.map((notification) => (
+          <Notification
+            key={notification.id}
+            className="app-toast"
+            data-tone={notification.tone}
+            role={notification.tone === "error" ? "alert" : "status"}
+            title={notification.title}
+            color={toneColors[notification.tone]}
+            closeButtonProps={{ "aria-label": "Dismiss notification" }}
+            onClose={() =>
+              setNotifications((current) => current.filter((item) => item.id !== notification.id))
+            }
+          >
+            {notification.message}
+            {notification.href && (
+              <Anchor component={AppLink} href={notification.href} size="sm">
+                View job run
+              </Anchor>
+            )}
+          </Notification>
+        ))}
+      </div>
     </div>
   );
 }

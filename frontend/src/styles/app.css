@@ -565,6 +565,51 @@ h2 {
   padding: clamp(var(--ui-space-4), 4vw, var(--ui-space-8));
 }
 
+.app-toast-viewport {
+  position: fixed;
+  z-index: 1000;
+  top: 1rem;
+  right: 1rem;
+  display: grid;
+  gap: 0.625rem;
+  width: min(26rem, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.app-toast {
+  border-left: 3px solid var(--brand-line);
+  pointer-events: auto;
+  animation: toast-enter 160ms ease-out;
+}
+
+.app-toast[data-tone="success"] {
+  border-left-color: var(--mantine-color-green-6);
+}
+
+.app-toast[data-tone="error"] {
+  border-left-color: var(--mantine-color-red-6);
+}
+
+.app-toast[data-tone="warning"] {
+  border-left-color: var(--mantine-color-yellow-6);
+}
+
+.app-toast[data-tone="info"] {
+  border-left-color: var(--mantine-color-blue-6);
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .app-navigation .mantine-NavLink-root {
   border-radius: var(--ui-radius-md);
   margin-block: var(--ui-space-1);
