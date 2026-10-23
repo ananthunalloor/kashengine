@@ -252,7 +252,11 @@ it("sends server search, exact filters, sorting and page size in bookmarked URL 
     target: { value: "manual" },
   });
   await waitFor(() => expect(router.state.location.search).toMatchObject({ trigger: "manual" }));
-  fireEvent.change(screen.getByRole("searchbox", { name: "Search jobs, task IDs, or users" }), {
+  const search = screen.getByRole("searchbox", { name: "Search jobs, task IDs, or users" });
+  expect(search.closest(".table-toolbar")).toContainElement(
+    screen.getByRole("combobox", { name: "Job" }),
+  );
+  fireEvent.change(search, {
     target: { value: "missing" },
   });
   expect(await screen.findByText("No runs match these filters.")).toBeInTheDocument();

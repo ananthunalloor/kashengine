@@ -115,6 +115,9 @@ it("shows directory fields, safe source links, IST dates and preview navigation"
 it("restores bookmarked search, debounces typing, resets page and keeps focus", async () => {
   const router = await showCompanies({ path: "/companies/?q=bank&page=2" });
   const input = await screen.findByRole("searchbox");
+  expect(input.closest(".table-toolbar")).toContainElement(
+    screen.getByRole("combobox", { name: "Sector" }),
+  );
   expect(input).toHaveValue("bank");
   input.focus();
   fireEvent.change(input, { target: { value: " tools " } });

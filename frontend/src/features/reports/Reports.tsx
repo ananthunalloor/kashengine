@@ -10,6 +10,7 @@ import { MetricValue, StrengthLegend } from "../../shared/ui/MetricValue";
 import { formatReportDate } from "../../shared/ui/formatReportDate";
 import { reportSearchSchema } from "../../shared/api/reports";
 import type { ReportSearch } from "../../shared/api/reports";
+import { TableFilterField, TableFilters } from "../../shared/ui/TableFilters";
 
 const deliveryDate = new Intl.DateTimeFormat("en-IN", {
   day: "numeric",
@@ -56,6 +57,61 @@ export function ReportsList({
     clearTimeout(timer.current);
     onFilter({ ...filters, q: q.trim(), direction, page: 1 }, replace);
   }
+  const filterControls = (
+    <TableFilters
+      onSubmit={(event) => {
+        event.preventDefault();
+        apply(query);
+      }}
+    >
+      <TableFilterField search label="Search reports" htmlFor="report-query">
+        <input
+          id="report-query"
+          type="search"
+          maxLength={100}
+          value={query}
+          placeholder="Search date or report text..."
+          onChange={(event) => {
+            const value = event.target.value;
+            setQuery(value);
+            clearTimeout(timer.current);
+            timer.current = setTimeout(() => apply(value, filters.direction, true), 300);
+          }}
+        />
+      </TableFilterField>
+      <TableFilterField label="Outlook" htmlFor="report-direction">
+        <select
+          id="report-direction"
+          value={filters.direction ?? ""}
+          onChange={(event) =>
+            apply(query, reportSearchSchema.shape.direction.parse(event.target.value))
+          }
+        >
+          <option value="">All outlooks</option>
+          <option value="up">Up</option>
+          <option value="down">Down</option>
+          <option value="flat">Flat</option>
+          <option value="unknown">Not available</option>
+        </select>
+      </TableFilterField>
+      <Group gap="xs">
+        <Button type="submit" leftSection={<LuSearch aria-hidden="true" />}>
+          Search
+        </Button>
+        <Button
+          variant="default"
+          leftSection={<LuX aria-hidden="true" />}
+          type="button"
+          onClick={() => {
+            setQuery("");
+            apply("", "");
+          }}
+        >
+          Clear filters
+        </Button>
+      </Group>
+    </TableFilters>
+  );
   return (
     <Stack gap="xl">
       <header>
@@ -73,65 +129,10 @@ export function ReportsList({
           Compare with the existing Reports pages
         </Anchor>
       </header>
-      <form
-        className="news-filters report-filters"
-        onSubmit={(event) => {
-          event.preventDefault();
-          apply(query);
-        }}
-      >
-        <div>
-          <label htmlFor="report-query">Search reports</label>
-          <input
-            id="report-query"
-            type="search"
-            maxLength={100}
-            value={query}
-            placeholder="Search date or report text..."
-            onChange={(event) => {
-              const value = event.target.value;
-              setQuery(value);
-              clearTimeout(timer.current);
-              timer.current = setTimeout(() => apply(value, filters.direction, true), 300);
-            }}
-          />
-        </div>
-        <div>
-          <label htmlFor="report-direction">Outlook</label>
-          <select
-            id="report-direction"
-            value={filters.direction ?? ""}
-            onChange={(event) =>
-              apply(query, reportSearchSchema.shape.direction.parse(event.target.value))
-            }
-          >
-            <option value="">All outlooks</option>
-            <option value="up">Up</option>
-            <option value="down">Down</option>
-            <option value="flat">Flat</option>
-            <option value="unknown">Not available</option>
-          </select>
-        </div>
-        <Group>
-          <Button type="submit" leftSection={<LuSearch aria-hidden="true" />}>
-            Search
-          </Button>
-          <Button
-            variant="default"
-            leftSection={<LuX aria-hidden="true" />}
-            type="button"
-            onClick={() => {
-              setQuery("");
-              apply("", "");
-            }}
-          >
-            Clear filters
-          </Button>
-        </Group>
-      </form>
       <DataTable
         data={data.items}
         label="Reports"
+        filterControls={filterControls}
         columns={[
           {
             id: "date",

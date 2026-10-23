@@ -10,6 +10,7 @@ import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { sourceLink } from "../../shared/ui/sourceLink";
 import { DataTable } from "../../shared/ui/DataTable";
 import { MetricValue } from "../../shared/ui/MetricValue";
+import { TableFilterField, TableFilters } from "../../shared/ui/TableFilters";
 
 const publishedDate = new Intl.DateTimeFormat("en-IN", {
   day: "numeric",
@@ -46,6 +47,89 @@ export function News({
     onFilter({ ...values, q: values.q.trim(), page: 1 }, replace);
   }
 
+  const filterControls = (
+    <TableFilters
+      onSubmit={(event) => {
+        event.preventDefault();
+        apply({ ...filters, q: query });
+      }}
+    >
+      <TableFilterField search label="Search" htmlFor="news-query">
+        <input
+          id="news-query"
+          type="search"
+          name="q"
+          value={query}
+          maxLength={100}
+          autoComplete="off"
+          placeholder="Search records..."
+          ref={searchInput}
+          onChange={(event) => {
+            const value = event.target.value;
+            setQuery(value);
+            clearTimeout(timer.current);
+            timer.current = setTimeout(() => apply({ ...filters, q: value }, true), 300);
+          }}
+        />
+      </TableFilterField>
+      <TableFilterField label="Score" htmlFor="news-sentiment">
+        <select
+          id="news-sentiment"
+          name="sentiment"
+          value={filters.sentiment}
+          onChange={(event) =>
+            apply({
+              ...filters,
+              q: query,
+              sentiment: newsSearchSchema.shape.sentiment.parse(event.target.value),
+            })
+          }
+        >
+          <option value="">All scores</option>
+          {data.sentiments.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </TableFilterField>
+      <TableFilterField label="Source" htmlFor="news-source">
+        <select
+          id="news-source"
+          name="source"
+          value={filters.source}
+          onChange={(event) => apply({ ...filters, q: query, source: event.target.value })}
+        >
+          <option value="">All sources</option>
+          {filters.source && !data.sources.includes(filters.source) && (
+            <option value={filters.source}>{filters.source} (unavailable)</option>
+          )}
+          {data.sources.filter(Boolean).map((source) => (
+            <option key={source} value={source}>
+              {source}
+            </option>
+          ))}
+        </select>
+      </TableFilterField>
+      <Group gap="xs">
+        <Button type="submit" leftSection={<LuSlidersHorizontal aria-hidden="true" />}>
+          Apply
+        </Button>
+        <Button
+          type="button"
+          variant="default"
+          leftSection={<LuX aria-hidden="true" />}
+          onClick={() => {
+            setQuery("");
+            apply({ ...filters, q: "", sentiment: "", source: "", page: 1 });
+            searchInput.current?.focus();
+          }}
+        >
+          Clear filters
+        </Button>
+      </Group>
+    </TableFilters>
+  );
   return (
     <Stack gap="xl">
       <header>
@@ -64,90 +148,6 @@ export function News({
           Compare with the existing News page
         </Anchor>
       </header>
-      <form
-        className="news-filters"
-        onSubmit={(event) => {
-          event.preventDefault();
-          apply({ ...filters, q: query });
-        }}
-      >
-        <div>
-          <label htmlFor="news-query">Search</label>
-          <input
-            id="news-query"
-            type="search"
-            name="q"
-            value={query}
-            maxLength={100}
-            autoComplete="off"
-            ref={searchInput}
-            onChange={(event) => {
-              const value = event.target.value;
-              setQuery(value);
-              clearTimeout(timer.current);
-              timer.current = setTimeout(() => apply({ ...filters, q: value }, true), 300);
-            }}
-          />
-        </div>
-        <div>
-          <label htmlFor="news-sentiment">Score</label>
-          <select
-            id="news-sentiment"
-            name="sentiment"
-            value={filters.sentiment}
-            onChange={(event) =>
-              apply({
-                ...filters,
-                q: query,
-                sentiment: newsSearchSchema.shape.sentiment.parse(event.target.value),
-              })
-            }
-          >
-            <option value="">All</option>
-            {data.sentiments.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="news-source">Source</label>
-          <select
-            id="news-source"
-            name="source"
-            value={filters.source}
-            onChange={(event) => apply({ ...filters, q: query, source: event.target.value })}
-          >
-            <option value="">All</option>
-            {filters.source && !data.sources.includes(filters.source) && (
-              <option value={filters.source}>{filters.source} (unavailable)</option>
-            )}
-            {data.sources.filter(Boolean).map((source) => (
-              <option key={source} value={source}>
-                {source}
-              </option>
-            ))}
-          </select>
-        </div>
-        <Group gap="xs">
-          <Button type="submit" leftSection={<LuSlidersHorizontal aria-hidden="true" />}>
-            Apply
-          </Button>
-          <Button
-            type="button"
-            variant="default"
-            leftSection={<LuX aria-hidden="true" />}
-            onClick={() => {
-              setQuery("");
-              apply({ ...filters, q: "", sentiment: "", source: "", page: 1 });
-              searchInput.current?.focus();
-            }}
-          >
-            Clear filters
-          </Button>
-        </Group>
-      </form>
       <section aria-label="News results">
         <Text size="sm" c="dimmed" role="status" mb="md">
           {data.total} article{data.total === 1 ? "" : "s"}
@@ -155,6 +155,7 @@ export function News({
         <DataTable
           data={data.items}
           label="News"
+          filterControls={filterControls}
           columns={[
             {
               id: "title",

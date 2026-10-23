@@ -106,7 +106,7 @@ textarea {
   font: inherit;
 }
 
-button:not(.mantine-Button-root):not(.mantine-ActionIcon-root):not(.header-icon-button):not(.account-menu-trigger) {
+button:not(.mantine-Button-root):not(.mantine-ActionIcon-root):not(.header-icon-button):not(.account-menu-trigger):not(.table-footer button) {
   min-height: var(--ui-button-height);
   padding-inline: var(--ui-button-padding-inline);
 }
@@ -1186,6 +1186,16 @@ h2 {
   outline-offset: 2px;
 }
 
+.table-filter-field {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  min-width: 0;
+  max-width: 100%;
+  font-size: var(--ui-text-label-size);
+  color: var(--brand-muted);
+}
+
 .table-toolbar input,
 .table-toolbar select {
   font: inherit;
@@ -1197,12 +1207,27 @@ h2 {
   padding: var(--ui-space-2);
   min-width: 0;
   max-width: 100%;
+  min-height: var(--ui-button-height);
 }
 
 .table-search input {
   border: none;
   background: transparent;
   width: 11rem;
+  min-height: calc(var(--ui-button-height) - 2px);
+}
+
+.table-search svg {
+  flex-shrink: 0;
+}
+
+.table-filters input[type="checkbox"] {
+  min-height: auto;
+  margin-right: var(--ui-space-2);
+}
+
+.table-filters input[type="number"] {
+  width: 6rem;
 }
 
 .table-search input:focus-visible {
@@ -1340,7 +1365,7 @@ h2 {
   gap: 0.25rem;
   border: 1px solid var(--brand-line);
   border-radius: var(--ui-radius-sm);
-  min-height: auto;
+  min-height: 2rem;
   padding: var(--ui-space-1) var(--ui-space-2);
   font: inherit;
   background: var(--brand-surface);
@@ -1361,15 +1386,6 @@ h2 {
 
 .table-footer nav>span {
   margin-inline: 0.3rem;
-}
-
-.table-footer nav a:first-child>span:last-child,
-.table-footer nav a:last-child>span:last-child {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
 }
 
 @media (max-width: 48em) {
@@ -1442,16 +1458,6 @@ h2 {
   line-height: 1.8;
 }
 
-.ops-run-filters,
-.ops-workspace-filters {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
-}
-
-.ops-workspace-filters input[type="checkbox"] {
-  width: auto;
-  margin-right: 0.5rem;
-}
-
 .ops-run-facts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
@@ -1512,49 +1518,6 @@ h2 {
   width: 100%;
   color: var(--brand-loss);
   overflow-wrap: anywhere;
-}
-
-.news-filters {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
-  gap: var(--ui-space-4);
-  padding: var(--ui-space-5);
-  border: 1px solid var(--brand-line);
-  border-radius: var(--ui-radius-sm);
-  background: var(--brand-surface);
-}
-
-.news-filters label {
-  display: block;
-  font-size: var(--ui-text-label-size);
-  font-weight: 600;
-  margin-bottom: var(--ui-space-1);
-}
-
-.news-filters input,
-.news-filters select {
-  width: 100%;
-  min-width: 0;
-  min-height: var(--ui-button-height);
-  padding: var(--ui-space-2) var(--ui-space-3);
-  border: 1px solid var(--brand-line);
-  border-radius: var(--ui-radius-sm);
-  background: var(--brand-surface);
-  color: var(--brand-ink);
-  font: inherit;
-  font-size: var(--ui-text-label-size);
-}
-
-.news-filters> :last-child {
-  grid-column: 1 / -1;
-}
-
-.company-filters {
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-}
-
-.report-filters {
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
 }
 
 .news-card {
@@ -1693,10 +1656,6 @@ section[aria-labelledby="market-record"] .market-summary dd {
   background: var(--brand-loss-soft);
 }
 
-.ipo-filters {
-  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
-}
-
 .ipo-verdict {
   display: inline-flex;
   column-gap: var(--ui-space-1);
@@ -1772,10 +1731,6 @@ section[aria-labelledby="market-record"] .market-summary dd {
 }
 
 @media (max-width: 47.99375em) {
-  .news-filters {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .ipo-detail-grid {
     grid-template-columns: minmax(0, 1fr);
   }

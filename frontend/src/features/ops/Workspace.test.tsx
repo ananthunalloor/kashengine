@@ -130,6 +130,9 @@ it("renders native React Ops tables, complete navigation, escaped cells and IST 
 it("searches, filters, sorts and paginates on the server with URL restoration", async () => {
   const { router, fetchMock } = await show();
   await screen.findByRole("heading", { name: "News feeds", level: 1 });
+  expect(screen.getByLabelText("Search News feeds").closest(".table-toolbar")).toContainElement(
+    screen.getByRole("combobox", { name: "state" }),
+  );
   fireEvent.change(screen.getByLabelText("Search News feeds"), { target: { value: "Saved" } });
   fireEvent.click(screen.getByRole("button", { name: "Search" }));
   await waitFor(() => expect(router.state.location.search.q).toBe("Saved"));

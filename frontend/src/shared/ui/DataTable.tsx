@@ -7,8 +7,9 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import type { ColumnDef, PaginationState, SortingState } from "@tanstack/react-table";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { TableFilterField, TableFilters } from "./TableFilters";
 import {
   LuArrowDown,
   LuArrowUp,
@@ -49,6 +50,7 @@ export function DataTable<T>({
   server,
   filters = [],
   initialSort = [],
+  filterControls,
 }: {
   data: T[];
   columns: TableColumn<T>[];
@@ -57,7 +59,9 @@ export function DataTable<T>({
   server?: ServerTable;
   filters?: { label: string; value: (row: T) => string; options: string[] }[];
   initialSort?: SortingState;
+  filterControls?: ReactNode;
 }) {
+  const tableId = useId();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [sorting, setSorting] = useState<SortingState>(initialSort);
@@ -133,7 +137,9 @@ export function DataTable<T>({
     const content = (
       <>
         <span aria-hidden="true">{icon}</span>
-        <span>{name}</span>
+        <span className={name === "First page" || name === "Last page" ? "sr-only" : undefined}>
+          {name}
+        </span>
       </>
     );
     return available ? (
@@ -157,12 +163,13 @@ export function DataTable<T>({
           <LuTable2 aria-hidden="true" />
           {label}
         </span>
-        {!server && (
-          <div className="table-filters">
-            <label className="table-search">
-              <LuSearch aria-hidden="true" />
-              <span className="sr-only">Search {label}</span>
+        {server ? (
+          filterControls
+        ) : (
+          <TableFilters onSubmit={(event) => event.preventDefault()}>
+            <TableFilterField search label={`Search ${label}`} htmlFor={`${tableId}-search`}>
               <input
+                id={`${tableId}-search`}
                 type="search"
                 aria-label={`Search ${label}`}
                 value={search}
@@ -172,11 +179,15 @@ export function DataTable<T>({
                 }}
                 placeholder="Search records..."
               />
-            </label>
+            </TableFilterField>
             {filters.map((filter) => (
-              <label key={filter.label}>
-                <span className="sr-only">{filter.label}</span>
+              <TableFilterField
+                key={filter.label}
+                label={filter.label}
+                htmlFor={`${tableId}-${filter.label}`}
+              >
                 <select
+                  id={`${tableId}-${filter.label}`}
                   aria-label={filter.label}
                   value={selected[filter.label] ?? ""}
                   onChange={(event) => {
@@ -189,9 +200,9 @@ export function DataTable<T>({
                     <option key={option}>{option}</option>
                   ))}
                 </select>
-              </label>
+              </TableFilterField>
             ))}
-          </div>
+          </TableFilters>
         )}
         <label className="table-size">
           Rows per page

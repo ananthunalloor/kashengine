@@ -170,6 +170,9 @@ it("restores bookmarks, paginates on the server and retains filter/sort state", 
 it("searches and changes exact filters, resetting pagination and preserving pending search", async () => {
   const { router, fetchMock } = await showAudit({ path: "/ops/audit/?page=2&page_size=1" });
   const input = await screen.findByRole("searchbox", { name: "Search audit records" });
+  expect(input.closest(".table-toolbar")).toContainElement(
+    screen.getByRole("combobox", { name: "Action" }),
+  );
   fireEvent.change(input, { target: { value: " news " } });
   fireEvent.change(screen.getByRole("combobox", { name: "Recorded admin" }), {
     target: { value: "Deleted admin" },

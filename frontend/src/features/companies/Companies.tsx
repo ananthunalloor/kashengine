@@ -8,6 +8,7 @@ import type { CompanyPage } from "../../shared/api/generated/types.gen";
 import { sourceLink } from "../../shared/ui/sourceLink";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { DataTable } from "../../shared/ui/DataTable";
+import { TableFilterField, TableFilters } from "../../shared/ui/TableFilters";
 
 const fetchedDate = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
@@ -47,6 +48,69 @@ export function Companies({
     onFilter({ ...values, q: query.trim(), page: 1 });
   }
 
+  const filterControls = (
+    <TableFilters
+      onSubmit={(event) => {
+        event.preventDefault();
+        apply(query);
+      }}
+    >
+      <TableFilterField search label="Search by name, symbol, or sector" htmlFor="company-query">
+        <input
+          id="company-query"
+          type="search"
+          name="q"
+          maxLength={100}
+          autoComplete="off"
+          placeholder="Search name, symbol, or sector..."
+          value={query}
+          ref={searchInput}
+          onChange={(event) => {
+            const value = event.target.value;
+            setQuery(value);
+            clearTimeout(timer.current);
+            timer.current = setTimeout(() => apply(value, true), 300);
+          }}
+        />
+      </TableFilterField>
+      <TableFilterField label="Sector" htmlFor="company-sector">
+        <select
+          id="company-sector"
+          value={filters.sector ?? ""}
+          onChange={(event) => {
+            clearTimeout(timer.current);
+            onFilter({ ...filters, q: query.trim(), sector: event.target.value, page: 1 });
+          }}
+        >
+          <option value="">All sectors</option>
+          {filters.sector && !data.sectors?.includes(filters.sector) && (
+            <option>{filters.sector}</option>
+          )}
+          {data.sectors?.map((sector) => (
+            <option key={sector}>{sector}</option>
+          ))}
+        </select>
+      </TableFilterField>
+      <Group gap="xs">
+        <Button type="submit" leftSection={<LuSearch aria-hidden="true" />}>
+          Search
+        </Button>
+        <Button
+          type="button"
+          variant="default"
+          leftSection={<LuX aria-hidden="true" />}
+          onClick={() => {
+            setQuery("");
+            clearTimeout(timer.current);
+            onFilter({ ...filters, q: "", sector: undefined, page: 1 });
+            searchInput.current?.focus();
+          }}
+        >
+          Clear search
+        </Button>
+      </Group>
+    </TableFilters>
+  );
   return (
     <Stack gap="xl">
       <header>
@@ -62,69 +126,6 @@ export function Companies({
           Compare with the existing Companies page
         </Anchor>
       </header>
-      <form
-        className="news-filters company-filters"
-        onSubmit={(event) => {
-          event.preventDefault();
-          apply(query);
-        }}
-      >
-        <div>
-          <label htmlFor="company-query">Search by name, symbol, or sector</label>
-          <input
-            id="company-query"
-            type="search"
-            name="q"
-            maxLength={100}
-            autoComplete="off"
-            value={query}
-            ref={searchInput}
-            onChange={(event) => {
-              const value = event.target.value;
-              setQuery(value);
-              clearTimeout(timer.current);
-              timer.current = setTimeout(() => apply(value, true), 300);
-            }}
-          />
-        </div>
-        <div>
-          <label htmlFor="company-sector">Sector</label>
-          <select
-            id="company-sector"
-            value={filters.sector ?? ""}
-            onChange={(event) => {
-              clearTimeout(timer.current);
-              onFilter({ ...filters, q: query.trim(), sector: event.target.value, page: 1 });
-            }}
-          >
-            <option value="">All sectors</option>
-            {filters.sector && !data.sectors?.includes(filters.sector) && (
-              <option>{filters.sector}</option>
-            )}
-            {data.sectors?.map((sector) => (
-              <option key={sector}>{sector}</option>
-            ))}
-          </select>
-        </div>
-        <Group gap="xs">
-          <Button type="submit" leftSection={<LuSearch aria-hidden="true" />}>
-            Search
-          </Button>
-          <Button
-            type="button"
-            variant="default"
-            leftSection={<LuX aria-hidden="true" />}
-            onClick={() => {
-              setQuery("");
-              clearTimeout(timer.current);
-              onFilter({ ...filters, q: "", sector: undefined, page: 1 });
-              searchInput.current?.focus();
-            }}
-          >
-            Clear search
-          </Button>
-        </Group>
-      </form>
       <section aria-label="Company results">
         <Text size="sm" c="dimmed" role="status" mb="md">
           {data.total} {data.total === 1 ? "company" : "companies"}
@@ -132,6 +133,7 @@ export function Companies({
         <DataTable
           data={data.items}
           label="Companies"
+          filterControls={filterControls}
           columns={[
             {
               id: "name",

@@ -8,6 +8,7 @@ import type { AuditSearch } from "../../shared/api/ops";
 import { DataTable } from "../../shared/ui/DataTable";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { OpsTime } from "./OpsTime";
+import { TableFilterField, TableFilters } from "../../shared/ui/TableFilters";
 
 export function Audit({
   data,
@@ -32,6 +33,83 @@ export function Audit({
     onFilter({ ...values, q: query.trim(), page: 1 }, replace);
   }
 
+  const filterControls = (
+    <TableFilters
+      onSubmit={(event) => {
+        event.preventDefault();
+        change(filters);
+      }}
+    >
+      <TableFilterField search label="Search audit records" htmlFor="audit-query">
+        <input
+          id="audit-query"
+          type="search"
+          maxLength={200}
+          autoComplete="off"
+          ref={searchInput}
+          value={query}
+          placeholder="Admin, action, target, detail, or address"
+          onChange={(event) => {
+            const value = event.target.value;
+            setQuery(value);
+            clearTimeout(timer.current);
+            timer.current = setTimeout(
+              () => onFilter({ ...filters, q: value.trim(), page: 1 }, true),
+              300,
+            );
+          }}
+        />
+      </TableFilterField>
+      <TableFilterField label="Recorded admin" htmlFor="audit-actor">
+        <select
+          id="audit-actor"
+          value={filters.actor}
+          onChange={(event) => change({ ...filters, actor: event.target.value })}
+        >
+          <option value="">All admins</option>
+          {filters.actor && !data.actors.includes(filters.actor) && (
+            <option>{filters.actor}</option>
+          )}
+          {data.actors.map((actor) => (
+            <option key={actor}>{actor}</option>
+          ))}
+        </select>
+      </TableFilterField>
+      <TableFilterField label="Action" htmlFor="audit-action">
+        <select
+          id="audit-action"
+          value={filters.action}
+          onChange={(event) => change({ ...filters, action: event.target.value })}
+        >
+          <option value="">All actions</option>
+          {filters.action && !data.actions.includes(filters.action) && (
+            <option>{filters.action}</option>
+          )}
+          {data.actions.map((action) => (
+            <option key={action}>{action}</option>
+          ))}
+        </select>
+      </TableFilterField>
+      <Group gap="xs">
+        <Button type="submit" leftSection={<LuSearch aria-hidden="true" />}>
+          Search
+        </Button>
+        <Button
+          type="button"
+          variant="default"
+          leftSection={<LuX aria-hidden="true" />}
+          onClick={() => {
+            clearTimeout(timer.current);
+            setQuery("");
+            onFilter({ ...filters, q: "", actor: "", action: "", page: 1 });
+            searchInput.current?.focus();
+          }}
+        >
+          Clear filters
+        </Button>
+      </Group>
+    </TableFilters>
+  );
   return (
     <Stack gap="xl">
       <header>
@@ -46,88 +124,10 @@ export function Audit({
           Names are preserved as recorded, even after an account is renamed or deleted.
         </Text>
       </header>
-      <form
-        className="news-filters ops-run-filters"
-        onSubmit={(event) => {
-          event.preventDefault();
-          change(filters);
-        }}
-      >
-        <div>
-          <label htmlFor="audit-query">Search audit records</label>
-          <input
-            id="audit-query"
-            type="search"
-            maxLength={200}
-            autoComplete="off"
-            ref={searchInput}
-            value={query}
-            placeholder="Admin, action, target, detail, or address"
-            onChange={(event) => {
-              const value = event.target.value;
-              setQuery(value);
-              clearTimeout(timer.current);
-              timer.current = setTimeout(
-                () => onFilter({ ...filters, q: value.trim(), page: 1 }, true),
-                300,
-              );
-            }}
-          />
-        </div>
-        <div>
-          <label htmlFor="audit-actor">Recorded admin</label>
-          <select
-            id="audit-actor"
-            value={filters.actor}
-            onChange={(event) => change({ ...filters, actor: event.target.value })}
-          >
-            <option value="">All admins</option>
-            {filters.actor && !data.actors.includes(filters.actor) && (
-              <option>{filters.actor}</option>
-            )}
-            {data.actors.map((actor) => (
-              <option key={actor}>{actor}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="audit-action">Action</label>
-          <select
-            id="audit-action"
-            value={filters.action}
-            onChange={(event) => change({ ...filters, action: event.target.value })}
-          >
-            <option value="">All actions</option>
-            {filters.action && !data.actions.includes(filters.action) && (
-              <option>{filters.action}</option>
-            )}
-            {data.actions.map((action) => (
-              <option key={action}>{action}</option>
-            ))}
-          </select>
-        </div>
-        <Group gap="xs">
-          <Button type="submit" leftSection={<LuSearch aria-hidden="true" />}>
-            Search
-          </Button>
-          <Button
-            type="button"
-            variant="default"
-            leftSection={<LuX aria-hidden="true" />}
-            onClick={() => {
-              clearTimeout(timer.current);
-              setQuery("");
-              onFilter({ ...filters, q: "", actor: "", action: "", page: 1 });
-              searchInput.current?.focus();
-            }}
-          >
-            Clear filters
-          </Button>
-        </Group>
-      </form>
       <DataTable
         data={data.items}
         label="Audit trail"
+        filterControls={filterControls}
         empty="No audit records match these filters."
         columns={[
           {

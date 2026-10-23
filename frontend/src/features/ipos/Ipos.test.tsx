@@ -227,6 +227,9 @@ it("restores all bookmarked filters and retains them in pagination", async () =>
 it("debounces search, resets page, and applies board/verdict/status filters", async () => {
   const router = await showIpos({ path: "/ipos/?page=2" });
   const input = await screen.findByRole("searchbox");
+  expect(input.closest(".table-toolbar")).toContainElement(
+    screen.getByRole("combobox", { name: "Status" }),
+  );
   input.focus();
   fireEvent.change(input, { target: { value: "Ex" } });
   fireEvent.change(input, { target: { value: "Example" } });

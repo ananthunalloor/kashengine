@@ -11,6 +11,7 @@ import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { DataTable } from "../../shared/ui/DataTable";
 import { displayNumber } from "../../shared/ui/displayNumber";
 import { MetricValue } from "../../shared/ui/MetricValue";
+import { TableFilterField, TableFilters } from "../../shared/ui/TableFilters";
 
 const scoredDate = new Intl.DateTimeFormat("en-IN", {
   day: "numeric",
@@ -65,6 +66,108 @@ export function Ipos({
     clearTimeout(timer.current);
     onFilter({ ...value, q: value.q.trim(), page: 1 }, replace);
   }
+  const filterControls = (
+    <TableFilters
+      onSubmit={(event) => {
+        event.preventDefault();
+        apply({ ...filters, q: query });
+      }}
+    >
+      <TableFilterField search label="Search" htmlFor="ipo-query">
+        <input
+          id="ipo-query"
+          type="search"
+          maxLength={100}
+          autoComplete="off"
+          placeholder="Search records..."
+          ref={input}
+          value={query}
+          onChange={(event) => {
+            const value = event.target.value;
+            setQuery(value);
+            clearTimeout(timer.current);
+            timer.current = setTimeout(() => apply({ ...filters, q: value }, true), 300);
+          }}
+        />
+      </TableFilterField>
+      <TableFilterField label="Status" htmlFor="ipo-status">
+        <select
+          id="ipo-status"
+          value={filters.status}
+          onChange={(event) =>
+            apply({
+              ...filters,
+              q: query,
+              status: ipoSearchSchema.shape.status.parse(event.target.value),
+            })
+          }
+        >
+          {data.statuses.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </TableFilterField>
+      <TableFilterField label="Verdict" htmlFor="ipo-verdict">
+        <select
+          id="ipo-verdict"
+          value={filters.verdict}
+          onChange={(event) =>
+            apply({
+              ...filters,
+              q: query,
+              verdict: ipoSearchSchema.shape.verdict.parse(event.target.value),
+            })
+          }
+        >
+          <option value="">All verdicts</option>
+          {data.verdicts.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </TableFilterField>
+      <TableFilterField label="Board" htmlFor="ipo-category">
+        <select
+          id="ipo-category"
+          value={filters.category}
+          onChange={(event) =>
+            apply({
+              ...filters,
+              q: query,
+              category: ipoSearchSchema.shape.category.parse(event.target.value),
+            })
+          }
+        >
+          <option value="">All boards</option>
+          {data.categories.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </TableFilterField>
+      <Group gap="xs">
+        <Button type="submit" leftSection={<LuSlidersHorizontal aria-hidden="true" />}>
+          Apply
+        </Button>
+        <Button
+          type="button"
+          variant="default"
+          leftSection={<LuX aria-hidden="true" />}
+          onClick={() => {
+            setQuery("");
+            apply({ ...filters, q: "", status: "", verdict: "", category: "", page: 1 });
+            input.current?.focus();
+          }}
+        >
+          Clear filters
+        </Button>
+      </Group>
+    </TableFilters>
+  );
   return (
     <Stack gap="xl">
       <header>
@@ -81,110 +184,6 @@ export function Ipos({
           Compare with the existing IPO pages
         </Anchor>
       </header>
-      <form
-        className="news-filters ipo-filters"
-        onSubmit={(event) => {
-          event.preventDefault();
-          apply({ ...filters, q: query });
-        }}
-      >
-        <div>
-          <label htmlFor="ipo-query">Search</label>
-          <input
-            id="ipo-query"
-            type="search"
-            maxLength={100}
-            autoComplete="off"
-            ref={input}
-            value={query}
-            onChange={(event) => {
-              const value = event.target.value;
-              setQuery(value);
-              clearTimeout(timer.current);
-              timer.current = setTimeout(() => apply({ ...filters, q: value }, true), 300);
-            }}
-          />
-        </div>
-        <div>
-          <label htmlFor="ipo-status">Status</label>
-          <select
-            id="ipo-status"
-            value={filters.status}
-            onChange={(event) =>
-              apply({
-                ...filters,
-                q: query,
-                status: ipoSearchSchema.shape.status.parse(event.target.value),
-              })
-            }
-          >
-            {data.statuses.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="ipo-verdict">Verdict</label>
-          <select
-            id="ipo-verdict"
-            value={filters.verdict}
-            onChange={(event) =>
-              apply({
-                ...filters,
-                q: query,
-                verdict: ipoSearchSchema.shape.verdict.parse(event.target.value),
-              })
-            }
-          >
-            <option value="">All</option>
-            {data.verdicts.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="ipo-category">Board</label>
-          <select
-            id="ipo-category"
-            value={filters.category}
-            onChange={(event) =>
-              apply({
-                ...filters,
-                q: query,
-                category: ipoSearchSchema.shape.category.parse(event.target.value),
-              })
-            }
-          >
-            <option value="">All</option>
-            {data.categories.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <Group gap="xs">
-          <Button type="submit" leftSection={<LuSlidersHorizontal aria-hidden="true" />}>
-            Apply
-          </Button>
-          <Button
-            type="button"
-            variant="default"
-            leftSection={<LuX aria-hidden="true" />}
-            onClick={() => {
-              setQuery("");
-              apply({ ...filters, q: "", status: "", verdict: "", category: "", page: 1 });
-              input.current?.focus();
-            }}
-          >
-            Clear filters
-          </Button>
-        </Group>
-      </form>
       <section aria-label="IPO results">
         <Text role="status" size="sm" c="dimmed" mb="md">
           {data.total} IPO{data.total === 1 ? "" : "s"}
@@ -192,6 +191,7 @@ export function Ipos({
         <DataTable
           data={data.items}
           label="IPOs"
+          filterControls={filterControls}
           columns={[
             {
               id: "name",

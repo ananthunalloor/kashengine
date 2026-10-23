@@ -1,8 +1,10 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import type { FormEvent } from "react";
 import { expect, it, vi } from "vitest";
 
 import { DataTable } from "./DataTable";
 import { displayNumber } from "./displayNumber";
+import { TableFilterField, TableFilters } from "./TableFilters";
 
 const data = Array.from({ length: 26 }, (_, index) => ({
   name: `Record ${String(index + 1).padStart(2, "0")}`,
@@ -101,4 +103,66 @@ it("keeps nulls last and parses formatted numeric values without sorting lexical
   );
   fireEvent.click(screen.getByRole("button", { name: "Number" }));
   expect(screen.getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["2", "10", "–"]);
+});
+
+it("places server filters in the same toolbar as local filters without adding a local search", () => {
+  const onSubmit = vi.fn((event: FormEvent<HTMLFormElement>) => event.preventDefault());
+  render(
+    <DataTable
+      data={data.slice(0, 2)}
+      columns={columns}
+      label="Records"
+      filterControls={
+        <TableFilters onSubmit={onSubmit}>
+          <TableFilterField search label="Search records on the server" htmlFor="server-search">
+            <input id="server-search" type="search" />
+          </TableFilterField>
+          <TableFilterField label="Status" htmlFor="server-status">
+            <select id="server-status">
+              <option>All statuses</option>
+            </select>
+          </TableFilterField>
+        </TableFilters>
+      }
+      server={{
+        page: 2,
+        pages: 3,
+        total: 6,
+        pageSize: 2,
+        onSort: vi.fn(),
+        onPageSize: vi.fn(),
+        paginationLabel: "Record pages",
+        pageLink: (page, label) => <a href={`?page=${page}`}>{label}</a>,
+      }}
+    />,
+  );
+  const search = screen.getByRole("searchbox", { name: "Search records on the server" });
+  const toolbar = search.closest(".table-toolbar");
+  expect(toolbar).toContainElement(screen.getByRole("combobox", { name: "Status" }));
+  expect(toolbar).toContainElement(
+    screen.getByRole("combobox", { name: "Rows per page for Records" }),
+  );
+  expect(search.closest(".table-search")?.querySelector("svg")).not.toBeNull();
+  expect(screen.getAllByRole("searchbox")).toHaveLength(1);
+  fireEvent.submit(search.closest("form")!);
+  expect(onSubmit).toHaveBeenCalledOnce();
+  expect(screen.getByText("3-4 of 6 results")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "First page" }).lastElementChild).toHaveClass("sr-only");
+  expect(screen.getByRole("link", { name: "Last page" }).lastElementChild).toHaveClass("sr-only");
+});
+
+it("uses the same compact pagination labels for local buttons as server links", () => {
+  render(<DataTable data={data} columns={columns} label="Records" />);
+  expect(screen.getByRole("button", { name: "First page" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Last page" }).lastElementChild).toHaveClass("sr-only");
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  expect(screen.getByRole("button", { name: "First page" }).lastElementChild).toHaveClass(
+    "sr-only",
+  );
+  expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
+  expect(screen.getByText("11-20 of 26 results")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Last page" }));
+  expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Last page" })).toBeDisabled();
 });

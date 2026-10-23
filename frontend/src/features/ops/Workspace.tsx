@@ -2,6 +2,7 @@ import { Alert, Anchor, Button, Group, Stack, Text, Title } from "@mantine/core"
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useEffect, useId, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import {
   LuActivity,
   LuCircleAlert,
@@ -31,6 +32,7 @@ import { opsPageIcon } from "../../shared/ui/OpsNavigation";
 import { OpsTime } from "./OpsTime";
 import { OpsNotice, OpsStatus } from "./OpsStatus";
 import { AppLink } from "../../shared/ui/AppLink";
+import { TableFilterField, TableFilters } from "../../shared/ui/TableFilters";
 
 function Field({ field, disabled }: { field: OpsField; disabled: boolean }) {
   const id = useId();
@@ -197,12 +199,14 @@ function WorkspaceTable({
   filters,
   onFilter,
   onResult,
+  filterControls,
 }: {
   table: OpsTable;
   label: string;
   filters: OpsSearch;
   onFilter: (search: OpsSearch) => void;
   onResult: (result: OpsActionResult) => Promise<void>;
+  filterControls?: ReactNode;
 }) {
   const columns = table.columns.map((column) => ({
     id: column.key,
@@ -227,6 +231,7 @@ function WorkspaceTable({
     <DataTable
       data={table.rows}
       label={label}
+      filterControls={filterControls}
       columns={[
         ...columns,
         ...(hasActions
@@ -353,6 +358,106 @@ export function Workspace({
     );
   if (!data) return <AppLoading withinShell label="operations" />;
   const mainTable = data.sections.find((section) => section.table?.server)?.table;
+  const filterControls = (mainTable || path === "logs/" || path === "logins/") && (
+    <TableFilters
+      onSubmit={(event) => {
+        event.preventDefault();
+        onFilter({ ...filters, q: draft, page: 1 });
+      }}
+    >
+      <TableFilterField search label={`Search ${data.title}`} htmlFor="ops-q">
+        <input
+          id="ops-q"
+          type="search"
+          value={draft}
+          maxLength={200}
+          placeholder="Search records..."
+          onChange={(event) => setDraft(event.target.value)}
+        />
+      </TableFilterField>
+      {mainTable?.filters.map((key) => (
+        <TableFilterField key={key} label={key} htmlFor={`ops-filter-${key}`}>
+          <select
+            id={`ops-filter-${key}`}
+            value={filters[key as keyof OpsSearch] ?? ""}
+            onChange={(event) => onFilter({ ...filters, [key]: event.target.value, page: 1 })}
+          >
+            <option value="">All {key.toLowerCase()}</option>
+            {mainTable.filter_choices[key]?.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </TableFilterField>
+      ))}
+      {path === "logins/" && (
+        <TableFilterField label="Time window" htmlFor="ops-hours">
+          <select
+            id="ops-hours"
+            value={filters.hours}
+            onChange={(event) =>
+              onFilter({ ...filters, hours: event.target.value as OpsSearch["hours"], page: 1 })
+            }
+          >
+            <option value="">All time</option>
+            <option value="24">Last 24 hours</option>
+            <option value="168">Last 7 days</option>
+            <option value="720">Last 30 days</option>
+          </select>
+        </TableFilterField>
+      )}
+      {path === "logs/" && (
+        <>
+          <TableFilterField label="Minimum level" htmlFor="ops-level">
+            <select
+              id="ops-level"
+              value={filters.level}
+              onChange={(event) => onFilter({ ...filters, level: event.target.value })}
+            >
+              <option value="">All levels</option>
+              {["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"].map((value) => (
+                <option key={value}>{value}</option>
+              ))}
+            </select>
+          </TableFilterField>
+          <TableFilterField label="Logger contains" htmlFor="ops-logger">
+            <input
+              id="ops-logger"
+              name="logger"
+              defaultValue={filters.logger}
+              placeholder="Logger contains..."
+              onBlur={(event) => onFilter({ ...filters, logger: event.target.value })}
+            />
+          </TableFilterField>
+          <TableFilterField showLabel label="Tail entries (1–1000)" htmlFor="ops-limit">
+            <input
+              id="ops-limit"
+              type="number"
+              min={1}
+              max={1000}
+              defaultValue={filters.limit}
+              onBlur={(event) => {
+                if (event.target.validity.valid)
+                  onFilter({ ...filters, limit: Number(event.target.value) });
+              }}
+            />
+          </TableFilterField>
+          <label>
+            <input
+              type="checkbox"
+              checked={filters.live === "true"}
+              onChange={(event) =>
+                onFilter({ ...filters, live: event.target.checked ? "true" : "" })
+              }
+            />{" "}
+            Live refresh (visible tab only)
+          </label>
+        </>
+      )}
+      <Button type="submit">Search</Button>
+    </TableFilters>
+  );
   return (
     <Stack gap="xl" className="ops-workspace">
       <header>
@@ -389,110 +494,8 @@ export function Workspace({
           )}
         </>
       )}
-      {(mainTable || path === "logs/" || path === "logins/") && (
-        <form
-          className="news-filters ops-workspace-filters"
-          onSubmit={(event) => {
-            event.preventDefault();
-            onFilter({ ...filters, q: draft, page: 1 });
-          }}
-        >
-          <div>
-            <label htmlFor="ops-q">Search {data.title}</label>
-            <input
-              id="ops-q"
-              type="search"
-              value={draft}
-              maxLength={200}
-              onChange={(event) => setDraft(event.target.value)}
-            />
-          </div>
-          {mainTable?.filters.map((key) => (
-            <div key={key}>
-              <label htmlFor={`ops-filter-${key}`}>{key}</label>
-              <select
-                id={`ops-filter-${key}`}
-                value={filters[key as keyof OpsSearch] ?? ""}
-                onChange={(event) => onFilter({ ...filters, [key]: event.target.value, page: 1 })}
-              >
-                <option value="">All</option>
-                {mainTable.filter_choices[key]?.map((value) => (
-                  <option key={value} value={value}>
-                    {value}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ))}
-          {path === "logins/" && (
-            <div>
-              <label htmlFor="ops-hours">Time window</label>
-              <select
-                id="ops-hours"
-                value={filters.hours}
-                onChange={(event) =>
-                  onFilter({ ...filters, hours: event.target.value as OpsSearch["hours"], page: 1 })
-                }
-              >
-                <option value="">All time</option>
-                <option value="24">Last 24 hours</option>
-                <option value="168">Last 7 days</option>
-                <option value="720">Last 30 days</option>
-              </select>
-            </div>
-          )}
-          {path === "logs/" && (
-            <>
-              <div>
-                <label htmlFor="ops-level">Minimum level</label>
-                <select
-                  id="ops-level"
-                  value={filters.level}
-                  onChange={(event) => onFilter({ ...filters, level: event.target.value })}
-                >
-                  <option value="">All levels</option>
-                  {["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"].map((value) => (
-                    <option key={value}>{value}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="ops-logger">Logger contains</label>
-                <input
-                  id="ops-logger"
-                  name="logger"
-                  defaultValue={filters.logger}
-                  onBlur={(event) => onFilter({ ...filters, logger: event.target.value })}
-                />
-              </div>
-              <div>
-                <label htmlFor="ops-limit">Tail entries (1–1000)</label>
-                <input
-                  id="ops-limit"
-                  type="number"
-                  min={1}
-                  max={1000}
-                  defaultValue={filters.limit}
-                  onBlur={(event) => {
-                    if (event.target.validity.valid)
-                      onFilter({ ...filters, limit: Number(event.target.value) });
-                  }}
-                />
-              </div>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={filters.live === "true"}
-                  onChange={(event) =>
-                    onFilter({ ...filters, live: event.target.checked ? "true" : "" })
-                  }
-                />{" "}
-                Live refresh (visible tab only)
-              </label>
-            </>
-          )}
-          <Button type="submit">Search</Button>
-        </form>
+      {!mainTable && filterControls && (
+        <div className="data-panel table-toolbar">{filterControls}</div>
       )}
       {data.refresh_seconds > 0 && (
         <Text size="sm" c="dimmed">
@@ -591,6 +594,7 @@ export function Workspace({
               filters={filters}
               onFilter={onFilter}
               onResult={onResult}
+              filterControls={section.table === mainTable ? filterControls : undefined}
             />
           )}
           {section.forms.map((form) => (

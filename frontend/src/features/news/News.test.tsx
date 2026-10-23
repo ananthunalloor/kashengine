@@ -153,6 +153,12 @@ it("restores bookmarked filters and preserves them in pagination links", async (
 it("debounces typing, resets pagination, and updates the URL", async () => {
   const router = await showNews({ path: "/news/?page=2" });
   const input = await screen.findByRole("searchbox", { name: "Search" });
+  expect(input.closest(".table-toolbar")).toContainElement(
+    screen.getByRole("combobox", { name: "Score" }),
+  );
+  expect(input.closest(".table-toolbar")).toContainElement(
+    screen.getByRole("combobox", { name: "Rows per page for News" }),
+  );
   input.focus();
   fireEvent.change(input, { target: { value: "b" } });
   fireEvent.change(input, { target: { value: "bank" } });

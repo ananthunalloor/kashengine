@@ -10,6 +10,7 @@ import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { OpsTime } from "./OpsTime";
 import { OpsStatus } from "./OpsStatus";
 import { AppLink } from "../../shared/ui/AppLink";
+import { TableFilterField, TableFilters } from "../../shared/ui/TableFilters";
 
 export function RunStatus({ run }: { run: Pick<OpsRunSummary, "status" | "status_label"> }) {
   return (
@@ -67,6 +68,96 @@ export function Runs({
     clearTimeout(timer.current);
     onFilter({ ...values, q: query.trim(), page: 1 }, replace);
   }
+  const filterControls = (
+    <TableFilters
+      onSubmit={(event) => {
+        event.preventDefault();
+        change(filters);
+      }}
+    >
+      <TableFilterField search label="Search jobs, task IDs, or users" htmlFor="run-query">
+        <input
+          id="run-query"
+          type="search"
+          maxLength={200}
+          autoComplete="off"
+          placeholder="Search jobs, task IDs, or users..."
+          ref={searchInput}
+          value={query}
+          onChange={(event) => {
+            const value = event.target.value;
+            setQuery(value);
+            clearTimeout(timer.current);
+            timer.current = setTimeout(
+              () => onFilter({ ...filters, q: value.trim(), page: 1 }, true),
+              300,
+            );
+          }}
+        />
+      </TableFilterField>
+      <TableFilterField label="Job" htmlFor="run-label">
+        <select
+          id="run-label"
+          value={filters.label}
+          onChange={(event) => change({ ...filters, label: event.target.value })}
+        >
+          <option value="">All jobs</option>
+          {filters.label && !data.labels.includes(filters.label) && (
+            <option>{filters.label}</option>
+          )}
+          {data.labels.map((label) => (
+            <option key={label}>{label}</option>
+          ))}
+        </select>
+      </TableFilterField>
+      <TableFilterField label="Result" htmlFor="run-status">
+        <select
+          id="run-status"
+          value={filters.status}
+          onChange={(event) =>
+            change({ ...filters, status: event.target.value as RunSearch["status"] })
+          }
+        >
+          <option value="">All results</option>
+          <option value="pending">Waiting</option>
+          <option value="started">Running</option>
+          <option value="success">Done</option>
+          <option value="failure">Failed</option>
+        </select>
+      </TableFilterField>
+      <TableFilterField label="Started by" htmlFor="run-trigger">
+        <select
+          id="run-trigger"
+          value={filters.trigger}
+          onChange={(event) =>
+            change({ ...filters, trigger: event.target.value as RunSearch["trigger"] })
+          }
+        >
+          <option value="">All triggers</option>
+          <option value="auto">Automatic</option>
+          <option value="manual">Manual</option>
+        </select>
+      </TableFilterField>
+      <Group gap="xs">
+        <Button type="submit" leftSection={<LuSearch aria-hidden="true" />}>
+          Search
+        </Button>
+        <Button
+          type="button"
+          variant="default"
+          leftSection={<LuX aria-hidden="true" />}
+          onClick={() => {
+            clearTimeout(timer.current);
+            setQuery("");
+            onFilter({ ...filters, q: "", label: "", status: "", trigger: "", page: 1 });
+            searchInput.current?.focus();
+          }}
+        >
+          Clear filters
+        </Button>
+      </Group>
+    </TableFilters>
+  );
   return (
     <Stack gap="xl">
       <header>
@@ -86,101 +177,10 @@ export function Runs({
           </Anchor>
         </Group>
       </header>
-      <form
-        className="news-filters ops-run-filters"
-        onSubmit={(event) => {
-          event.preventDefault();
-          change(filters);
-        }}
-      >
-        <div>
-          <label htmlFor="run-query">Search jobs, task IDs, or users</label>
-          <input
-            id="run-query"
-            type="search"
-            maxLength={200}
-            autoComplete="off"
-            ref={searchInput}
-            value={query}
-            onChange={(event) => {
-              const value = event.target.value;
-              setQuery(value);
-              clearTimeout(timer.current);
-              timer.current = setTimeout(
-                () => onFilter({ ...filters, q: value.trim(), page: 1 }, true),
-                300,
-              );
-            }}
-          />
-        </div>
-        <div>
-          <label htmlFor="run-label">Job</label>
-          <select
-            id="run-label"
-            value={filters.label}
-            onChange={(event) => change({ ...filters, label: event.target.value })}
-          >
-            <option value="">All jobs</option>
-            {filters.label && !data.labels.includes(filters.label) && (
-              <option>{filters.label}</option>
-            )}
-            {data.labels.map((label) => (
-              <option key={label}>{label}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="run-status">Result</label>
-          <select
-            id="run-status"
-            value={filters.status}
-            onChange={(event) =>
-              change({ ...filters, status: event.target.value as RunSearch["status"] })
-            }
-          >
-            <option value="">All results</option>
-            <option value="pending">Waiting</option>
-            <option value="started">Running</option>
-            <option value="success">Done</option>
-            <option value="failure">Failed</option>
-          </select>
-        </div>
-        <div>
-          <label htmlFor="run-trigger">Started by</label>
-          <select
-            id="run-trigger"
-            value={filters.trigger}
-            onChange={(event) =>
-              change({ ...filters, trigger: event.target.value as RunSearch["trigger"] })
-            }
-          >
-            <option value="">All triggers</option>
-            <option value="auto">Automatic</option>
-            <option value="manual">Manual</option>
-          </select>
-        </div>
-        <Group gap="xs">
-          <Button type="submit" leftSection={<LuSearch aria-hidden="true" />}>
-            Search
-          </Button>
-          <Button
-            type="button"
-            variant="default"
-            leftSection={<LuX aria-hidden="true" />}
-            onClick={() => {
-              clearTimeout(timer.current);
-              setQuery("");
-              onFilter({ ...filters, q: "", label: "", status: "", trigger: "", page: 1 });
-              searchInput.current?.focus();
-            }}
-          >
-            Clear filters
-          </Button>
-        </Group>
-      </form>
       <DataTable
         data={data.items}
         label="Task runs"
+        filterControls={filterControls}
         empty="No runs match these filters."
         columns={[
           {

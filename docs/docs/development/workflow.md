@@ -103,6 +103,14 @@ small-sample caveats. Reads do not fetch, score, evaluate, or send anything. Bou
 use local TanStack tables and shared metric colors; full-list links stay inside React.
 The default login destination is `/dashboard/`.
 
+React tables share `shared/ui/DataTable.tsx`: use its compact Today-style filter toolbar
+and News-style pagination rather than page-specific panels or paging controls.
+Server-backed lists pass `filterControls` using `TableFilters` and `TableFilterField`;
+bounded local tables use the same fields automatically. Keep domain-specific filter choices
+and URL/debounce handling in the owning page. Search fields and selects retain accessible
+labels even when those labels are visually hidden. The shared footer handles result ranges,
+first/previous/next/last controls, and page sizes for both local and server-backed tables.
+
 Account opens `/account/` and reads `/api/app/account`, including subscription details,
 feature access, the latest 20 owner-scoped masked token rows, and the full active-token count.
 Its TanStack tables provide local search, filters, sorting, and pagination over these bounded

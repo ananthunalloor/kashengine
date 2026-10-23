@@ -155,6 +155,9 @@ it("supports bookmarked pagination and omits out-of-range controls", async () =>
 it("searches and filters reports before paging and preserves server sorting", async () => {
   const router = await showReports({ path: "/reports/?page=2&sort=-strength&page_size=10" });
   const search = await screen.findByRole("searchbox", { name: "Search reports" });
+  expect(search.closest(".table-toolbar")).toContainElement(
+    screen.getByRole("combobox", { name: "Outlook" }),
+  );
   search.focus();
   fireEvent.change(search, { target: { value: "banks" } });
   await waitFor(() =>
