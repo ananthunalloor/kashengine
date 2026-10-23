@@ -60,6 +60,20 @@ export function ApplicationShell({
   const colorScheme = useComputedColorScheme("light", { getInitialValueInEffect: true });
   const burger = useRef<HTMLButtonElement>(null);
   const isOps = pathname.startsWith("/ops/");
+  const pageContent = (
+    <>
+      {session.notice && (
+        <Alert color="yellow" title="Your subscription" role="status" mb="md">
+          {session.notice}{" "}
+          <Anchor component={AppLink} href="/account/">
+            See your account
+          </Anchor>
+          .
+        </Alert>
+      )}
+      {children}
+    </>
+  );
 
   return (
     <div className={`app-shell${isOps ? " ops-shell" : ""}`}>
@@ -86,10 +100,6 @@ export function ApplicationShell({
             </AppLink>
           </Group>
           <Group gap="xs">
-            <span className="workspace-badge app-desktop-only">
-              <LuShieldCheck aria-hidden="true" />
-              {isOps ? "Operations console" : "Private workspace"}
-            </span>
             <button
               type="button"
               className="header-icon-button"
@@ -118,16 +128,6 @@ export function ApplicationShell({
           }
         }}
       >
-        <div className="workspace-card">
-          <span className="workspace-icon">
-            {isOps ? <LuSettings2 aria-hidden="true" /> : <LuSparkles aria-hidden="true" />}
-          </span>
-          <div>
-            <strong>{isOps ? "Operations console" : "Your workspace"}</strong>
-            <span>{isOps ? "Monitor, diagnose, manage" : "Market intelligence"}</span>
-          </div>
-        </div>
-        <p className="navigation-label">Workspace</p>
         <nav aria-label="Main">
           {session.navigation.map((item) => {
             const url = item.url;
@@ -169,21 +169,16 @@ export function ApplicationShell({
             />
           )}
         </nav>
+        {session.is_staff && pathname.startsWith("/ops/") && (
+          <OpsNavigation
+            superuser={session.is_superuser}
+            pathname={pathname}
+            onNavigate={close}
+          />
+        )}
       </aside>
       <main className="app-main" id="main" tabIndex={-1}>
-        {session.is_staff && pathname.startsWith("/ops/") && (
-          <OpsNavigation superuser={session.is_superuser} pathname={pathname} />
-        )}
-        {session.notice && (
-          <Alert color="yellow" title="Your subscription" role="status" mb="md">
-            {session.notice}{" "}
-            <Anchor component={AppLink} href="/account/">
-              See your account
-            </Anchor>
-            .
-          </Alert>
-        )}
-        {children}
+        {pageContent}
         <Text component="footer" size="xs" c="dimmed" mt="xl" py="lg">
           Market signals are informational, not investment advice. GMP is unofficial data.{" "}
           <Anchor component={AppLink} href="/">

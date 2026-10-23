@@ -23,9 +23,27 @@ it("renders the server-provided links without inventing access", () => {
   expect(screen.getByRole("link", { name: "Today" })).toHaveAttribute("href", "/dashboard/");
   expect(screen.queryByRole("link", { name: "News" })).not.toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "Ops" })).not.toBeInTheDocument();
+  expect(screen.queryByText("Workspace", { exact: true })).not.toBeInTheDocument();
   expect(screen.getByRole("main")).toHaveAttribute("id", "main");
   expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   expect(document.querySelector("style")).toBeNull();
+});
+
+it("shows ops page options in the sidebar and expands the active section", () => {
+  render(
+    <ThemeProvider>
+      <ApplicationShell
+        session={{ ...session, is_staff: true, is_superuser: true }}
+        pathname="/ops/audit/"
+      >
+        <h1>Audit preview</h1>
+      </ApplicationShell>
+    </ThemeProvider>,
+  );
+
+  expect(screen.getByRole("navigation", { name: "Operations options" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Audit trail" })).toHaveAttribute("aria-current", "page");
+  expect(screen.getByRole("heading", { name: "Audit preview" })).toBeInTheDocument();
 });
 
 it("shows subscription notices and keeps account navigation for locked users", () => {

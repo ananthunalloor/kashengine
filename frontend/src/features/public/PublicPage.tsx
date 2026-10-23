@@ -290,7 +290,6 @@ function Login({ data }: { data: PublicData }) {
   const [pending, setPending] = useState(false);
   return (
     <section className="public-auth" aria-labelledby="login-title">
-      <p className="app-eyebrow">Your private workspace</p>
       <h1 id="login-title">Log in</h1>
       <p>
         Use the account that you made with <code>createsuperuser</code>.
