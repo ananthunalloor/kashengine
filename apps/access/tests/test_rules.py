@@ -8,11 +8,40 @@ from django.utils import timezone
 from apps.access import features, service
 from apps.access.models import FeatureBlock, Subscription, SubscriptionEvent
 from apps.access.rules import Access
+from apps.delivery.models import DeliveryPreference
 from apps.siteconfig import service as site_service
 
 pytestmark = pytest.mark.django_db
 
 ALL = features.KEYS
+
+
+def test_existing_regular_accounts_without_verification_have_no_features(django_user_model):
+    user = django_user_model.objects.create_user(
+        "unverified-existing", email="existing@example.test"
+    )
+    access = Access(user)
+    assert not access.email_verified
+    assert access.allowed == frozenset()
+    assert "Verify your email" in access.notice()
+    assert not any(access.can(key) for key in ALL)
+    DeliveryPreference.objects.create(user=user, email_verified_at=timezone.now())
+    assert Access(user).allowed == ALL
+
+
+def test_unverified_users_are_locked_even_when_subscriptions_are_disabled(member):
+    _require(False)
+    DeliveryPreference.objects.filter(user=member).update(email_verified_at=None)
+    assert Access(member).subscription_ok
+    assert not Access(member).email_verified
+    assert Access(member).allowed == frozenset()
+
+
+def test_staff_accounts_do_not_need_email_verification(staff, boss):
+    for user in (staff, boss):
+        assert not DeliveryPreference.objects.filter(user=user).exists()
+        assert Access(user).email_verified
+        assert Access(user).allowed == ALL
 
 
 def _require(on: bool = True):

@@ -49,6 +49,12 @@ export type Session = {
      */
     email: string;
     /**
+     * Email Verified
+     *
+     * Email verification completed, or staff/admin exemption.
+     */
+    email_verified: boolean;
+    /**
      * Is Staff
      *
      * Whether this user can read Ops pages.
@@ -87,7 +93,7 @@ export type Session = {
     /**
      * Notice
      *
-     * Subscription warning; empty when there is no warning.
+     * Account verification or subscription warning; empty when none.
      */
     notice: string;
     /**
@@ -1600,6 +1606,7 @@ export type Account = {
      * Email
      */
     email: string;
+    delivery: AccountDelivery;
     /**
      * State
      */
@@ -1677,6 +1684,34 @@ export type Account = {
 };
 
 /**
+ * AccountDelivery
+ *
+ * Report delivery eligibility and selected channels for the current user.
+ */
+export type AccountDelivery = {
+    /**
+     * Email Verified
+     */
+    email_verified: boolean;
+    /**
+     * Email Reports
+     */
+    email_reports: boolean;
+    /**
+     * Telegram Connected
+     */
+    telegram_connected: boolean;
+    /**
+     * Telegram Reports
+     */
+    telegram_reports: boolean;
+    /**
+     * Telegram Bot Username
+     */
+    telegram_bot_username: string;
+};
+
+/**
  * AccountFeature
  *
  * Access explanation for one feature, including removed and subscription-locked states.
@@ -1738,6 +1773,38 @@ export type AccountToken = {
      * State
      */
     state: 'active' | 'expired' | 'revoked';
+};
+
+/**
+ * DeliveryChoices
+ *
+ * User-selected report channels.
+ */
+export type DeliveryChoices = {
+    /**
+     * Email Reports
+     */
+    email_reports: boolean;
+    /**
+     * Telegram Reports
+     */
+    telegram_reports: boolean;
+};
+
+/**
+ * TelegramLinkResponse
+ *
+ * A one-time bot start link; the underlying code is never persisted in plain text.
+ */
+export type TelegramLinkResponse = {
+    /**
+     * Url
+     */
+    url: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
 };
 
 /**
@@ -3007,6 +3074,154 @@ export type GetAppAccountResponses = {
 };
 
 export type GetAppAccountResponse = GetAppAccountResponses[keyof GetAppAccountResponses];
+
+export type SendAppEmailVerificationData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/app/account/delivery/email/verify';
+};
+
+export type SendAppEmailVerificationErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+    /**
+     * Service Unavailable
+     */
+    503: Problem;
+};
+
+export type SendAppEmailVerificationError = SendAppEmailVerificationErrors[keyof SendAppEmailVerificationErrors];
+
+export type SendAppEmailVerificationResponses = {
+    /**
+     * OK
+     */
+    200: AccountDelivery;
+};
+
+export type SendAppEmailVerificationResponse = SendAppEmailVerificationResponses[keyof SendAppEmailVerificationResponses];
+
+export type UpdateAppAccountDeliveryData = {
+    body: DeliveryChoices;
+    path?: never;
+    query?: never;
+    url: '/api/app/account/delivery';
+};
+
+export type UpdateAppAccountDeliveryErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type UpdateAppAccountDeliveryError = UpdateAppAccountDeliveryErrors[keyof UpdateAppAccountDeliveryErrors];
+
+export type UpdateAppAccountDeliveryResponses = {
+    /**
+     * OK
+     */
+    200: AccountDelivery;
+};
+
+export type UpdateAppAccountDeliveryResponse = UpdateAppAccountDeliveryResponses[keyof UpdateAppAccountDeliveryResponses];
+
+export type CreateAppTelegramLinkData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/app/account/delivery/telegram/link';
+};
+
+export type CreateAppTelegramLinkErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type CreateAppTelegramLinkError = CreateAppTelegramLinkErrors[keyof CreateAppTelegramLinkErrors];
+
+export type CreateAppTelegramLinkResponses = {
+    /**
+     * OK
+     */
+    200: TelegramLinkResponse;
+};
+
+export type CreateAppTelegramLinkResponse = CreateAppTelegramLinkResponses[keyof CreateAppTelegramLinkResponses];
+
+export type UnlinkAppTelegramData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/app/account/delivery/telegram/unlink';
+};
+
+export type UnlinkAppTelegramErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type UnlinkAppTelegramError = UnlinkAppTelegramErrors[keyof UnlinkAppTelegramErrors];
+
+export type UnlinkAppTelegramResponses = {
+    /**
+     * OK
+     */
+    200: AccountDelivery;
+};
+
+export type UnlinkAppTelegramResponse = UnlinkAppTelegramResponses[keyof UnlinkAppTelegramResponses];
 
 export type CreateAppTokenData = {
     body: TokenCreate;

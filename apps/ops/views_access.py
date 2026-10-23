@@ -7,6 +7,7 @@ trail and in the history of the subscription.
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
@@ -15,6 +16,7 @@ from django.utils import timezone
 from apps.access import features, service
 from apps.access.models import Subscription
 from apps.access.rules import Access
+from apps.delivery.models import SignupInvite
 from apps.siteconfig import conf
 from apps.web.datastar import read_filters
 
@@ -31,6 +33,52 @@ STATE_FILTERS = (
     ("staff", "Staff"),
 )
 STATE_NAMES = dict(STATE_FILTERS)
+
+
+@staff_required
+def invite_list(request: HttpRequest) -> HttpResponse:
+    """List invitation metadata without exposing code digests or plaintext."""
+    return TemplateResponse(
+        request,
+        "ops/invites.html",
+        {
+            "invites": SignupInvite.objects.select_related("created_by", "used_by").order_by(
+                "-created_at", "-pk"
+            ),
+            "section": "invites",
+        },
+    )
+
+
+@superuser_post_required
+@transaction.atomic
+def invite_generate(request: HttpRequest) -> HttpResponse:
+    """Issue a single-use code and audit its reference, never its secret."""
+    invite = SignupInvite(created_by=request.user)
+    code = invite.generate_code()
+    invite.save()
+    audit.record(request.user, "generate invite", str(invite.pk), request=request)
+    messages.success(
+        request,
+        f"Invitation #{invite.pk} created. Copy this code now; it will not be shown again: {code}",
+    )
+    return redirect("ops:invites")
+
+
+@superuser_post_required
+@transaction.atomic
+def invite_revoke(request: HttpRequest, pk: int) -> HttpResponse:
+    """Revoke only an unused invitation; preserve redemption history."""
+    invite = get_object_or_404(SignupInvite, pk=pk)
+    updated = SignupInvite.objects.filter(pk=invite.pk, used_at__isnull=True, revoked=False).update(
+        revoked=True
+    )
+    if updated:
+        audit.record(request.user, "revoke invite", str(invite.pk), request=request)
+        messages.success(request, f"Invitation #{invite.pk} revoked.")
+    else:
+        messages.error(request, "This invitation has already been used or revoked.")
+    return redirect("ops:invites")
 
 
 def _subscription_of(user) -> Subscription | None:

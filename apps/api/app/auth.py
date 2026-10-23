@@ -14,10 +14,11 @@ class AppSession(APIKeyCookie):
 
     param_name = settings.SESSION_COOKIE_NAME
 
-    def __init__(self, feature: str | None = None) -> None:
+    def __init__(self, feature: str | None = None, *, allow_unverified: bool = False) -> None:
         """Optionally require a feature after authenticating the browser session."""
         super().__init__()
         self.feature = feature
+        self.allow_unverified = allow_unverified
 
     def authenticate(self, request: HttpRequest, key: str | None):
         """Check the session without consuming the public API's rate budget.
@@ -40,8 +41,13 @@ class AppSession(APIKeyCookie):
         request.api_rate = ratelimit.hit(  # ty: ignore[unresolved-attribute]
             f"app:user:{user.pk}", limit=settings.APP_API_RATE_LIMIT_PER_MINUTE
         )
+        access = access_for(request)
+        if not self.allow_unverified and not access.email_verified:
+            raise ApiError(
+                "email_verification_required",
+                "Verify your email in Account settings to unlock all features.",
+            )
         if self.feature is not None:
-            access = access_for(request)
             if not access.subscription_ok:
                 raise ApiError(
                     "subscription_required", "An active trial or subscription is needed."

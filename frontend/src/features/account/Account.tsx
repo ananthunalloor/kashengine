@@ -3,8 +3,20 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { LuCircleUserRound, LuKeyRound, LuPlus, LuShieldCheck, LuX } from "react-icons/lu";
 
-import type { Account as AccountData, AccountToken } from "../../shared/api/generated/types.gen";
-import { accountQuery, createToken, revokeToken } from "../../shared/api/account";
+import type {
+  Account as AccountData,
+  AccountDelivery,
+  AccountToken,
+} from "../../shared/api/generated/types.gen";
+import {
+  accountQuery,
+  createTelegramLink,
+  createToken,
+  revokeToken,
+  sendEmailVerification,
+  unlinkTelegram,
+  updateDelivery,
+} from "../../shared/api/account";
 import { csrfToken, loginUrl } from "../../shared/api/client";
 import { ApiError } from "../../shared/api/errors";
 import { DataTable } from "../../shared/ui/DataTable";
@@ -39,6 +51,14 @@ export function Account({ data }: { data: AccountData }) {
   const [confirm, setConfirm] = useState<AccountToken | null>(null);
   const [error, setError] = useState<{ message: string; unauthorized: boolean } | null>(null);
   const [notice, setNotice] = useState("");
+  const [emailReports, setEmailReports] = useState(data.delivery.email_reports);
+  const [telegramReports, setTelegramReports] = useState(data.delivery.telegram_reports);
+  const [delivery, setDelivery] = useState(data.delivery);
+  const [deliveryPending, setDeliveryPending] = useState(false);
+  const [deliveryError, setDeliveryError] = useState("");
+  const [deliveryNotice, setDeliveryNotice] = useState("");
+  const [telegramLink, setTelegramLink] = useState("");
+  const verificationRequired = !delivery.email_verified && data.state !== "staff";
   const mounted = useRef(true);
   const busy = useRef(false);
   const secretPanel = useRef<HTMLDivElement>(null);
@@ -52,6 +72,17 @@ export function Account({ data }: { data: AccountData }) {
   useEffect(() => {
     if (secret) secretPanel.current?.focus();
   }, [secret]);
+  useEffect(() => {
+    setEmailReports(data.delivery.email_reports);
+    setTelegramReports(data.delivery.telegram_reports);
+    setDelivery(data.delivery);
+  }, [
+    data.delivery.email_reports,
+    data.delivery.email_verified,
+    data.delivery.telegram_connected,
+    data.delivery.telegram_reports,
+    data.delivery.telegram_bot_username,
+  ]);
 
   function showError(cause: unknown) {
     notifyError(cause, "Account action failed");
@@ -66,6 +97,91 @@ export function Account({ data }: { data: AccountData }) {
 
   async function refreshAccount() {
     await client.invalidateQueries({ queryKey: accountQuery().queryKey }, { throwOnError: true });
+  }
+
+  async function saveDelivery() {
+    setDeliveryPending(true);
+    setDeliveryError("");
+    setDeliveryNotice("");
+    try {
+      const updatedDelivery = await updateDelivery(emailReports, telegramReports);
+      setDelivery(updatedDelivery);
+      client.setQueryData<AccountData>(accountQuery().queryKey, (current) =>
+        current ? { ...current, delivery: updatedDelivery } : current,
+      );
+      setDeliveryNotice("Report settings saved.");
+      notify({
+        title: "Report settings saved",
+        message: "Your report delivery choices have been updated.",
+        tone: "success",
+      });
+    } catch (cause) {
+      notifyError(cause, "Could not save report settings");
+      setDeliveryError(cause instanceof ApiError ? cause.message : "Reload and try again.");
+    } finally {
+      setDeliveryPending(false);
+    }
+  }
+
+  async function verifyEmail() {
+    setDeliveryPending(true);
+    setDeliveryError("");
+    setDeliveryNotice("");
+    try {
+      const updated = await sendEmailVerification();
+      setDelivery(updated);
+      setDeliveryNotice(
+        updated.email_verified
+          ? "Your email is already verified."
+          : "Verification email sent. Check your inbox; you can keep using your account.",
+      );
+    } catch (cause) {
+      notifyError(cause, "Could not send verification email");
+      setDeliveryError(cause instanceof ApiError ? cause.message : "Reload and try again.");
+    } finally {
+      setDeliveryPending(false);
+    }
+  }
+
+  async function linkTelegram() {
+    setDeliveryPending(true);
+    setDeliveryError("");
+    setDeliveryNotice("");
+    try {
+      const result = await createTelegramLink();
+      setTelegramLink(result.url);
+      setDeliveryNotice("Open the Telegram link to finish connecting your account.");
+    } catch (cause) {
+      notifyError(cause, "Could not create Telegram link");
+      setDeliveryError(cause instanceof ApiError ? cause.message : "Reload and try again.");
+    } finally {
+      setDeliveryPending(false);
+    }
+  }
+
+  async function disconnectTelegram() {
+    setDeliveryPending(true);
+    setDeliveryError("");
+    setDeliveryNotice("");
+    try {
+      const updatedDelivery: AccountDelivery = await unlinkTelegram();
+      setDelivery(updatedDelivery);
+      client.setQueryData<AccountData>(accountQuery().queryKey, (current) =>
+        current ? { ...current, delivery: updatedDelivery } : current,
+      );
+      setTelegramLink("");
+      setDeliveryNotice("Telegram disconnected. Telegram reports are disabled.");
+      notify({
+        title: "Telegram disconnected",
+        message: "Telegram reports are disabled.",
+        tone: "success",
+      });
+    } catch (cause) {
+      notifyError(cause, "Could not disconnect Telegram");
+      setDeliveryError(cause instanceof ApiError ? cause.message : "Reload and try again.");
+    } finally {
+      setDeliveryPending(false);
+    }
   }
 
   async function makeToken() {
@@ -222,6 +338,100 @@ export function Account({ data }: { data: AccountData }) {
             )}
           </>
         )}
+      </section>
+      <section className="news-card" aria-labelledby="account-delivery">
+        <Title order={2} size="h3" id="account-delivery">
+          Report delivery
+        </Title>
+        <Text size="sm" c="dimmed" mt="sm">
+          Choose where your daily reports are sent. You can select email, Telegram, or both.
+        </Text>
+        <Stack gap="sm" mt="md">
+          <label>
+            <input
+              type="checkbox"
+              checked={emailReports}
+              disabled={!delivery.email_verified || deliveryPending}
+              onChange={(event) => setEmailReports(event.currentTarget.checked)}
+            />{" "}
+            Email reports to {data.email || "your account email"}
+          </label>
+          {!delivery.email_verified && (
+            <div>
+              <Text size="sm" c="dimmed">
+                {verificationRequired
+                  ? "All features are locked until you verify your email. You can stay logged in and request a verification link here."
+                  : "Verify your email before enabling email reports."}
+              </Text>
+              <Button
+                variant="default"
+                disabled={deliveryPending || !securityToken || !data.email}
+                onClick={() => void verifyEmail()}
+              >
+                Send verification email
+              </Button>
+            </div>
+          )}
+          <div>
+            <Text size="sm">
+              Telegram:{" "}
+              {delivery.telegram_connected
+                ? `Connected${delivery.telegram_bot_username ? ` to @${delivery.telegram_bot_username}` : ""}`
+                : "Not connected"}
+            </Text>
+            {delivery.telegram_connected ? (
+              <Group mt="xs">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={telegramReports}
+                    disabled={verificationRequired || deliveryPending}
+                    onChange={(event) => setTelegramReports(event.currentTarget.checked)}
+                  />{" "}
+                  Send reports through Telegram
+                </label>
+                <Button
+                  size="compact-sm"
+                  variant="default"
+                  disabled={verificationRequired || deliveryPending}
+                  onClick={() => void disconnectTelegram()}
+                >
+                  Disconnect
+                </Button>
+              </Group>
+            ) : (
+              <Button
+                mt="xs"
+                size="compact-sm"
+                disabled={verificationRequired || deliveryPending}
+                onClick={() => void linkTelegram()}
+              >
+                Link Telegram
+              </Button>
+            )}
+            {telegramLink && (
+              <Text size="sm" mt="xs">
+                <Anchor href={telegramLink} target="_blank" rel="noreferrer">
+                  Open Telegram to finish linking
+                </Anchor>
+                . Return here and reload this page once the bot confirms the link.
+              </Text>
+            )}
+          </div>
+          {deliveryNotice && <Text role="status">{deliveryNotice}</Text>}
+          {deliveryError && (
+            <Text role="alert" c="red">
+              {deliveryError}
+            </Text>
+          )}
+          <Button
+            variant="light"
+            disabled={verificationRequired || deliveryPending}
+            onClick={() => void saveDelivery()}
+          >
+            {deliveryPending ? "Saving..." : "Save report settings"}
+          </Button>
+        </Stack>
       </section>
       <section aria-labelledby="account-features">
         <Title order={2} size="h3" id="account-features" mb="md">

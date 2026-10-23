@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_not_required
 from django.http import JsonResponse
 from django.urls import include, path, re_path
 
+from apps.delivery.views import telegram_webhook
 from apps.web.public_preview import page_not_found
 
 handler403 = "apps.web.public_preview.permission_denied"
@@ -20,6 +21,7 @@ def health(request):
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("health/", health, name="health"),
+    path("api/telegram/webhook/", telegram_webhook, name="telegram_webhook"),
     path("api/", include("apps.api.urls")),
     path("ops/", include("apps.ops.react_urls")),
     path("", include("apps.web.urls")),

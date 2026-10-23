@@ -65,7 +65,9 @@ OPEN_URL_NAMES: frozenset[str] = frozenset(
         "login",
         "logout",
         "account",
-        "token_create",
+        "signup",
+        "legal",
+        "verify_email",
         "token_revoke",
     }
 )

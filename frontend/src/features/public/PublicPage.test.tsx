@@ -75,6 +75,66 @@ it("shows an explicit login failure without retaining submitted passwords", () =
   expect(document.body).not.toHaveTextContent("must-not-appear");
 });
 
+it("renders React signup posting to Django with CSRF, invite and required legal agreement", () => {
+  show({ page: "signup", legal_version: "2026-10-23" });
+  expect(screen.getByRole("heading", { name: "Create your account" })).toBeInTheDocument();
+  const form = screen.getByRole("button", { name: "Create account" }).closest("form")!;
+  expect(form).toHaveAttribute("action", "/signup/");
+  expect(form).toHaveAttribute("method", "post");
+  expect(form.querySelector('[name="csrfmiddlewaretoken"]')).toHaveValue("public-csrf");
+  expect(form.querySelector('[name="legal_version"]')).toHaveValue("2026-10-23");
+  expect(screen.getByLabelText("Email")).toHaveAttribute("type", "email");
+  expect(screen.getByLabelText("Password")).toHaveAttribute("autocomplete", "new-password");
+  expect(screen.getByLabelText("Invite code")).toBeRequired();
+  expect(screen.getByRole("checkbox")).not.toBeChecked();
+  expect(screen.getByRole("checkbox")).toBeRequired();
+  expect(screen.getByRole("link", { name: "Terms of Use" })).toHaveAttribute(
+    "href",
+    "/legal/#terms",
+  );
+  expect(screen.getByRole("link", { name: "Privacy Notice" })).toHaveAttribute(
+    "href",
+    "/legal/#privacy",
+  );
+  fireEvent.submit(form);
+  expect(screen.getByRole("button", { name: /Creating account/ })).toBeDisabled();
+  expect(form).toHaveAttribute("aria-busy", "true");
+});
+
+it("shows signup field errors without retaining secrets and hides invites for open registration", () => {
+  show({
+    page: "signup",
+    invite_required: false,
+    values: { username: "member", email: "member@example.test" },
+    errors: { password2: ["Passwords do not match."], agree_to_legal: ["You must agree."] },
+  });
+  expect(screen.queryByLabelText("Invite code")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("User name")).toHaveValue("member");
+  expect(screen.getByLabelText("Email")).toHaveValue("member@example.test");
+  expect(screen.getByLabelText("Password")).toHaveValue("");
+  expect(screen.getByLabelText("Confirm password")).toHaveAttribute("aria-invalid", "true");
+  expect(screen.getByText("Passwords do not match.")).toHaveAttribute("role", "alert");
+  expect(screen.getByText("You must agree.")).toHaveAttribute("role", "alert");
+});
+
+it.each([true, false])(
+  "explains immediate login after signup when email sent is %s",
+  (email_sent) => {
+    show({ page: "signup-complete", email_sent, email: "member@example.test" });
+    expect(screen.getByRole("heading", { name: "Your account is ready" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Log in to your account/ })).toHaveAttribute(
+      "href",
+      "/login/",
+    );
+    expect(screen.getByText(/All features stay locked/)).toBeInTheDocument();
+    if (email_sent)
+      expect(
+        screen.getByText(/sent a verification link to member@example.test/),
+      ).toBeInTheDocument();
+    else expect(screen.getByRole("alert")).toHaveTextContent(/account was created/);
+  },
+);
+
 it.each([null, 1, 30])(
   "explains real lockout wait %s without exposing login details",
   (minutes) => {

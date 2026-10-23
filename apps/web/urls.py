@@ -2,7 +2,7 @@
 
 from django.urls import path
 
-from . import public_preview, views
+from . import public_preview, signup, views
 from .legacy_urls import IsoDateConverter  # noqa: F401  # Registers the shared date converter.
 
 app_name = "web"
@@ -10,6 +10,13 @@ app_name = "web"
 urlpatterns = [
     path("", public_preview.landing, name="landing"),
     path("login/", public_preview.PreviewLogin.as_view(), name="login"),
+    path("signup/", signup.signup, name="signup"),
+    path("legal/", signup.legal, name="legal"),
+    path(
+        "verify-email/<str:token>/",
+        signup.verify_email,
+        name="verify_email",
+    ),
     path("logout/", views.Logout.as_view(), name="logout"),
     path("dashboard/", views.react_app, name="dashboard"),
     path("account/", views.react_app, name="account"),

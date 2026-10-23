@@ -1,0 +1,13 @@
+{% extends "web/base.html" %}
+{% block title %}Email verification · Kash Engine{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-lg" aria-labelledby="verification-title">
+  {% if valid %}
+  <h1 id="verification-title" class="font-serif text-3xl font-semibold">Email verified</h1>
+  <p class="mt-3">Your email is verified. Your account features are now available according to your subscription and access permissions. Visit <a class="underline" href="{% url 'web:account' %}">Account settings</a> to choose report delivery.</p>
+  {% else %}
+  <h1 id="verification-title" class="font-serif text-3xl font-semibold">This link is no longer valid</h1>
+  <p class="mt-3">It may have expired or already been used. Log in and open <a class="underline" href="{% url 'web:account' %}">Account settings</a> to request a new verification link.</p>
+  {% endif %}
+</section>
+{% endblock %}

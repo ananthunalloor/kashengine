@@ -180,6 +180,9 @@ class Session(Schema):
     id: int = Field(description="User primary key.")
     username: str = Field(description="Signed-in user's display name.")
     email: str = Field(description="Signed-in user's email, or empty when not set.")
+    email_verified: bool = Field(
+        description="Email verification completed, or staff/admin exemption."
+    )
     is_staff: bool = Field(description="Whether this user can read Ops pages.")
     is_superuser: bool = Field(description="Whether this user can perform Ops writes.")
     features: list[str] = Field(description="Feature keys currently available to this user.")
@@ -188,7 +191,9 @@ class Session(Schema):
     subscription_state: Literal["trial", "active", "expired", "none", "staff"] = Field(
         description="Current subscription state, or staff exemption."
     )
-    notice: str = Field(description="Subscription warning; empty when there is no warning.")
+    notice: str = Field(
+        description="Account verification or subscription warning; empty when none."
+    )
     navigation: list[NavigationItem] = Field(description="Visible links, in menu order.")
     logout_url: str = Field(description="Same-origin Django logout endpoint; requires CSRF POST.")
     market_calendar: TradingCalendar
@@ -216,11 +221,36 @@ class AccountToken(Schema):
     state: Literal["active", "expired", "revoked"]
 
 
+class AccountDelivery(Schema):
+    """Report delivery eligibility and selected channels for the current user."""
+
+    email_verified: bool
+    email_reports: bool
+    telegram_connected: bool
+    telegram_reports: bool
+    telegram_bot_username: str
+
+
+class DeliveryChoices(Schema):
+    """User-selected report channels."""
+
+    email_reports: bool
+    telegram_reports: bool
+
+
+class TelegramLinkResponse(Schema):
+    """A one-time bot start link; the underlying code is never persisted in plain text."""
+
+    url: str
+    expires_at: datetime
+
+
 class Account(Schema):
     """Subscription, feature access, and token settings for the current browser user."""
 
     username: str
     email: str
+    delivery: AccountDelivery
     state: Literal["trial", "active", "expired", "none", "staff"]
     subscription_kind: str | None
     ends_at: datetime | None

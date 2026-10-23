@@ -1,21 +1,114 @@
 """Account preview ownership, subscription parity, CSRF, and one-time token privacy."""
 
+import re
+import smtplib
 from datetime import timedelta
+from urllib.parse import parse_qs, urlparse
 
 import pytest
+from django.core import mail
 from django.test import Client
 from django.utils import timezone
 
 from apps.access.models import FeatureBlock, Subscription
 from apps.api import tokens
 from apps.api.models import ApiToken
+from apps.delivery.models import DeliveryPreference, EmailVerification, TelegramLink
 from apps.ops.models import AuditEvent
 from apps.siteconfig import conf
+from apps.web import signup
 from apps.web.views import _account_context
 
 pytestmark = pytest.mark.django_db
 URL = "/api/app/account"
 CREATE = f"{URL}/tokens"
+VERIFY = f"{URL}/delivery/email/verify"
+
+
+def test_unverified_account_can_only_manage_verification_and_revoke_tokens(
+    member, make_token, auth
+):
+    DeliveryPreference.objects.filter(user=member).update(email_verified_at=None)
+    token, raw = make_token(member)
+    client, headers = csrf_client(member)
+    account = client.get(URL).json()
+    assert not account["api_enabled"]
+    assert not account["api_docs"]
+    assert all(not feature["allowed"] for feature in account["features"])
+    for endpoint in (CREATE, f"{URL}/delivery/telegram/link", f"{URL}/delivery/telegram/unlink"):
+        response = client.post(
+            endpoint, {"name": "blocked"}, content_type="application/json", headers=headers
+        )
+        assert response.status_code == 403
+        assert response.json()["code"] == "email_verification_required"
+    assert (
+        Client().get("/api/v1/news", headers=auth(raw)).json()["code"]
+        == "email_verification_required"
+    )
+    response = client.post(f"{CREATE}/{token.pk}/revoke", headers=headers)
+    assert response.status_code == 200
+    assert client.get(URL).status_code == 200
+
+
+def test_resend_verification_is_owner_scoped_and_can_verify_later(client, member, settings):
+    DeliveryPreference.objects.filter(user=member).update(email_verified_at=None)
+    settings.MAILERS = {"default": {"BACKEND": "django.core.mail.backends.locmem.EmailBackend"}}
+    client.force_login(member)
+    response = client.post(VERIFY)
+    assert response.status_code == 200
+    assert not response.json()["email_verified"]
+    assert mail.outbox[0].to == [member.email]
+    previous = EmailVerification.objects.get(user=member).token_hash
+    assert client.post(VERIFY).status_code == 422
+    assert len(mail.outbox) == 1
+    EmailVerification.objects.filter(user=member).update(
+        expires_at=timezone.now() - timedelta(seconds=1)
+    )
+    assert client.post(VERIFY).status_code == 200
+    assert EmailVerification.objects.get(user=member).token_hash != previous
+    url = re.search(r"https?://\S+/verify-email/[^/\s]+/", mail.outbox[-1].body)
+    assert url
+    assert client.get(urlparse(url.group()).path).status_code == 200
+    assert DeliveryPreference.objects.get(user=member).email_verified_at is not None
+    assert client.post(VERIFY).json()["email_verified"]
+    assert len(mail.outbox) == 2
+
+
+def test_resend_verification_auth_and_csrf(client, member):
+    assert client.post(VERIFY).status_code == 401
+    protected, _headers = csrf_client(member)
+    assert protected.post(VERIFY).status_code == 403
+    assert not EmailVerification.objects.exists()
+
+
+def test_resend_failure_preserves_existing_token_and_account(client, member, monkeypatch):
+    DeliveryPreference.objects.filter(user=member).update(email_verified_at=None)
+    client.force_login(member)
+    existing = EmailVerification.objects.create(
+        user=member, token_hash="a" * 64, expires_at=timezone.now() - timedelta(hours=1)
+    )
+
+    def failed_mail(*args, **kwargs):
+        raise smtplib.SMTPException("SMTP unavailable")
+
+    monkeypatch.setattr(signup, "send_mail", failed_mail)
+    response = client.post(VERIFY)
+    assert response.status_code == 503
+    assert response.json()["code"] == "email_delivery_failed"
+    existing.refresh_from_db()
+    assert existing.token_hash == "a" * 64
+    member.refresh_from_db()
+    assert member.is_active
+
+
+def test_resend_with_no_email_returns_explicit_error(client, member):
+    DeliveryPreference.objects.filter(user=member).update(email_verified_at=None)
+    member.email = ""
+    member.save(update_fields=["email"])
+    client.force_login(member)
+    response = client.post(VERIFY)
+    assert response.status_code == 422
+    assert "needs an email" in response.json()["detail"]
 
 
 def csrf_client(user):
@@ -58,6 +151,13 @@ def test_auth_preview_cache_and_legacy_parity(client, member, make_token, auth):
     assert b'id="root"' in preview.content
     assert "no-store" in preview["Cache-Control"]
     assert "web/account.html" not in [t.name for t in preview.templates]
+    assert body["delivery"] == {
+        "email_verified": True,
+        "email_reports": False,
+        "telegram_connected": False,
+        "telegram_reports": False,
+        "telegram_bot_username": "",
+    }
 
 
 @pytest.mark.parametrize("state", ["trial", "active", "expired", "none", "staff"])
@@ -261,3 +361,91 @@ def test_expired_account_can_manage_tokens_and_disabled_api_can_still_revoke(
     )
     assert client.post(f"{CREATE}/{row.pk}/revoke", headers=headers).status_code == 200
     assert client.get("/account/").status_code == 200
+
+
+def test_account_delivery_requires_verified_destinations_and_links_telegram(member, settings):
+    DeliveryPreference.objects.filter(user=member).update(email_verified_at=None)
+    settings.TELEGRAM_BOT_USERNAME = "kash_test_bot"
+    settings.TELEGRAM_WEBHOOK_SECRET = "webhook-secret-for-tests"
+    client, headers = csrf_client(member)
+
+    response = client.put(
+        f"{URL}/delivery",
+        {"email_reports": True, "telegram_reports": False},
+        content_type="application/json",
+        headers=headers,
+    )
+    assert response.status_code == 403
+    assert "Verify your email" in response.json()["detail"]
+
+    preference = DeliveryPreference.objects.get(user=member)
+    preference.email_verified_at = timezone.now()
+    preference.save(update_fields=["email_verified_at"])
+    link_response = client.post(f"{URL}/delivery/telegram/link", headers=headers)
+    assert link_response.status_code == 200
+    link = link_response.json()
+    token = parse_qs(urlparse(link["url"]).query)["start"][0]
+    telegram_link = TelegramLink.objects.get(user=member)
+    assert telegram_link.token_hash != token
+    assert token not in telegram_link.token_hash
+
+    DeliveryPreference.objects.filter(user=member).update(email_verified_at=None)
+    blocked = client.post(
+        "/api/telegram/webhook/",
+        data=('{"message":{"text":"/start ' + token + '","chat":{"id":123456,"type":"private"}}}'),
+        content_type="application/json",
+        headers={"X-Telegram-Bot-Api-Secret-Token": "webhook-secret-for-tests"},
+    )
+    assert blocked.status_code == 403
+    assert (
+        not DeliveryPreference.objects.filter(user=member).exclude(telegram_chat_id=None).exists()
+    )
+    preference.email_verified_at = timezone.now()
+    preference.save(update_fields=["email_verified_at"])
+
+    webhook_response = client.post(
+        "/api/telegram/webhook/",
+        data=('{"message":{"text":"/start ' + token + '","chat":{"id":123456,"type":"private"}}}'),
+        content_type="application/json",
+        headers={"X-Telegram-Bot-Api-Secret-Token": "webhook-secret-for-tests"},
+    )
+    assert webhook_response.status_code == 200
+    preference.refresh_from_db()
+    assert preference.telegram_chat_id == "123456"
+    assert not TelegramLink.objects.filter(user=member).exists()
+
+    response = client.put(
+        f"{URL}/delivery",
+        {"email_reports": True, "telegram_reports": True},
+        content_type="application/json",
+        headers=headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["email_reports"]
+    assert response.json()["telegram_reports"]
+    assert "123456" not in client.get(URL).content.decode()
+
+    response = client.post(f"{URL}/delivery/telegram/unlink", headers=headers)
+    assert response.status_code == 200
+    preference.refresh_from_db()
+    assert preference.telegram_chat_id is None
+    assert not preference.telegram_reports
+
+
+def test_telegram_webhook_requires_secret_and_ignores_invalid_tokens(client, settings):
+    settings.TELEGRAM_WEBHOOK_SECRET = "webhook-secret-for-tests"
+    body = '{"message":{"text":"/start expired-or-unknown","chat":{"id":55}}}'
+    assert (
+        client.post(
+            "/api/telegram/webhook/", data=body, content_type="application/json"
+        ).status_code
+        == 401
+    )
+    response = client.post(
+        "/api/telegram/webhook/",
+        data=body,
+        content_type="application/json",
+        headers={"X-Telegram-Bot-Api-Secret-Token": "webhook-secret-for-tests"},
+    )
+    assert response.status_code == 200
+    assert not DeliveryPreference.objects.filter(telegram_chat_id="55").exists()

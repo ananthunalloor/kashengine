@@ -64,7 +64,7 @@ def test_session_uses_the_existing_navigation_rules(client, django_user_model, r
     assert body["email"] == user.email
     assert body["is_staff"] == user.is_staff
     assert body["is_superuser"] == user.is_superuser
-    assert body["features"] == sorted(features.KEYS)
+    assert body["features"] == (sorted(features.KEYS) if role != "member" else [])
     assert body["navigation"] == [
         {"label": link["label"], "url": link["url"]} for link in navigation_for(request)
     ]
@@ -212,11 +212,16 @@ def test_private_contract_is_separate_and_committed():
         "/api/app/delivery",
         "/api/app/today",
         "/api/app/account",
+        "/api/app/account/delivery",
+        "/api/app/account/delivery/email/verify",
+        "/api/app/account/delivery/telegram/link",
+        "/api/app/account/delivery/telegram/unlink",
         "/api/app/account/tokens",
         "/api/app/account/tokens/{pk}/revoke",
         "/api/app/ops/runs",
         "/api/app/ops/audit",
         "/api/app/ops/runs/{pk}",
+        "/api/app/ops/runs/{pk}/stop",
         "/api/app/ops/pages/{path}",
         "/api/app/ops/actions/{path}",
     }

@@ -110,6 +110,7 @@ def http_error(request: HttpRequest, exc: HttpError):
 
 @api.get(
     "/session",
+    auth=AppSession(allow_unverified=True),
     response={200: Session, **ERRORS},
     operation_id="get_app_session",
     summary="Get the current browser session and visible navigation",
@@ -131,6 +132,7 @@ def get_session(request: HttpRequest):
         "id": user.pk,
         "username": user.get_username(),
         "email": getattr(user, "email", ""),
+        "email_verified": access.email_verified,
         "is_staff": bool(getattr(user, "is_staff", False)),
         "is_superuser": bool(getattr(user, "is_superuser", False)),
         "features": sorted(access.allowed),

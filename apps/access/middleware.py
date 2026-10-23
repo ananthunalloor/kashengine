@@ -55,9 +55,15 @@ class AccessMiddleware:
         if name in features.OPEN_URL_NAMES:
             return None
         access = access_for(request)
-        if not access.subscription_ok:
+        if not access.email_verified or not access.subscription_ok:
             if request.headers.get(DATASTAR_HEADER):
-                return _refuse(request, "", {})
+                return HttpResponse(
+                    "Verify your email in Account settings to unlock all features."
+                    if not access.email_verified
+                    else "Not allowed.",
+                    status=403,
+                    content_type="text/plain",
+                )
             return redirect(reverse("web:account"))
         feature = features.BY_URL_NAME.get(name or "")
         if feature and not access.can(feature.key):

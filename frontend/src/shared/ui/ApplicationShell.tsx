@@ -64,19 +64,21 @@ export function ApplicationShell({
   const subscriptionKey = `${session.id}:${session.notice}`;
   const pageAlerts = (
     <>
-      <MarketCalendar
-        key={session.id}
-        calendar={session.market_calendar}
-        canManage={session.is_staff}
-      />
+      {session.email_verified && (
+        <MarketCalendar
+          key={session.id}
+          calendar={session.market_calendar}
+          canManage={session.is_staff}
+        />
+      )}
       {session.notice && dismissedNotice !== subscriptionKey && (
         <Alert
           color="yellow"
-          title="Your subscription"
+          title="Your account"
           role="status"
           mb="md"
           withCloseButton
-          closeButtonLabel="Dismiss subscription notice"
+          closeButtonLabel="Dismiss account notice"
           onClose={() => setDismissedNotice(subscriptionKey)}
         >
           {session.notice}{" "}

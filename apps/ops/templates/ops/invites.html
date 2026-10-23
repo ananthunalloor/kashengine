@@ -1,0 +1,39 @@
+{% extends "ops/base.html" %}
+{% block title %}Invite codes · Kash Engine{% endblock %}
+{% block ops %}
+<h1 class="font-serif text-3xl font-semibold">Invite codes</h1>
+<p class="mt-2 text-sm text-muted">Single-use sign-up invitations. Codes are shown only when generated. Copy each new code from the success message and share it privately.</p>
+{% if request.user.is_superuser %}
+<form method="post" action="{% url 'ops:invite_generate' %}" class="my-4">
+  {% csrf_token %}
+  <button type="submit" class="rounded-md bg-accent px-3 py-2 text-paper">Generate invite code</button>
+</form>
+{% endif %}
+<div class="mt-6 overflow-x-auto">
+  <table class="w-full text-left text-sm">
+    <thead><tr><th>Invitation</th><th>State</th><th>Created at</th><th>Created by</th><th>Used at</th><th>Used by</th><th>Email</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for invite in invites %}
+      <tr>
+        <td>#{{ invite.pk }}</td>
+        <td>{% if invite.used_at %}Used{% elif invite.revoked %}Revoked{% else %}Available{% endif %}</td>
+        <td>{{ invite.created_at }}</td>
+        <td>{{ invite.created_by.username|default:"Deleted user" }}</td>
+        <td>{{ invite.used_at|default:"—" }}</td>
+        <td>{{ invite.used_by.username|default:"—" }}</td>
+        <td>{{ invite.used_by.email|default:"—" }}</td>
+        <td>
+          {% if request.user.is_superuser and not invite.used_at and not invite.revoked %}
+          <form method="post" action="{% url 'ops:invite_revoke' invite.pk %}">
+            {% csrf_token %}<button type="submit" class="underline">Revoke</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="8">No invitations yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

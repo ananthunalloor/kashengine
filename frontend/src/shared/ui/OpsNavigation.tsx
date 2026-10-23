@@ -8,6 +8,7 @@ import {
   LuDatabaseBackup,
   LuFileSliders,
   LuGauge,
+  LuKeyRound,
   LuListChecks,
   LuNewspaper,
   LuScrollText,
@@ -42,6 +43,7 @@ const sections = [
     label: "Access",
     pages: [
       ["users/", "Users", LuUsers],
+      ["invites/", "Invite codes", LuKeyRound],
       ["subscriptions/", "Subscriptions", LuWalletCards],
       ["logins/", "Logins", LuShieldCheck],
       ["audit/", "Audit trail", LuClipboardList],

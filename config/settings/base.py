@@ -104,6 +104,24 @@ DATASTAR_SRC = env(
     default="https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.4/bundles/datastar.js",
 )
 WEB_PAGE_SIZE = env.int("WEB_PAGE_SIZE", default=25)
+SIGNUP_INVITE_REQUIRED = env.bool("SIGNUP_INVITE_REQUIRED", default=True)
+EMAIL_VERIFICATION_HOURS = env.int("EMAIL_VERIFICATION_HOURS", default=24)
+
+MAILERS = {
+    "default": {
+        "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+        "OPTIONS": {
+            "host": env("EMAIL_HOST", default="localhost"),
+            "port": env.int("EMAIL_PORT", default=25),
+            "username": env("EMAIL_HOST_USER", default=""),
+            "password": env("EMAIL_HOST_PASSWORD", default=""),
+            "use_tls": env.bool("EMAIL_USE_TLS", default=False),
+            "use_ssl": env.bool("EMAIL_USE_SSL", default=False),
+            "timeout": env.int("EMAIL_TIMEOUT", default=10),
+        },
+    }
+}
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Kash Engine <noreply@localhost>")
 
 # Subscriptions. These are the first values. An admin changes them on Ops > Settings.
 # While SUBSCRIPTIONS_REQUIRED is false, nobody is locked out. The features of each user are
@@ -225,6 +243,8 @@ IPO_GOOD_GAIN_PCT = env.float("IPO_GOOD_GAIN_PCT", default=10.0)  # A listing ga
 # Find your chat ID with `manage.py telegram_check`.
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", default="")
 TELEGRAM_CHAT_IDS = env.list("TELEGRAM_CHAT_IDS", default=[])
+TELEGRAM_BOT_USERNAME = env("TELEGRAM_BOT_USERNAME", default="")
+TELEGRAM_WEBHOOK_SECRET = env("TELEGRAM_WEBHOOK_SECRET", default="")
 TELEGRAM_API_URL = env("TELEGRAM_API_URL", default="https://api.telegram.org")
 TELEGRAM_TIMEOUT_SECONDS = env.int("TELEGRAM_TIMEOUT_SECONDS", default=20)
 

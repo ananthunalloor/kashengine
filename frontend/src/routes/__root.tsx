@@ -2,7 +2,12 @@ import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { useEffect } from "react";
 import type { QueryClient } from "@tanstack/react-query";
-import { createRootRouteWithContext, Outlet, useRouterState } from "@tanstack/react-router";
+import {
+  createRootRouteWithContext,
+  Outlet,
+  redirect,
+  useRouterState,
+} from "@tanstack/react-router";
 
 import { sessionQuery } from "../shared/api/session";
 import { zOpsMessage } from "../shared/api/generated/zod.gen";
@@ -34,7 +39,7 @@ function RootLayout() {
 
   return (
     <ApplicationShell session={session} pathname={pathname}>
-      <LiveUpdates staff={session.is_staff} />
+      {session.email_verified && <LiveUpdates staff={session.is_staff} />}
       {notice.success && notice.data.opsNotice?.length ? (
         <OpsNotice messages={notice.data.opsNotice} />
       ) : null}
@@ -46,9 +51,13 @@ function RootLayout() {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  beforeLoad: async ({ context }) => ({
-    session: await context.queryClient.ensureQueryData(sessionQuery),
-  }),
+  beforeLoad: async ({ context, location }) => {
+    const session = await context.queryClient.ensureQueryData(sessionQuery);
+    if (!session.email_verified && location.pathname !== "/account/") {
+      throw redirect({ to: "/account/" });
+    }
+    return { session };
+  },
   component: RootLayout,
   pendingComponent: AppLoading,
   errorComponent: AppError,

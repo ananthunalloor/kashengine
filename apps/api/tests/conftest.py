@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from apps.api import tokens
 from apps.companies.models import Company
-from apps.delivery.models import DeliveryLog
+from apps.delivery.models import DeliveryLog, DeliveryPreference
 from apps.ipos.models import Ipo
 from apps.markets.models import IndexQuote, Instrument, Prediction
 from apps.news.models import NewsArticle
@@ -27,7 +27,9 @@ def api_test_setup(settings):
 
 @pytest.fixture
 def member(django_user_model):
-    return django_user_model.objects.create_user("member", "member@example.com", PASSWORD)
+    user = django_user_model.objects.create_user("member", "member@example.com", PASSWORD)
+    DeliveryPreference.objects.create(user=user, email_verified_at=timezone.now())
+    return user
 
 
 @pytest.fixture

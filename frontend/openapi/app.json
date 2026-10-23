@@ -1130,6 +1130,288 @@
         ]
       }
     },
+    "/api/app/account/delivery/email/verify": {
+      "post": {
+        "operationId": "send_app_email_verification",
+        "summary": "Send a new email verification link for the current account",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDelivery"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Allow verification later, with a short cooldown and explicit delivery failures.",
+        "tags": [
+          "Account"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/account/delivery": {
+      "put": {
+        "operationId": "update_app_account_delivery",
+        "summary": "Save the current user's report delivery channel choices",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDelivery"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Save opted-in destinations only when the required verification is complete.",
+        "tags": [
+          "Account"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliveryChoices"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/account/delivery/telegram/link": {
+      "post": {
+        "operationId": "create_app_telegram_link",
+        "summary": "Create a short-lived Telegram bot link for the current user",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramLinkResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Issue a one-time start link; the bot webhook validates its opaque token.",
+        "tags": [
+          "Account"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/account/delivery/telegram/unlink": {
+      "post": {
+        "operationId": "unlink_app_telegram",
+        "summary": "Remove the current user's linked Telegram destination",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDelivery"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Disconnect the chat and disable Telegram delivery for the current user.",
+        "tags": [
+          "Account"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
     "/api/app/account/tokens": {
       "post": {
         "operationId": "create_app_token",
@@ -1983,6 +2265,11 @@
             "title": "Email",
             "type": "string"
           },
+          "email_verified": {
+            "description": "Email verification completed, or staff/admin exemption.",
+            "title": "Email Verified",
+            "type": "boolean"
+          },
           "is_staff": {
             "description": "Whether this user can read Ops pages.",
             "title": "Is Staff",
@@ -2024,7 +2311,7 @@
             "type": "string"
           },
           "notice": {
-            "description": "Subscription warning; empty when there is no warning.",
+            "description": "Account verification or subscription warning; empty when none.",
             "title": "Notice",
             "type": "string"
           },
@@ -2049,6 +2336,7 @@
           "id",
           "username",
           "email",
+          "email_verified",
           "is_staff",
           "is_superuser",
           "features",
@@ -4004,6 +4292,9 @@
             "title": "Email",
             "type": "string"
           },
+          "delivery": {
+            "$ref": "#/components/schemas/AccountDelivery"
+          },
           "state": {
             "enum": [
               "trial",
@@ -4114,6 +4405,7 @@
         "required": [
           "username",
           "email",
+          "delivery",
           "state",
           "subscription_kind",
           "ends_at",
@@ -4133,6 +4425,40 @@
           "token_days"
         ],
         "title": "Account",
+        "type": "object"
+      },
+      "AccountDelivery": {
+        "description": "Report delivery eligibility and selected channels for the current user.",
+        "properties": {
+          "email_verified": {
+            "title": "Email Verified",
+            "type": "boolean"
+          },
+          "email_reports": {
+            "title": "Email Reports",
+            "type": "boolean"
+          },
+          "telegram_connected": {
+            "title": "Telegram Connected",
+            "type": "boolean"
+          },
+          "telegram_reports": {
+            "title": "Telegram Reports",
+            "type": "boolean"
+          },
+          "telegram_bot_username": {
+            "title": "Telegram Bot Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email_verified",
+          "email_reports",
+          "telegram_connected",
+          "telegram_reports",
+          "telegram_bot_username"
+        ],
+        "title": "AccountDelivery",
         "type": "object"
       },
       "AccountFeature": {
@@ -4233,6 +4559,45 @@
           "state"
         ],
         "title": "AccountToken",
+        "type": "object"
+      },
+      "DeliveryChoices": {
+        "description": "User-selected report channels.",
+        "properties": {
+          "email_reports": {
+            "title": "Email Reports",
+            "type": "boolean"
+          },
+          "telegram_reports": {
+            "title": "Telegram Reports",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "email_reports",
+          "telegram_reports"
+        ],
+        "title": "DeliveryChoices",
+        "type": "object"
+      },
+      "TelegramLinkResponse": {
+        "description": "A one-time bot start link; the underlying code is never persisted in plain text.",
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "expires_at"
+        ],
+        "title": "TelegramLinkResponse",
         "type": "object"
       },
       "TokenCreated": {

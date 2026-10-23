@@ -1,0 +1,41 @@
+{% extends "web/base.html" %}
+{% block title %}Terms of Use and Privacy Notice · Kash Engine{% endblock %}
+{% block content %}
+<article class="mx-auto max-w-3xl space-y-6">
+  <header>
+    <h1 class="font-serif text-3xl font-semibold">Terms of Use and Privacy Notice</h1>
+    <p class="mt-2 text-sm text-muted">Version {{ legal_version }}. Effective 23 October 2026.</p>
+  </header>
+  <section id="terms" class="space-y-3">
+    <h2 class="font-serif text-2xl font-semibold">Terms of Use</h2>
+    <h3 class="font-semibold">1. Service and eligibility</h3>
+    <p>Kash Engine provides market information and reports. You must be at least 18 and legally able to enter this agreement. Use the service only where permitted by applicable law. Creating an account requires a valid email address and, when required, a single-use invitation issued by an administrator. You can log in immediately to manage verification, but all product features remain locked until your email is verified. Staff and administrator accounts are exempt from this feature-access requirement.</p>
+    <h3 class="font-semibold">2. Information only, not investment advice</h3>
+    <p>Reports, predictions, summaries, and other content are for general information and education only. They are not personalized investment, financial, legal, or tax advice, an offer to buy or sell securities, or a recommendation suitable for your circumstances. No advisory or fiduciary relationship is created. Consult an appropriately qualified professional before making financial decisions.</p>
+    <h3 class="font-semibold">3. Risk and accuracy</h3>
+    <p>Investments can lose value, including your entire investment. Past performance and model predictions do not guarantee future results. Information may be delayed, incomplete, generated automatically, or incorrect. Verify information independently. Delivery by email or Telegram is not guaranteed and must not be relied on for time-critical trading decisions.</p>
+    <h3 class="font-semibold">4. Your account and acceptable use</h3>
+    <p>Provide accurate registration details, protect your credentials, and do not share or resell invitations or access. Do not misuse the service, attempt unauthorized access, interfere with its operation, or use it unlawfully. Administrators may suspend or terminate accounts for abuse or violations of these terms.</p>
+    <h3 class="font-semibold">5. Content and availability</h3>
+    <p>Content may be subject to third-party rights. Access does not grant ownership or permission to redistribute protected content. The service may change, be interrupted, or be discontinued. To the extent permitted by law, it is provided as available without warranties of accuracy, availability, or fitness for a particular purpose.</p>
+    <h3 class="font-semibold">6. Liability and legal rights</h3>
+    <p>You remain responsible for your decisions and use of the information. To the extent permitted by applicable law, the operator is not liable for investment losses or indirect or consequential losses arising from use of the service. Nothing in this agreement excludes liability or consumer rights that cannot lawfully be excluded.</p>
+    <h3 class="font-semibold">7. Changes and questions</h3>
+    <p>The current agreement is published on this page with a version and effective date. Material changes should be communicated before taking effect. For questions, account deletion, or complaints, contact the administrator who provided your invitation or the operator through the contact channel published with this deployment.</p>
+  </section>
+  <section id="privacy" class="space-y-3">
+    <h2 class="font-serif text-2xl font-semibold">Privacy Notice</h2>
+    <h3 class="font-semibold">1. Information we process</h3>
+    <p>We process your username, email address, securely hashed password, account status, verification records, invitation redemption, agreement version and acceptance time, and report delivery preferences. If you link Telegram, we store your private chat identifier and temporary linking-token digest. We also keep delivery records and operational or security logs, which may include IP addresses and request metadata.</p>
+    <h3 class="font-semibold">2. Purposes and choices</h3>
+    <p>This information is used to create and secure accounts, verify destinations, administer invitations, provide requested reports, troubleshoot delivery, and record agreement acceptance. Email verification messages confirm your email destination and unlock product features for regular accounts; verification is not required to log in and manage verification. Report delivery is optional: after verification, choose email, Telegram, both, or neither on the Account page. You can disable either channel or unlink Telegram there.</p>
+    <h3 class="font-semibold">3. Providers and transfers</h3>
+    <p>Hosting and email providers process information needed to run this deployment. Choosing Telegram sends your report and chat identifier through Telegram, which processes data under its own terms and privacy policy. Providers may process information outside your country; the operator must assess applicable transfer and data-protection requirements. We do not sell your personal information.</p>
+    <h3 class="font-semibold">4. Storage, security, and retention</h3>
+    <p>Session and security cookies support authentication and protect the service. We use access controls and hashed passwords and tokens, but no system can guarantee absolute security. Information is retained as needed to operate your account, investigate delivery or security issues, and meet applicable obligations. Backup copies and records required for legal or security purposes may remain after account deletion.</p>
+    <h3 class="font-semibold">5. Your rights and contact</h3>
+    <p>Depending on applicable law, you may have rights to access, correct, delete, restrict, or object to processing of your information, request portability, or complain to a data-protection authority. Contact the deployment operator through the administrator or published support channel to exercise these rights. Disabling reports stops future optional deliveries but does not recall messages already sent.</p>
+  </section>
+  <p class="text-sm text-muted">Return to <a class="underline" href="{% url 'web:signup' %}">sign-up</a>.</p>
+</article>
+{% endblock %}

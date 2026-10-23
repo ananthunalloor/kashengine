@@ -3,10 +3,11 @@
 Order of the rules:
 
 1. Staff and superusers have all features. A subscription is not needed.
-2. If "Require a subscription" is on, a user needs an active trial or subscription. Without it,
+2. Regular users must verify their email before using any feature.
+3. If "Require a subscription" is on, a user needs an active trial or subscription. Without it,
    the user has no feature.
-3. A feature that an admin removed (a FeatureBlock) is not allowed.
-4. Everything else is allowed.
+4. A feature that an admin removed (a FeatureBlock) is not allowed.
+5. Everything else is allowed.
 """
 
 from datetime import datetime
@@ -15,6 +16,7 @@ from typing import cast
 
 from django.utils import timezone
 
+from apps.delivery.models import DeliveryPreference
 from apps.siteconfig import conf
 
 from . import features
@@ -49,6 +51,18 @@ class Access:
         return self.authenticated and is_exempt(self.user)
 
     @cached_property
+    def email_verified(self) -> bool:
+        """Require a verified email for regular users, including pre-existing accounts."""
+        if self.exempt:
+            return True
+        return (
+            self.authenticated
+            and DeliveryPreference.objects.filter(
+                user=self.user, email_verified_at__isnull=False
+            ).exists()
+        )
+
+    @cached_property
     def subscription(self) -> Subscription | None:
         """The subscription of the user, or None."""
         if not self.authenticated:
@@ -79,7 +93,7 @@ class Access:
             return frozenset()
         if self.exempt:
             return features.KEYS
-        if not self.subscription_ok:
+        if not self.email_verified or not self.subscription_ok:
             return frozenset()
         return features.KEYS - self.blocked
 
@@ -101,6 +115,8 @@ class Access:
 
     def notice(self) -> str:
         """A short text for the menu: a locked user, or an end that is near. Empty if none."""
+        if self.authenticated and not self.email_verified:
+            return "Verify your email in Account settings to unlock all features."
         if self.exempt or not conf.SUBSCRIPTIONS_REQUIRED or not self.authenticated:
             return ""
         if not self.subscription_ok:

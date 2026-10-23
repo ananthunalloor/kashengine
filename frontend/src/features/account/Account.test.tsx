@@ -20,6 +20,13 @@ const token: AccountToken = {
 const data: Account = {
   username: "member",
   email: "member@example.test",
+  delivery: {
+    email_verified: true,
+    email_reports: false,
+    telegram_connected: false,
+    telegram_reports: false,
+    telegram_bot_username: "kash_test_bot",
+  },
   state: "trial",
   subscription_kind: "trial",
   ends_at: "2026-10-26T03:00:00Z",
@@ -64,6 +71,8 @@ async function showAccount({
   revokeStatus = 200,
   refreshFails = false,
   csrf = true,
+  verified = true,
+  path = "/account/",
   waitForCreate,
 }: {
   body?: unknown;
@@ -73,6 +82,8 @@ async function showAccount({
   revokeStatus?: number;
   refreshFails?: boolean;
   csrf?: boolean;
+  verified?: boolean;
+  path?: string;
   waitForCreate?: Promise<void>;
 } = {}) {
   if (csrf) document.cookie = "csrftoken=account-test-csrf; path=/";
@@ -83,12 +94,34 @@ async function showAccount({
     let responseBody: unknown;
     let status = 200;
     if (input === "/api/app/session") {
-      responseBody = { ...session, subscription_ok: false, features: [] };
+      responseBody = {
+        ...session,
+        email_verified: verified,
+        subscription_ok: false,
+        features: [],
+        navigation: verified ? session.navigation : [{ label: "Account", url: "/account/" }],
+        notice: verified ? "" : "Verify your email in Account settings to unlock all features.",
+      };
     } else if (input === "/api/app/account/tokens" && init?.method === "POST") {
       await waitForCreate;
       created = createStatus === 201;
       status = createStatus;
       responseBody = createBody;
+    } else if (input === "/api/app/account/delivery/email/verify" && init?.method === "POST") {
+      responseBody = { ...data.delivery, email_verified: false };
+    } else if (input === "/api/app/account/delivery" && init?.method === "PUT") {
+      responseBody = { ...data.delivery, email_reports: true };
+    } else if (input === "/api/app/account/delivery/telegram/link" && init?.method === "POST") {
+      responseBody = {
+        url: "https://t.me/kash_test_bot?start=single-use-token",
+        expires_at: "2026-10-23T06:00:00Z",
+      };
+    } else if (input === "/api/app/account/delivery/telegram/unlink" && init?.method === "POST") {
+      responseBody = {
+        ...data.delivery,
+        telegram_connected: false,
+        telegram_reports: false,
+      };
     } else if (input.endsWith("/revoke")) {
       revoked = revokeStatus === 200;
       status = revokeStatus;
@@ -118,7 +151,7 @@ async function showAccount({
     routeTree,
     basepath: "/",
     trailingSlash: "always",
-    history: createMemoryHistory({ initialEntries: ["/account/"] }),
+    history: createMemoryHistory({ initialEntries: [path] }),
     context: { queryClient: client },
     defaultPendingMinMs: 0,
   });
@@ -132,6 +165,48 @@ async function showAccount({
   );
   return { client, router, fetchMock, unmount: result.unmount };
 }
+
+it.each(["/account/", "/dashboard/", "/news/"])(
+  "keeps unverified users on Account and allows requesting verification from %s",
+  async (path) => {
+    const { fetchMock, router } = await showAccount({
+      path,
+      verified: false,
+      body: {
+        ...data,
+        delivery: { ...data.delivery, email_verified: false },
+        api_enabled: false,
+        api_docs: false,
+        features: data.features.map((feature) => ({ ...feature, allowed: false })),
+      },
+    });
+    const button = await screen.findByRole("button", { name: "Send verification email" });
+    expect(router.state.location.pathname).toBe("/account/");
+    expect(screen.getByRole("checkbox", { name: /Email reports/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Link Telegram" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save report settings" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Make token" })).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/All features are locked until you verify your email/),
+    ).toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.every(
+        ([url]) => url === "/api/app/session" || url === "/api/app/account",
+      ),
+    ).toBe(true);
+    fireEvent.click(button);
+    expect(
+      await screen.findByText(/Verification email sent. Check your inbox/),
+    ).toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, init]) =>
+          url === "/api/app/account/delivery/email/verify" && init?.method === "POST",
+      ),
+    ).toBe(true);
+    expect(screen.getByRole("checkbox", { name: /Email reports/ })).toBeDisabled();
+  },
+);
 
 async function makeToken() {
   fireEvent.change(await screen.findByRole("textbox", { name: "Token name" }), {
@@ -162,6 +237,51 @@ it("renders subscription, access explanations and masked tokens for locked accou
   expect(document.querySelector("b")).toBeNull();
   expect(document.querySelector("style")).toBeNull();
   expect(screen.getAllByRole("main")).toHaveLength(1);
+});
+
+it("saves selected report channels using the session CSRF token", async () => {
+  const { fetchMock } = await showAccount();
+  fireEvent.click(await screen.findByRole("checkbox", { name: /Email reports/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Save report settings" }));
+
+  await waitFor(() =>
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/app/account/delivery",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ email_reports: true, telegram_reports: false }),
+      }),
+    ),
+  );
+  const sent = fetchMock.mock.calls.find(([path]) => path === "/api/app/account/delivery")?.[1];
+  expect(new Headers(sent?.headers).get("X-CSRFToken")).toBe("account-test-csrf");
+});
+
+it("creates a one-time Telegram link", async () => {
+  await showAccount();
+  fireEvent.click(await screen.findByRole("button", { name: "Link Telegram" }));
+  expect(
+    await screen.findByRole("link", { name: "Open Telegram to finish linking" }),
+  ).toHaveAttribute("href", "https://t.me/kash_test_bot?start=single-use-token");
+});
+
+it("disconnects a linked Telegram account", async () => {
+  const connected = {
+    ...data,
+    delivery: {
+      ...data.delivery,
+      telegram_connected: true,
+      telegram_reports: true,
+    },
+  };
+  const { fetchMock } = await showAccount({ body: connected });
+  fireEvent.click(await screen.findByRole("button", { name: "Disconnect" }));
+  await waitFor(() =>
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/app/account/delivery/telegram/unlink",
+      expect.objectContaining({ method: "POST" }),
+    ),
+  );
 });
 
 it("creates once, sends CSRF, refreshes metadata and never stores the secret in Query caches", async () => {

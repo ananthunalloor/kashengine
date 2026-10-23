@@ -86,7 +86,7 @@ it("shows subscription notices and keeps account navigation for locked users", (
   expect(screen.getByRole("status")).toHaveTextContent("Your access has ended.");
   expect(screen.queryByRole("link", { name: "Reports" })).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Account" })).toHaveAttribute("href", "/account/");
-  fireEvent.click(screen.getByRole("button", { name: "Dismiss subscription notice" }));
+  fireEvent.click(screen.getByRole("button", { name: "Dismiss account notice" }));
   expect(screen.queryByRole("status")).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Account" })).toBeInTheDocument();
 });

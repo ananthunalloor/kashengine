@@ -4,6 +4,7 @@ export const session: Session = {
   id: 1,
   username: "member",
   email: "member@example.test",
+  email_verified: true,
   is_staff: false,
   is_superuser: false,
   features: ["reports"],

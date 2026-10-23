@@ -67,6 +67,13 @@ RAM or more. The size depends on the model that you choose.
    `DJANGO_CSRF_TRUSTED_ORIGINS`, `DJANGO_SECRET_KEY`, `POSTGRES_PASSWORD` (and the same password
    in `DATABASE_URL`), and `TELEGRAM_BOT_TOKEN`. Keep `localhost` in `DJANGO_ALLOWED_HOSTS`:
    the Docker health check needs it. Set `ADMIN_ALLOWED_IPS` and `DOCS_ALLOWED_IPS`.
+   Configure SMTP values, `TELEGRAM_BOT_USERNAME`, and a random
+   `TELEGRAM_WEBHOOK_SECRET` if users should self-register and receive reports. Register
+   `https://<SITE_ADDRESS>/api/telegram/webhook/` with Telegram as the bot webhook using that same
+   secret token. Keep `SIGNUP_INVITE_REQUIRED=true` and generate single-use invitations in
+   Django admin after creating your superuser. Review and adapt the starter Terms of Use and
+   Privacy Notice at `/legal/` with qualified counsel and publish operator contact details before
+   inviting users. See [Account sign-up](../domains/reports-and-delivery.md#account-sign-up-and-destinations).
    Do not commit `.env.prod`.
 4. Start the stack. The `--env-file` option is required, because Compose reads `SITE_ADDRESS`
    and `ACME_EMAIL` from it:

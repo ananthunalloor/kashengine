@@ -1,10 +1,10 @@
 ---
-title: Reports and Telegram delivery
+title: Reports and delivery
 sidebar_label: Reports and delivery
-description: How the daily report is built from stored data, and how it is sent on Telegram.
+description: How the daily report is built from stored data, and how it is sent by email or Telegram.
 ---
 
-# Reports and Telegram delivery
+# Reports and delivery
 
 Code: `apps/reports/`, `apps/delivery/`. Task: `delivery.send_daily_report`.
 
@@ -31,16 +31,74 @@ bad markup. `Report.data` keeps the numbers and the lists for the web page and t
 ## Delivery
 
 `delivery.send_daily_report` runs on weekdays at 07:30 and 07:50 IST. On a Saturday or a Sunday it
-does nothing. It builds today's report (or reuses it), then calls `deliver_report`.
+does nothing. It builds today's report (or reuses it), sends Telegram deliveries, then emails
+reports to accounts that have verified their email and opted in.
 
-`deliver_report` sends the text to each chat in `TELEGRAM_CHAT_IDS`:
+`deliver_report` sends the text to each configured Telegram chat and each linked user chat whose
+owner selected Telegram delivery:
 
 - A chat that already got this report (a `sent` row in `DeliveryLog`) is skipped. So the retry run
   at 07:50 sends only to the chats that failed. A manual send with `force` sends to all chats again.
 - One chat that fails does not stop the others. Each try writes a `DeliveryLog` row with the
   status, the recipient and a redacted error (at most 500 characters).
 - If the token or the chat list is empty, the function raises `DeliveryNotConfiguredError`. The
-  task logs a warning and returns `not_sent`. The report is still saved.
+  task records the Telegram failure separately; email delivery still runs.
+- Email delivery requires both a verified email and explicit opt-in. Each send is logged, and
+  retries skip an email address that already received that report.
+
+## Account sign-up and destinations
+
+New accounts are invite-code gated by default. Configure SMTP settings before allowing sign-up.
+Open **Ops > Access > Invite codes** to inspect the invitation table: reference, state
+(Available, Used, or Revoked), creator, creation time, redemption time, redeemed account, and
+email address. The table supports search, state filtering, sorting, and pagination.
+Staff can inspect it; only superusers can **Generate invite code** or **Revoke** an unused code.
+Generation and revocation are recorded in the audit trail without including the code.
+Alternatively, in Django admin, open **Delivery > Signup invites > Add**, then save.
+Copy the code from the success message immediately: it is shown only once, and only its
+SHA-256 digest is stored. Share it privately with one person. Each invitation registers exactly
+one account; it is consumed when registration succeeds, even before email verification. Invalid
+forms do not consume it. Email-send failures do not undo account creation: users can log in and
+request a fresh verification email later. Administrators can revoke unused invitations.
+The old shared `SIGNUP_INVITE_CODE` environment variable is no longer supported.
+
+The sign-up form and account-created confirmation use the public React layout, while Django
+handles the CSRF-protected form submission and validation. Accounts can log in immediately, but
+all regular users (including existing accounts) must verify their email before using any product
+feature, API, API token creation, or linked Telegram reports. Staff and superusers are exempt.
+Account, verification/resending, logout, and token revocation remain available while locked.
+The navigation shows only Account until verification, and direct feature URLs redirect there.
+Existing accounts without an email address must contact an administrator to add one.
+To verify email ownership manually, a superuser can open **Django admin > Authentication and
+Authorization > Users**, select the account(s), choose **Mark email verified (only after confirming
+email ownership)**, and click **Go**. Independently confirm ownership first. The action requires
+a valid email address, records each change in the Ops audit trail and Django admin history, and
+removes pending verification links. It does not reactivate disabled accounts, enable reports, or
+change subscriptions. Already-verified accounts are left unchanged. The Users table includes an
+**Email verified** indicator; users should reload after manual verification.
+Verification links expire after `EMAIL_VERIFICATION_HOURS`. Account settings provides a
+**Send verification email** button for requesting a new link, with a one-minute cooldown.
+A successfully sent replacement invalidates the previous link; a failed resend preserves it.
+Verification never reactivates an account disabled by an administrator.
+To make registration open later, set
+`SIGNUP_INVITE_REQUIRED=false`.
+
+Sign-up also requires an unchecked-by-default agreement checkbox linking to `/legal/`.
+The accepted agreement version and timestamp are recorded under **Delivery > Legal acceptances**.
+This requirement also applies to open registration. The page contains starter Terms of Use and
+a Privacy Notice, including financial-information disclaimers. Have qualified counsel review and
+adapt these for your operator, jurisdiction, contact details, provider arrangements, and retention
+requirements before launch. Publish a real operator support/contact channel. When changing the
+agreement, preserve the previous text in version control and update `LEGAL_VERSION` in
+`apps/web/signup.py` plus the effective date and text in `apps/web/templates/web/legal.html`.
+Existing users are not automatically prompted to accept a new agreement.
+
+On the Account page, users can select email, Telegram, or both. Telegram is linked by opening a
+short-lived bot deep link and sending its `/start` payload. Configure `TELEGRAM_BOT_USERNAME` and
+`TELEGRAM_WEBHOOK_SECRET`, then register
+`https://<SITE_ADDRESS>/api/telegram/webhook/` with Telegram as the bot webhook URL and the same
+secret token. Do not use `getUpdates` while the webhook is configured. Linked chat IDs are never
+returned by the account API.
 
 The Telegram client sends plain text (no parse mode). A message can have 4096 characters at most.
 A longer text is split at blank lines at 4000 characters. On HTTP 429 the client waits once if

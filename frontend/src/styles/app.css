@@ -476,7 +476,7 @@ button:not(.mantine-Button-root):not(.mantine-ActionIcon-root):not(.mantine-Clos
   gap: 0.75rem;
 }
 
-.public-auth input:not([type="hidden"]) {
+.public-auth input:not([type="hidden"], [type="checkbox"]) {
   width: 100%;
   border: 1px solid var(--brand-line);
   border-radius: 0.6rem;
@@ -484,6 +484,10 @@ button:not(.mantine-Button-root):not(.mantine-ActionIcon-root):not(.mantine-Clos
   color: var(--brand-ink);
   padding: 0.75rem;
   margin-bottom: 0.5rem;
+}
+
+.public-auth input[type="checkbox"] {
+  accent-color: var(--brand-ink);
 }
 
 .public-auth .public-error {

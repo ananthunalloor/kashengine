@@ -198,6 +198,140 @@ it("keeps read-only staff access while excluding backups", async () => {
   ).not.toBeInTheDocument();
 });
 
+const invitationsPage = zOpsPage.parse({
+  title: "Invite codes",
+  description: "Single-use invitations. Codes are shown only when generated.",
+  sections: [
+    {
+      title: "Invitations",
+      forms: [
+        {
+          id: "invites/generate/",
+          action: "/api/app/ops/actions/invites/generate/",
+          label: "Generate invite code",
+        },
+      ],
+      table: {
+        server: true,
+        page: 1,
+        pages: 1,
+        page_size: 25,
+        total: 2,
+        columns: [
+          { key: "invitation", label: "Invitation" },
+          { key: "state", label: "State" },
+          { key: "created_by", label: "Created By" },
+          { key: "used_by", label: "Used By" },
+          { key: "email", label: "Email" },
+        ],
+        filters: ["state"],
+        filter_choices: { state: ["Available", "Used"] },
+        rows: [
+          {
+            cells: {
+              invitation: { text: "#12" },
+              state: { text: "Available", tone: "positive" },
+              created_by: { text: "admin", href: "/ops/users/1/" },
+            },
+            forms: [
+              {
+                id: "invites/12/revoke/",
+                action: "/api/app/ops/actions/invites/12/revoke/",
+                label: "Revoke",
+                confirmation: "Revoke invitation #12?",
+              },
+            ],
+          },
+          {
+            cells: {
+              invitation: { text: "#11" },
+              state: { text: "Used" },
+              used_by: { text: "new-member", href: "/ops/users/2/" },
+              email: { text: "member@example.test" },
+            },
+          },
+        ],
+      },
+    },
+  ],
+});
+
+it("shows Invite codes in Access tabs with invitation details and management controls", async () => {
+  const { fetchMock } = await show({ path: "/ops/invites/", body: invitationsPage });
+  expect(
+    await screen.findByRole("heading", { name: "Invite codes", level: 1 }),
+  ).toBeInTheDocument();
+  const tabs = within(screen.getByRole("tablist", { name: "Access pages" }));
+  expect(tabs.getByRole("tab", { name: "Invite codes" })).toHaveAttribute("aria-selected", "true");
+  expect(tabs.getByRole("tab", { name: "Users" })).toBeInTheDocument();
+  expect(screen.getByRole("table", { name: "Invitations" })).toBeInTheDocument();
+  expect(screen.getByRole("cell", { name: "#12" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "new-member" })).toHaveAttribute("href", "/ops/users/2/");
+  expect(screen.getByRole("cell", { name: "member@example.test" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Generate invite code" })).toBeInTheDocument();
+  expect(screen.getAllByRole("button", { name: "Revoke" })).toHaveLength(1);
+  expect(fetchMock.mock.calls.some(([url]) => url.includes("/ops/pages/invites/"))).toBe(true);
+});
+
+it("generates invitation codes through the protected action and displays the one-time code", async () => {
+  const { fetchMock } = await show({ path: "/ops/invites/", body: invitationsPage });
+  await screen.findByRole("heading", { name: "Invite codes", level: 1 });
+  const notice = "Invitation #13 created. Copy this code now; it will not be shown again: new-code";
+  fetchMock.mockImplementation(async (input: string, init?: RequestInit) => {
+    const data = input.includes("/session")
+      ? { ...session, is_staff: true, is_superuser: true }
+      : init?.method === "POST"
+        ? { ok: true, messages: [{ level: "success", text: notice }], redirect: "/ops/invites/" }
+        : invitationsPage;
+    return new Response(JSON.stringify(data), {
+      headers: { "Content-Type": "application/json" },
+    });
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Generate invite code" }));
+  await waitFor(() => expect(screen.getAllByText(notice).length).toBeGreaterThan(0));
+  const call = fetchMock.mock.calls.find(
+    ([url, init]) => url.endsWith("/invites/generate/") && init?.method === "POST",
+  );
+  expect(new Headers(call?.[1]?.headers).get("X-CSRFToken")).toBe("ops-csrf");
+});
+
+it("confirms revocation before submitting the invitation action", async () => {
+  const { fetchMock } = await show({ path: "/ops/invites/", body: invitationsPage });
+  await screen.findByRole("heading", { name: "Invite codes", level: 1 });
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  fireEvent.click(screen.getByRole("button", { name: "Revoke" }));
+  expect(confirm).toHaveBeenCalledWith("Revoke invitation #12?");
+  expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  confirm.mockReturnValue(true);
+  fireEvent.click(screen.getByRole("button", { name: "Revoke" }));
+  await waitFor(() =>
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, init]) => url.endsWith("/invites/12/revoke/") && init?.method === "POST",
+      ),
+    ).toBe(true),
+  );
+  confirm.mockRestore();
+});
+
+it("shows staff the invitation table without generation or revocation controls", async () => {
+  const readonly = zOpsPage.parse({
+    ...invitationsPage,
+    sections: invitationsPage.sections.map((section) => ({
+      ...section,
+      forms: [],
+      table: section.table && {
+        ...section.table,
+        rows: section.table.rows.map((row) => ({ ...row, forms: [] })),
+      },
+    })),
+  });
+  await show({ path: "/ops/invites/", body: readonly, superuser: false });
+  await screen.findByRole("table", { name: "Invitations" });
+  expect(screen.queryByRole("button", { name: "Generate invite code" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Revoke" })).not.toBeInTheDocument();
+});
+
 it("hides stale tables after permission revocation", async () => {
   const { fetchMock } = await show();
   await screen.findByRole("table", { name: "Feeds" });

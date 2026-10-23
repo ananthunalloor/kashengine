@@ -47,6 +47,7 @@ PAGES = {
     "logs",
     "metrics",
     "users",
+    "invites",
     "user",
     "subscriptions",
     "logins",
@@ -62,6 +63,8 @@ PAGES = {
 }
 ACTIONS = {
     "job_run",
+    "invite_generate",
+    "invite_revoke",
     "user_end_sessions",
     "user_revoke_tokens",
     "user_set_active",
@@ -733,6 +736,77 @@ def _present_metrics(request: HttpRequest, name: str, context: dict[str, Any]) -
     )
 
     return OpsPage(title=title, description=description, sections=sections, refresh_seconds=refresh)
+
+
+def _present_invites(request: HttpRequest, name: str, context: dict[str, Any]) -> OpsPage:
+    """Present invitation metadata and superuser-only management controls."""
+    can_write = bool(getattr(request.user, "is_superuser", False))
+    rows = []
+    for invite in context["invites"]:
+        status = "Used" if invite.used_at else "Revoked" if invite.revoked else "Available"
+        item = row(
+            invitation=f"#{invite.pk}",
+            state=cell(
+                status,
+                tone="positive"
+                if status == "Available"
+                else "negative"
+                if status == "Revoked"
+                else "neutral",
+            ),
+            created_at=invite.created_at,
+            created_by=cell(
+                invite.created_by.get_username() if invite.created_by else "Deleted user",
+                href=f"/ops/users/{invite.created_by_id}/" if invite.created_by_id else "",
+            ),
+            used_at=invite.used_at,
+            used_by=cell(
+                invite.used_by.get_username() if invite.used_by else "",
+                href=f"/ops/users/{invite.used_by_id}/" if invite.used_by_id else "",
+            ),
+            email=invite.used_by.email if invite.used_by else "",
+        )
+        if can_write and status == "Available":
+            item.forms.append(
+                action(
+                    f"invites/{invite.pk}/revoke/",
+                    "Revoke",
+                    confirmation=f"Revoke invitation #{invite.pk}? It will no longer allow signup.",
+                )
+            )
+        rows.append(item)
+    invitations = table(request, rows, full=True, filters=("state",))
+    if not invitations.columns:
+        invitations.columns = [
+            OpsColumn(key=key, label=label)
+            for key, label in (
+                ("invitation", "Invitation"),
+                ("state", "State"),
+                ("created_at", "Created At"),
+                ("created_by", "Created By"),
+                ("used_at", "Used At"),
+                ("used_by", "Used By"),
+                ("email", "Email"),
+            )
+        ]
+    return OpsPage(
+        title="Invite codes",
+        description=(
+            "Single-use sign-up invitations. Codes are shown only when generated; "
+            "only their digests are stored. Staff can inspect details; only superusers can "
+            "generate or revoke invitations."
+        ),
+        sections=[
+            OpsSection(
+                title="Invitations",
+                description="Copy each new code from the success message and share it privately.",
+                forms=[action("invites/generate/", "Generate invite code")]
+                if can_write
+                else [],
+                table=invitations,
+            )
+        ],
+    )
 
 
 def _present_subscriptions(request: HttpRequest, name: str, context: dict[str, Any]) -> OpsPage:
@@ -1561,6 +1635,7 @@ def page_data(request: HttpRequest, name: str, context: dict[str, Any]) -> OpsPa
         "metrics": _present_metrics,
         "subscriptions": _present_subscriptions,
         "users": _present_subscriptions,
+        "invites": _present_invites,
         "user": _present_user,
         "logins": _present_logins,
         "config": _present_config,

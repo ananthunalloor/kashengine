@@ -1,10 +1,17 @@
-"""Management command: build the report and send it to Telegram."""
+"""Management command: build the report and send it to opted-in destinations."""
 
 from datetime import date
 
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.delivery.service import DeliveryNotConfiguredError, configured_chat_ids, deliver_report
+from apps.delivery.service import (
+    DeliveryNotConfiguredError,
+    DeliveryResult,
+    configured_chat_ids,
+    deliver_report,
+    deliver_user_emails,
+    report_chat_ids,
+)
 from apps.delivery.telegram import TelegramClient, TelegramError
 from apps.reports.builder import build_report
 
@@ -14,14 +21,15 @@ class Command(BaseCommand):
 
     help = (
         "Build the daily report (if it does not exist) and send it to the Telegram chats in "
-        "TELEGRAM_CHAT_IDS. A chat that already got the report is skipped."
+        "TELEGRAM_CHAT_IDS and opted-in user destinations. Destinations that already got it are "
+        "skipped."
     )
 
     def add_arguments(self, parser):
         """Add the command options."""
         parser.add_argument("--date", help="The date of the report, as YYYY-MM-DD. Default: today.")
         parser.add_argument(
-            "--force", action="store_true", help="Send again, also to the chats that got it."
+            "--force", action="store_true", help="Send again to destinations that got it already."
         )
         parser.add_argument(
             "--test",
@@ -44,21 +52,36 @@ class Command(BaseCommand):
 
         report, created = build_report(day)
         self.stdout.write(f"Report {report.date}: {'built' if created else 'exists'}.")
-        try:
-            result = deliver_report(report, force=options["force"])
-        except DeliveryNotConfiguredError as exc:
-            raise CommandError(
-                f"{exc} Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_IDS in your .env file. "
-                "Run telegram_check to find your chat ID."
-            ) from exc
+        telegram: DeliveryResult = {"sent": 0, "failed": 0, "skipped": 0, "errors": {}}
+        telegram_error = ""
+        chat_ids = report_chat_ids()
+        if chat_ids:
+            try:
+                telegram = deliver_report(
+                    report, chat_ids=chat_ids, force=options["force"]
+                )
+            except DeliveryNotConfiguredError as exc:
+                telegram_error = str(exc)
 
+        email = deliver_user_emails(report, force=options["force"])
+        if not chat_ids and not any(email[key] for key in ("sent", "failed", "skipped")):
+            raise CommandError("No Telegram chats or opted-in email destinations are configured.")
+        if telegram_error:
+            self.stdout.write(self.style.WARNING(f"Telegram not sent: {telegram_error}"))
+        elif chat_ids:
+            self.stdout.write(
+                "Telegram: {sent} sent, {failed} failed, {skipped} skipped.".format(**telegram)
+            )
         self.stdout.write(
-            "Telegram: {sent} sent, {failed} failed, {skipped} skipped.".format(**result)
+            "Email: {sent} sent, {failed} failed, {skipped} skipped.".format(**email)
         )
-        for chat_id, error in result["errors"].items():
-            self.stdout.write(self.style.WARNING(f"  {chat_id}: {error}"))
-        if result["failed"]:
-            raise CommandError("Some chats did not get the report. Run the command again.")
+        for result in (telegram, email):
+            for recipient, error in result["errors"].items():
+                self.stdout.write(self.style.WARNING(f"  {recipient}: {error}"))
+        if telegram["failed"] or email["failed"] or telegram_error:
+            raise CommandError(
+                "Some report destinations did not get the report. Run the command again."
+            )
 
     def _send_test(self):
         chat_ids = configured_chat_ids()

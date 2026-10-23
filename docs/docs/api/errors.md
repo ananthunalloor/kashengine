@@ -62,6 +62,13 @@ the admin of the site.
 Status `403`. The user does not have the feature of the endpoint. An admin can remove a feature
 from a user. The `detail` names the feature.
 
+### email_verification_required {#email_verification_required}
+
+Status `403`. A regular user has not verified their email. All product features and public API
+access are blocked. Log in and open Account to request or complete verification. Staff and
+administrators are exempt. Session metadata, Account, verification, and token revocation remain
+available so users can complete verification and secure their accounts.
+
 ### not_found {#not_found}
 
 Status `404`. The item does not exist. For example, there is no report for the date, or no IPO
@@ -85,6 +92,12 @@ again later. If it continues, tell the admin.
 ### api_disabled {#api_disabled}
 
 Status `503`. A superuser turned the API off. The answer has `Retry-After: 300`.
+
+### email_delivery_failed {#email_delivery_failed}
+
+Status `503`. The private Account API could not send an email verification link. The account
+remains available for login and verification; request a new link later. Product features remain
+locked for regular users until verification.
 
 ## How to handle errors in a client
 

@@ -52,6 +52,7 @@ export const zSession = z.object({
     id: z.int(),
     username: z.string(),
     email: z.string(),
+    email_verified: z.boolean(),
     is_staff: z.boolean(),
     is_superuser: z.boolean(),
     features: z.array(z.string()),
@@ -579,6 +580,19 @@ export const zToday = z.object({
 });
 
 /**
+ * AccountDelivery
+ *
+ * Report delivery eligibility and selected channels for the current user.
+ */
+export const zAccountDelivery = z.object({
+    email_verified: z.boolean(),
+    email_reports: z.boolean(),
+    telegram_connected: z.boolean(),
+    telegram_reports: z.boolean(),
+    telegram_bot_username: z.string()
+});
+
+/**
  * AccountFeature
  *
  * Access explanation for one feature, including removed and subscription-locked states.
@@ -618,6 +632,7 @@ export const zAccountToken = z.object({
 export const zAccount = z.object({
     username: z.string(),
     email: z.string(),
+    delivery: zAccountDelivery,
     state: z.enum([
         'trial',
         'active',
@@ -641,6 +656,26 @@ export const zAccount = z.object({
     active_tokens: z.int(),
     token_limit: z.int(),
     token_days: z.int()
+});
+
+/**
+ * DeliveryChoices
+ *
+ * User-selected report channels.
+ */
+export const zDeliveryChoices = z.object({
+    email_reports: z.boolean(),
+    telegram_reports: z.boolean()
+});
+
+/**
+ * TelegramLinkResponse
+ *
+ * A one-time bot start link; the underlying code is never persisted in plain text.
+ */
+export const zTelegramLinkResponse = z.object({
+    url: z.string(),
+    expires_at: z.iso.datetime()
 });
 
 /**
@@ -1066,6 +1101,28 @@ export const zGetAppTodayResponse = zToday;
  * OK
  */
 export const zGetAppAccountResponse = zAccount;
+
+/**
+ * OK
+ */
+export const zSendAppEmailVerificationResponse = zAccountDelivery;
+
+export const zUpdateAppAccountDeliveryBody = zDeliveryChoices;
+
+/**
+ * OK
+ */
+export const zUpdateAppAccountDeliveryResponse = zAccountDelivery;
+
+/**
+ * OK
+ */
+export const zCreateAppTelegramLinkResponse = zTelegramLinkResponse;
+
+/**
+ * OK
+ */
+export const zUnlinkAppTelegramResponse = zAccountDelivery;
 
 export const zCreateAppTokenBody = zTokenCreate;
 

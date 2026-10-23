@@ -29,11 +29,13 @@ CODES: dict[str, int] = {
     "token_expired": 401,
     "subscription_required": 403,
     "feature_not_available": 403,
+    "email_verification_required": 403,
     "not_found": 404,
     "validation_error": 422,
     "rate_limited": 429,
     "server_error": 500,
     "api_disabled": 503,
+    "email_delivery_failed": 503,
 }
 
 

@@ -19,13 +19,20 @@ import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { PageNotFound } from "../../shared/ui/PageNotFound";
 
 export const publicPageSchema = z.object({
-  page: z.enum(["landing", "login", "access", "lockout", "not-found"]),
+  page: z.enum(["landing", "login", "signup", "signup-complete", "access", "lockout", "not-found"]),
   authenticated: z.boolean(),
   csrf: z.string(),
   next: z.string().default(""),
   invalid: z.boolean().default(false),
   feature: z.string().default("This feature"),
   minutes: z.number().nullable().default(null),
+  invite_required: z.boolean().default(true),
+  legal_version: z.string().default(""),
+  values: z.record(z.string(), z.string()).default({}),
+  errors: z.record(z.string(), z.array(z.string())).default({}),
+  email: z.string().default(""),
+  email_sent: z.boolean().default(false),
+  verification_hours: z.number().default(24),
 });
 
 type PublicData = z.infer<typeof publicPageSchema>;
@@ -80,9 +87,9 @@ const capabilities = [
     path: "delivery",
     title: "From the engine to you",
     icon: LuSend,
-    text: "Get the daily report through configured Telegram delivery, and check whether each send made it through.",
+    text: "Get the daily report by email or linked Telegram, and check whether each send made it through.",
     detail:
-      "Review send attempts, delivery status, and errors. Telegram destinations and scheduled sending are configured by your administrator.",
+      "Review send attempts, delivery status, and errors. Choose email, Telegram, or both in your account settings.",
     tags: ["Telegram delivery", "Delivery history"],
   },
 ];
@@ -170,7 +177,8 @@ export function Landing({ authenticated }: Pick<PublicData, "authenticated">) {
             <span>One daily report</span>
           </p>
           <p className="public-telegram">
-            <LuSend aria-hidden="true" /> Your morning, simplified. Daily reports via Telegram.
+            <LuSend aria-hidden="true" /> Your morning, simplified. Daily reports by email or
+            Telegram.
           </p>
         </section>
       </section>
@@ -281,6 +289,11 @@ export function Landing({ authenticated }: Pick<PublicData, "authenticated">) {
           {authenticated ? "Open your dashboard" : "Log in to Kash Engine"}
           <LuArrowRight aria-hidden="true" />
         </a>
+        {!authenticated && (
+          <a className="public-header-link" href="/signup/">
+            Create an account <LuArrowRight aria-hidden="true" />
+          </a>
+        )}
       </section>
     </>
   );
@@ -291,9 +304,7 @@ function Login({ data }: { data: PublicData }) {
   return (
     <section className="public-auth" aria-labelledby="login-title">
       <h1 id="login-title">Log in</h1>
-      <p>
-        Use the account that you made with <code>createsuperuser</code>.
-      </p>
+      <p>Sign in with the username and password you chose when you created your account.</p>
       {data.invalid && (
         <p className="public-error" role="alert">
           The user name or the password is not correct. Try again.
@@ -317,6 +328,137 @@ function Login({ data }: { data: PublicData }) {
           <LuArrowRight aria-hidden="true" />
         </button>
       </form>
+      <p className="mt-4 text-sm">
+        Need an account? <a href="/signup/">Sign up with an invite code</a>.
+      </p>
+    </section>
+  );
+}
+
+function Signup({ data }: { data: PublicData }) {
+  const [pending, setPending] = useState(false);
+  const fields = [
+    { name: "username", label: "User name", type: "text", autocomplete: "username", max: 150 },
+    { name: "email", label: "Email", type: "email", autocomplete: "email", max: 254 },
+    {
+      name: "password1",
+      label: "Password",
+      type: "password",
+      autocomplete: "new-password",
+      max: undefined,
+    },
+    {
+      name: "password2",
+      label: "Confirm password",
+      type: "password",
+      autocomplete: "new-password",
+      max: undefined,
+    },
+    ...(data.invite_required
+      ? [{ name: "invite_code", label: "Invite code", type: "text", autocomplete: "off", max: 100 }]
+      : []),
+  ];
+  return (
+    <section className="public-auth" aria-labelledby="signup-title">
+      <h1 id="signup-title">Create your account</h1>
+      <p>Create your account now. Verify your email to unlock all features.</p>
+      <form method="post" action="/signup/" onSubmit={() => setPending(true)} aria-busy={pending}>
+        <input type="hidden" name="csrfmiddlewaretoken" value={data.csrf} />
+        <input type="hidden" name="legal_version" value={data.legal_version} />
+        {["__all__", "legal_version"].flatMap((name) =>
+          (data.errors[name] ?? []).map((error, index) => (
+            <p className="public-error" role="alert" key={`${name}-${index}`}>
+              {error}
+            </p>
+          )),
+        )}
+        {fields.map((field) => (
+          <div key={field.name}>
+            <label htmlFor={`signup-${field.name}`}>{field.label}</label>
+            <input
+              id={`signup-${field.name}`}
+              name={field.name}
+              type={field.type}
+              autoComplete={field.autocomplete}
+              maxLength={field.max}
+              defaultValue={data.values[field.name] ?? ""}
+              required
+              aria-invalid={!!data.errors[field.name]?.length || undefined}
+              aria-describedby={
+                data.errors[field.name]?.length ? `${field.name}-errors` : undefined
+              }
+            />
+            {field.name === "password1" && (
+              <p>
+                Use at least 8 characters. Avoid common passwords, personal information, and
+                all-numeric passwords.
+              </p>
+            )}
+            <div id={`${field.name}-errors`}>
+              {data.errors[field.name]?.map((error, index) => (
+                <p className="public-error" role="alert" key={index}>
+                  {error}
+                </p>
+              ))}
+            </div>
+          </div>
+        ))}
+        <label htmlFor="signup-agree">
+          <input
+            id="signup-agree"
+            type="checkbox"
+            name="agree_to_legal"
+            required
+            aria-invalid={!!data.errors.agree_to_legal?.length || undefined}
+          />{" "}
+          I agree to the{" "}
+          <a href="/legal/#terms" target="_blank" rel="noopener">
+            Terms of Use
+          </a>{" "}
+          and acknowledge the{" "}
+          <a href="/legal/#privacy" target="_blank" rel="noopener">
+            Privacy Notice
+          </a>{" "}
+          (version {data.legal_version}).
+        </label>
+        {data.errors.agree_to_legal?.map((error, index) => (
+          <p className="public-error" role="alert" key={index}>
+            {error}
+          </p>
+        ))}
+        <button className="public-button" disabled={pending} type="submit">
+          {pending ? "Creating account..." : "Create account"} <LuArrowRight aria-hidden="true" />
+        </button>
+      </form>
+      <p>
+        Already have an account? <a href="/login/">Log in</a>.
+      </p>
+    </section>
+  );
+}
+
+function SignupComplete({ data }: { data: PublicData }) {
+  return (
+    <section className="public-auth" aria-labelledby="signup-complete-title">
+      <h1 id="signup-complete-title">Your account is ready</h1>
+      <p>
+        You can log in now to manage verification. All features stay locked until you verify your
+        email.
+      </p>
+      {data.email_sent ? (
+        <p>
+          We sent a verification link to {data.email}. It expires in {data.verification_hours}{" "}
+          hours. You can verify later or request a new link from Account settings.
+        </p>
+      ) : (
+        <p className="public-error" role="alert">
+          Your account was created, but we could not send the verification email. Log in and request
+          a new link from Account settings when you are ready.
+        </p>
+      )}
+      <a className="public-button" href="/login/">
+        Log in to your account <LuArrowRight aria-hidden="true" />
+      </a>
     </section>
   );
 }
@@ -329,11 +471,15 @@ export function PublicPage({ data }: { data: PublicData }) {
       ? "Less noise. More perspective."
       : data.page === "login"
         ? "Log in"
-        : data.page === "access"
-          ? "Not on your account"
-          : data.page === "not-found"
-            ? "Page not found"
-            : "Too many tries";
+        : data.page === "signup"
+          ? "Create account"
+          : data.page === "signup-complete"
+            ? "Your account is ready"
+            : data.page === "access"
+              ? "Not on your account"
+              : data.page === "not-found"
+                ? "Page not found"
+                : "Too many tries";
   usePageTitle(title);
   return (
     <div className="public-site">
@@ -368,6 +514,10 @@ export function PublicPage({ data }: { data: PublicData }) {
           <Landing authenticated={data.authenticated} />
         ) : data.page === "login" ? (
           <Login data={data} />
+        ) : data.page === "signup" ? (
+          <Signup data={data} />
+        ) : data.page === "signup-complete" ? (
+          <SignupComplete data={data} />
         ) : data.page === "not-found" ? (
           <PageNotFound />
         ) : (

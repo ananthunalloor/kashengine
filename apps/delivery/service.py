@@ -1,16 +1,31 @@
 """Send a report to the Telegram chats and record every try in DeliveryLog."""
 
 import logging
+import smtplib
+from typing import TypedDict
+
+from django.conf import settings
+from django.core.mail import send_mail
+from django.db.models import Q
 
 from apps.reports.models import Report
 from apps.siteconfig import conf
 
-from .models import DeliveryLog
+from .models import DeliveryLog, DeliveryPreference
 from .telegram import TelegramClient, TelegramError, redact
 
 logger = logging.getLogger(__name__)
 
 ERROR_CHARS = 500
+
+
+class DeliveryResult(TypedDict):
+    """Counts and per-recipient errors from a delivery attempt."""
+
+    sent: int
+    failed: int
+    skipped: int
+    errors: dict[str, str]
 
 
 class DeliveryNotConfiguredError(Exception):
@@ -22,12 +37,89 @@ def configured_chat_ids() -> list[str]:
     return [chat_id.strip() for chat_id in conf.TELEGRAM_CHAT_IDS if chat_id.strip()]
 
 
+def report_chat_ids() -> list[str]:
+    """Return global Telegram destinations and enabled, linked user destinations."""
+    user_chat_ids = (
+        DeliveryPreference.objects.filter(
+            telegram_reports=True, telegram_chat_id__isnull=False, user__is_active=True
+        )
+        .filter(
+            Q(email_verified_at__isnull=False) | Q(user__is_staff=True) | Q(user__is_superuser=True)
+        )
+        .values_list("telegram_chat_id", flat=True)
+    )
+    return list(dict.fromkeys([*configured_chat_ids(), *user_chat_ids]))
+
+
+def deliver_user_emails(report: Report, force: bool = False) -> DeliveryResult:
+    """Email a report to active users who verified and enabled email delivery.
+
+    Args:
+        report: The report to email.
+        force: Send again even when a successful delivery is already logged.
+    """
+    result: DeliveryResult = {"sent": 0, "failed": 0, "skipped": 0, "errors": {}}
+    preferences = (
+        DeliveryPreference.objects.filter(
+            email_reports=True,
+            email_verified_at__isnull=False,
+            user__is_active=True,
+        )
+        .exclude(Q(user__email="") | Q(user__email__isnull=True))
+        .select_related("user")
+    )
+    for preference in preferences:
+        email = preference.user.email
+        already = DeliveryLog.objects.filter(
+            report=report,
+            channel=DeliveryLog.Channel.EMAIL,
+            recipient=email,
+            status=DeliveryLog.Status.SENT,
+        ).exists()
+        if already and not force:
+            result["skipped"] += 1
+            continue
+        try:
+            sent = send_mail(
+                subject=f"Kash Engine daily report — {report.date:%d %b %Y}",
+                message=report.text,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+        except (OSError, smtplib.SMTPException) as exc:
+            message = str(exc)
+        else:
+            message = "" if sent else "The email backend did not accept the message."
+        if message:
+            message = message[:ERROR_CHARS]
+            logger.warning("Report %s not emailed to %s: %s", report.date, email, message)
+            DeliveryLog.objects.create(
+                report=report,
+                channel=DeliveryLog.Channel.EMAIL,
+                status=DeliveryLog.Status.FAILED,
+                recipient=email,
+                error=message,
+            )
+            result["failed"] += 1
+            result["errors"][email] = message
+        else:
+            DeliveryLog.objects.create(
+                report=report,
+                channel=DeliveryLog.Channel.EMAIL,
+                status=DeliveryLog.Status.SENT,
+                recipient=email,
+            )
+            result["sent"] += 1
+    return result
+
+
 def deliver_report(
     report: Report,
     chat_ids: list[str] | None = None,
     client: TelegramClient | None = None,
     force: bool = False,
-) -> dict:
+) -> DeliveryResult:
     """Send the report to each chat. Return {"sent", "failed", "skipped", "errors": {chat: text}}.
 
     A chat that already got this report ("sent" in DeliveryLog) is skipped, so the retry run and a
@@ -44,7 +136,7 @@ def deliver_report(
     if not chat_ids:
         raise DeliveryNotConfiguredError("TELEGRAM_CHAT_IDS is empty.")
 
-    result: dict = {"sent": 0, "failed": 0, "skipped": 0, "errors": {}}
+    result: DeliveryResult = {"sent": 0, "failed": 0, "skipped": 0, "errors": {}}
     own_client = client is None
     client = client or TelegramClient()
     token = client.token

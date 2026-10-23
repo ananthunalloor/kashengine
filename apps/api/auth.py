@@ -49,9 +49,14 @@ def gate(request: HttpRequest, user, identity: str, feature: str | None):
     """
     request.api_rate = ratelimit.hit(identity)  # ty: ignore[unresolved-attribute]
     request.user = user
+    access = Access(user)
+    if not access.email_verified:
+        raise ApiError(
+            "email_verification_required",
+            "Verify your email in Account settings to unlock all features.",
+        )
     if feature is None:
         return user
-    access = Access(user)
     if not access.subscription_ok:
         raise ApiError(
             "subscription_required", "An active trial or subscription is needed to use the API."

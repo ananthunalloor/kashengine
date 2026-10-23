@@ -1,5 +1,6 @@
 """Full workspace parity over existing domain handlers, with explicit safe JSON."""
 
+import hashlib
 import json
 from datetime import timedelta
 
@@ -9,6 +10,7 @@ from django.test import Client
 from django.utils import timezone
 
 from apps.api.app.ops_pages import ACTIONS, PAGES, _job_statistics, form_data
+from apps.delivery.models import SignupInvite
 from apps.markets.models import Instrument
 from apps.news.models import NewsFeed
 from apps.ops import jobs, schedule
@@ -108,6 +110,7 @@ def test_metrics_uses_the_same_readable_job_statistics(boss_client, offline):
         "logs/",
         "metrics/",
         "users/",
+        "invites/",
         "subscriptions/",
         "logins/",
         "config/",
@@ -162,6 +165,134 @@ def test_permission_matrix_and_action_allowlist(
     )
     assert "audit" not in PAGES  # Dedicated full-history endpoint remains authoritative.
     assert "feed_delete" in ACTIONS
+
+
+def test_invites_table_contains_metadata_and_never_code_digests(boss_client, boss, member):
+    available = SignupInvite(created_by=boss)
+    code = available.generate_code()
+    available.save()
+    used = SignupInvite(created_by=boss, used_by=member, used_at=timezone.now())
+    used.generate_code()
+    used.save()
+    revoked = SignupInvite(created_by=boss, revoked=True)
+    revoked.generate_code()
+    revoked.save()
+
+    response = boss_client.get(f"{BASE}pages/invites/")
+    assert response.status_code == 200
+    assert response["Cache-Control"] == "private, no-store"
+    body = response.json()
+    assert body["title"] == "Invite codes"
+    section = body["sections"][0]
+    assert section["forms"][0]["action"] == f"{BASE}actions/invites/generate/"
+    rows = section["table"]["rows"]
+    assert len(rows) == 3
+    available_row = next(row for row in rows if row["cells"]["state"]["text"] == "Available")
+    assert available_row["cells"]["invitation"]["text"] == f"#{available.pk}"
+    assert available_row["cells"]["created_by"]["text"] == boss.username
+    assert available_row["cells"]["created_at"]["kind"] == "time"
+    assert available_row["forms"][0]["action"] == f"{BASE}actions/invites/{available.pk}/revoke/"
+    used_row = next(row for row in rows if row["cells"]["state"]["text"] == "Used")
+    assert used_row["cells"]["used_by"]["text"] == member.username
+    assert used_row["cells"]["used_by"]["href"] == f"/ops/users/{member.pk}/"
+    assert used_row["cells"]["email"]["text"] == member.email
+    assert used_row["forms"] == []
+    assert code not in response.content.decode()
+    assert available.token_hash not in response.content.decode()
+    assert boss_client.get("/ops/invites/").status_code == 200
+
+
+def test_invites_empty_table_preserves_columns(boss_client):
+    table = boss_client.get(f"{BASE}pages/invites/").json()["sections"][0]["table"]
+    assert table["rows"] == []
+    assert [column["key"] for column in table["columns"]] == [
+        "invitation",
+        "state",
+        "created_at",
+        "created_by",
+        "used_at",
+        "used_by",
+        "email",
+    ]
+
+
+def test_invites_permissions_and_csrf(client, member_client, staff_client, boss_client):
+    assert client.get(f"{BASE}pages/invites/").status_code == 401
+    assert member_client.get(f"{BASE}pages/invites/").status_code == 403
+    response = staff_client.get(f"{BASE}pages/invites/")
+    assert response.status_code == 200
+    assert response.json()["sections"][0]["forms"] == []
+    assert staff_client.post(f"{BASE}actions/invites/generate/").status_code == 403
+    assert member_client.post(f"{BASE}actions/invites/generate/").status_code == 403
+    assert client.post(f"{BASE}actions/invites/generate/").status_code == 401
+    protected = Client(enforce_csrf_checks=True)
+    protected.cookies = boss_client.cookies
+    assert protected.post(f"{BASE}actions/invites/generate/").status_code == 403
+    assert not SignupInvite.objects.exists()
+
+
+def test_invite_generation_and_revocation_are_audited_without_secrets(boss_client, boss):
+    response = boss_client.post(f"{BASE}actions/invites/generate/")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"]
+    assert body["redirect"] == "/ops/invites/"
+    code = body["messages"][0]["text"].rsplit(": ", 1)[1]
+    invite = SignupInvite.objects.get()
+    assert invite.created_by == boss
+    assert invite.token_hash == hashlib.sha256(code.encode()).hexdigest()
+    event = AuditEvent.objects.get(action="generate invite")
+    assert event.target == str(invite.pk)
+    assert code not in event.detail
+    assert invite.token_hash not in event.detail
+    listing = boss_client.get(f"{BASE}pages/invites/")
+    assert code not in listing.content.decode()
+    assert "messages" not in listing.json()
+    response = boss_client.post(f"{BASE}actions/invites/{invite.pk}/revoke/")
+    assert response.json()["ok"]
+    invite.refresh_from_db()
+    assert invite.revoked
+    assert AuditEvent.objects.filter(action="revoke invite", target=str(invite.pk)).count() == 1
+    response = boss_client.post(f"{BASE}actions/invites/{invite.pk}/revoke/")
+    assert not response.json()["ok"]
+    assert AuditEvent.objects.filter(action="revoke invite").count() == 1
+
+
+def test_used_invites_cannot_be_revoked_or_regenerated(boss_client, boss, member):
+    invite = SignupInvite(created_by=boss, used_by=member, used_at=timezone.now())
+    invite.generate_code()
+    invite.save()
+    response = boss_client.post(f"{BASE}actions/invites/{invite.pk}/revoke/")
+    assert not response.json()["ok"]
+    invite.refresh_from_db()
+    assert not invite.revoked
+    assert invite.used_by == member
+    assert not AuditEvent.objects.filter(action="revoke invite").exists()
+    with pytest.raises(ValueError, match="existing invitation"):
+        invite.generate_code()
+    assert boss_client.post(f"{BASE}actions/invites/999999/revoke/").status_code == 404
+
+
+def test_invite_table_search_filter_sort_and_pagination(boss_client, boss, member):
+    for index in range(3):
+        invite = SignupInvite(created_by=boss, revoked=index == 2)
+        invite.generate_code()
+        invite.save()
+    invite = SignupInvite(created_by=boss, used_by=member, used_at=timezone.now())
+    invite.generate_code()
+    invite.save()
+    response = boss_client.get(
+        f"{BASE}pages/invites/", {"state": "Available", "sort": "-created_at", "page_size": 1}
+    )
+    table = response.json()["sections"][0]["table"]
+    assert table["total"] == 2
+    assert table["pages"] == 2
+    assert table["rows"][0]["cells"]["state"]["text"] == "Available"
+    assert table["filter_choices"]["state"] == ["Available", "Revoked", "Used"]
+    response = boss_client.get(f"{BASE}pages/invites/", {"q": member.email})
+    table = response.json()["sections"][0]["table"]
+    assert table["total"] == 1
+    assert table["rows"][0]["cells"]["used_by"]["text"] == member.username
 
 
 def test_form_validation_errors_and_no_secret_echo(boss_client):

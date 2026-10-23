@@ -1,18 +1,22 @@
 """Tests for the delivery service, the daily task, and the commands."""
 
+import smtplib
 from datetime import date
 
 import pytest
+from django.core import mail
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.utils import timezone
 
 from apps.delivery import service, tasks
 from apps.delivery.management.commands import send_report as send_report_command
 from apps.delivery.management.commands import telegram_check as telegram_check_command
-from apps.delivery.models import DeliveryLog
+from apps.delivery.models import DeliveryLog, DeliveryPreference
 from apps.delivery.service import DeliveryNotConfiguredError, deliver_report
 from apps.delivery.telegram import TelegramClient, TelegramError
 from apps.reports.models import Report
+from apps.siteconfig import conf
 
 pytestmark = pytest.mark.django_db
 
@@ -141,6 +145,80 @@ def test_deliver_report_uses_the_settings_and_makes_its_own_client(report, setti
     assert [chat for chat, _ in telegram.sent] == ["7", "8"]
 
 
+def test_email_report_requires_verified_opt_in_and_skips_duplicate_sends(
+    report, settings, django_user_model
+):
+    settings.MAILERS = {"default": {"BACKEND": "django.core.mail.backends.locmem.EmailBackend"}}
+    user = django_user_model.objects.create_user(
+        username="email-member", email="member@example.test", password="Market-Password-123!"
+    )
+    preference = DeliveryPreference.objects.create(
+        user=user, email_reports=True, email_verified_at=None
+    )
+
+    assert service.deliver_user_emails(report)["sent"] == 0
+    preference.email_verified_at = timezone.now()
+    preference.save(update_fields=["email_verified_at"])
+
+    first = service.deliver_user_emails(report)
+    second = service.deliver_user_emails(report)
+    forced = service.deliver_user_emails(report, force=True)
+
+    assert (first["sent"], second["skipped"], forced["sent"]) == (1, 1, 1)
+    assert len(mail.outbox) == 2
+    assert mail.outbox[0].to == ["member@example.test"]
+    assert (
+        DeliveryLog.objects.filter(
+            channel=DeliveryLog.Channel.EMAIL, status=DeliveryLog.Status.SENT
+        ).count()
+        == 2
+    )
+
+
+def test_email_delivery_logs_failures_and_continues(report, monkeypatch, django_user_model):
+    user = django_user_model.objects.create_user(
+        username="failed-email", email="fail@example.test", password="Market-Password-123!"
+    )
+    DeliveryPreference.objects.create(
+        user=user, email_reports=True, email_verified_at=timezone.now()
+    )
+
+    def fail_to_send(*args, **kwargs):
+        raise smtplib.SMTPException("mail server unavailable")
+
+    monkeypatch.setattr(service, "send_mail", fail_to_send)
+
+    result = service.deliver_user_emails(report)
+
+    assert result["failed"] == 1
+    assert result["errors"]["fail@example.test"] == "mail server unavailable"
+    log = DeliveryLog.objects.get(channel=DeliveryLog.Channel.EMAIL)
+    assert log.status == DeliveryLog.Status.FAILED
+    assert log.recipient == "fail@example.test"
+
+
+def test_report_chat_ids_include_only_enabled_linked_user_chats(settings, django_user_model):
+    settings.TELEGRAM_CHAT_IDS = ["global"]
+    user = django_user_model.objects.create_user(
+        username="telegram-member", email="telegram@example.test", password="Market-Password-123!"
+    )
+    DeliveryPreference.objects.create(
+        user=user, telegram_reports=True, telegram_chat_id="12345", email_verified_at=timezone.now()
+    )
+    other = django_user_model.objects.create_user(
+        username="unlinked-member", email="other@example.test", password="Market-Password-123!"
+    )
+    DeliveryPreference.objects.create(user=other, telegram_reports=True, telegram_chat_id=None)
+    conf.invalidate()
+
+    assert service.report_chat_ids() == ["global", "12345"]
+    DeliveryPreference.objects.filter(user=user).update(email_verified_at=None)
+    assert service.report_chat_ids() == ["global"]
+    user.is_staff = True
+    user.save(update_fields=["is_staff"])
+    assert service.report_chat_ids() == ["global", "12345"]
+
+
 def test_the_task_skips_the_weekend(monkeypatch):
     monkeypatch.setattr(tasks, "today_ist", lambda: SATURDAY)
     monkeypatch.setattr(tasks, "build_report", lambda day: pytest.fail("must not build"))
@@ -151,8 +229,16 @@ def test_the_task_skips_the_weekend(monkeypatch):
 def test_the_task_builds_and_sends(monkeypatch, report):
     monkeypatch.setattr(tasks, "today_ist", lambda: DAY)
     monkeypatch.setattr(tasks, "build_report", lambda day: (report, True))
+    monkeypatch.setattr(tasks, "report_chat_ids", lambda: ["1"])
     monkeypatch.setattr(
-        tasks, "deliver_report", lambda r: {"sent": 1, "failed": 0, "skipped": 0, "errors": {}}
+        tasks,
+        "deliver_report",
+        lambda report, chat_ids: {"sent": 1, "failed": 0, "skipped": 0, "errors": {}},
+    )
+    monkeypatch.setattr(
+        tasks,
+        "deliver_user_emails",
+        lambda r: {"sent": 0, "failed": 0, "skipped": 0, "errors": {}},
     )
 
     result = tasks.send_daily_report()
@@ -165,18 +251,31 @@ def test_the_task_builds_and_sends(monkeypatch, report):
 def test_the_task_still_builds_the_report_when_telegram_is_not_set(monkeypatch, report):
     monkeypatch.setattr(tasks, "today_ist", lambda: DAY)
     monkeypatch.setattr(tasks, "build_report", lambda day: (report, False))
+    monkeypatch.setattr(tasks, "report_chat_ids", lambda: ["1"])
 
-    def not_configured(_report):
+    def not_configured(_report, chat_ids):
         raise DeliveryNotConfiguredError("TELEGRAM_BOT_TOKEN is not set.")
 
     monkeypatch.setattr(tasks, "deliver_report", not_configured)
+    monkeypatch.setattr(
+        tasks,
+        "deliver_user_emails",
+        lambda r: {"sent": 0, "failed": 0, "skipped": 0, "errors": {}},
+    )
 
     result = tasks.send_daily_report()
 
     assert result == {
         "date": "2026-10-06",
         "built": False,
-        "not_sent": "TELEGRAM_BOT_TOKEN is not set.",
+        "sent": 0,
+        "failed": 0,
+        "skipped": 0,
+        "errors": {},
+        "telegram_not_sent": "TELEGRAM_BOT_TOKEN is not set.",
+        "email_sent": 0,
+        "email_failed": 0,
+        "email_skipped": 0,
     }
 
 
@@ -217,12 +316,18 @@ def test_build_report_command_rejects_a_bad_date():
 def test_send_report_command_sends_and_reports(monkeypatch, capsys, settings):
     settings.TELEGRAM_CHAT_IDS = ["1"]
     sent = []
+    monkeypatch.setattr(send_report_command, "report_chat_ids", lambda: ["1"])
     monkeypatch.setattr(
         send_report_command,
         "deliver_report",
-        lambda report, force=False: (
+        lambda report, chat_ids, force=False: (
             sent.append(force) or {"sent": 1, "failed": 0, "skipped": 0, "errors": {}}
         ),
+    )
+    monkeypatch.setattr(
+        send_report_command,
+        "deliver_user_emails",
+        lambda report, force=False: {"sent": 0, "failed": 0, "skipped": 0, "errors": {}},
     )
 
     call_command("send_report", "--date", "2026-10-06", "--force")
@@ -230,19 +335,26 @@ def test_send_report_command_sends_and_reports(monkeypatch, capsys, settings):
     out = capsys.readouterr().out
     assert "Report 2026-10-06: built." in out
     assert "Telegram: 1 sent, 0 failed, 0 skipped." in out
+    assert "Email: 0 sent, 0 failed, 0 skipped." in out
     assert sent == [True]
 
 
 def test_send_report_command_fails_loudly_when_a_chat_fails(monkeypatch, capsys):
+    monkeypatch.setattr(send_report_command, "report_chat_ids", lambda: ["1"])
     monkeypatch.setattr(
         send_report_command,
         "deliver_report",
-        lambda report, force=False: {
+        lambda report, chat_ids, force=False: {
             "sent": 0,
             "failed": 1,
             "skipped": 0,
             "errors": {"1": "Telegram error 400: chat not found"},
         },
+    )
+    monkeypatch.setattr(
+        send_report_command,
+        "deliver_user_emails",
+        lambda report, force=False: {"sent": 0, "failed": 0, "skipped": 0, "errors": {}},
     )
 
     with pytest.raises(CommandError, match="Run the command again"):
@@ -251,11 +363,12 @@ def test_send_report_command_fails_loudly_when_a_chat_fails(monkeypatch, capsys)
     assert "chat not found" in capsys.readouterr().out
 
 
-def test_send_report_command_explains_a_missing_setting(settings):
+def test_send_report_command_rejects_missing_destinations(settings):
     settings.TELEGRAM_BOT_TOKEN = ""
     settings.TELEGRAM_CHAT_IDS = []
+    conf.invalidate()
 
-    with pytest.raises(CommandError, match="TELEGRAM_BOT_TOKEN"):
+    with pytest.raises(CommandError, match="No Telegram chats"):
         call_command("send_report", "--date", "2026-10-06")
 
 

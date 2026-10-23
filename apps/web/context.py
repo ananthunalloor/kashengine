@@ -36,7 +36,9 @@ def navigation_for(request) -> list[dict]:
     nav = [
         {"label": label, "url": reverse(name), "active": current in names}
         for label, name, names, feature in SECTIONS
-        if access.subscription_ok and (feature is None or access.can(feature))
+        if access.email_verified
+        and access.subscription_ok
+        and (feature is None or access.can(feature))
     ]
     nav.append({"label": "Account", "url": reverse("web:account"), "active": current == "account"})
     if user.is_staff:
