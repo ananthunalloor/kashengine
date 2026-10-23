@@ -127,6 +127,34 @@ it("renders native React Ops tables, complete navigation, escaped cells and IST 
   expect(document.querySelector("style")).toBeNull();
 });
 
+it("pins Ops row actions and their header to the right of the table", async () => {
+  const body = zOpsPage.parse({
+    ...page,
+    sections: [
+      {
+        title: "Feeds",
+        table: {
+          ...page.sections[0]!.table,
+          rows: [
+            {
+              cells: { name: { text: "Saved feed" } },
+              links: [{ label: "Edit feed", url: "/ops/feeds/1/" }],
+            },
+          ],
+        },
+      },
+    ],
+  });
+  await show({ body });
+  expect(await screen.findByRole("columnheader", { name: "Actions" })).toHaveClass(
+    "table-sticky-right",
+  );
+  expect(screen.getByRole("link", { name: "Edit feed" }).closest("td")).toHaveClass(
+    "table-sticky-right",
+  );
+  expect(screen.getByRole("cell", { name: "Saved feed" })).not.toHaveClass("table-sticky-right");
+});
+
 it("searches, filters, sorts and paginates on the server with URL restoration", async () => {
   const { router, fetchMock } = await show();
   await screen.findByRole("heading", { name: "News feeds", level: 1 });

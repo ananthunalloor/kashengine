@@ -17,6 +17,29 @@ const columns = [
   { id: "status", label: "Status", value: (row: (typeof data)[number]) => row.status },
 ];
 
+it("pins only opted-in column headers and cells and leaves the empty state unpinned", () => {
+  const stickyColumns = [
+    ...columns,
+    {
+      id: "actions",
+      label: "Actions",
+      value: () => null,
+      sortable: false,
+      stickyRight: true,
+      render: () => <button type="button">Edit record</button>,
+    },
+  ];
+  render(<DataTable data={data.slice(0, 2)} columns={stickyColumns} label="Records" />);
+  expect(screen.getByRole("columnheader", { name: "Actions" })).toHaveClass("table-sticky-right");
+  expect(screen.getByRole("columnheader", { name: "Name" })).not.toHaveClass("table-sticky-right");
+  for (const button of screen.getAllByRole("button", { name: "Edit record" })) {
+    expect(button.closest("td")).toHaveClass("table-sticky-right");
+  }
+  expect(screen.getByRole("cell", { name: "Record 01" })).not.toHaveClass("table-sticky-right");
+  fireEvent.change(screen.getByRole("searchbox"), { target: { value: "no matches" } });
+  expect(screen.getByRole("cell")).not.toHaveClass("table-sticky-right");
+});
+
 it("paginates, sorts numerically, filters all rows, and resets page on search/size change", () => {
   render(
     <DataTable

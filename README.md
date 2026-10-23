@@ -411,7 +411,14 @@ is retained. Theme changes use static CSS and do not weaken the Content-Security
 The React workspace uses React Icons (Lucide set) for navigation and controls, with a shared
 TanStack Table for Today summaries, Reports, News, IPOs, Companies, Markets, Delivery, and detail-page tables.
 Sortable headers, accessible search/filters, row-size selection, and first/previous/next/last
-pagination share one responsive design. Wide tables scroll within their panel, not the page.
+pagination share one responsive design. Signed-in pages use the full content width beside the
+navigation, without a page-width cap and with a small responsive side gutter. Ops tables also extend through
+their section's side padding. Tables that still exceed the available width scroll within their
+panel, not the page.
+Ops row Actions headers and cells stay pinned to the right edge while the other columns scroll.
+Long Ops row button labels wrap and buttons grow vertically rather than truncating their text.
+Ops page tabs stay pinned below the app header, including when tabs wrap on mobile. A buffer
+appears underneath only while the tabs are stuck, without changing the normal page spacing.
 Reports, News, IPOs, and Companies search/filter/sort the full dataset on the server before
 pagination; URL parameters preserve the table state across reloads and browser history.
 Reports support date/text search and outlook filters; Companies also supports exact sector

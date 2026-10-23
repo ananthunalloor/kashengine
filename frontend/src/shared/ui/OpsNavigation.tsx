@@ -1,4 +1,5 @@
 import { NavLink, Tabs } from "@mantine/core";
+import { useEffect, useRef, useState } from "react";
 import {
   LuActivity,
   LuCalendarClock,
@@ -124,6 +125,26 @@ export function OpsPageTabs({
   pathname: string;
   children: ReactNode;
 }) {
+  const tabList = useRef<HTMLDivElement>(null);
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    const updateStuck = () => {
+      const element = tabList.current;
+      if (!element) {
+        setStuck(false);
+        return;
+      }
+      const top = Number.parseFloat(getComputedStyle(element).top);
+      setStuck(element.getBoundingClientRect().top <= top);
+    };
+    updateStuck();
+    window.addEventListener("scroll", updateStuck, { passive: true });
+    window.addEventListener("resize", updateStuck);
+    return () => {
+      window.removeEventListener("scroll", updateStuck);
+      window.removeEventListener("resize", updateStuck);
+    };
+  }, [pathname]);
   const visibleSections = sections
     .map((section) => ({
       ...section,
@@ -145,7 +166,7 @@ export function OpsPageTabs({
 
   return (
     <Tabs className="ops-page-tabs" value={activeValue} keepMounted={false}>
-      <Tabs.List aria-label={`${activeSection.label} pages`}>
+      <Tabs.List ref={tabList} data-stuck={stuck} aria-label={`${activeSection.label} pages`}>
         {activeSection.pages.map(([path, label, Icon]) => {
           const value = `/ops/${path}`;
           return (

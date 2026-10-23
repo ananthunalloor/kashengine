@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 
 import { session } from "../../test/session";
 import { ThemeProvider } from "../../app/ThemeProvider";
@@ -48,6 +48,30 @@ it("shows ops categories in the sidebar and page options as tabs", () => {
   expect(screen.getByRole("tab", { name: "Overview" })).toHaveAttribute("href", "/ops/");
   expect(screen.getByRole("tab", { name: "Jobs" })).toHaveAttribute("aria-selected", "true");
   expect(screen.getByRole("heading", { name: "Jobs preview" })).toBeInTheDocument();
+});
+
+it("shows the tabs buffer only while pinned and clears it when scrolling back", () => {
+  const view = render(
+    <ThemeProvider>
+      <ApplicationShell session={{ ...session, is_staff: true }} pathname="/ops/jobs/">
+        <h1>Jobs preview</h1>
+      </ApplicationShell>
+    </ThemeProvider>,
+  );
+  const tabs = screen.getByRole("tablist", { name: "Activity pages" });
+  tabs.style.top = "64px";
+  const bounds = vi.spyOn(tabs, "getBoundingClientRect");
+  bounds.mockReturnValue(new DOMRect(0, 120, 300, 40));
+  fireEvent.scroll(window);
+  expect(tabs).toHaveAttribute("data-stuck", "false");
+  bounds.mockReturnValue(new DOMRect(0, 64, 300, 40));
+  fireEvent.scroll(window);
+  expect(tabs).toHaveAttribute("data-stuck", "true");
+  bounds.mockReturnValue(new DOMRect(0, 120, 300, 40));
+  fireEvent.scroll(window);
+  expect(tabs).toHaveAttribute("data-stuck", "false");
+  view.unmount();
+  bounds.mockRestore();
 });
 
 it("shows subscription notices and keeps account navigation for locked users", () => {

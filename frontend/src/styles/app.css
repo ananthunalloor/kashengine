@@ -623,9 +623,8 @@ h2 {
 .app-main {
   min-width: 0;
   width: 100%;
-  max-width: 76rem;
-  margin-inline: auto;
-  padding: clamp(var(--ui-space-4), 4vw, var(--ui-space-8));
+  padding-block: clamp(var(--ui-space-4), 4vw, var(--ui-space-8));
+  padding-inline: clamp(var(--ui-space-3), 1.5vw, var(--ui-space-4));
 }
 
 .app-navigation .mantine-NavLink-root {
@@ -715,8 +714,21 @@ h2 {
 }
 
 .ops-page-tabs [role="tablist"] {
+  position: sticky;
+  top: 4rem;
+  z-index: 5;
+  background: var(--brand-canvas);
   flex-wrap: wrap;
   gap: var(--ui-space-1);
+}
+
+.ops-page-tabs [role="tablist"][data-stuck="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 100% 0 auto;
+  height: var(--ui-space-3);
+  background: var(--brand-canvas);
+  pointer-events: none;
 }
 
 .ops-page-tab-panel {
@@ -752,6 +764,10 @@ h2 {
   border: 1px solid var(--brand-line);
   border-radius: var(--ui-radius-md);
   background: var(--brand-surface);
+}
+
+.ops-shell .ops-section > .data-panel {
+  margin-inline: calc(-1 * var(--ui-space-4));
 }
 
 .ops-status {
@@ -970,8 +986,26 @@ h2 {
 
 .ops-row-actions {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--ui-space-2);
   min-width: 10rem;
+}
+
+.ops-row-actions .mantine-Button-root {
+  height: auto;
+  padding-block: var(--ui-space-2);
+  white-space: normal;
+}
+
+.ops-row-actions .mantine-Button-inner {
+  height: auto;
+}
+
+.ops-row-actions .mantine-Button-label {
+  height: auto;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
 }
 
 .ops-row-actions details[open] {
@@ -1349,6 +1383,21 @@ h2 {
 
 .data-table tbody tr:hover {
   background: color-mix(in srgb, var(--brand-soft) 35%, transparent);
+}
+
+.data-table .table-sticky-right {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  box-shadow: -1px 0 var(--brand-line), -6px 0 10px #2024360a;
+}
+
+.data-table td.table-sticky-right {
+  background: var(--brand-surface);
+}
+
+.data-table tbody tr:hover td.table-sticky-right {
+  background: color-mix(in srgb, var(--brand-soft) 35%, var(--brand-surface));
 }
 
 .data-table th button {

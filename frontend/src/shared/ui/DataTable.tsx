@@ -28,6 +28,7 @@ export type TableColumn<T> = {
   value: (row: T) => string | number | null;
   render?: (row: T) => ReactNode;
   sortable?: boolean;
+  stickyRight?: boolean;
 };
 
 type ServerTable = {
@@ -241,6 +242,11 @@ export function DataTable<T>({
                   <th
                     key={header.id}
                     scope="col"
+                    className={
+                      columns.find((column) => column.id === header.column.id)?.stickyRight
+                        ? "table-sticky-right"
+                        : undefined
+                    }
                     aria-sort={
                       header.column.getIsSorted() === "asc"
                         ? "ascending"
@@ -275,7 +281,10 @@ export function DataTable<T>({
                   {row.getVisibleCells().map((cell) => {
                     const column = columns.find((column) => column.id === cell.column.id);
                     return (
-                      <td key={cell.id}>
+                      <td
+                        key={cell.id}
+                        className={column?.stickyRight ? "table-sticky-right" : undefined}
+                      >
                         {column?.render
                           ? column.render(row.original)
                           : String(cell.getValue() ?? "\u2013")}

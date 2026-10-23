@@ -246,6 +246,7 @@ function WorkspaceTable({
                 id: "actions",
                 label: "Actions",
                 sortable: false,
+                stickyRight: true,
                 value: () => null,
                 render: (row: OpsRow) => (
                   <div className="ops-row-actions">
