@@ -29,21 +29,25 @@ it("renders the server-provided links without inventing access", () => {
   expect(document.querySelector("style")).toBeNull();
 });
 
-it("shows ops page options in the sidebar and expands the active section", () => {
+it("shows ops categories in the sidebar and page options as tabs", () => {
   render(
     <ThemeProvider>
       <ApplicationShell
         session={{ ...session, is_staff: true, is_superuser: true }}
-        pathname="/ops/audit/"
+        pathname="/ops/jobs/"
       >
-        <h1>Audit preview</h1>
+        <h1>Jobs preview</h1>
       </ApplicationShell>
     </ThemeProvider>,
   );
 
   expect(screen.getByRole("navigation", { name: "Operations options" })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Audit trail" })).toHaveAttribute("aria-current", "page");
-  expect(screen.getByRole("heading", { name: "Audit preview" })).toBeInTheDocument();
+  const activityLink = screen.getByRole("link", { name: "Activity" });
+  expect(activityLink).toHaveAttribute("href", "/ops/");
+  expect(activityLink).not.toHaveAttribute("aria-current", "page");
+  expect(screen.getByRole("tab", { name: "Overview" })).toHaveAttribute("href", "/ops/");
+  expect(screen.getByRole("tab", { name: "Jobs" })).toHaveAttribute("aria-selected", "true");
+  expect(screen.getByRole("heading", { name: "Jobs preview" })).toBeInTheDocument();
 });
 
 it("shows subscription notices and keeps account navigation for locked users", () => {

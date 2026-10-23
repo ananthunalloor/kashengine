@@ -640,21 +640,23 @@ h2 {
   padding-inline: var(--ui-space-2);
 }
 
-.ops-navigation-section+.ops-navigation-section {
-  margin-top: var(--ui-space-2);
-}
-
-.ops-navigation-heading {
-  margin: var(--ui-space-2) var(--ui-space-3) var(--ui-space-1);
-  color: var(--brand-muted);
-  font-size: var(--ui-text-xs-size);
-  font-weight: 650;
-}
-
-.ops-navigation .ops-page-navlink {
+.ops-navigation .ops-section-navlink {
   margin-block: 0;
   padding: var(--ui-space-2) var(--ui-space-3);
   font-size: var(--ui-text-label-size);
+}
+
+.ops-page-tabs {
+  margin-bottom: var(--ui-space-5);
+}
+
+.ops-page-tabs [role="tablist"] {
+  flex-wrap: wrap;
+  gap: var(--ui-space-1);
+}
+
+.ops-page-tab-panel {
+  padding-top: var(--ui-space-4);
 }
 
 .ops-shell .app-main {

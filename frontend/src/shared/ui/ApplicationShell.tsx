@@ -23,15 +23,13 @@ import {
   LuNewspaper,
   LuSend,
   LuSettings2,
-  LuShieldCheck,
-  LuSparkles,
   LuSun,
 } from "react-icons/lu";
 import type { IconType } from "react-icons";
 
 import type { Session } from "../api/generated/types.gen";
 import { AccountMenu } from "./AccountMenu";
-import { OpsNavigation } from "./OpsNavigation";
+import { OpsNavigation, OpsPageTabs } from "./OpsNavigation";
 import { AppLink } from "./AppLink";
 
 const navigationIcons: Record<string, IconType> = {
@@ -178,7 +176,13 @@ export function ApplicationShell({
         )}
       </aside>
       <main className="app-main" id="main" tabIndex={-1}>
-        {pageContent}
+        {session.is_staff && pathname.startsWith("/ops/") ? (
+          <OpsPageTabs superuser={session.is_superuser} pathname={pathname}>
+            {pageContent}
+          </OpsPageTabs>
+        ) : (
+          pageContent
+        )}
         <Text component="footer" size="xs" c="dimmed" mt="xl" py="lg">
           Market signals are informational, not investment advice. GMP is unofficial data.{" "}
           <Anchor component={AppLink} href="/">

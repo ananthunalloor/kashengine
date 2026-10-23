@@ -1,4 +1,4 @@
-import { NavLink } from "@mantine/core";
+import { NavLink, Tabs } from "@mantine/core";
 import {
   LuActivity,
   LuCalendarClock,
@@ -19,6 +19,7 @@ import {
 import { AppLink } from "./AppLink";
 
 import type { IconType } from "react-icons";
+import type { ReactNode } from "react";
 
 type OpsPage = readonly [path: string, label: string, icon: IconType];
 
@@ -85,35 +86,88 @@ export function OpsNavigation({
       pages: section.pages.filter(([path]) => path !== "backups/" || superuser),
     }))
     .filter(({ pages: sectionPages }) => sectionPages.length > 0);
+
   return (
-    <>
-      <nav className="ops-navigation" aria-label="Operations options">
-        {visibleSections.map(({ id, label, pages: sectionPages }) => {
+    <nav className="ops-navigation" aria-label="Operations options">
+      {visibleSections.map(({ id, label, pages: sectionPages }) => {
+        const [defaultPath, , Icon] = sectionPages[0];
+        const href = `/ops/${defaultPath}`;
+        const sectionActive = sectionPages.some(([path]) =>
+          path === "" ? pathname === "/ops/" : pathname.startsWith(`/ops/${path}`),
+        );
+
+        return (
+          <NavLink
+            className="ops-section-navlink"
+            key={id}
+            component={AppLink}
+            href={href}
+            activeOptions={{ exact: true }}
+            label={label}
+            leftSection={<Icon aria-hidden="true" />}
+            active={sectionActive}
+            aria-current={pathname === href ? "page" : undefined}
+            onClick={onNavigate}
+          />
+        );
+      })}
+    </nav>
+  );
+}
+
+export function OpsPageTabs({
+  superuser,
+  pathname,
+  children,
+}: {
+  superuser: boolean;
+  pathname: string;
+  children: ReactNode;
+}) {
+  const visibleSections = sections
+    .map((section) => ({
+      ...section,
+      pages: section.pages.filter(([path]) => path !== "backups/" || superuser),
+    }))
+    .filter(({ pages: sectionPages }) => sectionPages.length > 0);
+  const activeSection = visibleSections.find(({ pages: sectionPages }) =>
+    sectionPages.some(([path]) =>
+      path === "" ? pathname === "/ops/" : pathname.startsWith(`/ops/${path}`),
+    ),
+  );
+  const activePage = activeSection?.pages.find(([path]) =>
+    path === "" ? pathname === "/ops/" : pathname.startsWith(`/ops/${path}`),
+  );
+
+  if (!activeSection || !activePage) return <>{children}</>;
+
+  const activeValue = `/ops/${activePage[0]}`;
+
+  return (
+    <Tabs className="ops-page-tabs" value={activeValue} keepMounted={false}>
+      <Tabs.List aria-label={`${activeSection.label} pages`}>
+        {activeSection.pages.map(([path, label, Icon]) => {
+          const value = `/ops/${path}`;
           return (
-            <section className="ops-navigation-section" key={id}>
-              <p className="ops-navigation-heading">{label}</p>
-              {sectionPages.map(([path, pageLabel, Icon]) => {
-                const href = `/ops/${path}`;
-                const pageActive =
-                  pathname === href || (path !== "" && pathname.startsWith(href));
-                return (
-                  <NavLink
-                    className="ops-page-navlink"
-                    key={path}
-                    component={AppLink}
-                    href={href}
-                    label={pageLabel}
-                    active={pageActive}
-                    aria-current={pageActive ? "page" : undefined}
-                    onClick={onNavigate}
-                    leftSection={<Icon aria-hidden="true" />}
-                  />
-                );
-              })}
-            </section>
+            <Tabs.Tab
+              key={path}
+              value={value}
+              renderRoot={(props) => <AppLink {...props} href={value} />}
+              leftSection={<Icon aria-hidden="true" />}
+            >
+              {label}
+            </Tabs.Tab>
           );
         })}
-      </nav>
-    </>
+      </Tabs.List>
+      {activeSection.pages.map(([path]) => {
+        const value = `/ops/${path}`;
+        return (
+          <Tabs.Panel className="ops-page-tab-panel" key={value} value={value}>
+            {value === activeValue ? children : null}
+          </Tabs.Panel>
+        );
+      })}
+    </Tabs>
   );
 }
