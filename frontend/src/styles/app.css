@@ -3,6 +3,7 @@
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/preflight.css" layer(base);
 @import "@mantine/core/styles.layer.css";
+@import "@mantine/dates/styles.layer.css";
 @import "tailwindcss/utilities.css" layer(utilities);
 @import "../../../static/css/brand-tokens.css";
 
@@ -14,10 +15,10 @@
   --ui-space-5: 1.25rem;
   --ui-space-6: 1.5rem;
   --ui-space-8: 2rem;
-  --ui-radius-sm: 0.5rem;
-  --ui-radius-md: 0.75rem;
-  --ui-radius-lg: 1rem;
-  --ui-radius-xl: 1.25rem;
+  --ui-radius-sm: 0;
+  --ui-radius-md: 0;
+  --ui-radius-lg: 0;
+  --ui-radius-xl: 0;
   --ui-button-height: 2.5rem;
   --ui-button-padding-inline: 0.9rem;
   --ui-button-gap: 0.5rem;
@@ -44,7 +45,12 @@
   --mantine-h1-font-weight: 650;
   --mantine-h2-font-weight: 650;
   --mantine-h3-font-weight: 650;
-  --mantine-radius-default: 0.75rem;
+  --mantine-radius-xs: 0;
+  --mantine-radius-sm: 0;
+  --mantine-radius-md: 0;
+  --mantine-radius-lg: 0;
+  --mantine-radius-xl: 0;
+  --mantine-radius-default: 0;
   --mantine-color-violet-filled: var(--brand-purple);
   --mantine-color-violet-filled-hover: var(--brand-purple-hover);
   --mantine-color-violet-light: var(--brand-soft);
@@ -174,16 +180,18 @@ textarea {
   font: inherit;
 }
 
-button:not(.mantine-Button-root):not(.mantine-ActionIcon-root):not(.mantine-CloseButton-root):not(.header-icon-button):not(.account-menu-trigger):not(.table-footer button) {
+button:not([class*="mantine-"]):not(.header-icon-button):not(.account-menu-trigger):not(
+    .table-footer button
+  ) {
   min-height: var(--ui-button-height);
   padding-inline: var(--ui-button-padding-inline);
 }
 
-.mantine-Button-section>svg,
-.mantine-ActionIcon-root>svg,
-.mantine-NavLink-section>svg,
-.header-icon-button>svg,
-.account-menu-trigger>svg {
+.mantine-Button-section > svg,
+.mantine-ActionIcon-root > svg,
+.mantine-NavLink-section > svg,
+.header-icon-button > svg,
+.account-menu-trigger > svg {
   width: var(--ui-icon-size-md);
   height: var(--ui-icon-size-md);
 }
@@ -194,10 +202,17 @@ button:not(.mantine-Button-root):not(.mantine-ActionIcon-root):not(.mantine-Clos
 }
 
 .public-site {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
   max-width: 1240px;
   margin: auto;
   padding: 0 clamp(var(--ui-space-4), 4vw, 3rem);
   overflow-wrap: anywhere;
+}
+
+.public-site > main {
+  flex: 1;
 }
 
 .public-site a:not(.public-button, .app-brand) {
@@ -450,13 +465,57 @@ button:not(.mantine-Button-root):not(.mantine-ActionIcon-root):not(.mantine-Clos
   gap: 0.8rem;
 }
 
-.public-footer {
+.app-footer {
   border-top: 1px solid var(--brand-line);
-  margin-top: 4rem;
-  padding: 2rem 0;
-  display: grid;
-  gap: 1rem;
-  font-size: 0.85rem;
+  padding-block: var(--ui-space-6);
+  color: var(--brand-muted);
+  font-size: var(--ui-text-label-size);
+}
+
+.app-footer-top,
+.app-footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  flex-wrap: wrap;
+  gap: var(--ui-space-4);
+}
+
+.app-footer-top p {
+  margin-top: var(--ui-space-2);
+}
+
+.app-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-3) var(--ui-space-5);
+}
+
+.app-footer a:not(.app-brand) {
+  color: var(--brand-purple);
+  text-underline-offset: 3px;
+}
+
+.app-footer a:not(.app-brand):hover {
+  text-decoration: underline;
+}
+
+.app-footer-bottom {
+  margin-top: var(--ui-space-5);
+  padding-top: var(--ui-space-4);
+  border-top: 1px solid var(--brand-line);
+}
+
+.app-footer-bottom p {
+  max-width: 44rem;
+}
+
+.app-footer small {
+  font-size: inherit;
+}
+
+.public-site > .app-footer {
+  margin-top: var(--ui-space-8);
 }
 
 .public-auth {
@@ -515,7 +574,6 @@ button:not(.mantine-Button-root):not(.mantine-ActionIcon-root):not(.mantine-Clos
 }
 
 @media (max-width: 600px) {
-
   .public-hero,
   .public-principles,
   .public-capabilities,
@@ -621,7 +679,7 @@ h2 {
 .app-shell {
   display: grid;
   grid-template-columns: 15rem minmax(0, 1fr);
-  grid-template-rows: 4rem 1fr;
+  grid-template-rows: 4rem 1fr auto;
   min-height: 100vh;
 }
 
@@ -635,6 +693,7 @@ h2 {
 }
 
 .app-navigation {
+  grid-row: 2 / 4;
   display: flex;
   flex-direction: column;
   position: sticky;
@@ -651,6 +710,11 @@ h2 {
   width: 100%;
   padding-block: clamp(var(--ui-space-4), 4vw, var(--ui-space-8));
   padding-inline: clamp(var(--ui-space-3), 1.5vw, var(--ui-space-4));
+}
+
+.app-shell > .app-footer {
+  grid-column: 2;
+  margin-inline: clamp(var(--ui-space-3), 1.5vw, var(--ui-space-4));
 }
 
 .app-navigation .mantine-NavLink-root {
@@ -673,7 +737,7 @@ h2 {
   display: block;
 }
 
-.workspace-card div>span {
+.workspace-card div > span {
   margin-top: var(--ui-space-1);
   color: var(--brand-muted);
   font-size: var(--ui-text-xs-size);
@@ -772,14 +836,14 @@ h2 {
   gap: var(--ui-space-3);
 }
 
-.ops-page-title>svg {
+.ops-page-title > svg {
   color: var(--brand-purple);
   flex-shrink: 0;
   width: 1em;
   height: 1em;
 }
 
-.ops-section-title>svg {
+.ops-section-title > svg {
   flex-shrink: 0;
   width: 1.1rem;
   height: 1.1rem;
@@ -800,7 +864,7 @@ h2 {
   border-color: currentColor;
 }
 
-.ops-status>svg {
+.ops-status > svg {
   flex: 0 0 auto;
   width: var(--ui-tag-icon-size);
   height: var(--ui-tag-icon-size);
@@ -952,7 +1016,7 @@ h2 {
   min-width: 0;
 }
 
-.ops-field input:not([type="checkbox"]),
+.ops-field > input:not([type="checkbox"]),
 .ops-field select,
 .ops-field textarea {
   width: 100%;
@@ -1081,7 +1145,7 @@ h2 {
   gap: var(--ui-space-3);
 }
 
-.account-popover-identity>div {
+.account-popover-identity > div {
   min-width: 0;
   flex: 1;
   overflow-wrap: anywhere;
@@ -1100,7 +1164,7 @@ h2 {
   margin-block: var(--ui-space-5);
 }
 
-.account-popover-details>div {
+.account-popover-details > div {
   display: flex;
   justify-content: space-between;
   gap: var(--ui-space-4);
@@ -1183,7 +1247,7 @@ h2 {
   overflow: hidden;
 }
 
-.workspace-welcome>div {
+.workspace-welcome > div {
   max-width: 34rem;
 }
 
@@ -1225,7 +1289,7 @@ h2 {
   margin-right: 0.4rem;
 }
 
-.app-main>.mantine-Stack-root>header {
+.app-main > .mantine-Stack-root > header {
   padding-bottom: var(--ui-space-6);
   border-bottom: 1px solid var(--brand-line);
 }
@@ -1234,7 +1298,7 @@ h2 {
   font-size: var(--ui-heading-1-size);
 }
 
-.app-main header>.mantine-Anchor-root {
+.app-main header > .mantine-Anchor-root {
   display: inline-flex;
   font-size: 0.75rem;
   margin-top: var(--ui-space-2);
@@ -1400,7 +1464,9 @@ h2 {
   position: sticky;
   right: 0;
   z-index: 1;
-  box-shadow: -1px 0 var(--brand-line), -6px 0 10px #2024360a;
+  box-shadow:
+    -1px 0 var(--brand-line),
+    -6px 0 10px #2024360a;
 }
 
 .data-table td.table-sticky-right {
@@ -1466,7 +1532,7 @@ h2 {
   color: var(--brand-muted);
 }
 
-.table-empty>svg {
+.table-empty > svg {
   color: var(--brand-purple);
   font-size: 1.5rem;
 }
@@ -1510,7 +1576,7 @@ h2 {
   background: var(--brand-soft);
 }
 
-.table-footer nav>span {
+.table-footer nav > span {
   margin-inline: 0.3rem;
 }
 
@@ -1678,7 +1744,7 @@ h2 {
   margin-top: 1rem;
 }
 
-.today-direction>.report-outlook {
+.today-direction > .report-outlook {
   font-size: 2rem;
 }
 
@@ -1738,11 +1804,11 @@ h2 {
   font: inherit;
 }
 
-#market-record+p {
+#market-record + p {
   max-width: 65rem;
 }
 
-section[aria-labelledby="market-record"] .market-summary>div {
+section[aria-labelledby="market-record"] .market-summary > div {
   padding: var(--ui-space-4);
   border-radius: var(--ui-radius-sm);
   background: var(--brand-canvas);
@@ -1813,7 +1879,7 @@ section[aria-labelledby="market-record"] .market-summary dd {
   font-size: var(--ui-text-label-size);
 }
 
-.ipo-facts>div {
+.ipo-facts > div {
   display: flex;
   justify-content: space-between;
   gap: var(--ui-space-4);
@@ -1835,7 +1901,6 @@ section[aria-labelledby="market-record"] .market-summary dd {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   *,
   *::before,
   *::after {
@@ -1857,6 +1922,10 @@ section[aria-labelledby="market-record"] .market-summary dd {
 
   .app-shell {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-shell > .app-footer {
+    grid-column: 1;
   }
 
   .app-desktop-only,
@@ -1882,4 +1951,22 @@ section[aria-labelledby="market-record"] .market-summary dd {
 }
 body:has(.trading-calendar-dialog) {
   overflow: hidden;
+}
+
+.trading-calendar-month {
+  align-self: center;
+}
+
+.trading-calendar-month [data-kind="holiday"],
+.trading-calendar-legend [data-kind="holiday"] {
+  background: var(--brand-canvas);
+  color: var(--brand-ink);
+  box-shadow: inset 0 -3px var(--brand-muted);
+}
+
+.trading-calendar-month [data-kind="special"],
+.trading-calendar-legend [data-kind="special"] {
+  background: var(--brand-soft);
+  color: var(--brand-purple);
+  box-shadow: inset 0 -3px var(--brand-purple);
 }

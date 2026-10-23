@@ -26,6 +26,70 @@ const form = zOpsForm.parse({
     { name: "url", label: "Feed URL", required: true },
   ],
 });
+
+it("uses Mantine date entry with ISO form values, bounds, labels and server errors", () => {
+  const dateForm = zOpsForm.parse({
+    ...form,
+    fields: [
+      {
+        name: "day",
+        label: "Trading day",
+        kind: "date",
+        value: "2026-01-26",
+        required: true,
+        min: "2026-01-01",
+        max: "2026-12-31",
+        help: "Exchange date in IST.",
+        errors: ["Check this trading date."],
+      },
+    ],
+  });
+  render(
+    <ThemeProvider>
+      <OpsActionForm form={dateForm} onResult={async () => {}} />
+    </ThemeProvider>,
+  );
+  const input = screen.getByLabelText("Trading day");
+  const element = input.closest("form")!;
+  expect(input).toHaveClass("mantine-DateInput-input");
+  expect(input).not.toHaveAttribute("type", "date");
+  expect(input).toBeRequired();
+  expect(input).toHaveAttribute("aria-invalid", "true");
+  expect(input).toHaveAccessibleDescription(/Exchange date in IST/);
+  expect(screen.getByRole("alert")).toHaveTextContent("Check this trading date.");
+  expect(new FormData(element).get("day")).toBe("2026-01-26");
+  fireEvent.focus(input);
+  expect(screen.getByRole("button", { name: "1 January 2026" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "31 December 2025" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "27 January 2026" }));
+  expect(new FormData(element).get("day")).toBe("2026-01-27");
+  fireEvent.focus(input);
+  expect(screen.getByRole("button", { name: "Next month" })).toBeEnabled();
+  expect(document.querySelector("style")).toBeNull();
+});
+
+it("allows optional Mantine dates to clear and excludes disabled dates from form submission", () => {
+  const dateForm = zOpsForm.parse({
+    ...form,
+    fields: [{ name: "day", label: "End date", kind: "date", value: "2026-01-26" }],
+  });
+  const view = render(
+    <ThemeProvider>
+      <OpsActionForm form={dateForm} onResult={async () => {}} />
+    </ThemeProvider>,
+  );
+  const input = screen.getByLabelText("End date");
+  fireEvent.click(screen.getByRole("button", { name: "Clear End date" }));
+  expect(input).toHaveValue("");
+  expect(new FormData(input.closest("form")!).get("day")).toBe("");
+  view.rerender(
+    <ThemeProvider>
+      <OpsActionForm form={{ ...dateForm, disabled: true }} onResult={async () => {}} />
+    </ThemeProvider>,
+  );
+  expect(input).toBeDisabled();
+  expect(new FormData(input.closest("form")!).has("day")).toBe(false);
+});
 const page = zOpsPage.parse({
   title: "News feeds",
   description: "Existing backend validation, new React controls.",

@@ -17,6 +17,7 @@ import { z } from "zod";
 
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { PageNotFound } from "../../shared/ui/PageNotFound";
+import { AppFooter } from "../../shared/ui/AppFooter";
 
 export const publicPageSchema = z.object({
   page: z.enum(["landing", "login", "signup", "signup-complete", "access", "lockout", "not-found"]),
@@ -545,15 +546,7 @@ export function PublicPage({ data }: { data: PublicData }) {
           </section>
         )}
       </main>
-      <footer className="public-footer">
-        <Brand />
-        <p>A little less noise. A lot more context.</p>
-        <p>
-          Not financial advice. Predictions can be wrong. GMP is unofficial. Always do your own
-          research.
-        </p>
-        <a href="/docs/">Documentation</a>
-      </footer>
+      <AppFooter />
     </div>
   );
 }

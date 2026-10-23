@@ -13,3 +13,10 @@
   --brand-loss: #b3372f;
   --brand-loss-soft: #fceeed;
 }
+
+/* Square corners are a product-wide rule, including library controls and pseudo-elements. */
+*,
+*::before,
+*::after {
+  border-radius: 0 !important;
+}

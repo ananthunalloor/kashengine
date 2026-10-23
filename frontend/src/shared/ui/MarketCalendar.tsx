@@ -1,4 +1,5 @@
 import { Alert, Anchor, Badge, Button, Group, Modal, Stack, Table, Text } from "@mantine/core";
+import { Calendar } from "@mantine/dates";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { LuCalendarDays, LuClock } from "react-icons/lu";
@@ -24,59 +25,85 @@ function CalendarYear({ year, current }: { year: number; current: TradingCalenda
       </Alert>
     );
   if (!data) return <Text role="status">Loading trading calendar...</Text>;
-  if (!data.days.length)
-    return (
-      <Alert color="yellow" title="No dates published here" role="status">
-        No holidays or special sessions have been added for {year}. This does not mean there are no
-        exchange holidays. Check the official NSE calendar below.
-      </Alert>
-    );
   return (
-    <Table.ScrollContainer minWidth={520}>
-      <Table captionSide="top">
-        <Table.Caption>
-          Holidays and special trading sessions for {year}. All times are IST.
-        </Table.Caption>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th scope="col">Date</Table.Th>
-            <Table.Th scope="col">Session</Table.Th>
-            <Table.Th scope="col">Reason</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {data.days.map((day) => (
-            <Table.Tr key={day.day}>
-              <Table.Td>
-                <time dateTime={day.day}>{formatReportDate(day.day)}</time>
-              </Table.Td>
-              <Table.Td>
-                <Badge color={day.kind === "holiday" ? "gray" : "blue"}>
-                  {day.kind === "holiday" ? "Holiday" : "Special session"}
-                </Badge>
-                <Text size="sm" mt="xs">
-                  {day.kind === "holiday" ? "Closed" : `${day.opens_at} - ${day.closes_at} IST`}
-                </Text>
-              </Table.Td>
-              <Table.Td>
-                {day.reason}
-                {sourceLink(day.source_url) && (
-                  <Text size="sm">
-                    <Anchor
-                      href={sourceLink(day.source_url)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Exchange circular
-                    </Anchor>
-                  </Text>
-                )}
-              </Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
-    </Table.ScrollContainer>
+    <>
+      <Calendar
+        key={year}
+        static
+        defaultDate={`${year}-01-01`}
+        minDate={`${year}-01-01`}
+        maxDate={`${year}-12-31`}
+        maxLevel="month"
+        nextLabel="Next month"
+        previousLabel="Previous month"
+        className="trading-calendar-month"
+        getDayProps={(date) => {
+          const session = data.days.find((day) => day.day === date);
+          return {
+            "data-kind": session?.kind,
+            title: session
+              ? `${session.reason}: ${session.kind === "holiday" ? "Closed" : `${session.opens_at} - ${session.closes_at} IST`}`
+              : undefined,
+          };
+        }}
+      />
+      <Group gap="xs" className="trading-calendar-legend" aria-label="Calendar legend">
+        <Badge data-kind="holiday">Holiday</Badge>
+        <Badge data-kind="special">Special session</Badge>
+      </Group>
+      {!data.days.length ? (
+        <Alert color="yellow" title="No dates published here" role="status">
+          No holidays or special sessions have been added for {year}. This does not mean there are
+          no exchange holidays. Check the official NSE calendar below.
+        </Alert>
+      ) : (
+        <Table.ScrollContainer minWidth={520}>
+          <Table captionSide="top">
+            <Table.Caption>
+              Holidays and special trading sessions for {year}. All times are IST.
+            </Table.Caption>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th scope="col">Date</Table.Th>
+                <Table.Th scope="col">Session</Table.Th>
+                <Table.Th scope="col">Reason</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {data.days.map((day) => (
+                <Table.Tr key={day.day}>
+                  <Table.Td>
+                    <time dateTime={day.day}>{formatReportDate(day.day)}</time>
+                  </Table.Td>
+                  <Table.Td>
+                    <Badge color={day.kind === "holiday" ? "gray" : "blue"}>
+                      {day.kind === "holiday" ? "Holiday" : "Special session"}
+                    </Badge>
+                    <Text size="sm" mt="xs">
+                      {day.kind === "holiday" ? "Closed" : `${day.opens_at} - ${day.closes_at} IST`}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td>
+                    {day.reason}
+                    {sourceLink(day.source_url) && (
+                      <Text size="sm">
+                        <Anchor
+                          href={sourceLink(day.source_url)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Exchange circular
+                        </Anchor>
+                      </Text>
+                    )}
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Table.ScrollContainer>
+      )}
+    </>
   );
 }
 

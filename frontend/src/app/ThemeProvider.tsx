@@ -23,6 +23,7 @@ import {
   Title,
   createTheme,
 } from "@mantine/core";
+import { DateInput } from "@mantine/dates";
 import type { ReactNode } from "react";
 
 import { uiStandard } from "./uiStandard";
@@ -32,7 +33,7 @@ const appTheme = createTheme({
   primaryColor: "violet",
   fontFamily: "var(--brand-font)",
   headings: { fontFamily: "var(--brand-font)", fontWeight: "650" },
-  defaultRadius: "sm",
+  defaultRadius: 0,
   cursorType: "pointer",
   spacing: uiStandard.spacing,
   radius: uiStandard.radius,
@@ -89,6 +90,20 @@ const appTheme = createTheme({
       },
     }),
     TextInput: TextInput.extend({ defaultProps: { size: "sm", radius: "sm" } }),
+    DateInput: DateInput.extend({
+      defaultProps: {
+        size: "sm",
+        radius: "sm",
+        ariaLabels: {
+          nextMonth: "Next month",
+          previousMonth: "Previous month",
+          nextYear: "Next year",
+          previousYear: "Previous year",
+          nextDecade: "Next decade",
+          previousDecade: "Previous decade",
+        },
+      },
+    }),
     Select: Select.extend({ defaultProps: { size: "sm", radius: "sm" } }),
     Textarea: Textarea.extend({ defaultProps: { size: "sm", radius: "sm" } }),
     NumberInput: NumberInput.extend({ defaultProps: { size: "sm", radius: "sm" } }),

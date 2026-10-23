@@ -35,9 +35,23 @@
   <main id="main" class="mx-auto max-w-5xl px-4 py-8">
     {% block content %}{% endblock %}
   </main>
-  <footer class="mx-auto max-w-5xl px-4 pb-10 text-xs leading-relaxed text-muted">
-    The signals are made by a simple rule and a local language model. They are not advice. GMP is
-    unofficial data. Do not use these pages as the only reason to buy or sell.
+  <footer class="mx-auto max-w-5xl border-t border-rule px-4 py-8 text-sm leading-relaxed text-muted">
+    <div class="flex flex-wrap justify-between gap-6">
+      <div>
+        <a href="/" class="text-xl font-semibold text-ink no-underline">Kash Engine</a>
+        <p class="mt-2">A little less noise. A lot more context.</p>
+      </div>
+      <nav aria-label="Resources" class="flex flex-wrap gap-x-5 gap-y-2">
+        <a href="/">About Kash Engine</a>
+        <a href="/docs/">API documentation</a>
+        <a href="/legal/#terms">Terms</a>
+        <a href="/legal/#privacy">Privacy</a>
+      </nav>
+    </div>
+    <div class="mt-6 flex flex-wrap justify-between gap-4 border-t border-rule pt-4 text-xs">
+      <p class="max-w-2xl">Not financial advice. Predictions can be wrong. GMP is unofficial. Always do your own research.</p>
+      <small>&copy; {% now "Y" %} Kash Engine</small>
+    </div>
   </footer>
   {% block scripts %}{% endblock %}
 </body>

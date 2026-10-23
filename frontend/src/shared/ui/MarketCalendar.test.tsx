@@ -97,6 +97,29 @@ it("keeps the calendar available during normal sessions and hides staff manageme
   expect(screen.queryByRole("link", { name: /Manage holidays/ })).not.toBeInTheDocument();
 });
 
+it("renders Mantine months with marked holidays and special sessions", () => {
+  show();
+  fireEvent.click(screen.getByRole("button", { name: "Trading calendar" }));
+  const month = document.querySelector(".trading-calendar-month");
+  expect(month).toBeInTheDocument();
+  expect(month?.querySelector(".mantine-Calendar-month")).toBeInTheDocument();
+  expect(month?.querySelector('[data-kind="holiday"]')).toHaveAttribute(
+    "title",
+    "Republic Day: Closed",
+  );
+  expect(screen.getByRole("button", { name: "Previous month" })).toBeDisabled();
+  for (let count = 0; count < 10; count++) {
+    fireEvent.click(screen.getByRole("button", { name: "Next month" }));
+  }
+  expect(month?.querySelector('[data-kind="special"]')).toHaveAttribute(
+    "title",
+    "Example Muhurat session: 18:00 - 19:00 IST",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Next month" }));
+  expect(screen.getByRole("button", { name: "Next month" })).toBeDisabled();
+  expect(document.querySelector("style")).toBeNull();
+});
+
 it("announces open special sessions with their reason", () => {
   show({
     ...calendar,

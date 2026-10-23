@@ -1,4 +1,5 @@
 import { Alert, Anchor, Button, Group, Stack, Text, Title } from "@mantine/core";
+import { DateInput } from "@mantine/dates";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useEffect, useId, useRef, useState } from "react";
@@ -64,6 +65,20 @@ function Field({ field, disabled }: { field: OpsField; disabled: boolean }) {
           maxLength={field.max_length ?? undefined}
           rows={4}
         />
+      ) : field.kind === "date" ? (
+        <DateInput
+          {...common}
+          defaultValue={field.value || null}
+          valueFormat="YYYY-MM-DD"
+          minDate={field.min ?? undefined}
+          maxDate={field.max ?? undefined}
+          description={field.help || undefined}
+          error={field.errors.length ? field.errors.join(" ") : undefined}
+          errorProps={{ role: "alert" }}
+          clearable={!field.required}
+          clearButtonProps={{ "aria-label": `Clear ${field.label}` }}
+          popoverProps={{ transitionProps: { duration: 0 } }}
+        />
       ) : field.kind === "checkbox" ? (
         <input
           {...common}
@@ -88,15 +103,17 @@ function Field({ field, disabled }: { field: OpsField; disabled: boolean }) {
           }
         />
       )}
-      <div id={`${id}-help`} className="ops-field-help">
-        {field.help}
-        {field.errors.map((error, index) => (
-          <p key={index} role="alert" className="ops-form-error">
-            <LuCircleAlert aria-hidden="true" />
-            {error}
-          </p>
-        ))}
-      </div>
+      {field.kind !== "date" && (
+        <div id={`${id}-help`} className="ops-field-help">
+          {field.help}
+          {field.errors.map((error, index) => (
+            <p key={index} role="alert" className="ops-form-error">
+              <LuCircleAlert aria-hidden="true" />
+              {error}
+            </p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

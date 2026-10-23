@@ -4,7 +4,6 @@ import {
   Burger,
   Group,
   NavLink,
-  Text,
   useComputedColorScheme,
   useMantineColorScheme,
 } from "@mantine/core";
@@ -33,6 +32,7 @@ import { OpsNavigation, OpsPageTabs } from "./OpsNavigation";
 import { AppLink } from "./AppLink";
 import { ApplicationAlerts } from "./ApplicationAlerts";
 import { MarketCalendar } from "./MarketCalendar";
+import { AppFooter } from "./AppFooter";
 
 const navigationIcons: Record<string, IconType> = {
   "/dashboard/": LuHouse,
@@ -199,13 +199,8 @@ export function ApplicationShell({
         ) : (
           children
         )}
-        <Text component="footer" size="xs" c="dimmed" mt="xl" py="lg">
-          Market signals are informational, not investment advice. GMP is unofficial data.{" "}
-          <Anchor component={AppLink} href="/">
-            About Kash Engine
-          </Anchor>
-        </Text>
       </main>
+      <AppFooter />
     </div>
   );
 }

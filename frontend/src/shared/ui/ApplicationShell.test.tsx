@@ -25,6 +25,8 @@ it("renders the server-provided links without inventing access", () => {
   expect(screen.queryByRole("link", { name: "Ops" })).not.toBeInTheDocument();
   expect(screen.queryByText("Workspace", { exact: true })).not.toBeInTheDocument();
   expect(screen.getByRole("main")).toHaveAttribute("id", "main");
+  expect(screen.getByRole("contentinfo")).not.toBeEmptyDOMElement();
+  expect(screen.getByRole("main")).not.toContainElement(screen.getByRole("contentinfo"));
   expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   expect(document.querySelector("style")).toBeNull();
 });

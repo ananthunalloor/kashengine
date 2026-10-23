@@ -35,6 +35,9 @@ it("renders the anonymous landing without any session API request", () => {
   }
   expect(screen.getByText("Illustrative preview")).toBeInTheDocument();
   expect(screen.getByText(/Not financial advice/)).toBeInTheDocument();
+  expect(screen.getByRole("contentinfo")).toContainElement(
+    screen.getByRole("navigation", { name: "Resources" }),
+  );
   expect(screen.getByRole("link", { name: /Explore API docs/ })).toHaveAttribute("href", "/docs/");
   expect(fetch).not.toHaveBeenCalled();
 });

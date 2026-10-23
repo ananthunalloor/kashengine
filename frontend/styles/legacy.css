@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "../../static/css/brand-tokens.css";
 
 /* Where Tailwind looks for class names. */
 @source "../../apps/web/templates";
