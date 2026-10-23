@@ -5,6 +5,8 @@ list again. All times are IST. Each entry is (name, task, minute, hour, day of w
 """
 
 DEFAULT_SCHEDULE: tuple[tuple[str, str, str, str, str], ...] = (
+    ("upstox-company-quotes", "markets.upstox_quotes", "*/5", "*", "*"),
+    ("upstox-data-refresh", "markets.upstox_refresh", "10", "*/6", "*"),
     ("fetch-news-feeds", "news.fetch_feeds", "5", "*/3", "*"),
     # A company is read again only when its data is older than SCREENER_REFRESH_DAYS.
     ("refresh-stale-companies", "companies.refresh_stale", "30", "2", "*"),

@@ -1,5 +1,6 @@
 import { Anchor, Stack, Text, Title } from "@mantine/core";
 import { LuChartNoAxesCombined } from "react-icons/lu";
+import { Link } from "@tanstack/react-router";
 
 import type { Markets as MarketsData } from "../../shared/api/generated/types.gen";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
@@ -32,6 +33,9 @@ export function Markets({ data, isStaff }: { data: MarketsData; isStaff: boolean
         <Text c="dimmed" mt="sm">
           Saved closes and the track record of our daily outlook.
         </Text>
+        <Link to="/markets/live/" search={{ q: "", page: 1 }}>
+          View company market data
+        </Link>
         <Anchor href="/markets/" size="sm">
           Compare with the original Markets page
         </Anchor>

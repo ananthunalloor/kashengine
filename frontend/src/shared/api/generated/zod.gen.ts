@@ -306,6 +306,8 @@ export const zIpoSignal = z.object({
     signal: z.string()
 });
 
+export const zJsonValue = z.unknown();
+
 /**
  * IpoDetail
  *
@@ -327,7 +329,62 @@ export const zIpoDetail = z.object({
     signals: z.array(zIpoSignal),
     notes: z.array(z.string()),
     scored_at: z.iso.datetime().nullable(),
-    source_url: z.string()
+    source_url: z.string(),
+    upstox_data: z.record(z.string(), zJsonValue).optional(),
+    upstox_updated_at: z.iso.datetime().nullish()
+});
+
+/**
+ * CompanyMarketFilters
+ *
+ * Search the saved directory, including companies without a quote.
+ */
+export const zCompanyMarketFilters = z.object({
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
+    q: z.string().max(100).optional().default('')
+});
+
+/**
+ * CompanyPrice
+ *
+ * Persisted market observation; freshness is calculated from as_of, never page load time.
+ */
+export const zCompanyPrice = z.object({
+    as_of: z.iso.datetime(),
+    received_at: z.iso.datetime(),
+    price: z.number(),
+    previous_close: z.number().nullable(),
+    change_pct: z.number().nullable(),
+    volume: z.int().nullable(),
+    mode: z.enum(['snapshot', 'stream'])
+});
+
+/**
+ * CompanyMarketItem
+ *
+ * A saved company with its latest quote, or an explicit missing quote.
+ */
+export const zCompanyMarketItem = z.object({
+    id: z.int(),
+    name: z.string(),
+    symbol: z.string(),
+    quote: zCompanyPrice.nullable(),
+    error: z.string()
+});
+
+/**
+ * CompanyMarketPage
+ *
+ * Paginated database-only market observations for saved companies.
+ */
+export const zCompanyMarketPage = z.object({
+    items: z.array(zCompanyMarketItem),
+    page: z.int(),
+    pages: z.int(),
+    total: z.int(),
+    page_size: z.int(),
+    upstox_enabled: z.boolean()
 });
 
 /**
@@ -400,16 +457,31 @@ export const zMarkets = z.object({
 });
 
 /**
- * CompanyFilters
+ * CompanyBar
  *
- * Bound directory search and validate pagination.
+ * One saved completed daily price bar.
  */
-export const zCompanyFilters = z.object({
-    page: z.int().optional().default(1),
-    page_size: z.int().gte(1).lte(100).nullish(),
-    q: z.string().max(100).optional().default(''),
-    sector: z.string().max(100).optional().default(''),
-    sort: z.string().regex(/^(|-?(name|symbol|sector|last_updated))$/).optional().default('')
+export const zCompanyBar = z.object({
+    day: z.iso.date(),
+    open: z.number(),
+    high: z.number(),
+    low: z.number(),
+    close: z.number(),
+    volume: z.int()
+});
+
+/**
+ * CompanyIssue
+ *
+ * Saved company-linked IPO score and its full evidence.
+ */
+export const zCompanyIssue = z.object({
+    id: z.int(),
+    name: z.string(),
+    score: z.number().nullable(),
+    verdict: z.string(),
+    scored_at: z.iso.datetime().nullable(),
+    score_inputs: z.record(z.string(), zJsonValue)
 });
 
 /**
@@ -424,6 +496,72 @@ export const zCompanyItem = z.object({
     sector: z.string(),
     screener_url: z.string(),
     last_updated: z.iso.datetime().nullable()
+});
+
+/**
+ * CompanySignal
+ *
+ * Saved next-session experimental outlook and reproducible scoring evidence.
+ */
+export const zCompanySignal = z.object({
+    target_date: z.iso.date(),
+    direction: z.string(),
+    score: z.number(),
+    momentum_score: z.number(),
+    news_score: z.number().nullable(),
+    created_at: z.iso.datetime(),
+    inputs: z.record(z.string(), zJsonValue)
+});
+
+/**
+ * CompanyStory
+ *
+ * Company-linked news and all available sentiment scores.
+ */
+export const zCompanyStory = z.object({
+    title: z.string(),
+    url: z.string(),
+    source: z.string(),
+    published_at: z.iso.datetime().nullable(),
+    sentiment_score: z.number().nullable(),
+    relevance: z.number().nullable(),
+    sentiment_reason: z.string()
+});
+
+/**
+ * CompanyDetail
+ *
+ * Company facts and feature-filtered saved market, news and scoring datasets.
+ */
+export const zCompanyDetail = z.object({
+    company: zCompanyItem,
+    summary: z.string(),
+    instrument_key: z.string(),
+    fundamentals: z.record(z.string(), zJsonValue),
+    fundamentals_source: z.string(),
+    fundamentals_as_of: z.iso.datetime().nullable(),
+    errors: z.record(z.string(), z.string()),
+    markets_available: z.boolean(),
+    news_available: z.boolean(),
+    ipos_available: z.boolean(),
+    quote: zCompanyPrice.nullable(),
+    candles: z.array(zCompanyBar),
+    outlook: zCompanySignal.nullable(),
+    news: z.array(zCompanyStory),
+    ipos: z.array(zCompanyIssue)
+});
+
+/**
+ * CompanyFilters
+ *
+ * Bound directory search and validate pagination.
+ */
+export const zCompanyFilters = z.object({
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
+    q: z.string().max(100).optional().default(''),
+    sector: z.string().max(100).optional().default(''),
+    sort: z.string().regex(/^(|-?(name|symbol|sector|last_updated))$/).optional().default('')
 });
 
 /**
@@ -1069,10 +1207,30 @@ export const zGetAppIpoPath = z.object({
  */
 export const zGetAppIpoResponse = zIpoDetail;
 
+export const zListAppCompanyMarketsQuery = z.object({
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
+    q: z.string().max(100).optional().default('')
+});
+
+/**
+ * OK
+ */
+export const zListAppCompanyMarketsResponse = zCompanyMarketPage;
+
 /**
  * OK
  */
 export const zGetAppMarketsResponse = zMarkets;
+
+export const zGetAppCompanyPath = z.object({
+    pk: z.int()
+});
+
+/**
+ * OK
+ */
+export const zGetAppCompanyResponse = zCompanyDetail;
 
 export const zListAppCompaniesQuery = z.object({
     page: z.int().optional().default(1),

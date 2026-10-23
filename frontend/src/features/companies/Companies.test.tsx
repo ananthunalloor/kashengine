@@ -92,12 +92,16 @@ it("shows directory fields, safe source links, IST dates and preview navigation"
     "tabindex",
   );
   expect(document.title).toBe("Companies | Kash Engine");
-  const source = screen.getByRole("link", { name: /<b>Alpha Bank<\/b>/ });
+  expect(screen.getByRole("link", { name: /<b>Alpha Bank<\/b>/ })).toHaveAttribute(
+    "href",
+    "/companies/1/",
+  );
+  const source = screen.getByRole("link", { name: /Screener source/ });
   expect(source).toHaveAttribute("href", data.items[0].screener_url);
   expect(source).toHaveAttribute("rel", "noopener noreferrer");
   expect(source).toHaveAttribute("target", "_blank");
   expect(document.querySelector(".data-table b")).toBeNull();
-  expect(screen.queryByRole("link", { name: /Beta Tools/ })).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /Beta Tools/ })).toHaveAttribute("href", "/companies/2/");
   expect(screen.getByText("Source link unavailable.")).toBeInTheDocument();
   expect(screen.getByText("17 Oct 2026")).toBeInTheDocument();
   expect(screen.getByText("Not fetched")).toBeInTheDocument();

@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Literal
 
 from ninja import Field, Schema
+from pydantic import JsonValue
 
 
 class NavigationItem(Schema):
@@ -487,6 +488,8 @@ class IpoDetail(IpoSummary):
     notes: list[str] = Field(description="Saved explanation and missing-data notes.")
     scored_at: datetime | None = Field(description="Time the verdict was last calculated.")
     source_url: str = Field(description="Original source URL, or empty when unavailable.")
+    upstox_data: dict[str, JsonValue] = Field(default_factory=dict)
+    upstox_updated_at: datetime | None = None
 
 
 class MarketCount(Schema):
@@ -646,6 +649,105 @@ class CompanyPage(Schema):
     total: int = Field(description="Total matching companies.")
     page_size: int = Field(default=25, description="Resolved number of rows per page.")
     sectors: list[str] = Field(default_factory=list, description="All nonempty sectors, sorted.")
+
+
+class CompanyPrice(Schema):
+    """Persisted market observation; freshness is calculated from as_of, never page load time."""
+
+    as_of: datetime
+    received_at: datetime
+    price: float
+    previous_close: float | None
+    change_pct: float | None
+    volume: int | None
+    mode: Literal["snapshot", "stream"]
+
+
+class CompanyBar(Schema):
+    """One saved completed daily price bar."""
+
+    day: dt.date
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: int
+
+
+class CompanySignal(Schema):
+    """Saved next-session experimental outlook and reproducible scoring evidence."""
+
+    target_date: dt.date
+    direction: str
+    score: float
+    momentum_score: float
+    news_score: float | None
+    created_at: datetime
+    inputs: dict[str, JsonValue]
+
+
+class CompanyStory(Schema):
+    """Company-linked news and all available sentiment scores."""
+
+    title: str
+    url: str
+    source: str
+    published_at: datetime | None
+    sentiment_score: float | None
+    relevance: float | None
+    sentiment_reason: str
+
+
+class CompanyIssue(Schema):
+    """Saved company-linked IPO score and its full evidence."""
+
+    id: int
+    name: str
+    score: float | None
+    verdict: str
+    scored_at: datetime | None
+    score_inputs: dict[str, JsonValue]
+
+
+class CompanyDetail(Schema):
+    """Company facts and feature-filtered saved market, news and scoring datasets."""
+
+    company: CompanyItem
+    summary: str
+    instrument_key: str
+    fundamentals: dict[str, JsonValue]
+    fundamentals_source: str
+    fundamentals_as_of: datetime | None
+    errors: dict[str, str]
+    markets_available: bool
+    news_available: bool
+    ipos_available: bool
+    quote: CompanyPrice | None
+    candles: list[CompanyBar]
+    outlook: CompanySignal | None
+    news: list[CompanyStory]
+    ipos: list[CompanyIssue]
+
+
+class CompanyMarketItem(Schema):
+    """A saved company with its latest quote, or an explicit missing quote."""
+
+    id: int
+    name: str
+    symbol: str
+    quote: CompanyPrice | None
+    error: str
+
+
+class CompanyMarketPage(Schema):
+    """Paginated database-only market observations for saved companies."""
+
+    items: list[CompanyMarketItem]
+    page: int
+    pages: int
+    total: int
+    page_size: int
+    upstox_enabled: bool
 
 
 class DeliveryItem(ReportDelivery):

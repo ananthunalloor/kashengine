@@ -2,7 +2,7 @@
 
 from django.contrib import admin
 
-from .models import Company
+from .models import Company, CompanyCandle, CompanyFundamentals, CompanyOutlook, CompanyQuote
 
 
 @admin.register(Company)
@@ -13,3 +13,6 @@ class CompanyAdmin(admin.ModelAdmin):
     list_filter = ("sector",)
     search_fields = ("name", "symbol")
     readonly_fields = ("created_at",)
+
+
+admin.site.register((CompanyQuote, CompanyCandle, CompanyFundamentals, CompanyOutlook))

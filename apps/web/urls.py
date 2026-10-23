@@ -26,6 +26,8 @@ urlpatterns = [
     path("ipos/", views.react_app, name="ipos"),
     path("ipos/<int:pk>/", views.react_ipo, name="ipo"),
     path("markets/", views.react_app, name="markets"),
+    path("markets/live/", views.react_app, name="market_live"),
     path("companies/", views.react_app, name="companies"),
+    path("companies/<int:pk>/", views.react_company, name="company"),
     path("delivery/", views.react_app, name="delivery"),
 ]

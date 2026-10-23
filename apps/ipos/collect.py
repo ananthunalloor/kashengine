@@ -90,6 +90,10 @@ def find_existing(record: IpoRecord) -> Ipo | None:
     2. The same company (the name without "Ltd" and so on) with no result yet. This covers an IPO
        that moved to other dates. A company does not make two IPOs at the same time.
     """
+    if record.isin:
+        identified = Ipo.objects.filter(isin=record.isin).first()
+        if identified:
+            return identified
     exact = Ipo.objects.filter(name=record.name, open_date=record.open_date).first()
     if exact:
         return exact

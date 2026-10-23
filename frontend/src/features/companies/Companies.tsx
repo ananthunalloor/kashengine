@@ -120,7 +120,7 @@ export function Companies({
         </Text>
         <Title order={1}>Companies</Title>
         <Text c="dimmed" mt="sm">
-          The companies that we link to news. Data comes from Screener.in.
+          Saved company details, fundamentals, prices, trends and score evidence.
         </Text>
         <Anchor href="/companies/" size="sm">
           Compare with the existing Companies page
@@ -143,13 +143,15 @@ export function Companies({
                 const href = sourceLink(company.screener_url);
                 return (
                   <div className="table-primary">
-                    {href ? (
-                      <a href={href} target="_blank" rel="noopener noreferrer">
-                        {company.name}
-                        <span className="sr-only"> (opens in a new tab)</span>
-                      </a>
-                    ) : (
-                      company.name
+                    <Link to="/companies/$id/" params={{ id: String(company.id) }}>
+                      {company.name}
+                    </Link>
+                    {href && (
+                      <Text size="xs">
+                        <a href={href} target="_blank" rel="noopener noreferrer">
+                          Screener source<span className="sr-only"> (opens in a new tab)</span>
+                        </a>
+                      </Text>
                     )}
                     {!href && (
                       <Text c="dimmed" size="xs">

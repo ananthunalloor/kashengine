@@ -760,6 +760,118 @@
         ]
       }
     },
+    "/api/app/markets/companies": {
+      "get": {
+        "operationId": "list_app_company_markets",
+        "summary": "Read saved company market observations",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "Requested page; out-of-range values are clamped.",
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Requested page; out-of-range values are clamped."
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rows per page, 1-100.",
+              "title": "Page Size"
+            },
+            "required": false,
+            "description": "Rows per page, 1-100."
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "default": "",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyMarketPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Reuse persisted snapshots only, with pagination before quote hydration.",
+        "tags": [
+          "Markets"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
     "/api/app/markets": {
       "get": {
         "operationId": "get_app_markets",
@@ -810,6 +922,94 @@
         "description": "Read saved results without fetching quotes or evaluating predictions.",
         "tags": [
           "Markets"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/companies/{pk}": {
+      "get": {
+        "operationId": "get_app_company",
+        "summary": "Read saved company facts, prices and score evidence",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pk",
+            "schema": {
+              "title": "Pk",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Never contact providers or recalculate scores while reading a company.",
+        "tags": [
+          "Companies"
         ],
         "security": [
           {
@@ -3368,6 +3568,25 @@
             "description": "Original source URL, or empty when unavailable.",
             "title": "Source Url",
             "type": "string"
+          },
+          "upstox_data": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Upstox Data",
+            "type": "object"
+          },
+          "upstox_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upstox Updated At"
           }
         },
         "required": [
@@ -3437,6 +3656,193 @@
           "signal"
         ],
         "title": "IpoSignal",
+        "type": "object"
+      },
+      "JsonValue": {},
+      "CompanyMarketFilters": {
+        "description": "Search the saved directory, including companies without a quote.",
+        "properties": {
+          "page": {
+            "default": 1,
+            "description": "Requested page; out-of-range values are clamped.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rows per page, 1-100.",
+            "title": "Page Size"
+          },
+          "q": {
+            "default": "",
+            "maxLength": 100,
+            "title": "Q",
+            "type": "string"
+          }
+        },
+        "title": "CompanyMarketFilters",
+        "type": "object"
+      },
+      "CompanyMarketItem": {
+        "description": "A saved company with its latest quote, or an explicit missing quote.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompanyPrice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "symbol",
+          "quote",
+          "error"
+        ],
+        "title": "CompanyMarketItem",
+        "type": "object"
+      },
+      "CompanyMarketPage": {
+        "description": "Paginated database-only market observations for saved companies.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CompanyMarketItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "title": "Pages",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "upstox_enabled": {
+            "title": "Upstox Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pages",
+          "total",
+          "page_size",
+          "upstox_enabled"
+        ],
+        "title": "CompanyMarketPage",
+        "type": "object"
+      },
+      "CompanyPrice": {
+        "description": "Persisted market observation; freshness is calculated from as_of, never page load time.",
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "received_at": {
+            "format": "date-time",
+            "title": "Received At",
+            "type": "string"
+          },
+          "price": {
+            "title": "Price",
+            "type": "number"
+          },
+          "previous_close": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Close"
+          },
+          "change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Pct"
+          },
+          "volume": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume"
+          },
+          "mode": {
+            "enum": [
+              "snapshot",
+              "stream"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "as_of",
+          "received_at",
+          "price",
+          "previous_close",
+          "change_pct",
+          "volume",
+          "mode"
+        ],
+        "title": "CompanyPrice",
         "type": "object"
       },
       "MarketCount": {
@@ -3646,51 +4052,219 @@
         "title": "Markets",
         "type": "object"
       },
-      "CompanyFilters": {
-        "description": "Bound directory search and validate pagination.",
+      "CompanyBar": {
+        "description": "One saved completed daily price bar.",
         "properties": {
-          "page": {
-            "default": 1,
-            "description": "Requested page; out-of-range values are clamped.",
-            "title": "Page",
-            "type": "integer"
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
           },
-          "page_size": {
+          "open": {
+            "title": "Open",
+            "type": "number"
+          },
+          "high": {
+            "title": "High",
+            "type": "number"
+          },
+          "low": {
+            "title": "Low",
+            "type": "number"
+          },
+          "close": {
+            "title": "Close",
+            "type": "number"
+          },
+          "volume": {
+            "title": "Volume",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume"
+        ],
+        "title": "CompanyBar",
+        "type": "object"
+      },
+      "CompanyDetail": {
+        "description": "Company facts and feature-filtered saved market, news and scoring datasets.",
+        "properties": {
+          "company": {
+            "$ref": "#/components/schemas/CompanyItem"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "instrument_key": {
+            "title": "Instrument Key",
+            "type": "string"
+          },
+          "fundamentals": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Fundamentals",
+            "type": "object"
+          },
+          "fundamentals_source": {
+            "title": "Fundamentals Source",
+            "type": "string"
+          },
+          "fundamentals_as_of": {
             "anyOf": [
               {
-                "maximum": 100,
-                "minimum": 1,
-                "type": "integer"
+                "format": "date-time",
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Rows per page, 1-100.",
-            "title": "Page Size"
+            "title": "Fundamentals As Of"
           },
-          "q": {
-            "default": "",
-            "description": "Name, symbol, or sector search.",
-            "maxLength": 100,
-            "title": "Q",
-            "type": "string"
+          "errors": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "object"
           },
-          "sector": {
-            "default": "",
-            "description": "Exact sector, or all.",
-            "maxLength": 100,
-            "title": "Sector",
-            "type": "string"
+          "markets_available": {
+            "title": "Markets Available",
+            "type": "boolean"
           },
-          "sort": {
-            "default": "",
-            "pattern": "^(|-?(name|symbol|sector|last_updated))$",
-            "title": "Sort",
-            "type": "string"
+          "news_available": {
+            "title": "News Available",
+            "type": "boolean"
+          },
+          "ipos_available": {
+            "title": "Ipos Available",
+            "type": "boolean"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompanyPrice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "candles": {
+            "items": {
+              "$ref": "#/components/schemas/CompanyBar"
+            },
+            "title": "Candles",
+            "type": "array"
+          },
+          "outlook": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompanySignal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "news": {
+            "items": {
+              "$ref": "#/components/schemas/CompanyStory"
+            },
+            "title": "News",
+            "type": "array"
+          },
+          "ipos": {
+            "items": {
+              "$ref": "#/components/schemas/CompanyIssue"
+            },
+            "title": "Ipos",
+            "type": "array"
           }
         },
-        "title": "CompanyFilters",
+        "required": [
+          "company",
+          "summary",
+          "instrument_key",
+          "fundamentals",
+          "fundamentals_source",
+          "fundamentals_as_of",
+          "errors",
+          "markets_available",
+          "news_available",
+          "ipos_available",
+          "quote",
+          "candles",
+          "outlook",
+          "news",
+          "ipos"
+        ],
+        "title": "CompanyDetail",
+        "type": "object"
+      },
+      "CompanyIssue": {
+        "description": "Saved company-linked IPO score and its full evidence.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "verdict": {
+            "title": "Verdict",
+            "type": "string"
+          },
+          "scored_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scored At"
+          },
+          "score_inputs": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Score Inputs",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "score",
+          "verdict",
+          "scored_at",
+          "score_inputs"
+        ],
+        "title": "CompanyIssue",
         "type": "object"
       },
       "CompanyItem": {
@@ -3744,6 +4318,175 @@
           "last_updated"
         ],
         "title": "CompanyItem",
+        "type": "object"
+      },
+      "CompanySignal": {
+        "description": "Saved next-session experimental outlook and reproducible scoring evidence.",
+        "properties": {
+          "target_date": {
+            "format": "date",
+            "title": "Target Date",
+            "type": "string"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "momentum_score": {
+            "title": "Momentum Score",
+            "type": "number"
+          },
+          "news_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "News Score"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "inputs": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Inputs",
+            "type": "object"
+          }
+        },
+        "required": [
+          "target_date",
+          "direction",
+          "score",
+          "momentum_score",
+          "news_score",
+          "created_at",
+          "inputs"
+        ],
+        "title": "CompanySignal",
+        "type": "object"
+      },
+      "CompanyStory": {
+        "description": "Company-linked news and all available sentiment scores.",
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "sentiment_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentiment Score"
+          },
+          "relevance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relevance"
+          },
+          "sentiment_reason": {
+            "title": "Sentiment Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "url",
+          "source",
+          "published_at",
+          "sentiment_score",
+          "relevance",
+          "sentiment_reason"
+        ],
+        "title": "CompanyStory",
+        "type": "object"
+      },
+      "CompanyFilters": {
+        "description": "Bound directory search and validate pagination.",
+        "properties": {
+          "page": {
+            "default": 1,
+            "description": "Requested page; out-of-range values are clamped.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rows per page, 1-100.",
+            "title": "Page Size"
+          },
+          "q": {
+            "default": "",
+            "description": "Name, symbol, or sector search.",
+            "maxLength": 100,
+            "title": "Q",
+            "type": "string"
+          },
+          "sector": {
+            "default": "",
+            "description": "Exact sector, or all.",
+            "maxLength": 100,
+            "title": "Sector",
+            "type": "string"
+          },
+          "sort": {
+            "default": "",
+            "pattern": "^(|-?(name|symbol|sector|last_updated))$",
+            "title": "Sort",
+            "type": "string"
+          }
+        },
+        "title": "CompanyFilters",
         "type": "object"
       },
       "CompanyPage": {

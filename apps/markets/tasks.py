@@ -10,13 +10,54 @@ returns a dict that Celery keeps as the task result.
 import logging
 
 from celery import shared_task
+from django.utils import timezone
+
+from apps.companies.outlook import save_outlook
+from apps.siteconfig import conf
 
 from .evaluation import evaluate_pending
 from .prediction import make_prediction
 from .quotes import fetch_quotes as fetch_all_quotes
-from .trading import is_trading_day, today_ist
+from .trading import is_trading_day, session_close, session_open, today_ist
+from .upstox import mapped_companies, sync_companies, sync_ipos, sync_news, sync_quotes
+from .upstox_client import UpstoxClient
 
 logger = logging.getLogger(__name__)
+
+
+@shared_task(name="markets.upstox_quotes", soft_time_limit=240)
+def upstox_quotes() -> dict:
+    """Refresh snapshots during saved trading sessions, including special weekend sessions."""
+    if not conf.UPSTOX_ENABLED:
+        return {"skipped": "Upstox is disabled."}
+    now = timezone.now()
+    day = today_ist(now)
+    if not is_trading_day(day) or not session_open(day) <= now <= session_close(day):
+        return {"skipped": "Outside the saved trading session."}
+    with UpstoxClient() as client:
+        return sync_quotes(client)
+
+
+@shared_task(name="markets.upstox_refresh", soft_time_limit=1800)
+def upstox_refresh() -> dict:
+    """Persist company history, due fundamentals, news and IPOs; trigger existing scoring."""
+    if not conf.UPSTOX_ENABLED:
+        return {"skipped": "Upstox is disabled."}
+    from apps.ipos.scoring import score_ipos  # noqa: PLC0415
+    from apps.news.tasks import score_articles  # noqa: PLC0415
+
+    with UpstoxClient() as client:
+        result = {
+            "companies": sync_companies(client),
+            "news": sync_news(client),
+            "ipos": sync_ipos(client),
+        }
+    result["ipo_scores"] = score_ipos()
+    if result["news"]["new"]:
+        score_articles.delay()
+    for company in mapped_companies():
+        save_outlook(company)
+    return result
 
 
 @shared_task(name="markets.fetch_quotes", soft_time_limit=600)

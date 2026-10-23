@@ -30,10 +30,10 @@ const changeSchema = z.object({
 });
 
 const related: Record<z.infer<typeof changeSchema>["scope"], string[]> = {
-  news: ["news", "today"],
-  companies: ["companies", "news", "today"],
-  markets: ["markets", "today"],
-  ipos: ["ipos", "ipo", "today"],
+  news: ["news", "company", "today"],
+  companies: ["companies", "company", "company-markets", "news", "today"],
+  markets: ["markets", "company", "company-markets", "today"],
+  ipos: ["ipos", "ipo", "company", "today"],
   reports: ["reports", "report", "today"],
   delivery: ["delivery", "reports", "report", "today"],
   ops: ["ops"],
@@ -42,6 +42,8 @@ const related: Record<z.infer<typeof changeSchema>["scope"], string[]> = {
   all: [
     "news",
     "companies",
+    "company",
+    "company-markets",
     "markets",
     "ipos",
     "ipo",

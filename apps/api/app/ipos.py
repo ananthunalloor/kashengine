@@ -160,4 +160,6 @@ def get_ipo(request: HttpRequest, pk: int):
         "notes": inputs.get("notes", []),
         "scored_at": ipo.scored_at,
         "source_url": ipo.source_url,
+        "upstox_data": ipo.upstox_data,
+        "upstox_updated_at": ipo.upstox_updated_at,
     }

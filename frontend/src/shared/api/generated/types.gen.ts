@@ -933,6 +933,16 @@ export type IpoDetail = {
      * Original source URL, or empty when unavailable.
      */
     source_url: string;
+    /**
+     * Upstox Data
+     */
+    upstox_data?: {
+        [key: string]: JsonValue;
+    };
+    /**
+     * Upstox Updated At
+     */
+    upstox_updated_at?: string | null;
 };
 
 /**
@@ -979,6 +989,125 @@ export type IpoSignal = {
      * Normalized signed signal on the 1.0-10.0 scale.
      */
     signal: string;
+};
+
+export type JsonValue = unknown;
+
+/**
+ * CompanyMarketFilters
+ *
+ * Search the saved directory, including companies without a quote.
+ */
+export type CompanyMarketFilters = {
+    /**
+     * Page
+     *
+     * Requested page; out-of-range values are clamped.
+     */
+    page?: number;
+    /**
+     * Page Size
+     *
+     * Rows per page, 1-100.
+     */
+    page_size?: number | null;
+    /**
+     * Q
+     */
+    q?: string;
+};
+
+/**
+ * CompanyMarketItem
+ *
+ * A saved company with its latest quote, or an explicit missing quote.
+ */
+export type CompanyMarketItem = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Symbol
+     */
+    symbol: string;
+    quote: CompanyPrice | null;
+    /**
+     * Error
+     */
+    error: string;
+};
+
+/**
+ * CompanyMarketPage
+ *
+ * Paginated database-only market observations for saved companies.
+ */
+export type CompanyMarketPage = {
+    /**
+     * Items
+     */
+    items: Array<CompanyMarketItem>;
+    /**
+     * Page
+     */
+    page: number;
+    /**
+     * Pages
+     */
+    pages: number;
+    /**
+     * Total
+     */
+    total: number;
+    /**
+     * Page Size
+     */
+    page_size: number;
+    /**
+     * Upstox Enabled
+     */
+    upstox_enabled: boolean;
+};
+
+/**
+ * CompanyPrice
+ *
+ * Persisted market observation; freshness is calculated from as_of, never page load time.
+ */
+export type CompanyPrice = {
+    /**
+     * As Of
+     */
+    as_of: string;
+    /**
+     * Received At
+     */
+    received_at: string;
+    /**
+     * Price
+     */
+    price: number;
+    /**
+     * Previous Close
+     */
+    previous_close: number | null;
+    /**
+     * Change Pct
+     */
+    change_pct: number | null;
+    /**
+     * Volume
+     */
+    volume: number | null;
+    /**
+     * Mode
+     */
+    mode: 'snapshot' | 'stream';
 };
 
 /**
@@ -1160,39 +1289,132 @@ export type Markets = {
 };
 
 /**
- * CompanyFilters
+ * CompanyBar
  *
- * Bound directory search and validate pagination.
+ * One saved completed daily price bar.
  */
-export type CompanyFilters = {
+export type CompanyBar = {
     /**
-     * Page
-     *
-     * Requested page; out-of-range values are clamped.
+     * Day
      */
-    page?: number;
+    day: string;
     /**
-     * Page Size
-     *
-     * Rows per page, 1-100.
+     * Open
      */
-    page_size?: number | null;
+    open: number;
     /**
-     * Q
-     *
-     * Name, symbol, or sector search.
+     * High
      */
-    q?: string;
+    high: number;
     /**
-     * Sector
-     *
-     * Exact sector, or all.
+     * Low
      */
-    sector?: string;
+    low: number;
     /**
-     * Sort
+     * Close
      */
-    sort?: string;
+    close: number;
+    /**
+     * Volume
+     */
+    volume: number;
+};
+
+/**
+ * CompanyDetail
+ *
+ * Company facts and feature-filtered saved market, news and scoring datasets.
+ */
+export type CompanyDetail = {
+    company: CompanyItem;
+    /**
+     * Summary
+     */
+    summary: string;
+    /**
+     * Instrument Key
+     */
+    instrument_key: string;
+    /**
+     * Fundamentals
+     */
+    fundamentals: {
+        [key: string]: JsonValue;
+    };
+    /**
+     * Fundamentals Source
+     */
+    fundamentals_source: string;
+    /**
+     * Fundamentals As Of
+     */
+    fundamentals_as_of: string | null;
+    /**
+     * Errors
+     */
+    errors: {
+        [key: string]: string;
+    };
+    /**
+     * Markets Available
+     */
+    markets_available: boolean;
+    /**
+     * News Available
+     */
+    news_available: boolean;
+    /**
+     * Ipos Available
+     */
+    ipos_available: boolean;
+    quote: CompanyPrice | null;
+    /**
+     * Candles
+     */
+    candles: Array<CompanyBar>;
+    outlook: CompanySignal | null;
+    /**
+     * News
+     */
+    news: Array<CompanyStory>;
+    /**
+     * Ipos
+     */
+    ipos: Array<CompanyIssue>;
+};
+
+/**
+ * CompanyIssue
+ *
+ * Saved company-linked IPO score and its full evidence.
+ */
+export type CompanyIssue = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Score
+     */
+    score: number | null;
+    /**
+     * Verdict
+     */
+    verdict: string;
+    /**
+     * Scored At
+     */
+    scored_at: string | null;
+    /**
+     * Score Inputs
+     */
+    score_inputs: {
+        [key: string]: JsonValue;
+    };
 };
 
 /**
@@ -1237,6 +1459,116 @@ export type CompanyItem = {
      * Last data fetch, or null if never fetched.
      */
     last_updated: string | null;
+};
+
+/**
+ * CompanySignal
+ *
+ * Saved next-session experimental outlook and reproducible scoring evidence.
+ */
+export type CompanySignal = {
+    /**
+     * Target Date
+     */
+    target_date: string;
+    /**
+     * Direction
+     */
+    direction: string;
+    /**
+     * Score
+     */
+    score: number;
+    /**
+     * Momentum Score
+     */
+    momentum_score: number;
+    /**
+     * News Score
+     */
+    news_score: number | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Inputs
+     */
+    inputs: {
+        [key: string]: JsonValue;
+    };
+};
+
+/**
+ * CompanyStory
+ *
+ * Company-linked news and all available sentiment scores.
+ */
+export type CompanyStory = {
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Url
+     */
+    url: string;
+    /**
+     * Source
+     */
+    source: string;
+    /**
+     * Published At
+     */
+    published_at: string | null;
+    /**
+     * Sentiment Score
+     */
+    sentiment_score: number | null;
+    /**
+     * Relevance
+     */
+    relevance: number | null;
+    /**
+     * Sentiment Reason
+     */
+    sentiment_reason: string;
+};
+
+/**
+ * CompanyFilters
+ *
+ * Bound directory search and validate pagination.
+ */
+export type CompanyFilters = {
+    /**
+     * Page
+     *
+     * Requested page; out-of-range values are clamped.
+     */
+    page?: number;
+    /**
+     * Page Size
+     *
+     * Rows per page, 1-100.
+     */
+    page_size?: number | null;
+    /**
+     * Q
+     *
+     * Name, symbol, or sector search.
+     */
+    q?: string;
+    /**
+     * Sector
+     *
+     * Exact sector, or all.
+     */
+    sector?: string;
+    /**
+     * Sort
+     */
+    sort?: string;
 };
 
 /**
@@ -2877,6 +3209,60 @@ export type GetAppIpoResponses = {
 
 export type GetAppIpoResponse = GetAppIpoResponses[keyof GetAppIpoResponses];
 
+export type ListAppCompanyMarketsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page
+         *
+         * Requested page; out-of-range values are clamped.
+         */
+        page?: number;
+        /**
+         * Page Size
+         *
+         * Rows per page, 1-100.
+         */
+        page_size?: number | null;
+        /**
+         * Q
+         */
+        q?: string;
+    };
+    url: '/api/app/markets/companies';
+};
+
+export type ListAppCompanyMarketsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type ListAppCompanyMarketsError = ListAppCompanyMarketsErrors[keyof ListAppCompanyMarketsErrors];
+
+export type ListAppCompanyMarketsResponses = {
+    /**
+     * OK
+     */
+    200: CompanyMarketPage;
+};
+
+export type ListAppCompanyMarketsResponse = ListAppCompanyMarketsResponses[keyof ListAppCompanyMarketsResponses];
+
 export type GetAppMarketsData = {
     body?: never;
     path?: never;
@@ -2909,6 +3295,52 @@ export type GetAppMarketsResponses = {
 };
 
 export type GetAppMarketsResponse = GetAppMarketsResponses[keyof GetAppMarketsResponses];
+
+export type GetAppCompanyData = {
+    body?: never;
+    path: {
+        /**
+         * Pk
+         */
+        pk: number;
+    };
+    query?: never;
+    url: '/api/app/companies/{pk}';
+};
+
+export type GetAppCompanyErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Not Found
+     */
+    404: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type GetAppCompanyError = GetAppCompanyErrors[keyof GetAppCompanyErrors];
+
+export type GetAppCompanyResponses = {
+    /**
+     * OK
+     */
+    200: CompanyDetail;
+};
+
+export type GetAppCompanyResponse = GetAppCompanyResponses[keyof GetAppCompanyResponses];
 
 export type ListAppCompaniesData = {
     body?: never;

@@ -73,6 +73,30 @@ GROUPS: tuple[tuple[str, str, str], ...] = (
 GROUP_TITLES = {key: title for key, title, _help in GROUPS}
 
 _SPECS: tuple[Spec, ...] = (
+    Spec(
+        "UPSTOX_ENABLED",
+        "Enable Upstox",
+        BOOL,
+        "markets",
+        "Opt-in stored company quotes, fundamentals, news and IPO ingestion. "
+        "Existing sources remain enabled independently.",
+    ),
+    Spec(
+        "UPSTOX_ACCESS_TOKEN",
+        "Upstox access token",
+        SECRET,
+        "markets",
+        "Server-side bearer token. Renew when it expires; never enter it in a browser URL.",
+    ),
+    Spec(
+        "UPSTOX_FUNDAMENTALS_DAYS",
+        "Upstox fundamentals refresh (days)",
+        INT,
+        "markets",
+        "Keep successful snapshots for reuse and refresh only when due.",
+        minimum=1,
+        maximum=365,
+    ),
     # Telegram
     Spec(
         "TELEGRAM_BOT_TOKEN",

@@ -21,6 +21,7 @@ from apps.access.middleware import access_for
 from apps.api import tokens
 from apps.api.app.ops_pages import PAGES, target
 from apps.api.models import ApiToken
+from apps.companies.models import Company
 from apps.delivery.models import DeliveryLog
 from apps.delivery.service import configured_chat_ids
 from apps.ipos.models import Ipo
@@ -114,6 +115,14 @@ def react_report(request: HttpRequest, day: date) -> HttpResponse:
 def dashboard(request):
     """The home page: today's outlook, news, IPOs, and quotes."""
     return render(request, "web/dashboard.html", queries.dashboard_data())
+
+
+@login_required(login_url="web:login")
+@safe_only
+def react_company(request: HttpRequest, pk: int) -> HttpResponse:
+    """Serve the uncached company detail shell for an existing saved company."""
+    get_object_or_404(Company.objects.only("id"), pk=pk)
+    return react_app(request)
 
 
 @login_required(login_url="web:login")
