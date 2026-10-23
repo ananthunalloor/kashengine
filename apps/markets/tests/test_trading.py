@@ -2,6 +2,8 @@
 
 from datetime import UTC, datetime
 
+import pytest
+
 from apps.markets.trading import (
     is_trading_day,
     market_tz,
@@ -12,6 +14,8 @@ from apps.markets.trading import (
 )
 
 from .helpers import FRI, MON, NEXT_MON, SAT, SUN, TUE, ist
+
+pytestmark = pytest.mark.django_db
 
 
 def test_weekdays_are_trading_days_and_the_weekend_is_not():

@@ -28,6 +28,7 @@ def test_the_fetch_task_downloads_and_then_checks_the_predictions(monkeypatch):
     assert result == {"saved": 3, "failed": {}, "evaluation": {"evaluated": 1}}
 
 
+@pytest.mark.django_db
 def test_the_predict_task_skips_the_weekend(monkeypatch):
     monkeypatch.setattr(tasks, "today_ist", lambda: SAT)
     monkeypatch.setattr(tasks, "make_prediction", lambda: pytest.fail("must not run"))
@@ -35,6 +36,7 @@ def test_the_predict_task_skips_the_weekend(monkeypatch):
     assert "skipped" in tasks.predict()
 
 
+@pytest.mark.django_db
 def test_the_predict_task_makes_the_prediction_on_a_trading_day(monkeypatch):
     monkeypatch.setattr(tasks, "today_ist", lambda: MON)
     monkeypatch.setattr(

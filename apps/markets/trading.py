@@ -1,14 +1,14 @@
 """Trading days and times for the Indian market. All dates use the time zone of the settings.
 
-We have no list of market holidays. A holiday counts as a trading day here. A prediction for a
-holiday ends as "void" (see evaluation.py).
+Staff-maintained NSE cash/equity exceptions override the normal weekday session.
+Unlisted weekdays are assumed to be regular sessions.
 
 The functions are small helpers. `prediction.py`, `evaluation.py`, the report builder, the
 delivery task and the Ops health checks all use them. The close time and the wait after the close
 come from the site settings `MARKET_CLOSE_TIME` and `MARKET_FINAL_BUFFER_MINUTES`.
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
@@ -16,6 +16,8 @@ from django.utils import timezone
 
 from apps.siteconfig import conf
 from apps.siteconfig.registry import clean_clock
+
+from .models import TradingCalendarDay
 
 FIRST_WEEKEND_WEEKDAY = 5  # datetime.weekday(): Monday is 0, Saturday is 5.
 
@@ -43,15 +45,17 @@ def today_ist(now: datetime | None = None) -> date:
 
 
 def is_trading_day(day: date) -> bool:
-    """Return True when the day is a weekday (Monday to Friday).
+    """Return whether the NSE equity calendar has a session on this date.
 
     Args:
         day: The date to test.
 
     Returns:
-        True for Monday to Friday, False for Saturday and Sunday. A market holiday on a weekday
-        also gives True, because the code has no holiday list.
+        Saved holidays close weekdays; special sessions can open weekends.
     """
+    exception = TradingCalendarDay.objects.filter(day=day).first()
+    if exception is not None:
+        return exception.kind == TradingCalendarDay.Kind.SPECIAL
     return day.weekday() < FIRST_WEEKEND_WEEKDAY  # Monday to Friday.
 
 
@@ -62,7 +66,7 @@ def next_trading_day(day: date) -> date:
         day: The start date.
 
     Returns:
-        A date that is the same as `day` or later. It is at most 2 days later (a weekend).
+        A date that is the same as `day` or later, skipping saved holidays and weekends.
     """
     while not is_trading_day(day):
         day += timedelta(days=1)
@@ -78,7 +82,7 @@ def previous_trading_day(day: date) -> date:
         day: The reference date.
 
     Returns:
-        The nearest earlier weekday. For a Monday, this is the Friday before.
+        The nearest earlier session, including special weekend sessions.
     """
     day -= timedelta(days=1)
     while not is_trading_day(day):
@@ -89,7 +93,8 @@ def previous_trading_day(day: date) -> date:
 def session_close(day: date) -> datetime:
     """Return the close time of the market on a day.
 
-    The time comes from the site setting `MARKET_CLOSE_TIME` (format HH:MM, in IST).
+    A special session uses its saved close. Otherwise the time comes from the site setting
+    `MARKET_CLOSE_TIME` (format HH:MM, in IST).
 
     Args:
         day: The date of the session.
@@ -97,8 +102,24 @@ def session_close(day: date) -> datetime:
     Returns:
         A timezone-aware datetime on `day` at the close time, in the market time zone.
     """
-    close = clean_clock(conf.MARKET_CLOSE_TIME)
+    exception = TradingCalendarDay.objects.filter(
+        day=day, kind=TradingCalendarDay.Kind.SPECIAL
+    ).first()
+    close = exception.closes_at if exception else clean_clock(conf.MARKET_CLOSE_TIME)
+    if close is None:
+        raise ValueError(f"Special session on {day} has no closing time.")
     return datetime.combine(day, close, tzinfo=market_tz())
+
+
+def session_open(day: date) -> datetime:
+    """Return the regular 09:15 IST opening, or the saved special-session opening."""
+    exception = TradingCalendarDay.objects.filter(
+        day=day, kind=TradingCalendarDay.Kind.SPECIAL
+    ).first()
+    opening = exception.opens_at if exception else time(9, 15)
+    if opening is None:
+        raise ValueError(f"Special session on {day} has no opening time.")
+    return datetime.combine(day, opening, tzinfo=market_tz())
 
 
 def final_buffer() -> timedelta:

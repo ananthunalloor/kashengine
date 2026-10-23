@@ -62,6 +62,9 @@ it("shows subscription notices and keeps account navigation for locked users", (
   expect(screen.getByRole("status")).toHaveTextContent("Your access has ended.");
   expect(screen.queryByRole("link", { name: "Reports" })).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Account" })).toHaveAttribute("href", "/account/");
+  fireEvent.click(screen.getByRole("button", { name: "Dismiss subscription notice" }));
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Account" })).toBeInTheDocument();
 });
 
 it("uses a CSRF-protected POST for logout", () => {
@@ -174,4 +177,28 @@ it("closes account details when the route changes", () => {
     </ThemeProvider>,
   );
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+it("keeps a dismissed market notice hidden when navigating into Ops", () => {
+  const value = {
+    ...session,
+    is_staff: true,
+    market_calendar: {
+      ...session.market_calendar,
+      is_open: false,
+      status_key: "closed",
+      reason: "Weekend",
+    },
+  };
+  const view = showShell(value);
+  fireEvent.click(screen.getByRole("button", { name: "Dismiss market notice" }));
+  view.rerender(
+    <ThemeProvider>
+      <ApplicationShell session={value} pathname="/ops/jobs/">
+        <h1>Jobs preview</h1>
+      </ApplicationShell>
+    </ThemeProvider>,
+  );
+  expect(screen.queryByRole("status", { name: "Market closed" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Trading calendar" })).toBeInTheDocument();
 });

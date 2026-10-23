@@ -28,6 +28,24 @@ Early development. Phase 1 (project setup) is done. The features below are plann
 
 ## Live updates and notifications
 
+The top of every signed-in page shows dismissible Mantine alerts for scheduled market
+closures, special sessions, subscription warnings, and persistent live-update notices.
+Closing a market or subscription alert hides that version while you navigate; changed
+status/messages appear again, and the account page still shows subscription details.
+The **Trading calendar** button remains available after dismissal. It opens a year-by-year
+NSE cash/equity holiday and special-session list, including reasons, session hours in IST,
+and exchange circular links.
+
+Staff with Django admin permissions maintain entries at
+`/admin/markets/tradingcalendarday/`. Apply migrations before deploying. Each date has one
+entry and a required reason; special sessions require same-day opening and closing times.
+No official holiday feed or pre-populated dates are supplied: an empty year explicitly warns
+that dates have not been entered. Verify announcements using the official NSE link in the
+calendar. Unlisted weekdays assume 09:15 IST opening and the configured `MARKET_CLOSE_TIME`;
+unlisted weekends are closed. These exceptions also drive prediction/report trading-day
+selection and special-session evaluation closing times. Market status refreshes at session
+boundaries, midnight, and on calendar edits; it describes the schedule, not live exchange health.
+
 The signed-in React app uses same-origin Server-Sent Events (SSE) to refresh data without
 reloading the page. Staff also receive job completion/failure notifications with links to
 task details. Actions, API errors, token changes, subscription notices, and connection

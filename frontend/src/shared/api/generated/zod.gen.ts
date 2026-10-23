@@ -13,6 +13,37 @@ export const zNavigationItem = z.object({
 });
 
 /**
+ * TradingCalendarEntry
+ *
+ * One exchange-announced holiday or special session.
+ */
+export const zTradingCalendarEntry = z.object({
+    day: z.iso.date(),
+    kind: z.enum(['holiday', 'special']),
+    reason: z.string(),
+    opens_at: z.string(),
+    closes_at: z.string(),
+    source_url: z.string()
+});
+
+/**
+ * TradingCalendar
+ *
+ * Scheduled NSE cash/equity status and staff-maintained yearly exceptions.
+ */
+export const zTradingCalendar = z.object({
+    year: z.int(),
+    as_of: z.iso.datetime(),
+    next_change_at: z.iso.datetime(),
+    is_open: z.boolean(),
+    status_key: z.string(),
+    reason: z.string(),
+    special_reason: z.string(),
+    source_url: z.string(),
+    days: z.array(zTradingCalendarEntry)
+});
+
+/**
  * Session
  *
  * The current browser user's permissions and navigation.
@@ -35,7 +66,8 @@ export const zSession = z.object({
     ]),
     notice: z.string(),
     navigation: z.array(zNavigationItem),
-    logout_url: z.string()
+    logout_url: z.string(),
+    market_calendar: zTradingCalendar
 });
 
 /**
@@ -933,6 +965,15 @@ export const zOpsActionResult = z.object({
  */
 export const zGetAppSessionResponse = zSession;
 
+export const zGetAppCalendarQuery = z.object({
+    year: z.int().gte(2000).lte(2100)
+});
+
+/**
+ * OK
+ */
+export const zGetAppCalendarResponse = zTradingCalendar;
+
 export const zListAppReportsQuery = z.object({
     page: z.int().optional().default(1),
     page_size: z.int().gte(1).lte(100).nullish(),
@@ -1070,6 +1111,17 @@ export const zListAppOpsRunsQuery = z.object({
  * OK
  */
 export const zListAppOpsRunsResponse = zOpsRunPage;
+
+export const zStopAppOpsRunPath = z.object({
+    pk: z.int()
+});
+
+/**
+ * Response
+ *
+ * OK
+ */
+export const zStopAppOpsRunResponse = z.record(z.string(), z.unknown());
 
 export const zGetAppOpsRunPath = z.object({
     pk: z.int()

@@ -17,4 +17,15 @@ export const session: Session = {
     { label: "Account", url: "/account/" },
   ],
   logout_url: "/logout/",
+  market_calendar: {
+    year: 2026,
+    as_of: "2026-10-23T04:30:00Z",
+    next_change_at: "2099-10-23T10:00:00Z",
+    is_open: true,
+    status_key: "2026-10-23:open",
+    reason: "Regular trading session",
+    special_reason: "",
+    source_url: "https://www.nseindia.com/resources/exchange-communication-holidays",
+    days: [],
+  },
 };

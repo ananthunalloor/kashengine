@@ -149,6 +149,31 @@ class OpsActionResult(Schema):
     page: OpsPage | None = None
 
 
+class TradingCalendarEntry(Schema):
+    """One exchange-announced holiday or special session."""
+
+    day: dt.date
+    kind: Literal["holiday", "special"]
+    reason: str
+    opens_at: str
+    closes_at: str
+    source_url: str
+
+
+class TradingCalendar(Schema):
+    """Scheduled NSE cash/equity status and staff-maintained yearly exceptions."""
+
+    year: int
+    as_of: datetime
+    next_change_at: datetime
+    is_open: bool
+    status_key: str
+    reason: str
+    special_reason: str
+    source_url: str
+    days: list[TradingCalendarEntry]
+
+
 class Session(Schema):
     """The current browser user's permissions and navigation."""
 
@@ -166,6 +191,7 @@ class Session(Schema):
     notice: str = Field(description="Subscription warning; empty when there is no warning.")
     navigation: list[NavigationItem] = Field(description="Visible links, in menu order.")
     logout_url: str = Field(description="Same-origin Django logout endpoint; requires CSRF POST.")
+    market_calendar: TradingCalendar
 
 
 class AccountFeature(Schema):

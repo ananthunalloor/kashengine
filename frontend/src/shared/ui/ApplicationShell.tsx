@@ -9,7 +9,7 @@ import {
   useMantineColorScheme,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import {
   LuActivity,
@@ -31,6 +31,8 @@ import type { Session } from "../api/generated/types.gen";
 import { AccountMenu } from "./AccountMenu";
 import { OpsNavigation, OpsPageTabs } from "./OpsNavigation";
 import { AppLink } from "./AppLink";
+import { ApplicationAlerts } from "./ApplicationAlerts";
+import { MarketCalendar } from "./MarketCalendar";
 
 const navigationIcons: Record<string, IconType> = {
   "/dashboard/": LuHouse,
@@ -58,10 +60,25 @@ export function ApplicationShell({
   const colorScheme = useComputedColorScheme("light", { getInitialValueInEffect: true });
   const burger = useRef<HTMLButtonElement>(null);
   const isOps = pathname.startsWith("/ops/");
-  const pageContent = (
+  const [dismissedNotice, setDismissedNotice] = useState("");
+  const subscriptionKey = `${session.id}:${session.notice}`;
+  const pageAlerts = (
     <>
-      {session.notice && (
-        <Alert color="yellow" title="Your subscription" role="status" mb="md">
+      <MarketCalendar
+        key={session.id}
+        calendar={session.market_calendar}
+        canManage={session.is_staff}
+      />
+      {session.notice && dismissedNotice !== subscriptionKey && (
+        <Alert
+          color="yellow"
+          title="Your subscription"
+          role="status"
+          mb="md"
+          withCloseButton
+          closeButtonLabel="Dismiss subscription notice"
+          onClose={() => setDismissedNotice(subscriptionKey)}
+        >
           {session.notice}{" "}
           <Anchor component={AppLink} href="/account/">
             See your account
@@ -69,7 +86,7 @@ export function ApplicationShell({
           .
         </Alert>
       )}
-      {children}
+      <ApplicationAlerts />
     </>
   );
 
@@ -168,20 +185,17 @@ export function ApplicationShell({
           )}
         </nav>
         {session.is_staff && pathname.startsWith("/ops/") && (
-          <OpsNavigation
-            superuser={session.is_superuser}
-            pathname={pathname}
-            onNavigate={close}
-          />
+          <OpsNavigation superuser={session.is_superuser} pathname={pathname} onNavigate={close} />
         )}
       </aside>
       <main className="app-main" id="main" tabIndex={-1}>
+        {pageAlerts}
         {session.is_staff && pathname.startsWith("/ops/") ? (
           <OpsPageTabs superuser={session.is_superuser} pathname={pathname}>
-            {pageContent}
+            {children}
           </OpsPageTabs>
         ) : (
-          pageContent
+          children
         )}
         <Text component="footer" size="xs" c="dimmed" mt="xl" py="lg">
           Market signals are informational, not investment advice. GMP is unofficial data.{" "}

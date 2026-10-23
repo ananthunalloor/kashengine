@@ -38,7 +38,7 @@ const related: Record<z.infer<typeof changeSchema>["scope"], string[]> = {
   delivery: ["delivery", "reports", "report", "today"],
   ops: ["ops"],
   account: ["account", "session"],
-  session: ["session", "account", "ops"],
+  session: ["session", "account", "ops", "calendar"],
   all: [
     "news",
     "companies",
@@ -52,6 +52,7 @@ const related: Record<z.infer<typeof changeSchema>["scope"], string[]> = {
     "ops",
     "account",
     "session",
+    "calendar",
   ],
 };
 

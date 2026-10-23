@@ -7,6 +7,10 @@ export type Notice = {
   persistent?: boolean;
 };
 
+export function isApplicationAlert(notice: Notice) {
+  return Boolean(notice.persistent && (notice.tone === "warning" || notice.tone === "info"));
+}
+
 let notices: Notice[] = [];
 const listeners = new Set<() => void>();
 let sequence = 0;

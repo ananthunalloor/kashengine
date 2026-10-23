@@ -41,7 +41,7 @@ def fetch_quotes() -> dict:
 
 @shared_task(name="markets.predict", soft_time_limit=300)
 def predict() -> dict:
-    """Make the prediction for today. It does nothing on a Saturday or a Sunday.
+    """Make the prediction for today, unless the saved calendar has no session.
 
     The task has a soft time limit of 300 seconds. On a weekday it calls
     `prediction.make_prediction` with the default target. If a prediction for the day exists
@@ -55,13 +55,11 @@ def predict() -> dict:
     Side effects:
         Can create a row in the `Prediction` table.
 
-    Note:
-        The task tests only the weekend. A market holiday on a weekday still gets a prediction.
-        The evaluation then marks it as void.
+    Saved holidays and special weekend sessions override the regular weekday schedule.
     """
     today = today_ist()
     if not is_trading_day(today):
-        return {"skipped": "The market is closed today (weekend)."}
+        return {"skipped": "The market is closed today (weekend or saved holiday)."}
     prediction, created = make_prediction()
     return {
         "target_date": prediction.target_date.isoformat(),

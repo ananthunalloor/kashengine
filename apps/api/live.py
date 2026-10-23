@@ -55,6 +55,8 @@ def model_changed(sender: type[Model], instance: Model, **kwargs) -> None:
     if kwargs.get("raw"):
         return
     scope = SCOPES.get(sender._meta.app_label)
+    if sender._meta.label_lower == "markets.tradingcalendarday":
+        scope = "session"
     if sender._meta.label_lower == "api.apitoken":
         scope = "account"
     if scope is None:

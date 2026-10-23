@@ -1826,3 +1826,6 @@ section[aria-labelledby="market-record"] .market-summary dd {
     font-size: 3rem;
   }
 }
+body:has(.trading-calendar-dialog) {
+  overflow: hidden;
+}

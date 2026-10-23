@@ -64,6 +64,76 @@
         ]
       }
     },
+    "/api/app/calendar": {
+      "get": {
+        "operationId": "get_app_calendar",
+        "summary": "Get Calendar",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "schema": {
+              "maximum": 2100,
+              "minimum": 2000,
+              "title": "Year",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradingCalendar"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Let any signed-in user browse the staff-maintained NSE equity calendar.",
+        "tags": [
+          "Session"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
     "/api/app/reports": {
       "get": {
         "operationId": "list_app_reports",
@@ -1537,6 +1607,96 @@
         ]
       }
     },
+    "/api/app/ops/runs/{pk}/stop": {
+      "post": {
+        "operationId": "stop_app_ops_run",
+        "summary": "Stop an active task run as staff",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pk",
+            "schema": {
+              "title": "Pk",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Stop a pending or started task run and mark it failed.\n\nThe request is allowed only for staff, and the Celery worker is instructed to terminate the task\nso the app does not leave a hung task in the queue.",
+        "tags": [
+          "Ops"
+        ],
+        "security": [
+          {
+            "OpsSession": []
+          }
+        ]
+      }
+    },
     "/api/app/ops/runs/{pk}": {
       "get": {
         "operationId": "get_app_ops_run",
@@ -1880,6 +2040,9 @@
             "description": "Same-origin Django logout endpoint; requires CSRF POST.",
             "title": "Logout Url",
             "type": "string"
+          },
+          "market_calendar": {
+            "$ref": "#/components/schemas/TradingCalendar"
           }
         },
         "required": [
@@ -1894,9 +2057,113 @@
           "subscription_state",
           "notice",
           "navigation",
-          "logout_url"
+          "logout_url",
+          "market_calendar"
         ],
         "title": "Session",
+        "type": "object"
+      },
+      "TradingCalendar": {
+        "description": "Scheduled NSE cash/equity status and staff-maintained yearly exceptions.",
+        "properties": {
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "next_change_at": {
+            "format": "date-time",
+            "title": "Next Change At",
+            "type": "string"
+          },
+          "is_open": {
+            "title": "Is Open",
+            "type": "boolean"
+          },
+          "status_key": {
+            "title": "Status Key",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "special_reason": {
+            "title": "Special Reason",
+            "type": "string"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/TradingCalendarEntry"
+            },
+            "title": "Days",
+            "type": "array"
+          }
+        },
+        "required": [
+          "year",
+          "as_of",
+          "next_change_at",
+          "is_open",
+          "status_key",
+          "reason",
+          "special_reason",
+          "source_url",
+          "days"
+        ],
+        "title": "TradingCalendar",
+        "type": "object"
+      },
+      "TradingCalendarEntry": {
+        "description": "One exchange-announced holiday or special session.",
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "holiday",
+              "special"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "opens_at": {
+            "title": "Opens At",
+            "type": "string"
+          },
+          "closes_at": {
+            "title": "Closes At",
+            "type": "string"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "kind",
+          "reason",
+          "opens_at",
+          "closes_at",
+          "source_url"
+        ],
+        "title": "TradingCalendarEntry",
         "type": "object"
       },
       "FieldError": {

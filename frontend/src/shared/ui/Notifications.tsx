@@ -3,7 +3,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { LuCheck, LuInfo, LuTriangleAlert, LuX } from "react-icons/lu";
 
 import { AppLink } from "./AppLink";
-import { dismissNotification, notificationStore } from "./notifications";
+import { dismissNotification, isApplicationAlert, notificationStore } from "./notifications";
 import type { Notice } from "./notifications";
 
 const icons = { success: LuCheck, error: LuX, warning: LuTriangleAlert, info: LuInfo };
@@ -50,9 +50,11 @@ export function Notifications() {
   const notices = useSyncExternalStore(notificationStore.subscribe, notificationStore.getSnapshot);
   return (
     <section className="app-notifications" aria-label="Notifications">
-      {notices.map((notice) => (
-        <Toast key={notice.id} notice={notice} />
-      ))}
+      {notices
+        .filter((notice) => !isApplicationAlert(notice))
+        .map((notice) => (
+          <Toast key={notice.id} notice={notice} />
+        ))}
     </section>
   );
 }

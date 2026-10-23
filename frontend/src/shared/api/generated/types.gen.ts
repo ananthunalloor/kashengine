@@ -102,6 +102,83 @@ export type Session = {
      * Same-origin Django logout endpoint; requires CSRF POST.
      */
     logout_url: string;
+    market_calendar: TradingCalendar;
+};
+
+/**
+ * TradingCalendar
+ *
+ * Scheduled NSE cash/equity status and staff-maintained yearly exceptions.
+ */
+export type TradingCalendar = {
+    /**
+     * Year
+     */
+    year: number;
+    /**
+     * As Of
+     */
+    as_of: string;
+    /**
+     * Next Change At
+     */
+    next_change_at: string;
+    /**
+     * Is Open
+     */
+    is_open: boolean;
+    /**
+     * Status Key
+     */
+    status_key: string;
+    /**
+     * Reason
+     */
+    reason: string;
+    /**
+     * Special Reason
+     */
+    special_reason: string;
+    /**
+     * Source Url
+     */
+    source_url: string;
+    /**
+     * Days
+     */
+    days: Array<TradingCalendarEntry>;
+};
+
+/**
+ * TradingCalendarEntry
+ *
+ * One exchange-announced holiday or special session.
+ */
+export type TradingCalendarEntry = {
+    /**
+     * Day
+     */
+    day: string;
+    /**
+     * Kind
+     */
+    kind: 'holiday' | 'special';
+    /**
+     * Reason
+     */
+    reason: string;
+    /**
+     * Opens At
+     */
+    opens_at: string;
+    /**
+     * Closes At
+     */
+    closes_at: string;
+    /**
+     * Source Url
+     */
+    source_url: string;
 };
 
 /**
@@ -2391,6 +2468,44 @@ export type GetAppSessionResponses = {
 
 export type GetAppSessionResponse = GetAppSessionResponses[keyof GetAppSessionResponses];
 
+export type GetAppCalendarData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Year
+         */
+        year: number;
+    };
+    url: '/api/app/calendar';
+};
+
+export type GetAppCalendarErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type GetAppCalendarError = GetAppCalendarErrors[keyof GetAppCalendarErrors];
+
+export type GetAppCalendarResponses = {
+    /**
+     * OK
+     */
+    200: TradingCalendar;
+};
+
+export type GetAppCalendarResponse = GetAppCalendarResponses[keyof GetAppCalendarResponses];
+
 export type ListAppReportsData = {
     body?: never;
     path?: never;
@@ -3115,6 +3230,56 @@ export type ListAppOpsRunsResponses = {
 };
 
 export type ListAppOpsRunsResponse = ListAppOpsRunsResponses[keyof ListAppOpsRunsResponses];
+
+export type StopAppOpsRunData = {
+    body?: never;
+    path: {
+        /**
+         * Pk
+         */
+        pk: number;
+    };
+    query?: never;
+    url: '/api/app/ops/runs/{pk}/stop';
+};
+
+export type StopAppOpsRunErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Not Found
+     */
+    404: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type StopAppOpsRunError = StopAppOpsRunErrors[keyof StopAppOpsRunErrors];
+
+export type StopAppOpsRunResponses = {
+    /**
+     * Response
+     *
+     * OK
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type StopAppOpsRunResponse = StopAppOpsRunResponses[keyof StopAppOpsRunResponses];
 
 export type GetAppOpsRunData = {
     body?: never;

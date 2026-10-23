@@ -5,7 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { ThemeProvider } from "../../app/ThemeProvider";
 import { routeTree } from "../../routeTree.gen";
-import type { Markets } from "../../shared/api/generated/types.gen";
+import type { Markets, TradingCalendar } from "../../shared/api/generated/types.gen";
 import { session } from "../../test/session";
 
 const data: Markets = {
@@ -68,7 +68,8 @@ async function showMarkets({
   body = data,
   status = 200,
   staff = false,
-}: { body?: unknown; status?: number; staff?: boolean } = {}) {
+  calendar = session.market_calendar,
+}: { body?: unknown; status?: number; staff?: boolean; calendar?: TradingCalendar } = {}) {
   document.cookie = "csrftoken=markets-test-csrf; path=/";
   vi.stubGlobal("scrollTo", vi.fn());
   vi.stubGlobal(
@@ -80,6 +81,7 @@ async function showMarkets({
           isSession
             ? {
                 ...session,
+                market_calendar: calendar,
                 is_staff: staff,
                 features: [...session.features, "markets"],
                 navigation: [...session.navigation, { label: "Markets", url: "/markets/" }],
@@ -211,4 +213,37 @@ it("surfaces malformed contracts and retries a failed request", async () => {
   );
   fireEvent.click(screen.getByRole("button", { name: "Try again" }));
   expect(await screen.findByRole("heading", { name: "Track record" })).toBeInTheDocument();
+});
+
+it("refreshes the scheduled market status when the session boundary is reached", async () => {
+  await showMarkets({
+    calendar: {
+      ...session.market_calendar,
+      next_change_at: new Date(Date.now() + 50).toISOString(),
+    },
+  });
+  expect(await screen.findByRole("heading", { name: "Track record" })).toBeInTheDocument();
+  expect(screen.queryByRole("status", { name: "Market closed" })).not.toBeInTheDocument();
+  vi.mocked(fetch).mockImplementation(
+    async (input) =>
+      new Response(
+        JSON.stringify(
+          input === "/api/app/session"
+            ? {
+                ...session,
+                market_calendar: {
+                  ...session.market_calendar,
+                  is_open: false,
+                  status_key: "after-close",
+                  reason: "Today's session ended at 15:30 IST.",
+                },
+              }
+            : data,
+        ),
+        { headers: { "Content-Type": "application/json" } },
+      ),
+  );
+  expect(
+    await screen.findByRole("status", { name: "Market closed" }, { timeout: 3000 }),
+  ).toHaveTextContent("Today's session ended at 15:30 IST.");
 });

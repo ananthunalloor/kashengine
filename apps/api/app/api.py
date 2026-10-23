@@ -1,15 +1,19 @@
 """Private application endpoints. These do not belong to the public versioned contract."""
 
+from typing import Annotated
+
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, JsonResponse
 from django.middleware.csrf import get_token
 from django.urls import reverse
-from ninja import NinjaAPI
+from ninja import Field, NinjaAPI
 from ninja.errors import AuthenticationError, HttpError
 
 from apps.access.middleware import access_for
 from apps.api import errors
 from apps.api.v1.common import ERRORS
+from apps.markets.calendar import calendar_snapshot
+from apps.markets.trading import today_ist
 from apps.siteconfig import conf
 from apps.web.context import navigation_for
 
@@ -23,7 +27,7 @@ from .news import router as news_router
 from .ops import router as ops_router
 from .ops_pages import router as ops_pages_router
 from .reports import router as reports_router
-from .schemas import Session
+from .schemas import Session, TradingCalendar
 from .today import router as today_router
 
 api = NinjaAPI(
@@ -136,4 +140,16 @@ def get_session(request: HttpRequest):
         "notice": access.notice(),
         "navigation": navigation_for(request),
         "logout_url": reverse("web:logout"),
+        "market_calendar": calendar_snapshot(today_ist().year),
     }
+
+
+@api.get(
+    "/calendar",
+    response={200: TradingCalendar, **ERRORS},
+    operation_id="get_app_calendar",
+    tags=["Session"],
+)
+def get_calendar(request: HttpRequest, year: Annotated[int, Field(ge=2000, le=2100)]):
+    """Let any signed-in user browse the staff-maintained NSE equity calendar."""
+    return calendar_snapshot(year)

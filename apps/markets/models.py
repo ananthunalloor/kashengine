@@ -1,16 +1,72 @@
-"""Models for the markets app: index quotes, predictions and instruments.
+"""Models for the markets app: calendar exceptions, quotes, predictions and instruments.
 
 `IndexQuote` holds one daily close for each symbol. `quotes.py` writes it. `Prediction` holds the
 prediction for one trading day and, later, the real result. `prediction.py` creates it and
 `evaluation.py` fills in the result. `Instrument` is the list of symbols to download, with the
 weight and scale of each global cue. Admins edit `Instrument` on the Ops pages. The web pages, the
-reports and the Ops health checks read all three models.
+reports and the Ops health checks read these models. `TradingCalendarDay` stores
+staff-maintained NSE holidays and special-session hours.
 """
 
 from typing import ClassVar
 
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+
+
+class TradingCalendarDay(models.Model):
+    """A staff-maintained exception to the regular NSE cash/equity session."""
+
+    class Kind(models.TextChoices):
+        """Supported exchange calendar exceptions."""
+
+        HOLIDAY = "holiday", "Holiday"
+        SPECIAL = "special", "Special trading session"
+
+    day = models.DateField(unique=True)
+    kind = models.CharField(max_length=10, choices=Kind.choices)
+    reason = models.CharField(max_length=250, help_text="Exchange-announced reason for this day.")
+    opens_at = models.TimeField(null=True, blank=True, help_text="Special session start, in IST.")
+    closes_at = models.TimeField(null=True, blank=True, help_text="Special session end, in IST.")
+    source_url = models.URLField(blank=True, help_text="Optional official exchange circular.")
+
+    class Meta:
+        ordering: ClassVar[list[str]] = ["day"]
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(kind="holiday", opens_at__isnull=True, closes_at__isnull=True)
+                    | models.Q(
+                        kind="special",
+                        opens_at__isnull=False,
+                        closes_at__isnull=False,
+                        closes_at__gt=models.F("opens_at"),
+                    )
+                ),
+                name="valid_trading_calendar_session",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(reason=""), name="trading_calendar_reason_required"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.day}: {self.reason}"
+
+    def clean(self) -> None:
+        """Reject missing reasons and ambiguous or overnight session hours."""
+        super().clean()
+        self.reason = self.reason.strip()
+        if not self.reason:
+            raise ValidationError({"reason": "Enter the exchange-announced reason."})
+        if self.kind == self.Kind.HOLIDAY:
+            if self.opens_at is not None or self.closes_at is not None:
+                raise ValidationError("Holidays cannot have session hours.")
+        elif self.kind == self.Kind.SPECIAL and (
+            self.opens_at is None or self.closes_at is None or self.closes_at <= self.opens_at
+        ):
+            raise ValidationError("Special sessions need a start and a later end time in IST.")
 
 
 class IndexQuote(models.Model):

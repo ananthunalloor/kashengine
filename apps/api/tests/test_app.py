@@ -201,6 +201,7 @@ def test_private_contract_is_separate_and_committed():
     assert committed.read_text(encoding="utf-8") == render("app")
     assert set(schema["paths"]) == {
         SESSION_URL,
+        "/api/app/calendar",
         "/api/app/reports",
         "/api/app/reports/{day}",
         "/api/app/news",

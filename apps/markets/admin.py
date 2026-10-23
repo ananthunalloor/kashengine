@@ -1,12 +1,22 @@
 """Django admin for the markets app.
 
-The module registers `IndexQuote` and `Prediction`. `Instrument` has no admin class here. Admins
-edit the instruments on the Ops pages (Ops > Instruments).
+The module registers `IndexQuote`, `Prediction`, and calendar exceptions. `Instrument` has no
+admin class here. Admins edit the instruments on the Ops pages (Ops > Instruments).
 """
 
 from django.contrib import admin
 
-from .models import IndexQuote, Prediction
+from .models import IndexQuote, Prediction, TradingCalendarDay
+
+
+@admin.register(TradingCalendarDay)
+class TradingCalendarDayAdmin(admin.ModelAdmin):
+    """Manage exchange-announced holidays and special sessions with reasons."""
+
+    list_display = ("day", "kind", "reason", "opens_at", "closes_at")
+    list_filter = ("kind",)
+    search_fields = ("reason",)
+    date_hierarchy = "day"
 
 
 @admin.register(IndexQuote)
