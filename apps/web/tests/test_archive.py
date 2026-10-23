@@ -58,6 +58,17 @@ def test_every_archived_page_requires_an_active_superuser(client, identities, ro
         assert 'id="root"' not in response.text
 
 
+def test_archive_landing_links_product_pages_on_the_main_site(client, identities, settings):
+    settings.SITE_ADDRESS = "kash.example.test"
+    client.force_login(identities["superuser"])
+
+    response = client.get("/", HTTP_HOST=ARCHIVE)
+
+    for path in ("dashboard", "news", "markets", "ipos", "companies", "reports", "delivery"):
+        assert f'href="http://kash.example.test/{path}/"' in response.text
+        assert f'href="/{path}/"' not in response.text
+
+
 @pytest.mark.parametrize("role", ["member", "staff", "superuser"])
 def test_public_archive_login_never_establishes_sessions_for_non_superusers(
     client, identities, role

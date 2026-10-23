@@ -1,6 +1,7 @@
 """The public introduction stays separate from the protected application."""
 
 import pytest
+from django.conf import settings
 from django.urls import reverse
 
 from apps.siteconfig import service as site_service
@@ -16,13 +17,14 @@ def test_landing_is_public_and_explains_the_capabilities(client):
     assert "web/landing.html" in [template.name for template in response.templates]
     assert response.text.count('<article class="capability-card">') == 6
     assert response.text.count("<details>") == 6
+    main_site_url = f"{response.wsgi_request.scheme}://{settings.SITE_ADDRESS}"
     for name in ("news", "markets", "ipos", "companies", "reports", "delivery"):
-        assert f'href="{reverse(f"web:{name}")}"' in response.text
+        assert f'href="{main_site_url}/{name}/"' in response.text
     for anchor in ("capabilities", "how-it-works", "principles"):
         assert f'id="{anchor}"' in response.text
     assert "Illustrative preview" in response.text
     assert "Not financial advice." in response.text
-    assert f'href="{reverse("web:login")}"' in response.text
+    assert f'href="{main_site_url}/login/"' in response.text
     assert "/api/v1/docs" in response.text
 
 
@@ -48,7 +50,10 @@ def test_landing_links_authenticated_users_to_the_dashboard(client, django_user_
 
     assert response.status_code == 200
     assert "Open dashboard" in response.text
-    assert f'href="{reverse("web:dashboard")}"' in response.text
+    assert (
+        f'href="{response.wsgi_request.scheme}://{settings.SITE_ADDRESS}/dashboard/"'
+        in response.text
+    )
 
 
 def test_landing_remains_open_when_a_subscription_expires(client, django_user_model, expire):
