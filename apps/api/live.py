@@ -83,12 +83,11 @@ def frame(event: str, payload: dict, cursor: int) -> str:
     return f"id: {cursor}\nevent: {event}\ndata: {json.dumps(payload)}\n\n"
 
 
-def event_stream(cursor: int, *, staff: bool):
+def event_stream(cursor: int, *, staff: bool, resync: bool = True):
     """Stream bounded batches, heartbeat on idle, and let EventSource resume on reconnect."""
     yield "retry: 1000\n\n"
-    yield frame("ready", {}, cursor)
+    yield frame("ready", {"resync": resync}, cursor)
     deadline = time.monotonic() + STREAM_SECONDS
-    idle_ticks = 0
     while time.monotonic() < deadline:
         events = LiveEvent.objects.filter(pk__gt=cursor).order_by("pk")
         if not staff:
@@ -98,11 +97,8 @@ def event_stream(cursor: int, *, staff: bool):
             cursor = event.pk
             yield frame("change", {"scope": event.scope, **event.payload}, cursor)
         if len(batch) < 200:  # noqa: PLR2004
-            if idle_ticks % 5 == 0:
-                yield "event: refresh\ndata: {}\n\n"
             yield ": heartbeat\n\n"
             time.sleep(1)
-            idle_ticks += 1
     yield frame("reconnect", {}, cursor)
 
 
@@ -122,8 +118,12 @@ def events(request: HttpRequest, *, staff: bool = False):
     if raw and (not raw.isascii() or not raw.isdecimal() or len(raw) > 19):  # noqa: PLR2004
         return problem(request, "validation_error", "Invalid live event cursor.")
     cursor = min(int(raw), latest) if raw else latest
+    oldest = LiveEvent.objects.order_by("pk").values_list("pk", flat=True).first() or 0
+    resync = not raw or int(raw) > latest or cursor < oldest - 1
+    if resync:
+        cursor = latest
     response = StreamingHttpResponse(
-        event_stream(cursor, staff=staff), content_type="text/event-stream"
+        event_stream(cursor, staff=staff, resync=resync), content_type="text/event-stream"
     )
     response["Cache-Control"] = "private, no-store"
     response["X-Accel-Buffering"] = "no"

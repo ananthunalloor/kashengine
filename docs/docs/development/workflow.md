@@ -200,8 +200,10 @@ Users, subscriptions, login events, schedules, feeds, and instruments use TanSta
 with complete-list search/filter/sort before pagination (1–100 rows); state is in the route URL.
 Fixed job registries, health checks, metric series, and explicitly labeled recent-history
 snapshots use local TanStack search/pagination. Metrics have accessible SVG daily-series charts
-and exact values in tables. Overview polls every 15 seconds; opt-in live logs every 5 seconds,
-only while visible, stopping on errors. Logs retain the existing redacted, bounded tail
+and exact values in tables. Status and table queries refresh on committed SSE change events,
+not periodic API polling or routine stream renewals. Opt-in live logs refresh on those changes
+only while visible, stopping on errors. Use manual Refresh for external runtime diagnostics
+or log writes that do not emit a model event. Logs retain the existing redacted, bounded tail
 (up to 1000 entries). Failed refreshes hide stale operational data. Static styles retain the
 landing palette, dark mode, and strict CSP without runtime style injection.
 The entrypoint configures Zod's `jitless` mode before constructing schemas so even its

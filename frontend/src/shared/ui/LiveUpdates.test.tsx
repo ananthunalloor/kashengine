@@ -1,5 +1,5 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render } from "@testing-library/react";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { act, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { LiveUpdates } from "./LiveUpdates";
@@ -39,7 +39,7 @@ function show(staff = true) {
       <LiveUpdates staff={staff} />
     </QueryClientProvider>,
   );
-  return { ...view, invalidate, source: MockEventSource.current };
+  return { ...view, client, invalidate, source: MockEventSource.current };
 }
 
 it("subscribes once, coalesces changes, notifies completion once, and cleans up", () => {
@@ -76,7 +76,7 @@ it("keeps job failures visible, rejects malformed events, and refreshes on recon
   act(() => {
     source.emit("change", { scope: "ops", run: { id: 9, label: "Backup", status: "failure" } });
     source.emit("change", { scope: "invalid" });
-    source.emit("ready", {});
+    source.emit("ready", { resync: true });
     vi.advanceTimersByTime(250);
   });
   expect(notificationStore.getSnapshot()).toEqual(
@@ -110,15 +110,110 @@ it("shows connection loss after a delay and clears it when the stream recovers",
     expect.objectContaining({ id: "live-connection", tone: "warning" }),
   ]);
   act(() => {
-    source.emit("ready", {});
+    source.emit("ready", { resync: false });
   });
   expect(notificationStore.getSnapshot()).toHaveLength(0);
 });
 
-it("uses SSE ticks only for enabled runtime pages, not paused logs or errored pages", () => {
+it("does not fetch on idle ticks or routine authenticated stream renewals", () => {
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
   const { source, invalidate } = show();
   act(() => {
+    source.emit("ready", { resync: true });
+    vi.advanceTimersByTime(250);
+  });
+  invalidate.mockClear();
+  act(() => {
+    for (let renewal = 0; renewal < 3; renewal++) {
+      source.emit("refresh", {});
+      source.emit("reconnect", {});
+      source.onerror?.();
+      source.emit("ready", { resync: false });
+      vi.advanceTimersByTime(20_000);
+    }
+  });
+  expect(invalidate).not.toHaveBeenCalled();
+  expect(fetch).not.toHaveBeenCalled();
+  expect(notificationStore.getSnapshot()).toHaveLength(0);
+});
+
+it("resynchronizes after a replay gap and after a genuine connection failure", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => new Response(JSON.stringify(session))),
+  );
+  const { source, invalidate } = show();
+  act(() => {
+    source.emit("ready", { resync: true });
+    vi.advanceTimersByTime(250);
+  });
+  expect(invalidate).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    source.emit("reconnect", {});
+    source.onerror?.();
+    source.onerror?.();
+  });
+  act(() => {
+    source.emit("ready", { resync: false });
+    vi.advanceTimersByTime(250);
+  });
+  expect(invalidate).toHaveBeenCalledTimes(2);
+});
+
+it("updates rendered status and table values only after a relevant change", async () => {
+  const { client, source } = show();
+  let saved = { status: "Waiting", value: 10 };
+  const read = vi.fn(async () => saved);
+  function StatusTable() {
+    const { data } = useQuery({
+      queryKey: ["app", "ops", "runs"],
+      queryFn: read,
+    });
+    return (
+      <table>
+        <tbody>
+          <tr>
+            <td>{data?.status}</td>
+            <td>{data?.value}</td>
+          </tr>
+        </tbody>
+      </table>
+    );
+  }
+  const table = render(
+    <QueryClientProvider client={client}>
+      <StatusTable />
+    </QueryClientProvider>,
+  );
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(10);
+  });
+  expect(screen.getByRole("cell", { name: "Waiting" })).toBeInTheDocument();
+  expect(screen.getByRole("cell", { name: "10" })).toBeInTheDocument();
+  saved = { status: "Done", value: 25 };
+  await act(async () => {
     source.emit("refresh", {});
+    source.emit("change", { scope: "news" });
+    await vi.advanceTimersByTimeAsync(60_000);
+  });
+  expect(read).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    source.emit("change", { scope: "ops" });
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  expect(read).toHaveBeenCalledTimes(2);
+  expect(screen.getByRole("cell", { name: "Done" })).toBeInTheDocument();
+  expect(screen.getByRole("cell", { name: "25" })).toBeInTheDocument();
+  table.unmount();
+  client.clear();
+});
+
+it("refreshes changed scopes but respects paused, hidden, or errored live logs", () => {
+  const { source, invalidate } = show();
+  act(() => {
+    source.emit("change", { scope: "ops" });
+    vi.advanceTimersByTime(250);
   });
   const predicate = invalidate.mock.calls[0][0]?.predicate;
   const client = new QueryClient();
@@ -131,5 +226,20 @@ it("uses SSE ticks only for enabled runtime pages, not paused logs or errored pa
     const query = client.getQueryCache().find({ queryKey: key });
     expect(query && predicate?.(query)).toBe(seconds > 0);
   }
+  const liveKey = ["app", "ops", "page", "logs/", { live: "true" }];
+  client.setQueryData(liveKey, { refresh_seconds: 5 });
+  const liveQuery = client.getQueryCache().find({ queryKey: liveKey });
+  expect(liveQuery && predicate?.(liveQuery)).toBe(true);
+  if (liveQuery) {
+    liveQuery.setState({ error: new Error("Unavailable") });
+    expect(predicate?.(liveQuery)).toBe(false);
+    liveQuery.setState({ error: null });
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    expect(predicate?.(liveQuery)).toBe(false);
+    visibility.mockRestore();
+  }
+  client.setQueryData(["app", "news"], {});
+  const news = client.getQueryCache().find({ queryKey: ["app", "news"] });
+  expect(news && predicate?.(news)).toBe(false);
   client.clear();
 });

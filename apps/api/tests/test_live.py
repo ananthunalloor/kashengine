@@ -111,6 +111,41 @@ def test_changes_arriving_after_connection_are_streamed(client, staff, monkeypat
     response.close()
 
 
+def test_idle_stream_only_heartbeats_without_refresh_ticks(monkeypatch):
+    one_cycle(monkeypatch)
+    chunks = "".join(live.event_stream(0, staff=True, resync=False))
+    assert 'event: ready\ndata: {"resync": false}' in chunks
+    assert ": heartbeat\n\n" in chunks
+    assert "event: refresh" not in chunks
+    assert "event: change" not in chunks
+    assert "event: reconnect" in chunks
+
+
+@pytest.mark.parametrize("history", ["initial", "current", "pruned", "reset"])
+def test_ready_resyncs_only_when_replay_cannot_cover_the_connection(client, member, history):
+    client.force_login(member)
+    first = LiveEvent.objects.create(scope="news")
+    second = LiveEvent.objects.create(scope="reports")
+    latest = LiveEvent.objects.create(scope="companies")
+    cursor = first.pk
+    if history == "pruned":
+        LiveEvent.objects.filter(pk__in=[first.pk, second.pk]).delete()
+    if history == "reset":
+        cursor = latest.pk + 1
+    headers = {} if history == "initial" else {"Last-Event-ID": str(cursor)}
+    response = client.get("/api/app/events", headers=headers)
+    try:
+        stream = iter(response.streaming_content)
+        next(stream)
+        ready = next(stream).decode()
+        payload = json.loads(ready.split("data: ", 1)[1])
+        assert payload == {"resync": history != "current"}
+        expected_cursor = cursor if history == "current" else latest.pk
+        assert ready.startswith(f"id: {expected_cursor}\n")
+    finally:
+        response.close()
+
+
 def test_bulk_job_completion_invalidates_member_data(django_capture_on_commit_callbacks):
     with django_capture_on_commit_callbacks(execute=True):
         TaskRun.objects.create(

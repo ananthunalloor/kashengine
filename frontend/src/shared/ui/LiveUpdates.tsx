@@ -73,6 +73,8 @@ export function LiveUpdates({ staff }: { staff: boolean }) {
     let connectionTimer: number | undefined;
     let checking = false;
     let disposed = false;
+    let renewing = false;
+    let needsResync = false;
     const scopes = new Set<string>();
     const seen = new Set<string>();
     function refresh(keys: string[]) {
@@ -84,34 +86,50 @@ export function LiveUpdates({ staff }: { staff: boolean }) {
         scopes.clear();
         void client.invalidateQueries({
           predicate: (query) =>
-            query.queryKey[0] === "app" && pending.has(String(query.queryKey[1])),
+            query.queryKey[0] === "app" &&
+            pending.has(String(query.queryKey[1])) &&
+            !(
+              query.queryKey[1] === "ops" &&
+              query.queryKey[2] === "page" &&
+              query.queryKey[3] === "logs/" &&
+              (document.visibilityState === "hidden" ||
+                query.state.error ||
+                !query.state.data ||
+                typeof query.state.data !== "object" ||
+                !("refresh_seconds" in query.state.data) ||
+                !query.state.data.refresh_seconds)
+            ),
         });
       }, 250);
     }
-    source.addEventListener("ready", () => {
+    source.addEventListener("ready", (event) => {
       window.clearTimeout(connectionTimer);
       connectionTimer = undefined;
       dismissNotification("live-connection");
-      refresh(Object.values(related).flat());
+      renewing = false;
+      let data: unknown;
+      try {
+        data = JSON.parse(event.data);
+      } catch {
+        notifyError(
+          new Error("Live updates returned unreadable data. Reload the page."),
+          "Live update failed",
+        );
+        return;
+      }
+      const ready = z.object({ resync: z.boolean() }).safeParse(data);
+      if (!ready.success) {
+        notifyError(
+          new Error("Live updates do not match this app. Reload the page."),
+          "Live update failed",
+        );
+        return;
+      }
+      if (ready.data.resync || needsResync) refresh(Object.values(related).flat());
+      needsResync = false;
     });
-    source.addEventListener("refresh", () => {
-      if (document.visibilityState === "hidden") return;
-      void client.invalidateQueries({
-        predicate: (query) => {
-          const data = query.state.data;
-          return (
-            query.queryKey[0] === "app" &&
-            query.queryKey[1] === "ops" &&
-            query.queryKey[2] === "page" &&
-            !query.state.error &&
-            typeof data === "object" &&
-            data !== null &&
-            "refresh_seconds" in data &&
-            typeof data.refresh_seconds === "number" &&
-            data.refresh_seconds > 0
-          );
-        },
-      });
+    source.addEventListener("reconnect", () => {
+      renewing = true;
     });
     source.addEventListener("change", (event) => {
       let data: unknown;
@@ -159,6 +177,11 @@ export function LiveUpdates({ staff }: { staff: boolean }) {
       }
     });
     source.onerror = () => {
+      if (renewing) {
+        renewing = false;
+        return;
+      }
+      needsResync = true;
       if (connectionTimer === undefined) {
         connectionTimer = window.setTimeout(() => {
           notify({
