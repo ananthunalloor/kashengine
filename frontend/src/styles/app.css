@@ -27,6 +27,10 @@
   --ui-text-body-size: 0.95rem;
   --ui-text-body-line-height: 1.5;
   --ui-text-xs-size: 0.72rem;
+  --ui-tag-height: 1.5rem;
+  --ui-tag-font-size: 0.8125rem;
+  --ui-tag-padding-inline: 0.5rem;
+  --ui-tag-icon-size: 0.875rem;
   --ui-text-label-size: 0.8rem;
   --ui-text-lg-size: 1.05rem;
   --ui-text-xl-size: 1.25rem;
@@ -391,10 +395,28 @@ button:not(.mantine-Button-root):not(.mantine-ActionIcon-root):not(.mantine-Clos
   margin: 1.25rem 0;
 }
 
+.app-status-tag,
+.report-status,
+.report-outlook,
+.ops-status,
 .public-tags span {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.7rem;
-  border-radius: 0.5rem;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  gap: var(--ui-space-1);
+  height: var(--ui-tag-height);
+  padding: 0 var(--ui-tag-padding-inline);
+  border: 1px solid transparent;
+  border-radius: var(--ui-radius-sm);
+  font-size: var(--ui-tag-font-size);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.public-tags span {
   background: var(--brand-soft);
 }
 
@@ -771,21 +793,13 @@ h2 {
 }
 
 .ops-status {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--ui-space-1);
-  padding: var(--ui-space-1) var(--ui-space-2);
-  border: 1px solid currentColor;
-  border-radius: var(--ui-radius-sm);
-  font-size: var(--ui-text-label-size);
-  font-weight: 650;
-  line-height: 1.4;
+  border-color: currentColor;
 }
 
 .ops-status>svg {
   flex: 0 0 auto;
-  width: 1rem;
-  height: 1rem;
+  width: var(--ui-tag-icon-size);
+  height: var(--ui-tag-icon-size);
 }
 
 .ops-status.ops-tone-positive {
@@ -827,13 +841,6 @@ h2 {
   font-size: 1.3rem;
   font-variant-numeric: tabular-nums;
   font-weight: 650;
-}
-
-.ops-stat dd .ops-status {
-  font-size: 1.3rem;
-  border: 0;
-  padding: 0;
-  background: transparent;
 }
 
 .ops-chart-legend,
@@ -1539,14 +1546,8 @@ h2 {
 
 .report-outlook,
 .report-status {
-  display: inline-flex;
-  column-gap: var(--ui-space-1);
-  padding: var(--ui-space-1) var(--ui-space-2);
-  border-radius: var(--ui-radius-sm);
   background: var(--brand-soft);
   color: var(--brand-muted);
-  font-size: 0.8rem;
-  font-weight: 600;
 }
 
 [data-tone="up"],

@@ -95,7 +95,10 @@ const appTheme = createTheme({
     PasswordInput: PasswordInput.extend({ defaultProps: { size: "sm", radius: "sm" } }),
     Checkbox: Checkbox.extend({ defaultProps: { size: "sm", radius: "sm" } }),
     Switch: Switch.extend({ defaultProps: { size: "sm" } }),
-    Badge: Badge.extend({ defaultProps: { size: "sm", radius: "sm" } }),
+    Badge: Badge.extend({
+      defaultProps: { size: "sm", radius: "sm" },
+      classNames: { root: "app-status-tag" },
+    }),
     Alert: Alert.extend({ defaultProps: { radius: "sm", p: "md" } }),
     Modal: Modal.extend({ defaultProps: { radius: "sm", padding: "lg" } }),
     Table: Table.extend({ defaultProps: { verticalSpacing: "sm", horizontalSpacing: "md" } }),

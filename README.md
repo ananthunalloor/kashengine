@@ -448,6 +448,12 @@ The React header includes an initials avatar with an account popover (username, 
 subscription status, Account details, and secure logout), plus an icon-only theme toggle.
 Both controls work on mobile and desktop and retain keyboard-accessible labels and focus behavior.
 
+React status and outlook tags, Ops badges (including summary cards), calendar badges, and
+public-page tags share compact sizing: 1.5rem height, 0.8125rem text, and 0.5rem horizontal
+padding. Their widths follow the label; status colors and Ops icons remain distinct.
+Sizing is defined by shared tag tokens and styles in `frontend/src/styles/app.css`; Mantine
+badges use the same styles through the app theme.
+
 Staff can view task history at `/ops/runs/` and stored run diagnostics at
 `/ops/runs/{id}/`. The TanStack history searches and filters all retained runs on the server
 before pagination, with job/result/trigger filters and URL-preserved sorting and page size.
