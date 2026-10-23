@@ -13,8 +13,10 @@ from datetime import timedelta
 from celery import shared_task
 from django.contrib.sessions.models import Session
 from django.core.management import call_command
+from django.db import transaction
 from django.utils import timezone
 
+from apps.api.models import LiveEvent
 from apps.siteconfig import conf
 
 from .backup_automation import run_backup
@@ -113,20 +115,29 @@ def prune() -> dict:
     keep_since = now - timedelta(days=conf.OPS_RETENTION_DAYS)
     audit_since = now - timedelta(days=max(conf.OPS_RETENTION_DAYS, AUDIT_KEEP_DAYS))
 
-    lost_pending = TaskRun.objects.filter(
-        status=TaskRun.Status.PENDING, created_at__lt=now - PENDING_LOST_AFTER
-    ).update(
-        status=TaskRun.Status.FAILURE,
-        finished_at=now,
-        error="The job never started. Is a worker running?",
-    )
-    lost_started = TaskRun.objects.filter(
-        status=TaskRun.Status.STARTED, started_at__lt=now - STARTED_LOST_AFTER
-    ).update(
-        status=TaskRun.Status.FAILURE,
-        finished_at=now,
-        error="The run was lost. The worker probably stopped.",
-    )
+    lost_pending = 0
+    lost_started = 0
+    with transaction.atomic():
+        for run in (
+            TaskRun.objects.select_for_update()
+            .filter(status=TaskRun.Status.PENDING, created_at__lt=now - PENDING_LOST_AFTER)
+            .iterator()
+        ):
+            run.status = TaskRun.Status.FAILURE
+            run.finished_at = now
+            run.error = "The job never started. Is a worker running?"
+            run.save(update_fields=["status", "finished_at", "error"])
+            lost_pending += 1
+        for run in (
+            TaskRun.objects.select_for_update()
+            .filter(status=TaskRun.Status.STARTED, started_at__lt=now - STARTED_LOST_AFTER)
+            .iterator()
+        ):
+            run.status = TaskRun.Status.FAILURE
+            run.finished_at = now
+            run.error = "The run was lost. The worker probably stopped."
+            run.save(update_fields=["status", "finished_at", "error"])
+            lost_started += 1
     result = {
         "lost_pending": lost_pending,
         "lost_started": lost_started,
@@ -134,6 +145,7 @@ def prune() -> dict:
         "login_events": LoginEvent.objects.filter(created_at__lt=keep_since).delete()[0],
         "audit_events": AuditEvent.objects.filter(created_at__lt=audit_since).delete()[0],
         "sessions": Session.objects.filter(expire_date__lt=now).delete()[0],
+        "live_events": LiveEvent.objects.filter(created_at__lt=now - timedelta(days=1)).delete()[0],
     }
     logger.info("Ops history pruned: %s", result)
     return result

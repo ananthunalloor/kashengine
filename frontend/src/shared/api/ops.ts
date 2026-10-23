@@ -92,8 +92,6 @@ export function runQuery(id: string) {
       return result.data;
     },
     retry: false,
-    refetchInterval: (query) =>
-      query.state.error ? false : query.state.data?.is_active ? 3000 : false,
   });
 }
 

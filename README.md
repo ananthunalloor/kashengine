@@ -26,6 +26,34 @@ Early development. Phase 1 (project setup) is done. The features below are plann
 - Docker and Docker Compose
 - uv (packages) and ruff (lint and format)
 
+## Live updates and notifications
+
+The signed-in React app uses same-origin Server-Sent Events (SSE) to refresh data without
+reloading the page. Staff also receive job completion/failure notifications with links to
+task details. Actions, API errors, token changes, subscription notices, and connection
+failures use Mantine notification cards with the app's light/dark brand colors. Success
+messages close after eight seconds (paused while hovered or focused); errors stay until
+dismissed. Inline form errors remain available.
+
+- Apply migrations with `python manage.py migrate` before starting the updated web server
+  **and** workers. Events are stored in the database, shared across processes, and published
+  after transactions commit. `ops.prune` keeps one day of replay history.
+- `/api/app/events` exposes only data invalidations. `/api/app/ops/events` additionally
+  exposes staff-only task IDs, labels, and statuses, under the existing Ops IP allowlist.
+  Secrets, task output, tracebacks, and form values are never sent in events.
+- Connections heartbeat every second, reconnect automatically, resume with `Last-Event-ID`,
+  and recheck session/staff access at least every 20 seconds. Initial connections do not
+  replay historical job popups. A reconnect also resynchronizes visible queries.
+- Model saves/deletes and relationship edits refresh affected pages. Job completion also
+  refreshes all pages to cover bulk writes inside jobs. Code performing bulk writes outside
+  a job must call `apps.api.live.publish("all")` after its changes (the helper defers to commit).
+  Runtime diagnostics and opted-in live logs refresh on five-second SSE ticks while visible;
+  there are no browser polling intervals for jobs or Ops pages.
+- Production Gunicorn uses threaded workers so streams do not occupy every sync worker.
+  Each open tab occupies one thread; size workers/threads and database connections for your
+  concurrent users, leaving headroom for normal requests. Proxies must not buffer SSE;
+  Django sends `text/event-stream` and `X-Accel-Buffering: no`.
+
 ## Project layout
 
 ```text

@@ -14,6 +14,19 @@ from django.utils import timezone
 TOKEN_PREFIX = "ke"  # noqa: S105 - the fixed start of every token, not a secret.
 
 
+class LiveEvent(models.Model):
+    """Short-lived, replayable UI changes shared by web and worker processes."""
+
+    scope = models.CharField(max_length=20)
+    staff_only = models.BooleanField(default=False)
+    payload = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    def __str__(self) -> str:
+        """Return the event scope without exposing its payload."""
+        return f"{self.scope} event {self.pk}"
+
+
 class ApiToken(models.Model):
     """One API token of one user.
 

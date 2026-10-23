@@ -10,6 +10,7 @@ import { queryClient } from "./app/query-client";
 import { router } from "./app/router";
 import { ThemeProvider } from "./app/ThemeProvider";
 import { SkipLink } from "./shared/ui/SkipLink";
+import { Notifications } from "./shared/ui/Notifications";
 
 const rootElement = document.getElementById("root");
 
@@ -21,6 +22,7 @@ createRoot(rootElement).render(
   <StrictMode>
     <SkipLink />
     <ThemeProvider>
+      <Notifications />
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
       </QueryClientProvider>

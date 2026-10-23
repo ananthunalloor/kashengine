@@ -56,10 +56,6 @@ export function opsPageQuery(path: string, filters: OpsSearch) {
       return result.data;
     },
     retry: false,
-    refetchInterval: (query) =>
-      query.state.error || !query.state.data?.refresh_seconds
-        ? false
-        : query.state.data.refresh_seconds * 1000,
   });
 }
 

@@ -16,6 +16,7 @@ import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { RunActor, RunStatus } from "./Runs";
 import { OpsTime } from "./OpsTime";
 import { AppLink } from "../../shared/ui/AppLink";
+import { notify, notifyError } from "../../shared/ui/notifications";
 
 export function RunDetail({
   run,
@@ -40,7 +41,13 @@ export function RunDetail({
         throw new Error("This task is no longer running.");
       }
       onRefresh();
+      notify({
+        title: "Stop requested",
+        message: "The stop request was sent. Check the run status for confirmation.",
+        tone: "info",
+      });
     } catch (error) {
+      notifyError(error, "Could not stop task");
       setStopError(error instanceof Error ? error.message : "Could not stop this task.");
     } finally {
       setStopping(false);
@@ -87,7 +94,7 @@ export function RunDetail({
         )}
         {run.is_active && (
           <Text size="sm" c="dimmed" mt="sm">
-            This run refreshes every 3 seconds while waiting or running.
+            This run updates live while waiting or running.
           </Text>
         )}
         {run.status === "pending" && (

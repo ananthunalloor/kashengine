@@ -30,7 +30,8 @@ import { DataTable } from "../../shared/ui/DataTable";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { opsPageIcon } from "../../shared/ui/OpsNavigation";
 import { OpsTime } from "./OpsTime";
-import { OpsNotice, OpsStatus } from "./OpsStatus";
+import { notifyOpsMessages, OpsNotice, OpsStatus } from "./OpsStatus";
+import { notifyError } from "../../shared/ui/notifications";
 import { AppLink } from "../../shared/ui/AppLink";
 import { TableFilterField, TableFilters } from "../../shared/ui/TableFilters";
 
@@ -135,6 +136,10 @@ export function OpsActionForm({
         setError("");
         try {
           const result = await submitOpsForm(form, payload);
+          notifyOpsMessages(result.messages);
+          if (!result.ok && !result.messages.length) {
+            notifyError(new Error("Nothing was saved. Fix the marked fields."), "Action failed");
+          }
           element
             .querySelectorAll<HTMLInputElement>("input[type=password],input[type=file]")
             .forEach((input) => {
@@ -143,6 +148,7 @@ export function OpsActionForm({
           await onResult(result);
           if (result.ok) setVersion((value) => value + 1);
         } catch (error) {
+          notifyError(error, "Action failed");
           element.querySelectorAll<HTMLInputElement>("input[type=password]").forEach((input) => {
             input.value = "";
           });
@@ -451,7 +457,7 @@ export function Workspace({
                 onFilter({ ...filters, live: event.target.checked ? "true" : "" })
               }
             />{" "}
-            Live refresh (visible tab only)
+            Live updates (visible tab only)
           </label>
         </>
       )}
@@ -499,8 +505,10 @@ export function Workspace({
       )}
       {data.refresh_seconds > 0 && (
         <Text size="sm" c="dimmed">
-          <LuActivity aria-hidden="true" /> Updates every {data.refresh_seconds} seconds while
-          visible; pauses on errors.
+          <LuActivity aria-hidden="true" />{" "}
+          {path === "logs/"
+            ? "Logs update live while visible; pauses on errors."
+            : "Updates live as jobs and data change."}
         </Text>
       )}
       {data.sections.map((section, index) => (

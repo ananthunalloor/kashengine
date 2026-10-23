@@ -99,6 +99,70 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.app-notifications {
+  position: fixed;
+  z-index: 1100;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  width: min(25rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-3);
+  pointer-events: none;
+}
+
+.app-toast {
+  --toast-color: var(--brand-purple);
+  --toast-soft: var(--brand-soft);
+  background: var(--brand-surface);
+  color: var(--brand-ink);
+  border: 1px solid var(--brand-line);
+  border-inline-start: 4px solid var(--toast-color);
+  border-radius: var(--ui-radius-md);
+  box-shadow: 0 8px 28px #0000001f;
+  padding: var(--ui-space-4);
+  pointer-events: auto;
+  overflow-wrap: anywhere;
+}
+
+.app-toast[data-tone="success"] {
+  --toast-color: var(--brand-gain);
+  --toast-soft: var(--brand-gain-soft);
+}
+
+.app-toast[data-tone="error"] {
+  --toast-color: var(--brand-loss);
+  --toast-soft: var(--brand-loss-soft);
+}
+
+.app-toast[data-tone="warning"] {
+  --toast-color: var(--metric-caution);
+  --toast-soft: var(--metric-caution-soft);
+}
+
+.app-toast .mantine-Notification-icon {
+  background: var(--toast-soft);
+  color: var(--toast-color);
+}
+
+.app-toast .mantine-Notification-title {
+  color: var(--brand-ink);
+}
+.app-toast .mantine-Notification-description {
+  color: var(--brand-muted);
+}
+.app-toast .mantine-Notification-closeButton {
+  color: var(--brand-muted);
+}
+.app-toast-link {
+  display: block;
+  color: var(--brand-purple);
+  margin-top: var(--ui-space-2);
+  width: fit-content;
+}
+
 button,
 input,
 select,
@@ -106,7 +170,7 @@ textarea {
   font: inherit;
 }
 
-button:not(.mantine-Button-root):not(.mantine-ActionIcon-root):not(.header-icon-button):not(.account-menu-trigger):not(.table-footer button) {
+button:not(.mantine-Button-root):not(.mantine-ActionIcon-root):not(.mantine-CloseButton-root):not(.header-icon-button):not(.account-menu-trigger):not(.table-footer button) {
   min-height: var(--ui-button-height);
   padding-inline: var(--ui-button-padding-inline);
 }

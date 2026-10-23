@@ -3,6 +3,30 @@ import type { IconType } from "react-icons";
 import { Alert } from "@mantine/core";
 import { LuCircleCheck, LuCircleX, LuInfo, LuTriangleAlert } from "react-icons/lu";
 import type { OpsMessage } from "../../shared/api/generated/types.gen";
+import { notify } from "../../shared/ui/notifications";
+
+export function notifyOpsMessages(messages: OpsMessage[]) {
+  messages.forEach((message) =>
+    notify({
+      title:
+        message.level === "error"
+          ? "Action failed"
+          : message.level === "success"
+            ? "Action completed"
+            : "Operations",
+      message: message.text,
+      tone:
+        message.level === "error"
+          ? "error"
+          : message.level === "success"
+            ? "success"
+            : message.level === "warning"
+              ? "warning"
+              : "info",
+      persistent: message.level === "error",
+    }),
+  );
+}
 
 type Tone = "positive" | "negative" | "warning" | "neutral";
 

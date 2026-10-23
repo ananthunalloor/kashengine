@@ -9,6 +9,7 @@ import { csrfToken, loginUrl } from "../../shared/api/client";
 import { ApiError } from "../../shared/api/errors";
 import { DataTable } from "../../shared/ui/DataTable";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
+import { notify, notifyError } from "../../shared/ui/notifications";
 
 const accountDate = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
@@ -53,6 +54,7 @@ export function Account({ data }: { data: AccountData }) {
   }, [secret]);
 
   function showError(cause: unknown) {
+    notifyError(cause, "Account action failed");
     setError({
       message:
         cause instanceof ApiError
@@ -79,6 +81,11 @@ export function Account({ data }: { data: AccountData }) {
       setSecret(result.secret);
       setName("");
       setNotice("Token created. Copy it now; it will not be shown again.");
+      notify({
+        title: "Token created",
+        message: "Copy your token now; it will not be shown again.",
+        tone: "success",
+      });
       try {
         await refreshAccount();
       } catch (cause) {
@@ -109,6 +116,11 @@ export function Account({ data }: { data: AccountData }) {
       setConfirm(null);
       setSecret("");
       setNotice(`Token ${token.display} is revoked.`);
+      notify({
+        title: "Token revoked",
+        message: `${token.display} can no longer access the API.`,
+        tone: "success",
+      });
       try {
         await refreshAccount();
       } catch (cause) {

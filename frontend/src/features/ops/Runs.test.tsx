@@ -309,17 +309,16 @@ it("renders stored diagnostics only as text, metadata and pending guidance", asy
   expect(screen.getAllByText("\u2013").length).toBeGreaterThan(1);
 });
 
-it("polls active runs every three seconds, stops at completion, and supports manual refresh", async () => {
+it("updates active runs on live invalidation and still supports manual refresh", async () => {
   const { fetchMock, changeRun } = await showRuns({ path: "/ops/runs/1/" });
   await screen.findByRole("heading", { name: "news.fetch" });
   vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
-  // Recreate the observer interval under the controlled clock.
   fireEvent.click(await screen.findByRole("button", { name: "Refresh now" }));
   await waitFor(() => expect(screen.getByRole("button", { name: "Refresh now" })).toBeEnabled());
   const before = fetchMock.mock.calls.length;
   changeRun({ ...detail, status: "success", status_label: "Done", is_active: false });
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(3000);
+    await clients[0].invalidateQueries({ queryKey: ["app", "ops", "run", "1"] });
   });
   await waitFor(() => expect(screen.getByText("Done")).toBeInTheDocument());
   expect(fetchMock.mock.calls.length).toBe(before + 1);
