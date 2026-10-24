@@ -1,6 +1,7 @@
 import { defineChart } from "@tanstack/charts";
 import { barY } from "@tanstack/charts/bar";
 import { group } from "@tanstack/charts/group";
+import { link } from "@tanstack/charts/link";
 import { lineY } from "@tanstack/charts/line";
 import { Chart } from "@tanstack/charts/react";
 import { scaleBand } from "@tanstack/charts/scales/band";
@@ -10,151 +11,208 @@ import { useMemo } from "react";
 
 type OpsChartPoint = { label: string; value: number; failed: number };
 type OpsSeriesPoint = {
-    label: string;
-    series: "Total" | "Failed / alerts";
-    value: number;
+  label: string;
+  series: "Total" | "Failed / alerts";
+  value: number;
 };
 type TrendPoint = { label: string; value: number };
+type CandlePoint = { label: string; open: number; high: number; low: number; close: number };
 
 const illustrativePoints: TrendPoint[] = [
-    { label: "1", value: 2 },
-    { label: "2", value: 6 },
-    { label: "3", value: 3 },
-    { label: "4", value: 9 },
-    { label: "5", value: 7 },
-    { label: "6", value: 12 },
-    { label: "7", value: 10 },
-    { label: "8", value: 15 },
-    { label: "9", value: 13 },
-    { label: "10", value: 19 },
-    { label: "11", value: 16 },
-    { label: "12", value: 22 },
-    { label: "13", value: 18 },
-    { label: "14", value: 24 },
-    { label: "15", value: 20 },
-    { label: "16", value: 27 },
-    { label: "17", value: 23 },
-    { label: "18", value: 30 },
+  { label: "1", value: 2 },
+  { label: "2", value: 6 },
+  { label: "3", value: 3 },
+  { label: "4", value: 9 },
+  { label: "5", value: 7 },
+  { label: "6", value: 12 },
+  { label: "7", value: 10 },
+  { label: "8", value: 15 },
+  { label: "9", value: 13 },
+  { label: "10", value: 19 },
+  { label: "11", value: 16 },
+  { label: "12", value: 22 },
+  { label: "13", value: 18 },
+  { label: "14", value: 24 },
+  { label: "15", value: 20 },
+  { label: "16", value: 27 },
+  { label: "17", value: 23 },
+  { label: "18", value: 30 },
 ];
 
 export function TrendChart({
-    points,
-    projectionPoints = [],
-    muted = false,
-    ariaLabel,
-    height = 190,
-    initialWidth = 760,
+  points,
+  projectionPoints = [],
+  muted = false,
+  ariaLabel,
+  height = 190,
+  initialWidth = 760,
 }: {
-    points: TrendPoint[];
-    projectionPoints?: TrendPoint[];
-    muted?: boolean;
-    ariaLabel: string;
-    height?: number;
-    initialWidth?: number;
+  points: TrendPoint[];
+  projectionPoints?: TrendPoint[];
+  muted?: boolean;
+  ariaLabel: string;
+  height?: number;
+  initialWidth?: number;
 }) {
-    const rows = useMemo(
-        () => points.map(({ label, value }) => ({ label, value })),
-        [points],
-    );
-    const projectionRows = useMemo(
-        () => projectionPoints.map(({ label, value }) => ({ label, value })),
-        [projectionPoints],
-    );
-    const definition = useMemo(
-        () =>
-            defineChart({
-                marks: [
-                    lineY(rows, {
-                        x: "label",
-                        y: "value",
-                        stroke: muted ? "#858b92" : "var(--brand-purple)",
-                        strokeWidth: 3,
-                    }),
-                    ...(projectionRows.length
-                        ? [
-                              lineY(projectionRows, {
-                                  x: "label",
-                                  y: "value",
-                                  stroke: "#858b92",
-                                  strokeDasharray: "6 5",
-                                  strokeWidth: 2,
-                              }),
-                          ]
-                        : []),
-                ],
-                scales: {
-                    x: { scale: scalePoint, axis: { ticks: { count: 6 } } },
-                    y: { scale: scaleLinear, nice: true, grid: true },
-                },
-            }),
-        [rows, projectionRows, muted],
-    );
+  const rows = useMemo(() => points.map(({ label, value }) => ({ label, value })), [points]);
+  const projectionRows = useMemo(
+    () => projectionPoints.map(({ label, value }) => ({ label, value })),
+    [projectionPoints],
+  );
+  const definition = useMemo(
+    () =>
+      defineChart({
+        marks: [
+          lineY(rows, {
+            x: "label",
+            y: "value",
+            stroke: muted ? "#858b92" : "var(--brand-purple)",
+            strokeWidth: 3,
+          }),
+          ...(projectionRows.length
+            ? [
+                lineY(projectionRows, {
+                  x: "label",
+                  y: "value",
+                  stroke: "#858b92",
+                  strokeDasharray: "6 5",
+                  strokeWidth: 2,
+                }),
+              ]
+            : []),
+        ],
+        scales: {
+          x: { scale: scalePoint, axis: { ticks: { count: 6 } } },
+          y: { scale: scaleLinear, nice: true, grid: true },
+        },
+      }),
+    [rows, projectionRows, muted],
+  );
 
-    return (
-        <Chart
-            definition={definition}
-            height={height}
-            initialWidth={initialWidth}
-            ariaLabel={ariaLabel}
-        />
-    );
+  return (
+    <Chart
+      definition={definition}
+      height={height}
+      initialWidth={initialWidth}
+      ariaLabel={ariaLabel}
+    />
+  );
+}
+
+export function CandlestickTrendChart({
+  candles,
+  projectionPoints = [],
+  ariaLabel,
+  height = 300,
+}: {
+  candles: CandlePoint[];
+  projectionPoints?: TrendPoint[];
+  ariaLabel: string;
+  height?: number;
+}) {
+  const projectionRows = useMemo(
+    () => projectionPoints.map(({ label, value }) => ({ label, value })),
+    [projectionPoints],
+  );
+  const definition = useMemo(
+    () =>
+      defineChart({
+        marks: [
+          link(candles, {
+            id: "daily-wicks",
+            x1: "label",
+            y1: "low",
+            x2: "label",
+            y2: "high",
+            stroke: (bar) => (bar.close >= bar.open ? "var(--brand-gain)" : "var(--brand-loss)"),
+            strokeWidth: 1.5,
+          }),
+          barY(candles, {
+            id: "daily-candles",
+            x: "label",
+            y1: "open",
+            y2: "close",
+            fill: (bar) => (bar.close >= bar.open ? "var(--brand-gain)" : "var(--brand-loss)"),
+            inset: 2,
+            maxThickness: 12,
+          }),
+          ...(projectionRows.length
+            ? [
+                lineY(projectionRows, {
+                  id: "history-only-projection",
+                  x: "label",
+                  y: "value",
+                  stroke: "var(--brand-purple)",
+                  strokeDasharray: "6 5",
+                  strokeWidth: 2,
+                }),
+              ]
+            : []),
+        ],
+        scales: {
+          x: { scale: () => scaleBand().padding(0.18), axis: { ticks: { count: 7 } } },
+          y: { scale: scaleLinear, nice: true, grid: true },
+        },
+      }),
+    [candles, projectionRows],
+  );
+
+  return <Chart definition={definition} height={height} initialWidth={900} ariaLabel={ariaLabel} />;
 }
 
 export function IllustrativeTrendChart() {
-    return (
-        <TrendChart
-            points={illustrativePoints}
-            height={120}
-            initialWidth={400}
-            ariaLabel="Illustrative rising trend, not live market data"
-        />
-    );
+  return (
+    <TrendChart
+      points={illustrativePoints}
+      height={120}
+      initialWidth={400}
+      ariaLabel="Illustrative rising trend, not live market data"
+    />
+  );
 }
 
 export function OpsSeriesChart({ points }: { points: OpsChartPoint[] }) {
-    const rows = useMemo(
-        () =>
-            points.flatMap<OpsSeriesPoint>((point) => [
-                { label: point.label, series: "Total", value: point.value },
-                {
-                    label: point.label,
-                    series: "Failed / alerts",
-                    value: point.failed,
-                },
-            ]),
-        [points],
-    );
-    const definition = useMemo(
-        () =>
-            defineChart({
-                marks: [
-                    barY(rows, {
-                        x: "label",
-                        y: "value",
-                        z: "series",
-                        fill: (point) =>
-                            point.series === "Total"
-                                ? "var(--brand-purple)"
-                                : "var(--brand-loss)",
-                        layout: group({
-                            scale: () => scaleBand().padding(0.12),
-                        }),
-                    }),
-                ],
-                scales: {
-                    x: { scale: () => scaleBand().padding(0.2) },
-                    y: { scale: scaleLinear, nice: true, grid: true },
-                },
+  const rows = useMemo(
+    () =>
+      points.flatMap<OpsSeriesPoint>((point) => [
+        { label: point.label, series: "Total", value: point.value },
+        {
+          label: point.label,
+          series: "Failed / alerts",
+          value: point.failed,
+        },
+      ]),
+    [points],
+  );
+  const definition = useMemo(
+    () =>
+      defineChart({
+        marks: [
+          barY(rows, {
+            x: "label",
+            y: "value",
+            z: "series",
+            fill: (point) =>
+              point.series === "Total" ? "var(--brand-purple)" : "var(--brand-loss)",
+            layout: group({
+              scale: () => scaleBand().padding(0.12),
             }),
-        [rows],
-    );
+          }),
+        ],
+        scales: {
+          x: { scale: () => scaleBand().padding(0.2) },
+          y: { scale: scaleLinear, nice: true, grid: true },
+        },
+      }),
+    [rows],
+  );
 
-    return (
-        <Chart
-            definition={definition}
-            height={190}
-            initialWidth={760}
-            ariaLabel="daily totals and failures. Exact values are in the table below."
-        />
-    );
+  return (
+    <Chart
+      definition={definition}
+      height={190}
+      initialWidth={760}
+      ariaLabel="daily totals and failures. Exact values are in the table below."
+    />
+  );
 }

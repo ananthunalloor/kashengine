@@ -1,4 +1,4 @@
-import { Alert, Anchor, Badge, Button, Group, Modal, Stack, Table, Text } from "@mantine/core";
+import { Alert, Anchor, Badge, Button, Group, Modal, Stack, Text } from "@mantine/core";
 import { Calendar } from "@mantine/dates";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -6,8 +6,54 @@ import { LuCalendarDays, LuClock } from "react-icons/lu";
 
 import { calendarQuery } from "../api/calendar";
 import type { TradingCalendar } from "../api/generated/types.gen";
+import { DataTable } from "./DataTable";
+import type { TableColumn } from "./DataTable";
 import { sourceLink } from "./sourceLink";
 import { formatReportDate } from "./formatReportDate";
+
+const calendarColumns: TableColumn<TradingCalendar["days"][number]>[] = [
+  {
+    id: "day",
+    label: "Date",
+    value: (day) => day.day,
+    render: (day) => <time dateTime={day.day}>{formatReportDate(day.day)}</time>,
+  },
+  {
+    id: "kind",
+    label: "Session",
+    value: (day) => day.kind,
+    render: (day) => (
+      <>
+        <Badge color={day.kind === "holiday" ? "gray" : "blue"}>
+          {day.kind === "holiday" ? "Holiday" : "Special session"}
+        </Badge>
+        <Text size="sm" mt="xs">
+          {day.kind === "holiday" ? "Closed" : `${day.opens_at} - ${day.closes_at} IST`}
+        </Text>
+      </>
+    ),
+  },
+  {
+    id: "reason",
+    label: "Reason",
+    value: (day) => day.reason,
+    render: (day) => {
+      const href = sourceLink(day.source_url);
+      return (
+        <>
+          {day.reason}
+          {href && (
+            <Text size="sm">
+              <Anchor href={href} target="_blank" rel="noopener noreferrer">
+                Exchange circular
+              </Anchor>
+            </Text>
+          )}
+        </>
+      );
+    },
+  },
+];
 
 function CalendarYear({ year, current }: { year: number; current: TradingCalendar }) {
   const query = useQuery({
@@ -57,51 +103,20 @@ function CalendarYear({ year, current }: { year: number; current: TradingCalenda
           no exchange holidays. Check the official NSE calendar below.
         </Alert>
       ) : (
-        <Table.ScrollContainer minWidth={520}>
-          <Table captionSide="top">
-            <Table.Caption>
-              Holidays and special trading sessions for {year}. All times are IST.
-            </Table.Caption>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th scope="col">Date</Table.Th>
-                <Table.Th scope="col">Session</Table.Th>
-                <Table.Th scope="col">Reason</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {data.days.map((day) => (
-                <Table.Tr key={day.day}>
-                  <Table.Td>
-                    <time dateTime={day.day}>{formatReportDate(day.day)}</time>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge color={day.kind === "holiday" ? "gray" : "blue"}>
-                      {day.kind === "holiday" ? "Holiday" : "Special session"}
-                    </Badge>
-                    <Text size="sm" mt="xs">
-                      {day.kind === "holiday" ? "Closed" : `${day.opens_at} - ${day.closes_at} IST`}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    {day.reason}
-                    {sourceLink(day.source_url) && (
-                      <Text size="sm">
-                        <Anchor
-                          href={sourceLink(day.source_url)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Exchange circular
-                        </Anchor>
-                      </Text>
-                    )}
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
+        <DataTable
+          data={data.days}
+          columns={calendarColumns}
+          label={`Trading sessions for ${year}`}
+          filters={[
+            {
+              label: "Session",
+              value: (day) => day.kind,
+              options: ["holiday", "special"],
+            },
+          ]}
+          initialSort={[{ id: "day", desc: false }]}
+          empty="No sessions match these filters."
+        />
       )}
     </>
   );

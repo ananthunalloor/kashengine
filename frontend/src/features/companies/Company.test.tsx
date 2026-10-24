@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { ThemeProvider } from "../../app/ThemeProvider";
@@ -140,11 +140,15 @@ it("renders saved company data and a history-only trend projection", async () =>
   expect(screen.getByText("A saved business summary.")).toBeInTheDocument();
   expect(document.querySelector("main h1 b")).toBeNull();
   expect(screen.getByLabelText(/20-session history-only linear projection/)).toBeInTheDocument();
-  expect(screen.getByText(/Completed daily closes in INR/)).toBeInTheDocument();
+  expect(screen.getByText(/Daily OHLC candles with a history-only projection/)).toBeInTheDocument();
+  expect(screen.getByRole("img", { name: /Daily candlestick chart/ })).toBeInTheDocument();
   expect(screen.getByText(/older observation, not live/)).toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "Company story" })).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "key ratios" }));
-  expect(await screen.findByText("P/E")).toBeInTheDocument();
+  expect(screen.getByText("P/E")).toBeInTheDocument();
+  expect(screen.getByText("20")).toBeInTheDocument();
+  expect(screen.getByText("Sector comparison: 15")).toBeInTheDocument();
+  expect(screen.getByText("Supporting")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "About P/E" })).toBeInTheDocument();
   expect(screen.getByText(/not been backtested/)).toBeInTheDocument();
   expect(fetch).toHaveBeenCalledWith("/api/app/companies/1", expect.anything());
 });
