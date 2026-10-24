@@ -18,6 +18,7 @@ import { z } from "zod";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { PageNotFound } from "../../shared/ui/PageNotFound";
 import { AppFooter } from "../../shared/ui/AppFooter";
+import { IllustrativeTrendChart } from "../../shared/ui/TanStackCharts";
 
 export const publicPageSchema = z.object({
   page: z.enum(["landing", "login", "signup", "signup-complete", "access", "lockout", "not-found"]),
@@ -154,18 +155,7 @@ export function Landing({ authenticated }: Pick<PublicData, "authenticated">) {
             Market outlook <span className="public-positive">Positive signal</span>
           </p>
           <strong>Nifty 50</strong>
-          <svg
-            className="public-chart"
-            viewBox="0 0 400 120"
-            role="img"
-            aria-label="Illustrative rising trend, not live market data"
-          >
-            <path className="public-chart-grid" d="M0 25H400M0 65H400M0 105H400" />
-            <path
-              className="public-chart-line"
-              d="M0 100 25 90 45 95 65 70 85 80 110 62 135 70 160 50 185 60 210 35 235 45 260 25 285 35 310 15 335 25 360 12 385 20 400 5"
-            />
-          </svg>
+          <IllustrativeTrendChart />
           <div className="public-brief-story">
             <LuNewspaper aria-hidden="true" />
             <div>

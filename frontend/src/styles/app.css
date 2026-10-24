@@ -160,12 +160,15 @@ body {
 .app-toast .mantine-Notification-title {
   color: var(--brand-ink);
 }
+
 .app-toast .mantine-Notification-description {
   color: var(--brand-muted);
 }
+
 .app-toast .mantine-Notification-closeButton {
   color: var(--brand-muted);
 }
+
 .app-toast-link {
   display: block;
   color: var(--brand-purple);
@@ -180,18 +183,16 @@ textarea {
   font: inherit;
 }
 
-button:not([class*="mantine-"]):not(.header-icon-button):not(.account-menu-trigger):not(
-    .table-footer button
-  ) {
+button:not([class*="mantine-"]):not(.header-icon-button):not(.account-menu-trigger):not(.table-footer button) {
   min-height: var(--ui-button-height);
   padding-inline: var(--ui-button-padding-inline);
 }
 
-.mantine-Button-section > svg,
-.mantine-ActionIcon-root > svg,
-.mantine-NavLink-section > svg,
-.header-icon-button > svg,
-.account-menu-trigger > svg {
+.mantine-Button-section>svg,
+.mantine-ActionIcon-root>svg,
+.mantine-NavLink-section>svg,
+.header-icon-button>svg,
+.account-menu-trigger>svg {
   width: var(--ui-icon-size-md);
   height: var(--ui-icon-size-md);
 }
@@ -211,7 +212,7 @@ button:not([class*="mantine-"]):not(.header-icon-button):not(.account-menu-trigg
   overflow-wrap: anywhere;
 }
 
-.public-site > main {
+.public-site>main {
   flex: 1;
 }
 
@@ -363,21 +364,6 @@ button:not([class*="mantine-"]):not(.header-icon-button):not(.account-menu-trigg
   border-radius: 1rem;
 }
 
-.public-chart {
-  width: 100%;
-  margin: 1.25rem 0;
-  fill: none;
-}
-
-.public-chart-grid {
-  stroke: var(--brand-line);
-}
-
-.public-chart-line {
-  stroke: var(--brand-purple);
-  stroke-width: 3;
-}
-
 .public-brief-story,
 .public-telegram {
   border-top: 1px solid var(--brand-line);
@@ -514,7 +500,7 @@ button:not([class*="mantine-"]):not(.header-icon-button):not(.account-menu-trigg
   font-size: inherit;
 }
 
-.public-site > .app-footer {
+.public-site>.app-footer {
   margin-top: var(--ui-space-8);
 }
 
@@ -574,6 +560,7 @@ button:not([class*="mantine-"]):not(.header-icon-button):not(.account-menu-trigg
 }
 
 @media (max-width: 600px) {
+
   .public-hero,
   .public-principles,
   .public-capabilities,
@@ -712,7 +699,7 @@ h2 {
   padding-inline: clamp(var(--ui-space-3), 1.5vw, var(--ui-space-4));
 }
 
-.app-shell > .app-footer {
+.app-shell>.app-footer {
   grid-column: 2;
   margin-inline: clamp(var(--ui-space-3), 1.5vw, var(--ui-space-4));
 }
@@ -737,7 +724,7 @@ h2 {
   display: block;
 }
 
-.workspace-card div > span {
+.workspace-card div>span {
   margin-top: var(--ui-space-1);
   color: var(--brand-muted);
   font-size: var(--ui-text-xs-size);
@@ -836,14 +823,14 @@ h2 {
   gap: var(--ui-space-3);
 }
 
-.ops-page-title > svg {
+.ops-page-title>svg {
   color: var(--brand-purple);
   flex-shrink: 0;
   width: 1em;
   height: 1em;
 }
 
-.ops-section-title > svg {
+.ops-section-title>svg {
   flex-shrink: 0;
   width: 1.1rem;
   height: 1.1rem;
@@ -856,7 +843,7 @@ h2 {
   background: var(--brand-surface);
 }
 
-.ops-shell .ops-section > .data-panel {
+.ops-shell .ops-section>.data-panel {
   margin-inline: calc(-1 * var(--ui-space-4));
 }
 
@@ -864,7 +851,7 @@ h2 {
   border-color: currentColor;
 }
 
-.ops-status > svg {
+.ops-status>svg {
   flex: 0 0 auto;
   width: var(--ui-tag-icon-size);
   height: var(--ui-tag-icon-size);
@@ -1016,7 +1003,7 @@ h2 {
   min-width: 0;
 }
 
-.ops-field > input:not([type="checkbox"]),
+.ops-field>input:not([type="checkbox"]),
 .ops-field select,
 .ops-field textarea {
   width: 100%;
@@ -1092,25 +1079,6 @@ h2 {
   overflow-wrap: anywhere;
 }
 
-.ops-series {
-  width: 100%;
-  max-height: 15rem;
-  color: var(--brand-muted);
-}
-
-.ops-series text {
-  fill: currentColor;
-  font-size: 7px;
-}
-
-.ops-bar-value {
-  fill: var(--brand-purple);
-}
-
-.ops-bar-failed {
-  fill: var(--brand-loss);
-}
-
 .ops-tone-positive {
   color: var(--brand-gain);
 }
@@ -1145,7 +1113,7 @@ h2 {
   gap: var(--ui-space-3);
 }
 
-.account-popover-identity > div {
+.account-popover-identity>div {
   min-width: 0;
   flex: 1;
   overflow-wrap: anywhere;
@@ -1164,7 +1132,7 @@ h2 {
   margin-block: var(--ui-space-5);
 }
 
-.account-popover-details > div {
+.account-popover-details>div {
   display: flex;
   justify-content: space-between;
   gap: var(--ui-space-4);
@@ -1247,7 +1215,7 @@ h2 {
   overflow: hidden;
 }
 
-.workspace-welcome > div {
+.workspace-welcome>div {
   max-width: 34rem;
 }
 
@@ -1289,7 +1257,7 @@ h2 {
   margin-right: 0.4rem;
 }
 
-.app-main > .mantine-Stack-root > header {
+.app-main>.mantine-Stack-root>header {
   padding-bottom: var(--ui-space-6);
   border-bottom: 1px solid var(--brand-line);
 }
@@ -1298,7 +1266,7 @@ h2 {
   font-size: var(--ui-heading-1-size);
 }
 
-.app-main header > .mantine-Anchor-root {
+.app-main header>.mantine-Anchor-root {
   display: inline-flex;
   font-size: 0.75rem;
   margin-top: var(--ui-space-2);
@@ -1532,7 +1500,7 @@ h2 {
   color: var(--brand-muted);
 }
 
-.table-empty > svg {
+.table-empty>svg {
   color: var(--brand-purple);
   font-size: 1.5rem;
 }
@@ -1576,7 +1544,7 @@ h2 {
   background: var(--brand-soft);
 }
 
-.table-footer nav > span {
+.table-footer nav>span {
   margin-inline: 0.3rem;
 }
 
@@ -1744,7 +1712,7 @@ h2 {
   margin-top: 1rem;
 }
 
-.today-direction > .report-outlook {
+.today-direction>.report-outlook {
   font-size: 2rem;
 }
 
@@ -1804,11 +1772,11 @@ h2 {
   font: inherit;
 }
 
-#market-record + p {
+#market-record+p {
   max-width: 65rem;
 }
 
-section[aria-labelledby="market-record"] .market-summary > div {
+section[aria-labelledby="market-record"] .market-summary>div {
   padding: var(--ui-space-4);
   border-radius: var(--ui-radius-sm);
   background: var(--brand-canvas);
@@ -1879,7 +1847,7 @@ section[aria-labelledby="market-record"] .market-summary dd {
   font-size: var(--ui-text-label-size);
 }
 
-.ipo-facts > div {
+.ipo-facts>div {
   display: flex;
   justify-content: space-between;
   gap: var(--ui-space-4);
@@ -1901,6 +1869,7 @@ section[aria-labelledby="market-record"] .market-summary dd {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -1924,7 +1893,7 @@ section[aria-labelledby="market-record"] .market-summary dd {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .app-shell > .app-footer {
+  .app-shell>.app-footer {
     grid-column: 1;
   }
 
@@ -1949,6 +1918,7 @@ section[aria-labelledby="market-record"] .market-summary dd {
     font-size: 3rem;
   }
 }
+
 body:has(.trading-calendar-dialog) {
   overflow: hidden;
 }

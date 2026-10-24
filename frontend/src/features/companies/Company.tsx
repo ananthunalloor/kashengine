@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import type { CompanyBar, CompanyDetail, CompanyPrice } from "../../shared/api/generated/types.gen";
 import { SavedFacts } from "../../shared/ui/SavedFacts";
 import { sourceLink } from "../../shared/ui/sourceLink";
+import { TrendChart } from "../../shared/ui/TanStackCharts";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 
 const number = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 });
@@ -82,24 +83,16 @@ function PriceTrend({ candles }: { candles: CompanyBar[] }) {
   const closes = candles.map((bar) => bar.close);
   const min = Math.min(...closes),
     max = Math.max(...closes);
-  const points = closes
-    .map(
-      (close, index) =>
-        `${20 + (index * 560) / Math.max(1, closes.length - 1)},${140 - ((close - min) * 120) / (max - min || 1)}`,
-    )
-    .join(" ");
   return (
     <Stack gap="md">
       <Text c="dimmed">
         Completed daily closes in INR. Unadjusted prices: splits and dividends can distort momentum.
       </Text>
-      <svg
-        viewBox="0 0 600 160"
-        role="img"
-        aria-label={`Saved closing prices from ${candles[0].day} to ${candles.at(-1)?.day}; low ${min}, high ${max} INR`}
-      >
-        <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2" />
-      </svg>
+      <TrendChart
+        points={candles.map((bar) => ({ label: bar.day, value: bar.close }))}
+        ariaLabel={`Saved closing prices from ${candles[0].day} to ${candles.at(-1)?.day}; low ${min}, high ${max} INR`}
+        height={240}
+      />
       <Accordion variant="separated">
         <Accordion.Item value="history">
           <Accordion.Control>Daily OHLCV history ({candles.length} sessions)</Accordion.Control>

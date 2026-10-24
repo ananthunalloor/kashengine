@@ -34,6 +34,7 @@ it("renders the anonymous landing without any session API request", () => {
     expect(screen.getByRole("link", { name: `Open ${path}` })).toHaveAttribute("href", `/${path}/`);
   }
   expect(screen.getByText("Illustrative preview")).toBeInTheDocument();
+  expect(screen.getByLabelText(/Illustrative rising trend/)).toBeInTheDocument();
   expect(screen.getByText(/Not financial advice/)).toBeInTheDocument();
   expect(screen.getByRole("contentinfo")).toContainElement(
     screen.getByRole("navigation", { name: "Resources" }),
