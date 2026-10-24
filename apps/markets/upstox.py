@@ -332,8 +332,15 @@ def sync_ipos(client: UpstoxClient) -> dict:
                 detail = client.get(f"v2/ipos/{quote(issue_id, safe='')}")
                 try:
                     issue = Issue.model_validate(detail.data)
-                except ValidationError:
-                    raise UpstoxError("Upstox returned invalid IPO details.") from None
+                except ValidationError as exc:
+                    fields = ", ".join(
+                        f"{'.'.join(str(part) for part in error['loc']) or '<root>'} "
+                        f"({error['type']})"
+                        for error in exc.errors(include_input=False)
+                    )
+                    logger.warning("Upstox IPO %s has invalid details at: %s", issue_id, fields)
+                    counts["skipped"] += 1
+                    continue
                 record = IpoRecord(
                     name=issue.name,
                     open_date=issue.bidding_start_date,

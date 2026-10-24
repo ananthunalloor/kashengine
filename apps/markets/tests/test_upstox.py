@@ -216,6 +216,32 @@ def test_ipo_all_stages_detail_mapping_and_saved_payload(company):
     assert ipo.upstox_data["issue_size"] == 250
 
 
+def test_ipo_invalid_detail_is_skipped_without_aborting_refresh(company, caplog):
+    def handler(request):
+        if request.url.path == "/v2/ipos":
+            return response(
+                [{"id": "invalid-ipo"}, {"id": "valid-ipo"}],
+                meta_data={"page": {"total_pages": 1}},
+            )
+        if request.url.path.endswith("/invalid-ipo"):
+            return response({"id": "invalid-ipo", "name": "Sensitive payload value"})
+        return response(
+            {
+                "id": "valid-ipo",
+                "name": "Valid IPO",
+                "issue_type": "regular",
+            }
+        )
+
+    counts = sync_ipos(provider(handler))
+
+    assert counts["skipped"] == 1
+    assert Ipo.objects.count() == 1
+    assert Ipo.objects.get().name == "Valid IPO"
+    assert "issue_type" in caplog.text
+    assert "Sensitive payload value" not in caplog.text
+
+
 def test_experimental_outlook_threshold_evidence_and_insufficient_data(company, monkeypatch):
     monkeypatch.setattr("apps.companies.outlook.latest_completed_day", lambda: date(2026, 10, 22))
     assert save_outlook(company) is None
