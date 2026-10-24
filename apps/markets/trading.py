@@ -132,3 +132,12 @@ def final_buffer() -> timedelta:
         quote is final.
     """
     return timedelta(minutes=conf.MARKET_FINAL_BUFFER_MINUTES)
+
+
+def latest_completed_day(now: datetime | None = None) -> date:
+    """Return the latest session whose close and final-data buffer have passed."""
+    now = now or timezone.now()
+    today = today_ist(now)
+    if is_trading_day(today) and now >= session_close(today) + final_buffer():
+        return today
+    return previous_trading_day(today)

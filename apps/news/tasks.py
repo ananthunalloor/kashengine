@@ -48,4 +48,10 @@ def score_articles(limit: int | None = None) -> dict:
     """Score the sentiment of the articles that are not scored yet, with the local LLM."""
     result = score_pending(limit=limit)
     logger.info("News scoring done: %s", result)
+    if conf.UPSTOX_ENABLED:
+        from apps.companies.outlook import save_outlook  # noqa: PLC0415
+        from apps.markets.upstox import mapped_companies  # noqa: PLC0415
+
+        for company in mapped_companies():
+            save_outlook(company)
     return result

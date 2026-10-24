@@ -199,12 +199,17 @@ def test_a_missing_run_is_a_404(staff_client):
 
 
 def test_the_jobs_page_shows_the_last_run_and_the_next_run(staff_client, offline):
-    TaskRun.objects.create(task_id="p1", task_name="ops.prune", label="ops.prune", status="success")
+    run = TaskRun.objects.create(
+        task_id="p1", task_name="ops.prune", label="ops.prune", status="success"
+    )
 
     page = staff_client.get(reverse("ops:jobs")).content.decode()
 
     assert "Clean old history" in page
     assert "40 3 * * *" in page
+    assert "Last run" in page
+    assert reverse("ops:run", args=[run.pk]) in page
+    assert "Done" in page
 
 
 # Logs

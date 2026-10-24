@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { appRequest } from "./client";
 import { ApiError } from "./errors";
-import { zCompanyPage } from "./generated/zod.gen";
+import { zCompanyPage, zCompanyDetail, zCompanyMarketPage } from "./generated/zod.gen";
 import { pageSizeSchema, tableParams } from "./tableSearch";
 
 export const companySearchSchema = z.object({
@@ -32,6 +32,49 @@ export function companiesQuery(filters: CompanySearch) {
         throw new ApiError(
           "contract",
           "The Companies response does not match this app. Reload the page.",
+        );
+      return result.data;
+    },
+  });
+}
+
+export function companyQuery(id: string) {
+  return queryOptions({
+    queryKey: ["app", "company", id],
+    queryFn: async ({ signal }) => {
+      const result = zCompanyDetail.safeParse(
+        await appRequest(`/api/app/companies/${encodeURIComponent(id)}`, { signal }),
+      );
+      if (!result.success)
+        throw new ApiError(
+          "contract",
+          "The company response does not match this app. Reload the page.",
+        );
+      return result.data;
+    },
+  });
+}
+
+export const companyMarketSearchSchema = companySearchSchema.pick({
+  q: true,
+  page: true,
+  page_size: true,
+});
+export type CompanyMarketSearch = z.infer<typeof companyMarketSearchSchema>;
+
+export function companyMarketsQuery(filters: CompanyMarketSearch) {
+  return queryOptions({
+    queryKey: ["app", "company-markets", filters],
+    queryFn: async ({ signal }) => {
+      const params = new URLSearchParams({ q: filters.q, page: String(filters.page) });
+      tableParams(params, filters);
+      const result = zCompanyMarketPage.safeParse(
+        await appRequest(`/api/app/markets/companies?${params}`, { signal }),
+      );
+      if (!result.success)
+        throw new ApiError(
+          "contract",
+          "The company market response does not match this app. Reload the page.",
         );
       return result.data;
     },

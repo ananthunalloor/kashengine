@@ -1,4 +1,4 @@
-import { Anchor, Button, Group, Stack, Text, Title } from "@mantine/core";
+import { Accordion, Anchor, Button, Group, Stack, Text, Title } from "@mantine/core";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { LuActivity, LuSlidersHorizontal, LuX } from "react-icons/lu";
@@ -12,6 +12,7 @@ import { DataTable } from "../../shared/ui/DataTable";
 import { displayNumber } from "../../shared/ui/displayNumber";
 import { MetricValue } from "../../shared/ui/MetricValue";
 import { TableFilterField, TableFilters } from "../../shared/ui/TableFilters";
+import { SavedFacts } from "../../shared/ui/SavedFacts";
 
 const scoredDate = new Intl.DateTimeFormat("en-IN", {
   day: "numeric",
@@ -381,6 +382,30 @@ export function IpoView({ ipo }: { ipo: IpoDetail }) {
           </Text>
         </section>
       </div>
+      {ipo.upstox_data && Object.keys(ipo.upstox_data).length > 0 && (
+        <section aria-label="Saved Upstox IPO details">
+          <Title order={2} size="h3">
+            Upstox IPO details
+          </Title>
+          <Text c="dimmed" size="sm" my="sm">
+            Saved{" "}
+            {ipo.upstox_updated_at
+              ? scoredDate.format(new Date(ipo.upstox_updated_at)) + " IST"
+              : "at an unknown time"}
+            . Issue size is in INR crore; prices are in INR.
+          </Text>
+          <Accordion>
+            <Accordion.Item value="provider">
+              <Accordion.Control>
+                Timeline, registrar, subscription and complete saved facts
+              </Accordion.Control>
+              <Accordion.Panel>
+                <SavedFacts value={ipo.upstox_data} />
+              </Accordion.Panel>
+            </Accordion.Item>
+          </Accordion>
+        </section>
+      )}
     </Stack>
   );
 }

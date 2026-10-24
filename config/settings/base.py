@@ -249,6 +249,10 @@ TELEGRAM_API_URL = env("TELEGRAM_API_URL", default="https://api.telegram.org")
 TELEGRAM_TIMEOUT_SECONDS = env.int("TELEGRAM_TIMEOUT_SECONDS", default=20)
 
 # The report time is a schedule entry (Ops > Schedule), not a setting.
+UPSTOX_ENABLED = env.bool("UPSTOX_ENABLED", default=False)
+UPSTOX_ACCESS_TOKEN = env("UPSTOX_ACCESS_TOKEN", default="")
+UPSTOX_FUNDAMENTALS_DAYS = env.int("UPSTOX_FUNDAMENTALS_DAYS", default=7)
+
 REPORT_NEWS_ITEMS = env.int("REPORT_NEWS_ITEMS", default=3)  # For good news, and for bad news.
 REPORT_NEWS_MIN_RELEVANCE = env.float("REPORT_NEWS_MIN_RELEVANCE", default=0.4)
 REPORT_IPO_ITEMS = env.int("REPORT_IPO_ITEMS", default=6)  # For each IPO list.

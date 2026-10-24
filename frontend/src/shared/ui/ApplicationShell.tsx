@@ -107,7 +107,7 @@ export function ApplicationShell({
               aria-expanded={opened}
               aria-controls="app-navigation"
             />
-            <AppLink href="/" className="app-brand" aria-label="Kash Engine">
+            <AppLink href="/dashboard" className="app-brand" aria-label="Kash Engine">
               <span className="app-brand-mark" aria-hidden="true">
                 k.
               </span>

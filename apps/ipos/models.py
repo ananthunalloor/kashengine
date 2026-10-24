@@ -131,6 +131,9 @@ class Ipo(models.Model):
     )
 
     source_url = models.URLField(max_length=1000, blank=True)
+    upstox_id = models.CharField(max_length=200, null=True, blank=True, unique=True)
+    upstox_data = models.JSONField(default=dict, blank=True)
+    upstox_updated_at = models.DateTimeField(null=True, blank=True)
 
     # Exchange codes. The source gives them after the listing. We use them to get the listing price.
     nse_symbol = models.CharField(max_length=30, blank=True)

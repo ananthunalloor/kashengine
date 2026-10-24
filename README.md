@@ -82,6 +82,85 @@ config/     Django project, settings (base, dev, prod), Celery
 deploy/     Caddy config for production
 ```
 
+## Upstox company data, news and IPOs
+
+Upstox is **opt-in** and supplements the existing sources; disabling it does not delete saved
+data or disable RSS, Yahoo Finance, or Screener collection. Current official APIs support
+[news](https://upstox.com/developer/api-documentation/get-news/),
+[IPO lists](https://upstox.com/developer/api-documentation/get-ipos/),
+[IPO details](https://upstox.com/developer/api-documentation/get-ipo-details/), and
+[company fundamentals](https://upstox.com/developer/api-documentation/fundamentals/).
+Check your Upstox/exchange entitlements and data-storage/display terms before enabling or
+redistributing data. API availability does not itself grant redistribution rights.
+
+1. Restore dependencies with `uv sync`, then run `python manage.py migrate` before restarting
+   web, worker and beat processes. Build the React app with `pnpm --dir frontend build`.
+2. In **Ops > Settings > Markets and prediction**, enable Upstox and save its access token.
+   Saved tokens use the existing encrypted settings store. Alternatively set `UPSTOX_ENABLED`
+   and `UPSTOX_ACCESS_TOKEN` in your private environment. Never put tokens in browser URLs.
+   Obtain and renew tokens through Upstox's supported authentication flow; automatic OAuth
+   enrollment/token renewal is not implemented. Expired tokens produce explicit refresh failures.
+3. In Django admin, set each saved company's **Upstox instrument key**, for example
+   `NSE_EQ|INE002A01018`. Use exact keys from the official instrument list, not guessed symbols.
+   Company prices, fundamentals, and company-linked news require these mappings. IPO ingestion
+   does not. Matching ISINs link IPOs to saved companies.
+4. Run **Refresh Upstox data** on **Ops > Jobs** for the initial import. It saves one year of
+   daily OHLCV history, due fundamentals, all news pages, and IPO details across all four lifecycle
+   stages. New news enters the existing LLM scoring queue; IPOs use the existing scoring rules.
+
+The migrations add two editable beat schedules without overwriting existing schedule entries:
+
+- Quote snapshots every **five minutes**, only inside the saved NSE session (including special
+  weekend sessions). Each quote records provider time, price, previous close and volume.
+- Company/news/IPO refresh every **six hours**. Historical bars refresh incrementally with an
+  overlapping last day for corrections. Fundamentals refresh at most once per seven days
+  (`UPSTOX_FUNDAMENTALS_DAYS`), with older successful snapshots retained. They include profile,
+  key ratios, consolidated balance sheet, cash flow, annual income statement, shareholding and
+  corporate actions. Monetary units and reporting periods remain attached to provider data.
+
+For higher-frequency updates, run **one dedicated optional stream worker**, alongside the normal
+snapshot schedule:
+
+```bash
+uv run python manage.py stream_upstox
+# Or subscribe to a subset (maximum 100 mapped instruments per worker):
+uv run python manage.py stream_upstox --symbols RELIANCE INFY
+# With Compose:
+docker compose run --rm worker python manage.py stream_upstox
+```
+
+The worker uses Upstox V3 protobuf LTPC data over a certificate-verified WebSocket, reauthorizes
+with bounded backoff on disconnect, and stops with a visible error after repeated failures.
+Use your process supervisor for restarts. Restart it after changing company mappings or tokens.
+It persists at most **one observation per company per five seconds**, not every exchange tick.
+LTPC has no volume; the UI marks that field unavailable rather than inventing a value. REST
+snapshots continue as a fallback, and a late REST observation cannot hide a newer stream quote.
+Streaming observations, daily bars, and fundamentals snapshots are retained, so plan database
+capacity and backups for the number of companies you track.
+
+### Pages and saved scores
+
+- `/markets/live/`: paginated market observations for the saved company directory, searchable
+  by name or symbol, with provider timestamps, observation type, missing quotes and refresh errors.
+- `/companies/`: directory links now open `/companies/<id>/`, with summary, saved fundamentals,
+  OHLCV history and trend chart, linked news sentiment/relevance, IPO scores, and scoring evidence.
+- IPO detail pages also show the saved Upstox timeline, registrar and complete provider facts.
+
+These pages and their private APIs **only read the database**. They never call providers or
+recompute scores on a page request. Existing SSE invalidations update visible data when a worker
+saves changes; freshness labels age locally without API polling. Old observations are explicitly
+not labelled live, including when the stream disconnects or the market is closed.
+Each dataset continues to respect the account's Companies, Markets, News and IPO feature access.
+
+The company future-trend outlook is **experimental, unbacktested, and not financial advice**.
+It requires 21 recent completed daily bars. Momentum is the 20-session return divided by 10%,
+clipped to [-1, 1]. With scored company news from the previous seven days, the combined signal
+is 70% momentum and 30% relevance-weighted sentiment; without news it uses momentum alone.
+Scores above +0.15 point up, below -0.15 point down, and otherwise flat. Evidence, target session,
+creation time and all inputs are saved. This is neither a price target nor a probability.
+Unadjusted prices mean corporate actions can distort momentum. Historical outlooks retain their
+original target dates and are not presented as current forecasts.
+
 ## Run in development
 
 You need Docker and Docker Compose.

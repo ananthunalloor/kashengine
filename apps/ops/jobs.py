@@ -64,6 +64,22 @@ class Job:
 
 JOBS: tuple[Job, ...] = (
     Job(
+        "upstox-refresh",
+        "Refresh Upstox data",
+        "Save company history, due fundamentals, news and IPOs. Requires opt-in and a valid token.",
+        TASK,
+        "markets.upstox_refresh",
+        group="Markets",
+    ),
+    Job(
+        "upstox-quotes",
+        "Refresh Upstox quotes",
+        "Save company quotes during the saved trading session; no external calls from pages.",
+        TASK,
+        "markets.upstox_quotes",
+        group="Markets",
+    ),
+    Job(
         "database-backup",
         "Back up database",
         "Save an encrypted snapshot to the configured S3 bucket or mounted folder.",

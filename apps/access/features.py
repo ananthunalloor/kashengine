@@ -40,9 +40,14 @@ FEATURES: tuple[Feature, ...] = (
         "markets",
         "Markets and outlook",
         "The prediction, its history and accuracy, and the quotes. The outlook on Today.",
-        frozenset({"markets"}),
+        frozenset({"markets", "market_live"}),
     ),
-    Feature("companies", "Companies", "The company list.", frozenset({"companies"})),
+    Feature(
+        "companies",
+        "Companies",
+        "Company directory and details.",
+        frozenset({"companies", "company"}),
+    ),
     Feature(
         "delivery",
         "Delivery",

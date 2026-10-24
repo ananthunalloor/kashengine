@@ -172,6 +172,46 @@ async function show({
   return { client, router, fetchMock };
 }
 
+it("renders the linked last-run timestamp in the Jobs table", async () => {
+  const jobsPage = zOpsPage.parse({
+    title: "Jobs",
+    description: "Scheduled tasks and manual checks.",
+    sections: [
+      {
+        title: "Markets",
+        table: {
+          columns: [
+            { key: "job", label: "Job" },
+            { key: "last_status", label: "Last Status" },
+            { key: "last_run", label: "Last Run" },
+          ],
+          rows: [
+            {
+              cells: {
+                job: { text: "Refresh Upstox data" },
+                last_status: { text: "success", tone: "positive" },
+                last_run: {
+                  text: "2026-10-24T09:00:00+05:30",
+                  kind: "time",
+                  value: "2026-10-24T09:00:00+05:30",
+                  href: "/ops/runs/42/",
+                },
+              },
+            },
+          ],
+        },
+      },
+    ],
+  });
+  await show({ path: "/ops/jobs/", body: jobsPage });
+
+  const table = await screen.findByRole("table", { name: "Markets" });
+  const lastRun = within(table).getByRole("link", { name: /24 Oct 2026/ });
+  expect(lastRun).toHaveAttribute("href", "/ops/runs/42/");
+  expect(lastRun.querySelector("time")).toHaveAttribute("dateTime", "2026-10-24T09:00:00+05:30");
+  expect(within(table).getByRole("columnheader", { name: "Last Status" })).toBeInTheDocument();
+});
+
 it("renders native React Ops tables, complete navigation, escaped cells and IST values without style injection", async () => {
   await show();
   expect(await screen.findByRole("heading", { name: "News feeds", level: 1 })).not.toHaveAttribute(
