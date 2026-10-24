@@ -4,7 +4,6 @@ import {
   Anchor,
   Group,
   Paper,
-  SimpleGrid,
   Stack,
   Table,
   Text,
@@ -20,6 +19,7 @@ import { TrendChart } from "../../shared/ui/TanStackCharts";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 
 const number = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 });
+const projectionWindow = 20;
 const date = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
   dateStyle: "medium",
@@ -30,6 +30,25 @@ export function savedTime(value: string) {
 }
 export function score(value: number | null) {
   return value === null ? "Not scored" : value.toFixed(3);
+}
+
+export function projectClosingPrices(candles: CompanyBar[]): { label: string; value: number }[] {
+  if (candles.length < projectionWindow) return [];
+  const closes = candles.slice(-projectionWindow).map((bar) => bar.close);
+  const meanX = (closes.length - 1) / 2;
+  const meanY = closes.reduce((total, close) => total + close, 0) / closes.length;
+  const slope =
+    closes.reduce((total, close, index) => total + (index - meanX) * (close - meanY), 0) /
+    closes.reduce((total, _, index) => total + (index - meanX) ** 2, 0);
+  const last = candles.at(-1)!;
+
+  return [
+    { label: last.day, value: last.close },
+    ...Array.from({ length: projectionWindow }, (_, index) => ({
+      label: `T+${index + 1}`,
+      value: last.close + slope * (index + 1),
+    })),
+  ];
 }
 
 export function QuoteFreshness({ quote }: { quote: CompanyPrice }) {
@@ -79,20 +98,32 @@ export function PriceSummary({ quote }: { quote: CompanyPrice | null }) {
 }
 
 function PriceTrend({ candles }: { candles: CompanyBar[] }) {
-  if (!candles.length) return <Text c="dimmed">No saved daily price history.</Text>;
+  if (!candles.length)
+    return (
+      <Text c="dimmed">
+        No saved daily price history. At least 20 saved daily closes are needed to show a projection.
+      </Text>
+    );
   const closes = candles.map((bar) => bar.close);
   const min = Math.min(...closes),
     max = Math.max(...closes);
+  const projection = projectClosingPrices(candles);
   return (
     <Stack gap="md">
       <Text c="dimmed">
-        Completed daily closes in INR. Unadjusted prices: splits and dividends can distort momentum.
+        Completed daily closes in INR. The dashed grey line extends a linear fit of the latest 20
+        saved closes across 20 future sessions. It is a simple historical trajectory, not a price
+        target or financial advice, and has not been backtested; splits and dividends can distort it.
       </Text>
       <TrendChart
         points={candles.map((bar) => ({ label: bar.day, value: bar.close }))}
-        ariaLabel={`Saved closing prices from ${candles[0].day} to ${candles.at(-1)?.day}; low ${min}, high ${max} INR`}
+        projectionPoints={projection}
+        ariaLabel={`Saved closing prices from ${candles[0].day} to ${candles.at(-1)?.day}${projection.length ? ", followed by a 20-session history-only linear projection" : ""}; low ${min}, high ${max} INR`}
         height={240}
       />
+      {projection.length === 0 && (
+        <Text c="dimmed">At least 20 saved daily closes are needed to show a projection.</Text>
+      )}
       <Accordion variant="separated">
         <Accordion.Item value="history">
           <Accordion.Control>Daily OHLCV history ({candles.length} sessions)</Accordion.Control>
@@ -127,7 +158,6 @@ function PriceTrend({ candles }: { candles: CompanyBar[] }) {
 
 export function CompanyView({ data }: { data: CompanyDetail }) {
   usePageTitle(data.company.name);
-  const outlook = data.outlook;
   return (
     <Stack gap="xl">
       <header>
@@ -183,53 +213,10 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
           </Paper>
           <section>
             <Title order={2} size="h3" mb="md">
-              Stock trend
+              Stock trend and projected trajectory
             </Title>
             <PriceTrend candles={data.candles} />
           </section>
-          <Paper p="lg" withBorder>
-            <Title order={2} size="h3">
-              Predicted future trend
-            </Title>
-            <Alert color="orange" my="md" title="Experimental outlook">
-              Not financial advice. Not a price target or a measured probability. This rule has not
-              been backtested.
-            </Alert>
-            {outlook ? (
-              <Stack gap="md">
-                <Text>
-                  Saved outlook for {outlook.target_date}: <strong>{outlook.direction}</strong>.
-                  Created {savedTime(outlook.created_at)} IST. Historical targets are not current
-                  forecasts.
-                </Text>
-                <SimpleGrid cols={{ base: 1, sm: 3 }}>
-                  <Text>Combined score: {score(outlook.score)}</Text>
-                  <Text>Momentum score: {score(outlook.momentum_score)}</Text>
-                  <Text>News score: {score(outlook.news_score)}</Text>
-                </SimpleGrid>
-                <Text c="dimmed">
-                  Scores run from -1 (down/negative) to +1 (up/positive). Momentum is the 20-session
-                  return divided by 10%, capped at +/-1. With news: 70% momentum, 30%
-                  relevance-weighted sentiment. Without news: momentum only. Scores within +/-0.15
-                  are flat.
-                </Text>
-                <Accordion>
-                  <Accordion.Item value="evidence">
-                    <Accordion.Control>All outlook inputs and scores</Accordion.Control>
-                    <Accordion.Panel>
-                      <SavedFacts value={outlook.inputs} />
-                    </Accordion.Panel>
-                  </Accordion.Item>
-                </Accordion>
-              </Stack>
-            ) : (
-              <Text c="dimmed">
-                {data.news_available
-                  ? "No saved outlook. At least 21 recent completed daily bars are required."
-                  : "The outlook requires access to News as well as Markets."}
-              </Text>
-            )}
-          </Paper>
         </>
       ) : (
         <Text c="dimmed">Market prices, stock trends and outlooks require Markets access.</Text>

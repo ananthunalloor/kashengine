@@ -39,11 +39,15 @@ const illustrativePoints: TrendPoint[] = [
 
 export function TrendChart({
     points,
+    projectionPoints = [],
+    muted = false,
     ariaLabel,
     height = 190,
     initialWidth = 760,
 }: {
     points: TrendPoint[];
+    projectionPoints?: TrendPoint[];
+    muted?: boolean;
     ariaLabel: string;
     height?: number;
     initialWidth?: number;
@@ -52,6 +56,10 @@ export function TrendChart({
         () => points.map(({ label, value }) => ({ label, value })),
         [points],
     );
+    const projectionRows = useMemo(
+        () => projectionPoints.map(({ label, value }) => ({ label, value })),
+        [projectionPoints],
+    );
     const definition = useMemo(
         () =>
             defineChart({
@@ -59,16 +67,27 @@ export function TrendChart({
                     lineY(rows, {
                         x: "label",
                         y: "value",
-                        stroke: "var(--brand-purple)",
+                        stroke: muted ? "#858b92" : "var(--brand-purple)",
                         strokeWidth: 3,
                     }),
+                    ...(projectionRows.length
+                        ? [
+                              lineY(projectionRows, {
+                                  x: "label",
+                                  y: "value",
+                                  stroke: "#858b92",
+                                  strokeDasharray: "6 5",
+                                  strokeWidth: 2,
+                              }),
+                          ]
+                        : []),
                 ],
                 scales: {
                     x: { scale: scalePoint, axis: { ticks: { count: 6 } } },
                     y: { scale: scaleLinear, nice: true, grid: true },
                 },
             }),
-        [rows],
+        [rows, projectionRows, muted],
     );
 
     return (

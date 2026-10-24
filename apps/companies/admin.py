@@ -9,7 +9,7 @@ from .models import Company, CompanyCandle, CompanyFundamentals, CompanyOutlook,
 class CompanyAdmin(admin.ModelAdmin):
     """Admin list and search for Company."""
 
-    list_display = ("name", "symbol", "sector", "last_updated")
+    list_display = ("name", "symbol", "upstox_instrument_key", "sector", "last_updated")
     list_filter = ("sector",)
     search_fields = ("name", "symbol")
     readonly_fields = ("created_at",)

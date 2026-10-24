@@ -100,10 +100,10 @@ redistributing data. API availability does not itself grant redistribution right
    and `UPSTOX_ACCESS_TOKEN` in your private environment. Never put tokens in browser URLs.
    Obtain and renew tokens through Upstox's supported authentication flow; automatic OAuth
    enrollment/token renewal is not implemented. Expired tokens produce explicit refresh failures.
-3. In Django admin, set each saved company's **Upstox instrument key**, for example
-   `NSE_EQ|INE002A01018`. Use exact keys from the official instrument list, not guessed symbols.
-   Company prices, fundamentals, and company-linked news require these mappings. IPO ingestion
-   does not. Matching ISINs link IPOs to saved companies.
+3. The built-in starter company list includes verified Upstox instrument keys. For other companies,
+  set the **Upstox instrument key** in Django admin using an exact key from Upstox's instrument
+  list, not a guessed symbol. Company prices, fundamentals, and company-linked news require these
+  mappings. IPO ingestion does not. Matching ISINs link IPOs to saved companies.
 4. Run **Refresh Upstox data** on **Ops > Jobs** for the initial import. It saves one year of
    daily OHLCV history, due fundamentals, all news pages, and IPO details across all four lifecycle
    stages. New news enters the existing LLM scoring queue; IPOs use the existing scoring rules.
