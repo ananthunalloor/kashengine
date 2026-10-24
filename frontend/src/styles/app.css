@@ -113,7 +113,6 @@ body {
   position: fixed;
   z-index: 1100;
   right: max(1rem, env(safe-area-inset-right));
-  /* bottom: max(1rem, env(safe-area-inset-bottom)); */
   top: max(1rem, env(safe-area-inset-top));
   width: min(25rem, calc(100vw - 2rem));
   max-height: calc(100dvh - 2rem);
