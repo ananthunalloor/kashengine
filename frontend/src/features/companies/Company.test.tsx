@@ -109,7 +109,7 @@ it("renders saved summary, fundamentals, chart, all scores and safe news text", 
   ).toBeInTheDocument();
   expect(screen.getByText("A saved business summary.")).toBeInTheDocument();
   expect(document.querySelector("main h1 b")).toBeNull();
-  expect(screen.getByRole("img", { name: /Saved closing prices/ })).toBeInTheDocument();
+  expect(screen.getByLabelText(/Saved closing prices/)).toBeInTheDocument();
   expect(screen.getByText(/Combined score: 0.500/)).toBeInTheDocument();
   expect(screen.getByText(/Momentum score: 0.600/)).toBeInTheDocument();
   expect(screen.getByText(/News score: 0.300/)).toBeInTheDocument();

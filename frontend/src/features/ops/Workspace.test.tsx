@@ -553,7 +553,7 @@ it("renders semantic statistic cards and table states with distinct icons and a 
   );
   expect(screen.getByRole("cell", { name: "Waiting" }).querySelector("svg")).not.toBeNull();
   expect(screen.getByText("Failed / alerts")).toBeInTheDocument();
-  expect(screen.getByRole("img", { name: /daily totals and failures/ })).toBeInTheDocument();
+  expect(screen.getByLabelText(/daily totals and failures/)).toBeInTheDocument();
 });
 
 function renderForm(value = form) {

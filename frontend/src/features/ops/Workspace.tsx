@@ -35,6 +35,7 @@ import { notifyOpsMessages, OpsNotice, OpsStatus } from "./OpsStatus";
 import { notifyError } from "../../shared/ui/notifications";
 import { AppLink } from "../../shared/ui/AppLink";
 import { TableFilterField, TableFilters } from "../../shared/ui/TableFilters";
+import { OpsSeriesChart } from "../../shared/ui/TanStackCharts";
 
 function Field({ field, disabled }: { field: OpsField; disabled: boolean }) {
   const id = useId();
@@ -549,45 +550,7 @@ export function Workspace({
                   <i className="ops-legend-failed" /> Failed / alerts
                 </span>
               </figcaption>
-              <svg
-                className="ops-series"
-                viewBox={`0 0 ${section.chart.length * 32} 130`}
-                role="img"
-                aria-label={`${section.title}: daily totals and failures. Exact values in the table below.`}
-              >
-                {section.chart.map((point, index) => {
-                  const max = Math.max(
-                    1,
-                    ...section.chart.map((point) => Math.max(point.value, point.failed)),
-                  );
-                  const height = (100 * point.value) / max;
-                  const failedHeight = (100 * point.failed) / max;
-                  return (
-                    <g key={point.label}>
-                      <title>
-                        {point.label}: {point.value} total, {point.failed} failed
-                      </title>
-                      <rect
-                        x={index * 32 + 3}
-                        y={105 - height}
-                        width={12}
-                        height={height}
-                        className="ops-bar-value"
-                      />
-                      <rect
-                        x={index * 32 + 16}
-                        y={105 - failedHeight}
-                        width={10}
-                        height={failedHeight}
-                        className="ops-bar-failed"
-                      />
-                      <text x={index * 32 + 14} y={122} textAnchor="middle">
-                        {point.label}
-                      </text>
-                    </g>
-                  );
-                })}
-              </svg>
+              <OpsSeriesChart points={section.chart} />
             </figure>
           )}
           {!!Object.keys(section.details).length && (
