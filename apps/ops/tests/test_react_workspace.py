@@ -70,6 +70,31 @@ def test_job_statistics_have_numeric_counts_rates_and_formatted_durations(boss_c
     assert empty["average_duration"]["value"] is None
 
 
+def test_jobs_table_exposes_last_run_as_a_linked_time_cell(boss_client):
+    job = jobs.JOBS[0]
+    run = TaskRun.objects.create(
+        task_id="last-run-column",
+        task_name=job.target,
+        label=job.run_label,
+        status=TaskRun.Status.SUCCESS,
+    )
+
+    body = boss_client.get(f"{BASE}pages/jobs/").json()
+    item = next(
+        item
+        for section in body["sections"]
+        if section["table"]
+        for item in section["table"]["rows"]
+        if item["cells"]["job"]["text"] == job.label
+    )
+
+    assert item["cells"]["last_status"]["text"] == "success"
+    assert item["cells"]["last_status"]["tone"] == "positive"
+    assert item["cells"]["last_run"]["kind"] == "time"
+    assert item["cells"]["last_run"]["text"] == run.created_at.isoformat()
+    assert item["cells"]["last_run"]["href"] == f"/ops/runs/{run.pk}/"
+
+
 @pytest.mark.parametrize(
     ("stats", "text", "tone"),
     [

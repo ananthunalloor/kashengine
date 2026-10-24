@@ -528,10 +528,16 @@ def _present_jobs(request: HttpRequest, name: str, context: dict[str, Any]) -> O
                 description=job.description,
                 schedule="\n".join(entry["schedules"]) or "By hand only",
                 next_run=entry["next_run"],
-                last=state(entry["last"].status) if entry["last"] else "Never",
+                last_status=state(entry["last"].status) if entry["last"] else "Never",
+                last_run=cell(
+                    entry["last"].created_at,
+                    href=f"/ops/runs/{entry['last'].pk}/",
+                )
+                if entry["last"]
+                else cell(None),
                 **_job_statistics(entry["stats"]),
             )
-            for key in ("last", "active"):
+            for key in ("active",):
                 if entry[key]:
                     item.links.append(link(f"{key.title()} run", f"runs/{entry[key].pk}/"))
             if can_write:
@@ -800,9 +806,7 @@ def _present_invites(request: HttpRequest, name: str, context: dict[str, Any]) -
             OpsSection(
                 title="Invitations",
                 description="Copy each new code from the success message and share it privately.",
-                forms=[action("invites/generate/", "Generate invite code")]
-                if can_write
-                else [],
+                forms=[action("invites/generate/", "Generate invite code")] if can_write else [],
                 table=invitations,
             )
         ],
