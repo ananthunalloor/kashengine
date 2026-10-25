@@ -22,7 +22,7 @@ for the live list, and [Tasks](../reference/generated/system/tasks.md) for the t
                                          ipos.score (07:10)
                                                   ▼
                        delivery.send_daily_report (07:30, retry 07:50)
-                         builds the report and sends it on Telegram
+                         builds the report, sends it on Telegram and by email
 ```
 
 ## Step by step
@@ -45,9 +45,13 @@ for the live list, and [Tasks](../reference/generated/system/tasks.md) for the t
    the next trading day, and saves a `Prediction`.
 7. **Collect and score IPOs.** `ipos.collect` and `ipos.refresh_metrics` keep the IPO rows
    current. `ipos.score` scores the IPOs that did not list yet.
+   If Upstox is on, `markets.upstox_quotes` (every 5 minutes, in a trading session) and
+   `markets.upstox_refresh` (every 6 hours) add company quotes, history, fundamentals, news and
+   IPOs. A new article goes to the same scoring step. See
+   [Upstox data](../domains/markets-and-predictions.md#upstox-data).
 8. **Build and send the report.** `delivery.send_daily_report` builds the report for today from
-   the stored data and sends it to every Telegram chat. A second run at 07:50 sends only to the
-   chats that did not get it. The task does nothing on Saturday and Sunday.
+   the stored data and sends it to the Telegram chats and to the users who verified their email and turned on email
+   reports. A second run at 07:50 sends only to the recipients that did not get it. The task does nothing when the market is closed (a weekend or a saved holiday).
 9. **Show the data.** The web pages and the [HTTP API](../api/overview.md) read the stored data.
    They never call a provider.
 

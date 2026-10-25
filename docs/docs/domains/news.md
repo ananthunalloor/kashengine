@@ -24,6 +24,14 @@ An article is unique by its URL. Before the save, the code removes the tracking 
 (`fbclid`, `gclid`, `mc_cid`, `mc_eid`, `ref`, `ref_src`) and the fragment. The title is cut to
 500 characters and the summary to 2000. HTML tags are removed from the text.
 
+### Upstox news
+
+If Upstox is on (see [Upstox data](./markets-and-predictions.md#upstox-data)), `markets.upstox_refresh`
+also saves the news of each company that has an instrument key. The source name is `Upstox`. The
+code saves the heading, the link, the summary and the time. It does not scrape the full article.
+It links each article to its company, and it does not reset a score that exists already. New
+articles start `news.score_articles`.
+
 ## Full text
 
 `news.scrape_articles` downloads the page of each article that has no text. The rules:
@@ -48,7 +56,7 @@ article the model must answer with JSON:
 
 | Field | Meaning |
 | --- | --- |
-| `score` | From -1 (very bad for Indian stocks) to 1 (very good). |
+| `score` | From -1 (very bad for Indian stocks) to 1 (very good). The app and the report show it on a scale of 1 to 10 (see [How scores are shown](./reports-and-delivery.md#how-scores-are-shown)). |
 | `relevance` | From 0 (not about the market) to 1 (can move the whole market). |
 | `reason` | One short sentence. The code keeps at most 300 characters. |
 

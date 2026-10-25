@@ -37,6 +37,12 @@ data for yourself only. The code obeys `robots.txt` and reads only a few URLs a 
 | `IPO_GMP_ENABLED` | A live GMP table (`IPO_GMP_URL`, investorgain.com by default). | The GMP and the subscription of open IPOs, with the time that the source gives. |
 | `IPO_LISTING_ENABLED` (on) | Yahoo Finance through `yfinance`. | The listing price: the open price of the first trading day. The code tries `SYMBOL.NS`, then `CODE.BO`. |
 
+A fourth source is **Upstox** (`UPSTOX_ENABLED`, see [Upstox data](./markets-and-predictions.md#upstox-data)).
+`markets.upstox_refresh` reads the IPO lists of all four stages (upcoming, open, closed, listed)
+and the detail page of each IPO. It uses the same save rules as the other sources. The detail data
+(`upstox_data`), the Upstox id and the time of the update are saved on the IPO. An IPO whose ISIN
+matches a saved company links to that company. An IPO with invalid details is skipped and logged.
+
 :::note
 The source code was tested on saved sample data only, not against the live services. If a source
 changes its layout, the fetch fails and the log shows why. The old data stays.
@@ -57,7 +63,9 @@ listing result for `IPO_LISTING_CHECK_DAYS` (14) days.
 | News | 0.15 | The average sentiment of the news of the last `IPO_NEWS_DAYS` (14) days that names the IPO. With fewer than 3 articles it counts less. |
 
 The score is the weighted average of the signals that exist. A signal that is missing is left
-out. It does not count as zero.
+out. It does not count as zero. The app and the report show the score on a scale of 1 to 10 (see
+[How scores are shown](./reports-and-delivery.md#how-scores-are-shown)). The stored value stays
+between -1 and 1.
 
 The **verdict**:
 

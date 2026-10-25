@@ -113,7 +113,7 @@ body {
   position: fixed;
   z-index: 1100;
   right: max(1rem, env(safe-area-inset-right));
-  bottom: max(1rem, env(safe-area-inset-bottom));
+  top: max(1rem, env(safe-area-inset-top));
   width: min(25rem, calc(100vw - 2rem));
   max-height: calc(100dvh - 2rem);
   overflow-y: auto;
@@ -429,6 +429,81 @@ button:not([class*="mantine-"]):not(.header-icon-button):not(.account-menu-trigg
 
 .public-card summary {
   cursor: pointer;
+  color: var(--brand-purple);
+}
+
+.company-fundamentals {
+  margin-top: 0.75rem;
+}
+
+.company-fundamental-group {
+  border-top: 1px solid var(--brand-line);
+  padding-top: 0.75rem;
+}
+
+.company-fact-item {
+  min-width: 0;
+  padding: 0.6rem 0.65rem;
+  border-bottom: 1px solid var(--brand-line);
+}
+
+.company-fact-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-transform: capitalize;
+}
+
+.company-fact-value {
+  margin-top: 0.25rem;
+  color: var(--brand-ink);
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.company-fact-value-text {
+  font-size: 0.85rem;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.company-market-panel {
+  overflow: hidden;
+}
+
+.company-quote-summary {
+  min-width: min(100%, 18rem);
+}
+
+.company-chart-legend {
+  color: var(--brand-muted);
+}
+
+.company-chart-legend p {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.company-chart-key {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  background: currentColor;
+}
+
+.company-chart-key-up {
+  color: var(--brand-gain);
+}
+
+.company-chart-key-down {
+  color: var(--brand-loss);
+}
+
+.company-chart-key-projection {
+  width: 1rem;
+  height: 2px;
   color: var(--brand-purple);
 }
 

@@ -29,7 +29,8 @@ page.
 
 ### Make a token
 
-1. Sign in to the web app and open **Account**.
+1. Sign in to the web app and open **Account**. Verify your email address first. The page shows
+   **Send verification email** until you do. Staff and superusers do not need to verify.
 2. In **API access**, enter a name for the token and select **Make token**.
 3. Copy the token from the box. The page does not show it again.
 

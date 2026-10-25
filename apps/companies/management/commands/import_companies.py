@@ -3,6 +3,7 @@
 import csv
 from pathlib import Path
 
+from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.companies.models import Company
@@ -15,7 +16,8 @@ class Command(BaseCommand):
 
     help = (
         "Add or update companies from a CSV file. "
-        "Columns: symbol, name, sector, aliases (aliases are separated by |). "
+        "Columns: symbol, name, sector, aliases (aliases are separated by |), "
+        "and optional upstox_instrument_key. "
         "Use --starter for the small built-in list of large companies."
     )
 
@@ -52,6 +54,16 @@ class Command(BaseCommand):
                     a.strip() for a in (row.get("aliases") or "").split("|") if a.strip()
                 ]:
                     values["aliases"] = aliases
+                if instrument_key := (row.get("upstox_instrument_key") or "").strip():
+                    try:
+                        Company._meta.get_field("upstox_instrument_key").run_validators(
+                            instrument_key
+                        )
+                    except ValidationError as exc:
+                        raise CommandError(
+                            f"Invalid Upstox instrument key for {symbol}: {instrument_key}"
+                        ) from exc
+                    values["upstox_instrument_key"] = instrument_key
                 _, was_created = Company.objects.update_or_create(symbol=symbol, defaults=values)
                 created += was_created
                 updated += not was_created

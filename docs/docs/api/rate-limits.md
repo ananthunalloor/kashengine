@@ -20,6 +20,19 @@ seconds.
 The counters live in the Django cache. In production the cache is Redis (database 1 of the same
 Redis server). If the cache is lost, the counters start again from zero.
 
+## The private API
+
+The private API of the React app (`/api/app/`) has its own budget. It is separate, so a page
+that loads many tables does not use the budget of your tokens.
+
+| Limit | Applies to | Default | Setting |
+| --- | --- | --- | --- |
+| Requests for each minute | Each signed-in user | 300 | `APP_API_RATE_LIMIT_PER_MINUTE` |
+
+This is an environment setting. It is not on the Ops pages. A signed-in page counts each request,
+and each new live update stream counts as one request. Do not use the private API from a program. See the
+[overview](./overview.md#the-private-application-api).
+
 ## Headers
 
 Each answer for a known caller has these headers:

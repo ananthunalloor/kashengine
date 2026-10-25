@@ -17,7 +17,17 @@ DATASTAR_HEADER = "Datastar-Request"
 
 
 def access_for(request: HttpRequest) -> Access:
-    """The `Access` object of the request. It is made once for each request."""
+    """Return the `Access` object of the request. It is made once for each request.
+
+    The function saves the object on `request.access`. Later calls in the same request use it,
+    so the database is read only one time.
+
+    Args:
+        request: The request. `request.user` must be set.
+
+    Returns:
+        The access rules for `request.user`.
+    """
     existing = getattr(request, "access", None)
     if existing is None:
         existing = Access(request.user)
@@ -26,7 +36,16 @@ def access_for(request: HttpRequest) -> Access:
 
 
 def _refuse(request: HttpRequest, template: str, context: dict) -> HttpResponse:
-    """A 403 page. A Datastar request gets a short text, so the page does not break."""
+    """Return a 403 answer. A Datastar request gets a short text, so the page does not break.
+
+    Args:
+        request: The request.
+        template: The template of the 403 page.
+        context: The context of the template.
+
+    Returns:
+        A response with status 403. It is plain text for a Datastar request, else the page.
+    """
     if request.headers.get(DATASTAR_HEADER):
         return HttpResponse("Not allowed.", status=403, content_type="text/plain")
     if not getattr(request, "is_archive", False):
@@ -40,6 +59,7 @@ class AccessMiddleware:
     """Check the feature and the subscription before a web view runs."""
 
     def __init__(self, get_response) -> None:
+        """Save the next handler of the middleware chain."""
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
@@ -47,7 +67,23 @@ class AccessMiddleware:
         return self.get_response(request)
 
     def process_view(self, request: HttpRequest, view_func, view_args, view_kwargs):
-        """Return a refusal, or None to let the view run."""
+        """Return a refusal, or None to let the view run.
+
+        The check applies only to the views in the `web` namespace and only to signed-in users.
+        A URL name in `OPEN_URL_NAMES` (dashboard, account, login, logout) is always allowed.
+        If the subscription rule fails, the user goes to the account page (a Datastar request
+        gets a 403 text). If the page belongs to a feature that the user may not use, the user
+        gets the 403 page `web/no_access.html`.
+
+        Args:
+            request: The request. The resolved URL of the request decides the check.
+            view_func: The view that Django will call. The method does not use it.
+            view_args: The positional arguments of the view. The method does not use them.
+            view_kwargs: The keyword arguments of the view. The method does not use them.
+
+        Returns:
+            A response to send instead of the view, or None to let the view run.
+        """
         match = request.resolver_match
         if match is None or match.namespace != "web" or not request.user.is_authenticated:
             return None

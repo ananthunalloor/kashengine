@@ -26,7 +26,11 @@ class Command(BaseCommand):
     )
 
     def add_arguments(self, parser):
-        """Add the command options."""
+        """Add the command options `--date`, `--force` and `--test`.
+
+        Args:
+            parser: The parser of the command.
+        """
         parser.add_argument("--date", help="The date of the report, as YYYY-MM-DD. Default: today.")
         parser.add_argument(
             "--force", action="store_true", help="Send again to destinations that got it already."
@@ -38,7 +42,19 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        """Run the command."""
+        """Build the report and send it, or send a test message with `--test`.
+
+        The command prints how many chats got the report. It prints each failed chat with a
+        safe error text.
+
+        Args:
+            args: Positional arguments. The command has none.
+            options: The parsed options: `date`, `force` and `test`.
+
+        Raises:
+            CommandError: If the date is not valid, if the bot token or the chat IDs are not
+                set, or if a chat did not get the report. Run the command again in that case.
+        """
         if options["test"]:
             self._send_test()
             return
@@ -57,9 +73,7 @@ class Command(BaseCommand):
         chat_ids = report_chat_ids()
         if chat_ids:
             try:
-                telegram = deliver_report(
-                    report, chat_ids=chat_ids, force=options["force"]
-                )
+                telegram = deliver_report(report, chat_ids=chat_ids, force=options["force"])
             except DeliveryNotConfiguredError as exc:
                 telegram_error = str(exc)
 
@@ -72,9 +86,7 @@ class Command(BaseCommand):
             self.stdout.write(
                 "Telegram: {sent} sent, {failed} failed, {skipped} skipped.".format(**telegram)
             )
-        self.stdout.write(
-            "Email: {sent} sent, {failed} failed, {skipped} skipped.".format(**email)
-        )
+        self.stdout.write("Email: {sent} sent, {failed} failed, {skipped} skipped.".format(**email))
         for result in (telegram, email):
             for recipient, error in result["errors"].items():
                 self.stdout.write(self.style.WARNING(f"  {recipient}: {error}"))
@@ -84,6 +96,11 @@ class Command(BaseCommand):
             )
 
     def _send_test(self):
+        """Send a short test message to each configured chat. No report is built or saved.
+
+        Raises:
+            CommandError: If no chat ID is set, or if Telegram refuses a message.
+        """
         chat_ids = configured_chat_ids()
         if not chat_ids:
             raise CommandError("TELEGRAM_CHAT_IDS is empty. Run telegram_check to find your ID.")

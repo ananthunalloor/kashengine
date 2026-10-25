@@ -6,9 +6,11 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.api import tokens
 from apps.api.models import ApiToken
+from apps.delivery.models import DeliveryPreference
 from apps.ops.models import AuditEvent
 
 pytestmark = pytest.mark.django_db
@@ -24,12 +26,16 @@ def _setup(settings):
 
 @pytest.fixture
 def user():
-    return get_user_model().objects.create_user("anan", password=PASSWORD)  # ty: ignore[unresolved-attribute]
+    account = get_user_model().objects.create_user("anan", password=PASSWORD)  # ty: ignore[unresolved-attribute]
+    DeliveryPreference.objects.create(user=account, email_verified_at=timezone.now())
+    return account
 
 
 @pytest.fixture
 def other():
-    return get_user_model().objects.create_user("other", password=PASSWORD)  # ty: ignore[unresolved-attribute]
+    account = get_user_model().objects.create_user("other", password=PASSWORD)  # ty: ignore[unresolved-attribute]
+    DeliveryPreference.objects.create(user=account, email_verified_at=timezone.now())
+    return account
 
 
 @pytest.fixture

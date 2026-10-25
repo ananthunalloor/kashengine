@@ -5,6 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { ThemeProvider } from "../../app/ThemeProvider";
 import { routeTree } from "../../routeTree.gen";
+import { projectClosingPrices } from "./Company";
 import type { CompanyDetail } from "../../shared/api/generated/types.gen";
 import { session } from "../../test/session";
 
@@ -19,7 +20,13 @@ const detail: CompanyDetail = {
   },
   summary: "A saved business summary.",
   instrument_key: "NSE_EQ|INE002A01018",
-  fundamentals: { "key-ratios": [{ name: "P/E", company_value: "20", sector_value: "15" }] },
+  fundamentals: {
+    "key-ratios": [
+      { name: "P/E", company_value: "20", sector_value: "15" },
+      { name: "ROE", company_value: "20", sector_value: "15" },
+      { name: "Debt to equity", company_value: "2", sector_value: "1" },
+    ],
+  },
   fundamentals_source: "Upstox",
   fundamentals_as_of: "2026-10-22T10:00:00Z",
   errors: {},
@@ -58,6 +65,15 @@ const detail: CompanyDetail = {
       relevance: 0.8,
       sentiment_reason: "Saved reason",
     },
+    {
+      title: "Market pressure story",
+      url: "https://news.example.test/market-pressure",
+      source: "Wire",
+      published_at: "2026-10-22T09:00:00Z",
+      sentiment_score: -0.4,
+      relevance: 0.7,
+      sentiment_reason: "Saved negative reason",
+    },
   ],
   ipos: [],
 };
@@ -65,6 +81,24 @@ const clients: QueryClient[] = [];
 afterEach(() => {
   clients.forEach((client) => client.clear());
   clients.length = 0;
+});
+
+it("extends a straight-line history at the fitted daily slope", () => {
+  const candles = Array.from({ length: 20 }, (_, index) => ({
+    day: `2026-10-${String(index + 1).padStart(2, "0")}`,
+    open: 100 + index,
+    high: 101 + index,
+    low: 99 + index,
+    close: 100 + index,
+    volume: 100,
+  }));
+
+  const projection = projectClosingPrices(candles);
+
+  expect(projection).toHaveLength(21);
+  expect(projection[0]).toEqual({ label: "2026-10-20", value: 119 });
+  expect(projection.at(-1)).toEqual({ label: "T+20", value: 139 });
+  expect(projectClosingPrices(candles.slice(1))).toEqual([]);
 });
 
 async function show(path: string, body: unknown) {
@@ -102,26 +136,53 @@ async function show(path: string, body: unknown) {
   );
 }
 
-it("renders saved summary, fundamentals, chart, all scores and safe news text", async () => {
-  await show("/companies/1/", detail);
+it("renders saved company data and a history-only trend projection", async () => {
+  const candles = Array.from({ length: 20 }, (_, index) => {
+    const close = 100 + index;
+    return {
+      day: `2026-10-${String(index + 1).padStart(2, "0")}`,
+      open: close,
+      high: close + 1,
+      low: close - 1,
+      close,
+      volume: 100,
+    };
+  });
+  await show("/companies/1/", { ...detail, candles });
   expect(
     await screen.findByRole("heading", { level: 1, name: "<b>Example</b>" }),
   ).toBeInTheDocument();
   expect(screen.getByText("A saved business summary.")).toBeInTheDocument();
   expect(document.querySelector("main h1 b")).toBeNull();
-  expect(screen.getByLabelText(/Saved closing prices/)).toBeInTheDocument();
-  expect(screen.getByText(/Combined score: 0.500/)).toBeInTheDocument();
-  expect(screen.getByText(/Momentum score: 0.600/)).toBeInTheDocument();
-  expect(screen.getByText(/News score: 0.300/)).toBeInTheDocument();
+  expect(screen.getByLabelText(/20-session history-only linear projection/)).toBeInTheDocument();
+  expect(screen.getByText(/Daily OHLC candles with a history-only projection/)).toBeInTheDocument();
+  expect(screen.getByRole("img", { name: /Daily candlestick chart/ })).toBeInTheDocument();
   expect(screen.getByText(/older observation, not live/)).toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "Company story" })).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "key ratios" }));
-  expect(await screen.findByText("P/E")).toBeInTheDocument();
+  expect(screen.getByText("P/E")).toBeInTheDocument();
+  expect(screen.getAllByText("20")).toHaveLength(2);
+  expect(screen.getAllByText("Sector comparison: 15")).toHaveLength(2);
+  expect(screen.getByText("Higher multiple · context needed")).toBeInTheDocument();
+  expect(screen.getByText("Stronger vs sector")).toBeInTheDocument();
+  expect(screen.getByText("Higher leverage")).toBeInTheDocument();
+  expect(screen.getByText("Supporting relevance")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "About P/E" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("region", {
+      name: "Company news table, scroll horizontally for more columns",
+    }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("Positive · 0.3")).toBeInTheDocument();
+  fireEvent.change(screen.getByRole("combobox", { name: "Sentiment" }), {
+    target: { value: "Negative" },
+  });
+  expect(screen.getByRole("link", { name: /Market pressure story/ })).toBeInTheDocument();
+  expect(screen.queryByText("Company story")).not.toBeInTheDocument();
   expect(screen.getByText(/not been backtested/)).toBeInTheDocument();
   expect(fetch).toHaveBeenCalledWith("/api/app/companies/1", expect.anything());
 });
 
-it("explains absent history and outlook without fabricating prices or scores", async () => {
+it("explains absent history without fabricating prices or a projection", async () => {
   await show("/companies/1/", {
     ...detail,
     quote: null,
@@ -133,7 +194,7 @@ it("explains absent history and outlook without fabricating prices or scores", a
   expect(await screen.findByText(/No provider business summary/)).toBeInTheDocument();
   expect(screen.getByText(/No saved quote/)).toBeInTheDocument();
   expect(screen.getByText(/No saved daily price history/)).toBeInTheDocument();
-  expect(screen.getByText(/At least 21 recent/)).toBeInTheDocument();
+  expect(screen.getByText(/At least 20 saved daily closes/)).toBeInTheDocument();
   expect(screen.queryByRole("img")).not.toBeInTheDocument();
 });
 

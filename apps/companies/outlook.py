@@ -14,10 +14,24 @@ FLAT_THRESHOLD = 0.15
 
 
 def save_outlook(company: Company) -> CompanyOutlook | None:
-    """Use 20-session price momentum and relevance-weighted news from the last seven days.
+    """Save an experimental outlook for the next session of one company.
 
-    The score is not a probability or a price target. Missing news is not scored as neutral.
-    No outlook is emitted without 21 completed, recent daily bars.
+    The score mixes 20-session price momentum (weight 0.7) with the average sentiment of the news
+    of the last seven days, weighted by relevance (weight 0.3). Without scored news the score is
+    the momentum alone. The score is not a probability or a price target.
+
+    The function makes no outlook without 21 completed daily candles that end on the latest
+    completed day. A direction is `up` above 0.15, `down` below -0.15, else `flat`.
+
+    Args:
+        company: The company, with its Upstox candles and news already saved.
+
+    Returns:
+        The new `CompanyOutlook`. The existing outlook if the target day and the inputs are the
+        same. None if there are not enough candles.
+
+    Side effects:
+        Can create a row in the `CompanyOutlook` table.
     """
     completed = latest_completed_day()
     candles = list(

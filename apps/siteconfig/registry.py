@@ -536,12 +536,29 @@ SPECS: dict[str, Spec] = {spec.key: spec for spec in _SPECS}
 
 
 def specs_in(group: str) -> list[Spec]:
-    """The settings of one group, in the order of this file."""
+    """Return the settings of one group, in the order of this file.
+
+    Args:
+        group: The name of the group, for example `news`.
+
+    Returns:
+        The specs of the group. The list is empty for an unknown group.
+    """
     return [spec for spec in _SPECS if spec.group == group]
 
 
 def clean_clock(value: str) -> time:
-    """Parse HH:MM. Raise ValueError for a bad text."""
+    """Parse HH:MM. Raise ValueError for a bad text.
+
+    Args:
+        value: The text, for example `15:30`.
+
+    Returns:
+        The time of day, without a time zone.
+
+    Raises:
+        ValueError: If the text does not have the form HH:MM or the hour or minute is wrong.
+    """
     match = CLOCK_PATTERN.match(value.strip())
     if not match:
         msg = "Use the form HH:MM, for example 15:30."
@@ -550,7 +567,24 @@ def clean_clock(value: str) -> time:
 
 
 def validate(spec: Spec, value: Any) -> Any:  # noqa: C901, PLR0912
-    """Check a value against its spec and return the clean value. Raise ValueError if bad."""
+    """Check a value against its spec and return the clean value. Raise ValueError if bad.
+
+    The rules depend on the kind of the spec. A number must be in the range of the spec. A
+    text is trimmed. A required text must not be empty. A URL must start with `http://` or
+    `https://`. A clock text must have the form HH:MM and the result has two digits for the hour.
+    A list can be a list or a text that is split at commas and new lines. Each item must match
+    the pattern of the spec.
+
+    Args:
+        spec: The spec of the setting.
+        value: The raw value, for example from a form or from saved JSON.
+
+    Returns:
+        The clean value: a bool, an int or float, a text, or a list of texts.
+
+    Raises:
+        ValueError: If the value is not valid. The message is safe to show to the admin.
+    """
     kind = spec.kind
     if kind == BOOL:
         return bool(value)

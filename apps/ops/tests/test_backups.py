@@ -62,6 +62,7 @@ def test_both_actions_require_csrf(boss):
 def test_round_trip_restores_records_relations_secrets_and_sequences(boss, django_user_model):
     group = Group.objects.create(name="Analysts")
     permission = Permission.objects.first()
+    assert permission is not None
     group.permissions.add(permission)
     boss.groups.add(group)
     boss.user_permissions.add(permission)
@@ -91,7 +92,7 @@ def test_round_trip_restores_records_relations_secrets_and_sequences(boss, djang
     assert restored.user_permissions.filter(pk=permission.pk).exists()
     assert Group.objects.get(pk=group.pk).permissions.filter(pk=permission.pk).exists()
     assert Setting.objects.get(key="TELEGRAM_BOT_TOKEN").value == "encrypted-value"
-    assert ApiToken.objects.get(prefix="12345678").user_id == boss.pk
+    assert ApiToken.objects.get(prefix="12345678").user.pk == boss.pk
     assert PeriodicTask.objects.get(name="snapshot-test").interval.every == 7
     assert Company.objects.create(symbol="NEXT", name="Next").pk > 9999
     assert AuditEvent.objects.filter(action="restore database", actor_name="boss").exists()
@@ -161,7 +162,9 @@ def test_invalid_foreign_key_rolls_back(boss):
     with pytest.raises(backups.BackupError):
         backups.restore_database(json.dumps(snapshot).encode(), boss, confirmation="RESTORE")
     assert Company.objects.filter(symbol="KEEP").exists()
-    assert Setting.objects.get(key="LLM_MODEL").updated_by_id == boss.pk
+    updated_by = Setting.objects.get(key="LLM_MODEL").updated_by
+    assert updated_by is not None
+    assert updated_by.pk == boss.pk
 
 
 def test_invalid_field_value_rolls_back_partial_load(boss):

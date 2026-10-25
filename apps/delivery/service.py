@@ -1,4 +1,4 @@
-"""Send a report to the Telegram chats and record every try in DeliveryLog."""
+"""Send a report by Telegram and by email, and record every try in DeliveryLog."""
 
 import logging
 import smtplib
@@ -33,12 +33,24 @@ class DeliveryNotConfiguredError(Exception):
 
 
 def configured_chat_ids() -> list[str]:
-    """Return the chat IDs from the settings, without blank values."""
+    """Return the chat IDs from the settings, without blank values.
+
+    Returns:
+        The chat IDs as trimmed texts, in the order of the setting `TELEGRAM_CHAT_IDS`.
+    """
     return [chat_id.strip() for chat_id in conf.TELEGRAM_CHAT_IDS if chat_id.strip()]
 
 
 def report_chat_ids() -> list[str]:
-    """Return global Telegram destinations and enabled, linked user destinations."""
+    """Return the Telegram chats that get the daily report.
+
+    The list has the chats of the setting `TELEGRAM_CHAT_IDS` and the linked chats of users who
+    turned on Telegram reports. A user chat counts only if the user is active and has a verified
+    email. Staff and superusers do not need a verified email.
+
+    Returns:
+        The chat IDs as texts, without duplicates. The chats of the setting come first.
+    """
     user_chat_ids = (
         DeliveryPreference.objects.filter(
             telegram_reports=True, telegram_chat_id__isnull=False, user__is_active=True
@@ -54,9 +66,19 @@ def report_chat_ids() -> list[str]:
 def deliver_user_emails(report: Report, force: bool = False) -> DeliveryResult:
     """Email a report to active users who verified and enabled email delivery.
 
+    One address that fails does not stop the others. Each try writes a `DeliveryLog` row with
+    the channel `email`.
+
     Args:
         report: The report to email.
         force: Send again even when a successful delivery is already logged.
+
+    Returns:
+        A dict with the counts `sent`, `failed` and `skipped`, and `errors` (a dict from the email
+        address to a safe error text of at most 500 characters).
+
+    Side effects:
+        Sends email messages. Writes one `DeliveryLog` row for each address that is tried.
     """
     result: DeliveryResult = {"sent": 0, "failed": 0, "skipped": 0, "errors": {}}
     preferences = (
@@ -120,7 +142,7 @@ def deliver_report(
     client: TelegramClient | None = None,
     force: bool = False,
 ) -> DeliveryResult:
-    """Send the report to each chat. Return {"sent", "failed", "skipped", "errors": {chat: text}}.
+    """Send the report to each Telegram chat and write one `DeliveryLog` row for each try.
 
     A chat that already got this report ("sent" in DeliveryLog) is skipped, so the retry run and a
     second manual run do not send twice. force=True sends to all the chats again.
@@ -129,6 +151,25 @@ def deliver_report(
     A text of more than 4000 characters goes in more than one message. If a later message fails,
     a retry sends all the messages again, so the first one can arrive twice. The report is built to
     be shorter than one message, so this should be rare.
+
+    Args:
+        report: The report to send. The function sends `report.text`.
+        chat_ids: The chat IDs. The default is the chat IDs of the settings.
+        client: A Telegram client. The default is a new client that the function closes at the
+            end. Tests give a fake client.
+        force: If True, send to all chats, also to chats that already got this report.
+
+    Returns:
+        A `DeliveryResult` dict with the keys `sent`, `failed` and `skipped` (counts of chats) and
+        `errors` (a dict from the chat ID to a safe error text, without the bot token and at most
+        500 characters).
+
+    Raises:
+        DeliveryNotConfiguredError: If the bot token is not set (and no client is given), or if
+            there is no chat ID.
+
+    Side effects:
+        Sends messages to Telegram. Writes one `DeliveryLog` row for each chat that is tried.
     """
     chat_ids = configured_chat_ids() if chat_ids is None else chat_ids
     if not conf.TELEGRAM_BOT_TOKEN and client is None:

@@ -37,9 +37,21 @@ SCOPES = {
 
 
 def publish(scope: str, *, staff_only: bool = False, payload: dict | None = None) -> None:
-    """Write after commit so clients never refetch uncommitted data."""
+    """Queue one live event. The event is written after the transaction commits.
+
+    A client that refetches after the event must never see uncommitted data. So the write waits
+    for `transaction.on_commit`. If the transaction rolls back, nothing is published. If the
+    write fails, the error is logged and the caller is not told.
+
+    Args:
+        scope: The page group that must refresh, for example `news`, `ops` or `all`.
+        staff_only: If true, only the Ops stream sends the event.
+        payload: Small safe data for the client, for example a run id and status. It must never
+            contain business data or secrets. The default is an empty dict.
+    """
 
     def write() -> None:
+        """Save the event row. A database error is logged and then ignored."""
         try:
             LiveEvent.objects.create(scope=scope, staff_only=staff_only, payload=payload or {})
         except DatabaseError:
@@ -51,7 +63,17 @@ def publish(scope: str, *, staff_only: bool = False, payload: dict | None = None
 @receiver(post_save)
 @receiver(post_delete)
 def model_changed(sender: type[Model], instance: Model, **kwargs) -> None:
-    """Invalidate affected pages, and announce task state without exposing output."""
+    """Publish a live event when a saved or deleted row changes a page.
+
+    The app label of the model gives the scope (`SCOPES`). A `TaskRun` save also sends the id,
+    label and status of the run, but never its output. A finished run sends an extra `all`
+    event. A model with no scope sends nothing. A fixture load (`raw`) sends nothing.
+
+    Args:
+        sender: The model class that sent the signal.
+        instance: The row that was saved or deleted.
+        **kwargs: Other signal arguments. The code reads `raw` and `signal`.
+    """
     if kwargs.get("raw"):
         return
     scope = SCOPES.get(sender._meta.app_label)
@@ -73,7 +95,14 @@ def model_changed(sender: type[Model], instance: Model, **kwargs) -> None:
 
 @receiver(m2m_changed)
 def relationships_changed(sender, instance, action, **kwargs) -> None:
-    """Refresh linked news and permission changes after relationship edits."""
+    """Publish a live event after a many-to-many change, for example linked news or permissions.
+
+    Args:
+        sender: The through model of the relationship.
+        instance: The row whose relationship changed.
+        action: The signal action. Only `post_add`, `post_remove` and `post_clear` publish.
+        **kwargs: Other signal arguments. The code ignores them.
+    """
     if action in {"post_add", "post_remove", "post_clear"}:
         scope = SCOPES.get(instance._meta.app_label)
         if scope:
@@ -81,12 +110,39 @@ def relationships_changed(sender, instance, action, **kwargs) -> None:
 
 
 def frame(event: str, payload: dict, cursor: int) -> str:
-    """Encode one SSE frame; JSON escaping prevents newline injection."""
+    """Encode one server-sent event (SSE) frame.
+
+    `json.dumps` escapes new lines in the payload, so a payload cannot add a field to the frame.
+
+    Args:
+        event: The event name, for example `ready`, `change` or `reconnect`.
+        payload: The data of the event. It must be JSON-serializable.
+        cursor: The id of the last event that the frame covers. The browser sends it back as
+            `Last-Event-ID` when it reconnects.
+
+    Returns:
+        The text of one frame that ends with a blank line.
+    """
     return f"id: {cursor}\nevent: {event}\ndata: {json.dumps(payload)}\n\n"
 
 
 def event_stream(cursor: int, *, staff: bool, resync: bool = True):
-    """Stream bounded batches, heartbeat on idle, and let EventSource resume on reconnect."""
+    """Stream the live events for about `STREAM_SECONDS` seconds, then ask the client to reconnect.
+
+    The stream sends a `ready` frame first. It then polls the database each second, sends up to
+    200 new events in each batch, and sends a heartbeat comment when the batch is not full. At
+    the end it sends a `reconnect` frame. The browser `EventSource` then reconnects with
+    `Last-Event-ID`.
+
+    Args:
+        cursor: The id of the last event that the client has seen. Only newer events are sent.
+        staff: If true, the stream includes the staff-only events.
+        resync: If true, the `ready` frame tells the client to refetch all data, because the
+            cursor is missing or too old.
+
+    Yields:
+        Text frames in the SSE format.
+    """
     yield "retry: 1000\n\n"
     yield frame("ready", {"resync": resync}, cursor)
     deadline = time.monotonic() + STREAM_SECONDS
@@ -106,7 +162,23 @@ def event_stream(cursor: int, *, staff: bool, resync: bool = True):
 
 @login_not_required
 def events(request: HttpRequest, *, staff: bool = False):
-    """Authenticate every bounded connection, preserving API errors instead of redirects."""
+    """Open a live-update stream for a signed-in user.
+
+    Each connection is authenticated again, so a sign-out or a role change takes effect at the
+    next reconnect. The view returns problem+json errors and never a login redirect. A cursor
+    that is missing, ahead of the newest event, or older than the oldest saved event gives a
+    `resync` stream that starts at the newest event.
+
+    Args:
+        request: The HTTP request. Only `GET` is allowed. The optional `Last-Event-ID` header
+            is the cursor.
+        staff: If true, the user must pass the Ops session check and the stream includes
+            staff-only events.
+
+    Returns:
+        A `text/event-stream` response with `Cache-Control: private, no-store`. For a bad method,
+        a bad cursor or a failed check it returns a problem+json error instead.
+    """
     if request.method != "GET":
         return problem(request, "validation_error", "Use GET for live updates.")
     try:
@@ -134,5 +206,12 @@ def events(request: HttpRequest, *, staff: bool = False):
 
 @login_not_required
 def staff_events(request: HttpRequest):
-    """Keep staff events under the proxy's Ops IP allowlist."""
+    """Open the staff live-update stream at a path that the Ops IP allowlist covers.
+
+    Args:
+        request: The HTTP request. See `events`.
+
+    Returns:
+        The response of `events` with `staff=True`.
+    """
     return events(request, staff=True)

@@ -9,7 +9,10 @@ description: The services, the apps and the main design rules of Kash Engine.
 Kash Engine is a Django project. It has one app for each part of the product. Celery workers do
 slow work outside web requests. Celery beat starts the work on a schedule. PostgreSQL keeps the
 data. Redis is the Celery broker and the cache of the API rate limit. Ollama runs the local
-language model. Caddy is the only public service.
+language model. Silo keeps the backup files. Caddy is the only public service.
+
+The main user interface is a React app (see [User interface](#user-interface)). Django serves
+the app and two HTTP APIs for it.
 
 ```text
                        Internet
@@ -20,7 +23,7 @@ language model. Caddy is the only public service.
           /docs/*     |       |    everything else
               +-------v-+   +-v-------------------+
               |  docs   |   |   web (Django)      |
-              | (nginx) |   |   gunicorn, 3 wkrs  |
+              | (nginx) |   |  gunicorn 3x16 thr  |
               +---------+   +--+---------------+--+
                                |               |
                         +------v-----+   +-----v------+
@@ -40,14 +43,20 @@ language model. Caddy is the only public service.
 
 | Service | What it does | Network (production) |
 | --- | --- | --- |
-| `caddy` | Terminates TLS. Routes `/docs` to `docs` and all other paths to `web`. Adds security headers. Limits `/admin/`, `/ops/`, `/app/ops/`, and `/api/app/ops/` to `ADMIN_ALLOWED_IPS`. | `edge` and `proxy` |
-| `web` | Django. The production command runs `migrate`, then `collectstatic`, then Gunicorn with 3 workers. | `proxy` and `backend` |
+| `caddy` | Terminates TLS. Routes `/docs` to `docs` and all other paths to `web`. Adds security headers. Limits `/admin/`, `/ops/`, `/app/ops/`, and `/api/app/ops/` to `ADMIN_ALLOWED_IPS`. Serves the archive host (`OLD_SITE_ADDRESS`) as a second site. | `edge` and `proxy` |
+| `web` | Django. The production command runs `migrate`, then `collectstatic`, then Gunicorn with 3 workers and 16 threads for each worker (`gthread`). | `proxy` and `backend` |
 | `worker` | Runs the Celery tasks. | `backend` and `egress` |
 | `beat` | Sends the scheduled tasks. The schedule is in the database (`django-celery-beat`). | `backend` and `egress` |
 | `db` | PostgreSQL 17. It keeps all data. | `backend` |
 | `redis` | The Celery broker, and the Django cache (database 1) for the API rate limit. | `backend` |
 | `ollama` | The local language model server. | `backend` and `egress` (model download) |
+| `silo` | S3-compatible object storage for backups. It replaced MinIO. The volume name `minio_data` and the `MINIO_ROOT_*` variables stay the same. | `backend` |
+| `silo-init` | Runs one time at start. It makes the private buckets and never deletes objects. | `backend` |
 | `docs` | nginx with the static documentation site. It has no secret and no database. | `proxy` |
+
+In development, a `frontend` service also runs the Vite server on `127.0.0.1:5173`. The
+production image has no such service. The `Dockerfile` builds the React app in a first stage
+(`frontend-build`) and copies `frontend/dist` into the image.
 
 The `proxy` and `backend` networks have no route to the internet. Only `edge` and `egress` do.
 Only Caddy publishes ports (80, 443 TCP and 443 UDP).
@@ -57,22 +66,73 @@ Only Caddy publishes ports (80, 443 TCP and 443 UDP).
 | Path | What it does |
 | --- | --- |
 | `apps/news/` | Reads RSS feeds, scrapes article text, scores sentiment with the LLM. |
-| `apps/companies/` | Companies, name matching in news, and Screener.in data. |
-| `apps/markets/` | Instruments, quotes, the Nifty 50 prediction, and its evaluation. |
+| `apps/companies/` | Companies, name matching in news, Screener.in data, saved Upstox quotes, history and fundamentals, and the company outlook. |
+| `apps/markets/` | Instruments, quotes, the trading calendar, the Nifty 50 prediction and its evaluation, and the Upstox client and stream worker. |
 | `apps/ipos/` | IPOs, GMP and subscription data, listing results, and the IPO score. |
 | `apps/reports/` | Builds the daily report from the stored data. |
-| `apps/delivery/` | Sends the report on Telegram and keeps a delivery log. |
+| `apps/delivery/` | Sends the report by email and on Telegram, keeps a delivery log, and keeps the sign-up invitations, the email verification and the Telegram links. |
 | `apps/llm/` | The client of the local LLM server. |
-| `apps/web/` | The web pages (Django templates, Datastar, Tailwind). |
-| `apps/api/` | The read-only HTTP API, the tokens, and the Swagger page. |
+| `apps/web/` | The landing page, the sign-up, sign-in and legal pages, and the archived Django pages. The archived pages use Datastar and Tailwind. Only a superuser can open them, and only on the archive host. |
+| `apps/api/` | The public read-only HTTP API (`/api/v1/`), the tokens, the Swagger page, the private API of the React app (`/api/app/`), and the live updates. |
 | `apps/access/` | Features and subscriptions: who may use what. |
 | `apps/siteconfig/` | Settings that a superuser changes on the dashboard. Encrypted secrets. |
-| `apps/ops/` | The Ops pages: health, jobs, runs, logs, users, audit, schedule, settings. |
+| `apps/ops/` | The Ops pages: health, jobs, runs, logs, users, audit, schedule, settings, and backups. |
+| `frontend/` | The React app (Vite, TanStack Router and Table, Mantine). It has its own tests and a generated API client. |
 | `config/` | Django settings (`base`, `dev`, `prod`), URLs, Celery, beat. |
 | `deploy/caddy/` | The Caddyfile for development and production. |
+| `deploy/silo/` | The script that makes the buckets. |
 | `docs/` | This documentation site and its generators. |
 
 The [Python reference](../reference/generated/python/index.md) lists every module.
+
+## User interface
+
+The React app is the main interface. Django serves its shell, and `django-vite` reads the Vite
+manifest in `frontend/dist`. The app calls the private API. It never calls the public API.
+
+| Host | What it shows | Who can use it |
+| --- | --- | --- |
+| `SITE_ADDRESS` | The landing page, the React app at `/app/...`, and the React Ops pages. | Everyone for the landing page. A signed-in user for the app. A staff user for Ops. |
+| `OLD_SITE_ADDRESS` | The archived Django pages (the old interface). | A superuser only. |
+
+The archive host is chosen by the `Host` header (`apps.web.archive.ArchiveMiddleware`). It uses
+its own URL file (`config/legacy_urls.py`). The middleware checks every view on that host.
+
+## Two HTTP APIs
+
+| API | Path | For | Contract |
+| --- | --- | --- | --- |
+| Public | `/api/v1/` | Your own programs. | `docs/openapi/v1.json`. It is stable inside a major version. |
+| Private | `/api/app/` | The React app only. | `frontend/openapi/app.json`. It can change at any time. |
+
+The private API accepts a browser session only. It does not accept a bearer token. A test checks
+that the two contracts stay separate. The React client in
+`frontend/src/shared/api/generated` is made from the private contract (`pnpm api:generate`).
+See [HTTP API overview](../api/overview.md).
+
+## Live updates
+
+The React app refreshes its data without a page reload. The mechanism is simple:
+
+1. A save or a delete of a model row writes a short `LiveEvent` row. The write waits for the end
+   of the database transaction (`transaction.on_commit`). A rollback sends nothing.
+2. The browser holds a Server-Sent Events (SSE) stream at `/api/app/events`. Staff also hold
+   `/api/app/ops/events`. The stream reads new events from the database, so the web and worker
+   processes share them.
+3. An event says which part of the app changed (the `scope`). It never contains business data,
+   task output or a secret. A task event holds only the run id, the label and the status.
+4. The app refetches only the queries of that scope.
+
+Each stream lasts about 20 seconds. Then the server sends `reconnect`, and the browser opens a
+new stream with `Last-Event-ID`, so no event is lost. If the browser is too late, the server
+asks for a full refresh. The server checks the session again at each new stream. The `ops.prune`
+task deletes events that are older than one day.
+
+Each open stream holds one Gunicorn thread and reads the database one time each second. This
+is why Gunicorn uses threads. See [Troubleshooting](../operations/troubleshooting.md).
+
+Code that writes many rows outside a task must call `apps.api.live.publish("all")` when it
+finishes.
 
 ## Design rules
 

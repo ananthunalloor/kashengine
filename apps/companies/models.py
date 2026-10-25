@@ -76,6 +76,7 @@ class CompanyFundamentals(models.Model):
         ordering: ClassVar[list[str]] = ["-fetched_at", "-pk"]
 
     def __str__(self):
+        """Return the company and the time of the copy."""
         return f"{self.company} fundamentals {self.fetched_at}"
 
 
@@ -99,6 +100,7 @@ class CompanyQuote(models.Model):
         ]
 
     def __str__(self):
+        """Return the company, the time of the quote and the price."""
         return f"{self.company} {self.as_of}: {self.price}"
 
 
@@ -123,6 +125,7 @@ class CompanyCandle(models.Model):
         ]
 
     def __str__(self):
+        """Return the company, the day and the close."""
         return f"{self.company} {self.day}: {self.close}"
 
 
@@ -142,4 +145,5 @@ class CompanyOutlook(models.Model):
         ordering: ClassVar[list[str]] = ["-created_at", "-pk"]
 
     def __str__(self):
+        """Return the company, the target day and the direction."""
         return f"{self.company} {self.target_date}: {self.direction}"

@@ -114,6 +114,7 @@ def test_import_starter_list_and_link_command(capsys):
     call_command("import_companies", "--starter")
     count = Company.objects.count()
     assert count >= 30
+    assert Company.objects.get(symbol="RELIANCE").upstox_instrument_key == "NSE_EQ|INE002A01018"
     call_command("import_companies", "--starter")  # A second run adds nothing.
     assert Company.objects.count() == count
 
@@ -130,8 +131,8 @@ def test_import_starter_list_and_link_command(capsys):
 def test_import_companies_from_a_csv_file(tmp_path):
     csv_file = tmp_path / "companies.csv"
     csv_file.write_text(
-        "symbol,name,sector,aliases\n"
-        "abc,ABC Industries Ltd,Metals,ABC Steel|ABC Inds\n"
+        "symbol,name,sector,aliases,upstox_instrument_key\n"
+        "abc,ABC Industries Ltd,Metals,ABC Steel|ABC Inds,NSE_EQ|INE002A01018\n"
         ",No Symbol Ltd,,\n",
         encoding="utf-8",
     )
@@ -141,4 +142,5 @@ def test_import_companies_from_a_csv_file(tmp_path):
     company = Company.objects.get(symbol="ABC")  # The symbol is made upper case.
     assert company.aliases == ["ABC Steel", "ABC Inds"]
     assert company.sector == "Metals"
+    assert company.upstox_instrument_key == "NSE_EQ|INE002A01018"
     assert Company.objects.count() == 1

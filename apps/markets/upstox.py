@@ -90,7 +90,15 @@ def mapped_companies():
 
 
 def record_error(company: Company, section: str, error: str = "") -> None:
-    """Keep old good data on failure and expose the failed dataset to readers."""
+    """Save or clear the error text of one data part of a company.
+
+    The old good data stays when a part fails. Readers can see which part failed.
+
+    Args:
+        company: The company. The object also gets the new `upstox_errors` value.
+        section: The part, for example `quotes`, `history` or `fundamentals`.
+        error: A safe error text. An empty text clears the error of the part.
+    """
     with transaction.atomic():
         saved = Company.objects.select_for_update().get(pk=company.pk)
         errors = dict(saved.upstox_errors)
@@ -105,7 +113,18 @@ def record_error(company: Company, section: str, error: str = "") -> None:
 
 
 def save_quote(company: Company, data: Quote) -> bool:
-    """Deduplicate by provider timestamp and retain actual exchange timestamps."""
+    """Save one snapshot quote. A quote with the same time is not saved again.
+
+    Args:
+        company: The company that the quote should belong to.
+        data: The checked quote from Upstox.
+
+    Returns:
+        True if a new row was saved, False if a row with the same time existed.
+
+    Raises:
+        UpstoxError: If the quote is for another instrument, or its time has no time zone.
+    """
     if data.instrument_token != company.upstox_instrument_key:
         raise UpstoxError("Upstox returned a quote for a different instrument.")
     if timezone.is_naive(data.timestamp):
@@ -126,7 +145,18 @@ def save_quote(company: Company, data: Quote) -> bool:
 
 
 def sync_quotes(client: UpstoxClient) -> dict:
-    """Batch snapshots without replacing newer streaming observations."""
+    """Download snapshot quotes for all Upstox companies, 100 for each request.
+
+    A bad batch or a missing instrument records an error for the company and the work goes on. A
+    saved snapshot never replaces a newer quote from the stream.
+
+    Args:
+        client: The Upstox client.
+
+    Returns:
+        A dict with `saved` (the count of new quotes) and `failed` (a dict from the symbol to a
+        safe error text).
+    """
     saved = 0
     failed = {}
     for companies in batched(mapped_companies(), 100, strict=False):
@@ -162,7 +192,21 @@ def sync_quotes(client: UpstoxClient) -> dict:
 
 
 def sync_history(company: Company, client: UpstoxClient) -> int:
-    """Backfill one year once, then overlap the last saved day to capture corrections."""
+    """Download the daily candles of one company and save the finished days.
+
+    The first run loads one year. Later runs start at the last saved day, so a correction of that
+    day is saved. The current day is not saved until its close and the buffer have passed.
+
+    Args:
+        company: The company.
+        client: The Upstox client.
+
+    Returns:
+        The number of candles that were saved or updated.
+
+    Raises:
+        UpstoxError: If the answer has a wrong shape or a candle has invalid values.
+    """
     latest = (
         company.candles.filter(instrument_key=company.upstox_instrument_key)
         .order_by("-day")
@@ -228,7 +272,22 @@ def sync_history(company: Company, client: UpstoxClient) -> int:
 
 
 def sync_fundamentals(company: Company, client: UpstoxClient) -> bool:
-    """Save complete snapshots atomically, at most once per configured refresh period."""
+    """Download and save the fundamentals of one company, if the last copy is old enough.
+
+    The function reads all sections (profile, ratios and statements) and saves them together, or
+    saves nothing. It also updates the sector of the company from the profile.
+
+    Args:
+        company: The company.
+        client: The Upstox client.
+
+    Returns:
+        True if a new copy was saved. False if the last copy is newer than
+        `UPSTOX_FUNDAMENTALS_DAYS` days.
+
+    Raises:
+        UpstoxError: If the profile or the key ratios have a wrong shape.
+    """
     last = company.fundamentals.filter(instrument_key=company.upstox_instrument_key).first()
     if last and last.fetched_at >= timezone.now() - timedelta(days=conf.UPSTOX_FUNDAMENTALS_DAYS):
         return False
@@ -260,7 +319,18 @@ def sync_fundamentals(company: Company, client: UpstoxClient) -> bool:
 
 
 def sync_companies(client: UpstoxClient) -> dict:
-    """Refresh daily bars and fundamentals separately so one failure does not erase another."""
+    """Update the history and the fundamentals of every Upstox company.
+
+    The two parts are separate. A failure of one part records an error and does not stop the other.
+    The function saves the outlook of each company at the end.
+
+    Args:
+        client: The Upstox client.
+
+    Returns:
+        A dict with `history` (the count of saved candles), `fundamentals` (the count of saved
+        copies) and `failed` (a dict from `SYMBOL:section` to a safe error text).
+    """
     saved = {"history": 0, "fundamentals": 0}
     failed = {}
     for company in mapped_companies():
@@ -282,7 +352,20 @@ def sync_companies(client: UpstoxClient) -> dict:
 
 
 def sync_news(client: UpstoxClient) -> dict:
-    """Save all returned news pages and exact company links without resetting existing scores."""
+    """Download the news of all Upstox companies and link each article to its company.
+
+    The function reads every page. An article with a known link keeps its sentiment score.
+
+    Args:
+        client: The Upstox client.
+
+    Returns:
+        A dict with `new`, the count of articles that were not saved before.
+
+    Raises:
+        UpstoxError: If a page has invalid data, or Upstox returns an instrument that was not
+            requested.
+    """
     saved = 0
     for companies in batched(mapped_companies(), 30, strict=False):
         by_key = {company.upstox_instrument_key: company for company in companies}
@@ -315,7 +398,20 @@ def sync_news(client: UpstoxClient) -> dict:
 
 
 def sync_ipos(client: UpstoxClient) -> dict:
-    """Read every lifecycle stage and detail page, reusing the existing IPO persistence rules."""
+    """Download the IPOs of all stages (upcoming, open, closed, listed) and save them.
+
+    The function reads the detail page of each IPO and uses the same save rules as the other IPO
+    sources. An IPO with invalid details is skipped and logged.
+
+    Args:
+        client: The Upstox client.
+
+    Returns:
+        A dict with the counts `created`, `updated`, `unchanged` and `skipped`.
+
+    Raises:
+        UpstoxError: If a list or an IPO identifier has a wrong shape.
+    """
     counts = {"created": 0, "updated": 0, "unchanged": 0, "skipped": 0}
     seen = set()
     for status in ("upcoming", "open", "closed", "listed"):

@@ -22,6 +22,15 @@ MAX_DAYS = 3650
 
 
 def _event(user, action: str, sub: Subscription, actor, note: str) -> None:
+    """Write one history row (`SubscriptionEvent`) for a change of a subscription.
+
+    Args:
+        user: The owner of the subscription.
+        action: A value of `SubscriptionEvent.Action`.
+        sub: The subscription after the change. Its kind and end time go in the row.
+        actor: The admin who made the change, or None for a change by the system.
+        note: A free text. The function cuts it to 200 characters.
+    """
     SubscriptionEvent.objects.create(
         user=user,
         action=action,
@@ -34,14 +43,31 @@ def _event(user, action: str, sub: Subscription, actor, note: str) -> None:
 
 
 def end_of_day(day: date) -> datetime:
-    """The last moment of a day in the local time zone (IST)."""
+    """Return the last moment of a day in the local time zone (IST).
+
+    Args:
+        day: The calendar date.
+
+    Returns:
+        23:59:59 of that date in `settings.TIME_ZONE`, as a UTC datetime.
+    """
     zone = ZoneInfo(settings.TIME_ZONE)
     return datetime.combine(day, time(23, 59, 59), tzinfo=zone).astimezone(UTC)
 
 
 @transaction.atomic
 def start_trial(user, now: datetime | None = None) -> Subscription:
-    """Give a new user the trial. Do nothing if the user has a subscription row already."""
+    """Give a new user the trial. Do nothing if the user has a subscription row already.
+
+    The trial has the length `SUBSCRIPTION_TRIAL_DAYS`. The function writes one history row.
+
+    Args:
+        user: The new user.
+        now: The start time. The default is the current time.
+
+    Returns:
+        The new trial, or the subscription that the user already had.
+    """
     now = now or timezone.now()
     existing = Subscription.objects.filter(user=user).first()
     if existing:
@@ -71,6 +97,27 @@ def give(
 
     With `days`, the days are added to the end of the current subscription (or to now, if it has
     ended). With `ends_on`, the subscription ends at the end of that day. Use one of them.
+
+    Args:
+        user: The owner of the subscription.
+        kind: One of `trial`, `paid` or `gift`.
+        days: The days to add, from 1 to 3650.
+        ends_on: The last day of the subscription, in the local time zone. It must be in the
+            future.
+        actor: The admin who gives the subscription, or None.
+        note: A free text for the history. The history keeps 200 characters.
+        now: The current time. Tests set it.
+
+    Returns:
+        The saved subscription.
+
+    Raises:
+        ValueError: If `kind` is not known, if both or none of `days` and `ends_on` are set,
+            if `days` is out of range, or if `ends_on` is not in the future.
+
+    Note:
+        A subscription that never ends (no end time) counts as ended for the `days` rule. The
+        new end is `days` after now.
     """
     now = now or timezone.now()
     if kind not in Subscription.Kind.values:
@@ -103,7 +150,20 @@ def give(
 
 @transaction.atomic
 def end_now(user, *, actor=None, note: str = "", now: datetime | None = None) -> Subscription:
-    """End the subscription now. Raise ValueError if the user has none."""
+    """End the subscription now. Raise ValueError if the user has none.
+
+    Args:
+        user: The owner of the subscription.
+        actor: The admin who ends it, or None.
+        note: A free text for the history.
+        now: The end time. The default is the current time.
+
+    Returns:
+        The saved subscription. Its end time is `now`.
+
+    Raises:
+        ValueError: If the user has no subscription.
+    """
     now = now or timezone.now()
     sub = Subscription.objects.select_for_update().filter(user=user).first()
     if sub is None:
@@ -119,8 +179,19 @@ def end_now(user, *, actor=None, note: str = "", now: datetime | None = None) ->
 def set_blocked(user, blocked: Iterable[str], *, actor=None) -> tuple[list[str], list[str]]:
     """Make the blocked features of a user equal to `blocked`.
 
-    Return (features that are now blocked, features that are now allowed again), both sorted.
-    Raise ValueError for an unknown feature key.
+    The function adds the missing blocks and deletes the blocks that are not in `blocked`.
+
+    Args:
+        user: The user.
+        blocked: The keys of all features that the user must not use after the call.
+        actor: The admin who makes the change. The new blocks keep the name.
+
+    Returns:
+        Two sorted lists: the features that are blocked now, and the features that are allowed
+        again.
+
+    Raises:
+        ValueError: If a key is not a known feature. The database does not change.
     """
     wanted = set(blocked)
     unknown = wanted - features.KEYS

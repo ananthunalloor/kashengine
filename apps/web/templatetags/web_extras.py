@@ -33,13 +33,27 @@ BADGES = {
 
 @register.filter
 def signed_score(value):
-    """Display a -1..1 score as 1.0..10.0, with neutral at 5.5."""
+    """Display a -1..1 score as 1.0..10.0, with neutral at 5.5.
+
+    Args:
+        value: The score, or an empty value.
+
+    Returns:
+        The text from `score_out_of_ten`, for example `5.5/10`.
+    """
     return score_out_of_ten(value, signed=True)
 
 
 @register.filter
 def unit_score(value):
-    """Display a 0..1 strength or relevance score as 1.0..10.0."""
+    """Display a 0..1 strength or relevance score as 1.0..10.0.
+
+    Args:
+        value: The score, or an empty value.
+
+    Returns:
+        The text from `score_out_of_ten`, for example `7.3/10`.
+    """
     return score_out_of_ten(value)
 
 

@@ -101,6 +101,9 @@ def session_close(day: date) -> datetime:
 
     Returns:
         A timezone-aware datetime on `day` at the close time, in the market time zone.
+
+    Raises:
+        ValueError: If the saved special session has no closing time.
     """
     exception = TradingCalendarDay.objects.filter(
         day=day, kind=TradingCalendarDay.Kind.SPECIAL
@@ -112,7 +115,19 @@ def session_close(day: date) -> datetime:
 
 
 def session_open(day: date) -> datetime:
-    """Return the regular 09:15 IST opening, or the saved special-session opening."""
+    """Return the opening time of the market on a day.
+
+    A special session uses its saved opening. Otherwise the opening is 09:15 IST.
+
+    Args:
+        day: The date of the session.
+
+    Returns:
+        A timezone-aware datetime on `day` at the opening time, in the market time zone.
+
+    Raises:
+        ValueError: If the saved special session has no opening time.
+    """
     exception = TradingCalendarDay.objects.filter(
         day=day, kind=TradingCalendarDay.Kind.SPECIAL
     ).first()
@@ -135,7 +150,15 @@ def final_buffer() -> timedelta:
 
 
 def latest_completed_day(now: datetime | None = None) -> date:
-    """Return the latest session whose close and final-data buffer have passed."""
+    """Return the latest trading day whose close and final-data buffer have passed.
+
+    Args:
+        now: The time to test. The default is the current time.
+
+    Returns:
+        Today if today is a trading day and the close plus `final_buffer()` has passed. Else the
+        trading day before today.
+    """
     now = now or timezone.now()
     today = today_ist(now)
     if is_trading_day(today) and now >= session_close(today) + final_buffer():

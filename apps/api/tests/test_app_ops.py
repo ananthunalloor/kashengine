@@ -169,3 +169,55 @@ def test_preview_routes_are_staff_only_and_legacy_remains(client, member, staff,
     assert client.get("/ops/runs/999999/").status_code == 404
     assert "web/spa.html" in [t.name for t in client.get("/ops/runs/").templates]
     assert client.post(URL).status_code == 405
+
+
+@pytest.fixture
+def active_run():
+    return TaskRun.objects.create(
+        task_id="stop-me",
+        task_name="apps.news.tasks.fetch",
+        label="news.fetch",
+        status=TaskRun.Status.STARTED,
+        started_at=timezone.now(),
+    )
+
+
+def test_staff_who_is_not_a_superuser_cannot_stop_a_run(client, staff, active_run):
+    client.force_login(staff)
+    with patch("config.celery.app.control.revoke") as revoke:
+        response = client.post(f"{URL}/{active_run.pk}/stop")
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Only a superuser can stop a task run."
+    revoke.assert_not_called()
+    active_run.refresh_from_db()
+    assert active_run.status == TaskRun.Status.STARTED
+    assert not AuditEvent.objects.exists()
+
+
+def test_superuser_stops_a_run_and_the_audit_trail_records_it(client, staff, active_run):
+    staff.is_superuser = True
+    staff.save(update_fields=["is_superuser"])
+    client.force_login(staff)
+    with patch("config.celery.app.control.revoke") as revoke:
+        response = client.post(f"{URL}/{active_run.pk}/stop")
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "status": TaskRun.Status.FAILURE}
+    revoke.assert_called_once_with("stop-me", terminate=True, signal="SIGKILL")
+    active_run.refresh_from_db()
+    assert active_run.status == TaskRun.Status.FAILURE
+    event = AuditEvent.objects.get()
+    assert (event.actor, event.action, event.target) == (staff, "stop run", "news.fetch")
+
+
+def test_a_run_that_is_not_active_is_not_stopped_again(client, staff, runs):
+    staff.is_superuser = True
+    staff.save(update_fields=["is_superuser"])
+    client.force_login(staff)
+    finished = next(run for run in runs if run.status == TaskRun.Status.SUCCESS)
+    with patch("config.celery.app.control.revoke") as revoke:
+        response = client.post(f"{URL}/{finished.pk}/stop")
+
+    assert response.json() == {"ok": False, "status": TaskRun.Status.SUCCESS}
+    revoke.assert_not_called()

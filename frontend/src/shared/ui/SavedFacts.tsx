@@ -1,4 +1,20 @@
-import { Stack, Table, Text, Title } from "@mantine/core";
+import { Stack, Text, Title } from "@mantine/core";
+
+import { DataTable } from "./DataTable";
+import type { TableColumn } from "./DataTable";
+
+type FlatFact = Record<string, string | number | boolean | null>;
+
+function isFlatFact(value: unknown): value is FlatFact {
+  return Boolean(
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.values(value).every(
+      (cell) => cell === null || ["string", "number", "boolean"].includes(typeof cell),
+    ),
+  );
+}
 
 function label(value: string) {
   return value.replaceAll("_", " ").replaceAll("-", " ");
@@ -11,37 +27,21 @@ export function SavedFacts({ value }: { value: unknown }) {
   if (typeof value !== "object") return <Text>{String(value)}</Text>;
   if (Array.isArray(value)) {
     if (!value.length) return <Text c="dimmed">No saved records.</Text>;
-    if (
-      value.every(
-        (row) =>
-          row &&
-          typeof row === "object" &&
-          !Array.isArray(row) &&
-          Object.values(row).every((cell) => cell === null || typeof cell !== "object"),
-      )
-    ) {
+    if (value.every(isFlatFact)) {
       const columns = [...new Set(value.flatMap((row) => Object.keys(row)))];
+      const definitions: TableColumn<FlatFact>[] = columns.map((key) => ({
+        id: key,
+        label: label(key),
+        value: (row) => (typeof row[key] === "boolean" ? String(row[key]) : row[key]),
+        render: (row) => String(row[key] ?? "Not available"),
+      }));
       return (
-        <Table.ScrollContainer minWidth={400}>
-          <Table captionSide="top" striped>
-            <Table.Thead>
-              <Table.Tr>
-                {columns.map((key) => (
-                  <Table.Th key={key}>{label(key)}</Table.Th>
-                ))}
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {value.map((row, index) => (
-                <Table.Tr key={index}>
-                  {columns.map((key) => (
-                    <Table.Td key={key}>{String(row[key] ?? "Not available")}</Table.Td>
-                  ))}
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
+        <DataTable
+          data={value}
+          columns={definitions}
+          label="Saved provider facts"
+          initialSort={columns.length ? [{ id: columns[0]!, desc: false }] : []}
+        />
       );
     }
     return (

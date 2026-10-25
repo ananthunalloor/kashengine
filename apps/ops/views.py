@@ -190,7 +190,7 @@ def job_run(request: HttpRequest, key: str) -> HttpResponse:
         messages.error(request, f"Tick the box to confirm. {job.confirm}")
         return redirect("ops:jobs")
     try:
-        run = jobs.start_job(job, request.user, request)
+        jobs.start_job(job, request.user, request)
     except jobs.JobBusyError as exc:
         messages.warning(request, str(exc))
         return redirect("ops:jobs")
@@ -299,6 +299,7 @@ def run_stop(request: HttpRequest, pk: int) -> HttpResponse:
     else:
         run.duration_ms = 0
     run.save(update_fields=["status", "finished_at", "duration_ms", "error"])
+    audit.record(request.user, "stop run", run.label, f"run {run.pk}", request)
     messages.success(request, f"Stopped: {run.label}.")
     return redirect("ops:run", pk=pk)
 

@@ -745,7 +745,20 @@ def _present_metrics(request: HttpRequest, name: str, context: dict[str, Any]) -
 
 
 def _present_invites(request: HttpRequest, name: str, context: dict[str, Any]) -> OpsPage:
-    """Present invitation metadata and superuser-only management controls."""
+    """Build the Ops page of the sign-up invitations.
+
+    Each row shows the number, the state (Available, Used or Revoked), the creator, the time and
+    the account that used it. A superuser also gets the Revoke button for an available invitation.
+    The page never shows a code.
+
+    Args:
+        request: The request. The user role decides which controls the page has.
+        name: The page name. The function does not use it.
+        context: The view context with the `invites` query set.
+
+    Returns:
+        The page description for the React app.
+    """
     can_write = bool(getattr(request.user, "is_superuser", False))
     rows = []
     for invite in context["invites"]:

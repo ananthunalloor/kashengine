@@ -96,7 +96,7 @@ def test_signup_allows_login_before_verification_but_gates_email_reports(setting
     assert acceptance.version == signup.LEGAL_VERSION
     assert acceptance.accepted_at is not None
     verification = EmailVerification.objects.get(user=user)
-    verify_url = re.search(r"https?://\S+/verify-email/([^/\s]+)/", mail.outbox[0].body)
+    verify_url = re.search(r"https?://\S+/verify-email/([^/\s]+)/", str(mail.outbox[0].body))
     assert verify_url is not None
     token = verify_url.group(1)
     assert token not in verification.token_hash
@@ -270,9 +270,8 @@ def test_verification_does_not_reactivate_disabled_account():
     client = Client()
     client.post("/signup/", SIGNUP_DATA)
     user = get_user_model().objects.get(username="new-member")
-    user.is_active = False
-    user.save(update_fields=["is_active"])
-    verify_url = re.search(r"https?://\S+/verify-email/([^/\s]+)/", mail.outbox[0].body)
+    get_user_model().objects.filter(pk=user.pk).update(is_active=False)
+    verify_url = re.search(r"https?://\S+/verify-email/([^/\s]+)/", str(mail.outbox[0].body))
     assert verify_url
     assert client.get(urlsplit(verify_url.group(0)).path).status_code == 200
     user.refresh_from_db()

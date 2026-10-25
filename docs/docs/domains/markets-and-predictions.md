@@ -41,12 +41,66 @@ the Yahoo terms for your case. It can break when Yahoo changes something. Then t
 and the log shows why.
 :::
 
-The code has **no list of market holidays**. A holiday counts as a trading day. The prediction
-for it ends as void (see below).
+## The trading calendar
+
+A weekday is a trading day, and a weekend is closed, unless the **trading calendar** says
+otherwise. The calendar is the table `TradingCalendarDay` (`apps/markets/models.py`). Each row
+is one date, with a required reason:
+
+| Kind | Meaning | Session hours |
+| --- | --- | --- |
+| `holiday` | The market is closed on a weekday. | Not allowed. |
+| `special` | The market is open, for example on a Saturday. | Required: a start and a later end, in IST. |
+
+An unlisted weekday opens at 09:15 IST and closes at `MARKET_CLOSE_TIME`. An unlisted weekend is
+closed. `trading.is_trading_day`, `session_open` and `session_close` read the table. The
+prediction, the evaluation, the daily report, the delivery task and the Ops health checks all use
+these functions.
+
+:::caution
+The code has **no official holiday feed** and no pre-filled dates. Staff with the Django admin
+permission enter each exchange holiday at `/admin/markets/tradingcalendarday/`. Check each date
+with the official NSE circular. An empty year shows a warning in the app. If a holiday is not
+entered, the code treats it as a trading day, and its prediction ends as void (see below).
+:::
+
+The signed-in app shows the status and a year list in the **Trading calendar** window. It reads
+`GET /api/app/calendar?year=YYYY`. The status describes the schedule. It does not show the
+health of the exchange.
+
+## Upstox data
+
+Upstox is **off** until a superuser turns on `UPSTOX_ENABLED` and saves `UPSTOX_ACCESS_TOKEN` on
+**Ops > Settings**. The token is a secret. It goes in the `Authorization` header only, never in a
+URL, a log line or an error text. The code does not renew the token. An expired token gives a clear
+error. Read the Upstox terms for the storage and the display of data before you turn it on.
+
+Two beat entries start with the first migration. They do nothing while Upstox is off:
+
+| Task | Default time (IST) | What it does |
+| --- | --- | --- |
+| `markets.upstox_quotes` | Every 5 minutes | Saves a snapshot quote of each mapped company. It runs only in a trading session of the calendar. |
+| `markets.upstox_refresh` | Minute 10 of every sixth hour | Saves the history, the due fundamentals, the news and the IPOs. It then starts the scoring and saves the company outlooks. |
+
+A part that fails records a safe error for the company (`upstox_errors`). The old good data stays,
+and the page shows the error.
+
+For faster prices, run **one** optional stream worker: `python manage.py stream_upstox` (add
+`--symbols` for a subset of at most 100 companies). It is not part of the Compose services. Run
+it under your own process supervisor. The worker:
+
+- asks Upstox for a new feed address at each connect, and accepts only a `wss://` address on a
+  host that ends with `.upstox.com`;
+- checks the certificate;
+- saves at most one quote for each company in 5 seconds, with the exchange time;
+- stops with an error after 5 failed tries, or at once on invalid data, and never saves a guessed
+  price.
+
+The page `/markets/live` lists the saved quotes of the companies. It reads the database only.
 
 ## The prediction rule
 
-`markets.predict` runs on trading days (Monday to Friday). It makes a `Prediction` for the day,
+`markets.predict` runs on trading days (see [the trading calendar](#the-trading-calendar)). It makes a `Prediction` for the day,
 unique by `target_date`.
 
 1. **News score.** The average sentiment of the scored news since the last market close. Each
@@ -77,8 +131,9 @@ The real result of a day is the change of the Nifty 50 close. A change inside
 - The code checks a prediction only when the quote of its day is **final**. A quote is final when
   the code saved it after the close (15:30) plus `MARKET_FINAL_BUFFER_MINUTES`. A row from the
   middle of the session can hold a price that is not the close.
-- A prediction is **void** when the market had no session on that day (a holiday): there is no
-  quote for the day, but there are quotes for later days. A void prediction is not counted.
+- A prediction is **void** when the market had no session on that day: there is no quote for the
+  day, but there are quotes for later days. A void prediction is not counted. With a complete
+  trading calendar this does not happen for a holiday, because no prediction is made.
 - The accuracy page compares the accuracy with the **baseline**: always guessing the most common
   real direction. At least 30 results are needed before the page says that the numbers are
   enough. A prediction with a confidence of 0.6 or more counts as high confidence. The last 30

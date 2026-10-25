@@ -1,25 +1,36 @@
 import {
   Accordion,
+  ActionIcon,
   Alert,
   Anchor,
+  Badge,
   Group,
   Paper,
   SimpleGrid,
   Stack,
-  Table,
   Text,
   Title,
+  Tooltip,
 } from "@mantine/core";
 import { Link } from "@tanstack/react-router";
+import { LuInfo } from "react-icons/lu";
 import { useEffect, useState } from "react";
 
-import type { CompanyBar, CompanyDetail, CompanyPrice } from "../../shared/api/generated/types.gen";
+import type {
+  CompanyBar,
+  CompanyDetail,
+  CompanyPrice,
+  CompanyStory,
+} from "../../shared/api/generated/types.gen";
+import { DataTable } from "../../shared/ui/DataTable";
+import type { TableColumn } from "../../shared/ui/DataTable";
 import { SavedFacts } from "../../shared/ui/SavedFacts";
 import { sourceLink } from "../../shared/ui/sourceLink";
-import { TrendChart } from "../../shared/ui/TanStackCharts";
+import { CandlestickTrendChart } from "../../shared/ui/TanStackCharts";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 
 const number = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 });
+const projectionWindow = 20;
 const date = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
   dateStyle: "medium",
@@ -30,6 +41,25 @@ export function savedTime(value: string) {
 }
 export function score(value: number | null) {
   return value === null ? "Not scored" : value.toFixed(3);
+}
+
+export function projectClosingPrices(candles: CompanyBar[]): { label: string; value: number }[] {
+  if (candles.length < projectionWindow) return [];
+  const closes = candles.slice(-projectionWindow).map((bar) => bar.close);
+  const meanX = (closes.length - 1) / 2;
+  const meanY = closes.reduce((total, close) => total + close, 0) / closes.length;
+  const slope =
+    closes.reduce((total, close, index) => total + (index - meanX) * (close - meanY), 0) /
+    closes.reduce((total, _, index) => total + (index - meanX) ** 2, 0);
+  const last = candles.at(-1)!;
+
+  return [
+    { label: last.day, value: last.close },
+    ...Array.from({ length: projectionWindow }, (_, index) => ({
+      label: `T+${index + 1}`,
+      value: last.close + slope * (index + 1),
+    })),
+  ];
 }
 
 export function QuoteFreshness({ quote }: { quote: CompanyPrice }) {
@@ -57,67 +87,97 @@ export function PriceSummary({ quote }: { quote: CompanyPrice | null }) {
       </Text>
     );
   return (
-    <Stack gap="sm">
-      <Title order={3}>INR {number.format(quote.price)}</Title>
-      <Text>
-        Change from previous close:{" "}
-        {quote.change_pct === null ? "Not available" : `${number.format(quote.change_pct)}%`}
-      </Text>
-      <Text>
-        Previous close:{" "}
-        {quote.previous_close === null
-          ? "Not available"
-          : `INR ${number.format(quote.previous_close)}`}
-      </Text>
-      <Text>
-        Volume:{" "}
-        {quote.volume === null ? "Not supplied by LTPC stream" : number.format(quote.volume)}
-      </Text>
+    <Stack gap="xs" className="company-quote-summary">
+      <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
+        <div>
+          <Text size="xs" c="dimmed">
+            Last price
+          </Text>
+          <Title order={3}>INR {number.format(quote.price)}</Title>
+        </div>
+        <div>
+          <Text size="xs" c="dimmed">
+            Change
+          </Text>
+          <Text
+            fw={600}
+            c={quote.change_pct === null ? "dimmed" : quote.change_pct >= 0 ? "teal" : "red"}
+          >
+            {quote.change_pct === null ? "Not available" : `${number.format(quote.change_pct)}%`}
+          </Text>
+        </div>
+        <div>
+          <Text size="xs" c="dimmed">
+            Previous close
+          </Text>
+          <Text fw={600}>
+            {quote.previous_close === null
+              ? "Not available"
+              : `INR ${number.format(quote.previous_close)}`}
+          </Text>
+        </div>
+        <div>
+          <Text size="xs" c="dimmed">
+            Volume
+          </Text>
+          <Text fw={600}>
+            {quote.volume === null ? "Not supplied" : number.format(quote.volume)}
+          </Text>
+        </div>
+      </SimpleGrid>
       <QuoteFreshness quote={quote} />
     </Stack>
   );
 }
 
 function PriceTrend({ candles }: { candles: CompanyBar[] }) {
-  if (!candles.length) return <Text c="dimmed">No saved daily price history.</Text>;
-  const closes = candles.map((bar) => bar.close);
-  const min = Math.min(...closes),
-    max = Math.max(...closes);
+  if (!candles.length)
+    return (
+      <Text c="dimmed">
+        No saved daily price history. At least 20 saved daily closes are needed to show a
+        projection.
+      </Text>
+    );
+  const projection = projectClosingPrices(candles);
+  const projectionPoints = projection.map(({ label, value }) => ({ label, value }));
   return (
     <Stack gap="md">
-      <Text c="dimmed">
-        Completed daily closes in INR. Unadjusted prices: splits and dividends can distort momentum.
-      </Text>
-      <TrendChart
-        points={candles.map((bar) => ({ label: bar.day, value: bar.close }))}
-        ariaLabel={`Saved closing prices from ${candles[0].day} to ${candles.at(-1)?.day}; low ${min}, high ${max} INR`}
+      <Group className="company-chart-legend" gap="md" wrap="wrap">
+        <Text size="xs">
+          <span className="company-chart-key company-chart-key-up" /> Up session
+        </Text>
+        <Text size="xs">
+          <span className="company-chart-key company-chart-key-down" /> Down session
+        </Text>
+        <Text size="xs">
+          <span className="company-chart-key company-chart-key-projection" /> History-only
+          projection
+        </Text>
+      </Group>
+      <CandlestickTrendChart
+        candles={candles.slice(-60).map((bar) => ({ ...bar, label: bar.day }))}
+        projectionPoints={projectionPoints}
+        ariaLabel={`Daily candlestick chart from ${candles.at(-60)?.day ?? candles[0].day} to ${candles.at(-1)?.day}${projection.length ? ", followed by a 20-session history-only linear projection" : ""}; each candle shows open, high, low and close in INR`}
         height={240}
       />
+      <Text c="dimmed" size="sm">
+        Each candle shows open, high, low and close in INR. The dashed line extends a linear fit of
+        the latest 20 closes across 20 future sessions; it is not a price target or financial
+        advice, has not been backtested, and splits or dividends can distort it.
+      </Text>
+      {projection.length === 0 && (
+        <Text c="dimmed">At least 20 saved daily closes are needed to show a projection.</Text>
+      )}
       <Accordion variant="separated">
         <Accordion.Item value="history">
           <Accordion.Control>Daily OHLCV history ({candles.length} sessions)</Accordion.Control>
           <Accordion.Panel>
-            <Table.ScrollContainer minWidth={550}>
-              <Table>
-                <Table.Thead>
-                  <Table.Tr>
-                    {["Day", "Open", "High", "Low", "Close", "Volume"].map((heading) => (
-                      <Table.Th key={heading}>{heading}</Table.Th>
-                    ))}
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {[...candles].reverse().map((bar) => (
-                    <Table.Tr key={bar.day}>
-                      <Table.Td>{bar.day}</Table.Td>
-                      {[bar.open, bar.high, bar.low, bar.close, bar.volume].map((value, index) => (
-                        <Table.Td key={index}>{number.format(value)}</Table.Td>
-                      ))}
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            </Table.ScrollContainer>
+            <DataTable
+              data={candles}
+              label="Daily OHLCV history"
+              columns={barColumns}
+              initialSort={[{ id: "day", desc: true }]}
+            />
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>
@@ -125,9 +185,275 @@ function PriceTrend({ candles }: { candles: CompanyBar[] }) {
   );
 }
 
+const barColumns: TableColumn<CompanyBar>[] = [
+  { id: "day", label: "Day", value: (bar) => bar.day },
+  ...(["open", "high", "low", "close", "volume"] as const).map((key) => ({
+    id: key,
+    label: key[0].toUpperCase() + key.slice(1),
+    value: (bar: CompanyBar) => bar[key],
+    render: (bar: CompanyBar) => number.format(bar[key]),
+  })),
+];
+
+type FundamentalFact = {
+  label: string;
+  value: unknown;
+  comparison?: unknown;
+};
+
+function humanize(value: string) {
+  return value.replaceAll("_", " ").replaceAll("-", " ").replace(/\s+/g, " ").trim();
+}
+
+function collectFacts(value: unknown, path: string[] = []): FundamentalFact[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) => {
+      const rowName =
+        item && typeof item === "object" && !Array.isArray(item) && typeof item.name === "string"
+          ? item.name
+          : `Record ${index + 1}`;
+      return collectFacts(item, [...path, rowName]);
+    });
+  }
+  if (!value || typeof value !== "object") return [];
+
+  const record = value as Record<string, unknown>;
+  if (typeof record.name === "string" && Object.hasOwn(record, "company_value")) {
+    return [
+      {
+        label: record.name,
+        value: record.company_value,
+        ...(Object.hasOwn(record, "sector_value") ? { comparison: record.sector_value } : {}),
+      },
+    ];
+  }
+
+  return Object.entries(record).flatMap(([key, item]) => {
+    if (key === "name" && typeof item === "string") return [];
+    const label = [...path, humanize(key)].filter(Boolean).join(" · ");
+    if (item === null || ["string", "number", "boolean"].includes(typeof item)) {
+      return [{ label, value: item }];
+    }
+    return collectFacts(item, [...path, humanize(key)]);
+  });
+}
+
+function significance(label: string, category: string) {
+  const coreMetric =
+    /valuation|market cap|revenue|profit|earnings|eps|return on|roe|roce|debt|cash flow|margin/i.test(
+      label,
+    );
+  if (coreMetric) return { label: "High significance", color: "teal" };
+  if (category === "key ratios") return { label: "Supporting", color: "blue" };
+  return { label: "Contextual", color: "gray" };
+}
+
+function comparableNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  const parsed = Number(value.replaceAll(",", "").replace(/%$/, "").trim());
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function metricAssessment(label: string, value: unknown, comparison: unknown) {
+  const actual = comparableNumber(value);
+  const sector = comparableNumber(comparison);
+  if (actual === null || sector === null) return { label: "No sector benchmark", color: "gray" };
+  if (actual === sector) return { label: "In line with sector", color: "gray" };
+
+  const key = label.toLowerCase();
+  const profitability =
+    /roe|roce|return on|profit margin|operating margin|net margin|revenue growth|earnings growth|eps growth|interest coverage/.test(
+      key,
+    );
+  const leverage = /debt.*equity|debt ratio|gearing|leverage/.test(key);
+  const valuation =
+    /p\/e|price.*earnings|p\/b|price.*book|ev\s*\/\s*ebitda|valuation multiple/.test(key);
+  const above = actual > sector;
+
+  if (profitability)
+    return above
+      ? { label: "Stronger vs sector", color: "teal" }
+      : { label: "Weaker vs sector", color: "orange" };
+  if (leverage)
+    return above
+      ? { label: "Higher leverage", color: "orange" }
+      : { label: "Lower leverage", color: "teal" };
+  if (valuation)
+    return { label: `${above ? "Higher" : "Lower"} multiple · context needed`, color: "yellow" };
+  return { label: `${above ? "Above" : "Below"} sector · context needed`, color: "gray" };
+}
+
+function factDescription(label: string) {
+  const key = label.toLowerCase();
+  if (/price to earnings|\bp\/e\b/.test(key))
+    return "Price relative to earnings per share. Compare with peers and growth; a high or low ratio is not meaningful on its own.";
+  if (/price to book|\bp\/b\b/.test(key))
+    return "Price relative to book value per share. Interpretation varies by sector and asset mix.";
+  if (/return on equity|\broe\b/.test(key))
+    return "Profit generated relative to shareholder equity. Leverage and one-off items can affect this measure.";
+  if (/debt to equity/.test(key))
+    return "Total debt relative to shareholder equity. Capital needs differ substantially across industries.";
+  if (/market cap|market capitalization/.test(key))
+    return "The market value of the company's listed equity, not the sector's market capitalization.";
+  if (/dividend yield/.test(key))
+    return "Annual dividend relative to share price. Past distributions do not guarantee future dividends.";
+  return `Provider-reported ${humanize(label)}. Check its unit, reporting period and sector context before comparing; significance describes analytical relevance, not whether the value is good or bad.`;
+}
+
+function factValue(value: unknown) {
+  if (value === null || value === undefined || value === "") return "Not available";
+  if (typeof value === "number") return number.format(value);
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  return String(value);
+}
+
+function Fundamentals({ data }: { data: CompanyDetail }) {
+  const categories = Object.entries(data.fundamentals)
+    .map(([key, value]) => ({ label: humanize(key), facts: collectFacts(value) }))
+    .filter((category) => category.facts.length > 0);
+
+  if (!categories.length) return <Text c="dimmed">No saved fundamentals.</Text>;
+
+  return (
+    <Stack gap="lg" className="company-fundamentals">
+      <Text size="sm" c="dimmed">
+        Significance indicates common analytical relevance, not whether a value is favorable. Always
+        check source units, reporting periods and sector context.
+      </Text>
+      {categories.map((category) => (
+        <section
+          key={category.label}
+          aria-label={category.label}
+          className="company-fundamental-group"
+        >
+          <Group justify="space-between" mb="sm" align="baseline">
+            <Title order={3} size="h4" tt="capitalize">
+              {category.label}
+            </Title>
+            <Text size="xs" c="dimmed">
+              {category.facts.length} metrics
+            </Text>
+          </Group>
+          <SimpleGrid cols={{ base: 1, xs: 2, lg: 4 }} spacing="xs">
+            {category.facts.map((fact, index) => {
+              const rank = significance(fact.label, category.label);
+              const assessment = metricAssessment(fact.label, fact.value, fact.comparison);
+              return (
+                <div key={`${fact.label}-${index}`} className="company-fact-item">
+                  <Group justify="space-between" align="flex-start" wrap="nowrap" gap="xs">
+                    <Text size="sm" fw={600} className="company-fact-label">
+                      {humanize(fact.label)}
+                    </Text>
+                    <Tooltip label={factDescription(fact.label)} multiline w={280} withArrow>
+                      <ActionIcon
+                        variant="subtle"
+                        size="sm"
+                        aria-label={`About ${humanize(fact.label)}`}
+                      >
+                        <LuInfo aria-hidden="true" />
+                      </ActionIcon>
+                    </Tooltip>
+                  </Group>
+                  <Text
+                    className={`company-fact-value${typeof fact.value === "string" && fact.value.length > 100 ? " company-fact-value-text" : ""}`}
+                  >
+                    {factValue(fact.value)}
+                  </Text>
+                  {fact.comparison !== undefined && (
+                    <Text size="xs" c="dimmed">
+                      Sector comparison: {factValue(fact.comparison)}
+                    </Text>
+                  )}
+                  <Group gap="xs" mt="xs" wrap="wrap">
+                    <Badge size="xs" variant="light" color={assessment.color}>
+                      {assessment.label}
+                    </Badge>
+                    <Text size="xs" c="dimmed">
+                      {rank.label} relevance
+                    </Text>
+                  </Group>
+                </div>
+              );
+            })}
+          </SimpleGrid>
+        </section>
+      ))}
+    </Stack>
+  );
+}
+
+function companyNewsSentiment(value: number | null) {
+  if (value === null) return { label: "Not scored", color: "gray" };
+  if (value > 0) return { label: `Positive · ${number.format(value)}`, color: "teal" };
+  if (value < 0) return { label: `Negative · ${number.format(value)}`, color: "red" };
+  return { label: "Neutral · 0", color: "gray" };
+}
+
+const companyNewsColumns: TableColumn<CompanyStory>[] = [
+  {
+    id: "title",
+    label: "Article & context",
+    value: (story) => story.title,
+    render: (story) => {
+      const href = sourceLink(story.url);
+      return (
+        <div className="table-story">
+          <div className="table-primary">
+            {href ? (
+              <a href={href} target="_blank" rel="noopener noreferrer">
+                {story.title}
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            ) : (
+              story.title
+            )}
+          </div>
+          {story.sentiment_reason && (
+            <Text size="sm" mt="xs">
+              {story.sentiment_reason}
+            </Text>
+          )}
+        </div>
+      );
+    },
+  },
+  { id: "source", label: "Source", value: (story) => story.source },
+  {
+    id: "published_at",
+    label: "Published",
+    value: (story) => story.published_at,
+    render: (story) =>
+      story.published_at ? (
+        <time dateTime={story.published_at}>{savedTime(story.published_at)} IST</time>
+      ) : (
+        "Not available"
+      ),
+  },
+  {
+    id: "sentiment_score",
+    label: "Sentiment",
+    value: (story) => story.sentiment_score,
+    render: (story) => {
+      const sentiment = companyNewsSentiment(story.sentiment_score);
+      return (
+        <Badge size="sm" variant="light" color={sentiment.color}>
+          {sentiment.label}
+        </Badge>
+      );
+    },
+  },
+  {
+    id: "relevance",
+    label: "Relevance",
+    value: (story) => story.relevance,
+    render: (story) =>
+      story.relevance === null ? "Not available" : number.format(story.relevance),
+  },
+];
+
 export function CompanyView({ data }: { data: CompanyDetail }) {
   usePageTitle(data.company.name);
-  const outlook = data.outlook;
   return (
     <Stack gap="xl">
       <header>
@@ -162,73 +488,23 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
           Financial-statement units and reporting periods are supplied by the source. Sector market
           cap is not the company's market cap.
         </Text>
-        <Accordion variant="separated" multiple>
-          {Object.entries(data.fundamentals).map(([key, value]) => (
-            <Accordion.Item key={key} value={key}>
-              <Accordion.Control>{key.replaceAll("-", " ").replaceAll("_", " ")}</Accordion.Control>
-              <Accordion.Panel>
-                <SavedFacts value={value} />
-              </Accordion.Panel>
-            </Accordion.Item>
-          ))}
-        </Accordion>
+        <Fundamentals data={data} />
       </section>
       {data.markets_available ? (
         <>
-          <Paper p="lg" withBorder>
-            <Title order={2} size="h3" mb="md">
-              Saved market price
-            </Title>
-            <PriceSummary quote={data.quote} />
-          </Paper>
-          <section>
-            <Title order={2} size="h3" mb="md">
-              Stock trend
-            </Title>
+          <Paper p="md" withBorder className="company-market-panel">
+            <Group justify="space-between" align="flex-start" mb="md" gap="md">
+              <div>
+                <Title order={2} size="h3">
+                  Market price &amp; trend
+                </Title>
+                <Text size="sm" c="dimmed">
+                  Daily OHLC candles with a history-only projection.
+                </Text>
+              </div>
+              <PriceSummary quote={data.quote} />
+            </Group>
             <PriceTrend candles={data.candles} />
-          </section>
-          <Paper p="lg" withBorder>
-            <Title order={2} size="h3">
-              Predicted future trend
-            </Title>
-            <Alert color="orange" my="md" title="Experimental outlook">
-              Not financial advice. Not a price target or a measured probability. This rule has not
-              been backtested.
-            </Alert>
-            {outlook ? (
-              <Stack gap="md">
-                <Text>
-                  Saved outlook for {outlook.target_date}: <strong>{outlook.direction}</strong>.
-                  Created {savedTime(outlook.created_at)} IST. Historical targets are not current
-                  forecasts.
-                </Text>
-                <SimpleGrid cols={{ base: 1, sm: 3 }}>
-                  <Text>Combined score: {score(outlook.score)}</Text>
-                  <Text>Momentum score: {score(outlook.momentum_score)}</Text>
-                  <Text>News score: {score(outlook.news_score)}</Text>
-                </SimpleGrid>
-                <Text c="dimmed">
-                  Scores run from -1 (down/negative) to +1 (up/positive). Momentum is the 20-session
-                  return divided by 10%, capped at +/-1. With news: 70% momentum, 30%
-                  relevance-weighted sentiment. Without news: momentum only. Scores within +/-0.15
-                  are flat.
-                </Text>
-                <Accordion>
-                  <Accordion.Item value="evidence">
-                    <Accordion.Control>All outlook inputs and scores</Accordion.Control>
-                    <Accordion.Panel>
-                      <SavedFacts value={outlook.inputs} />
-                    </Accordion.Panel>
-                  </Accordion.Item>
-                </Accordion>
-              </Stack>
-            ) : (
-              <Text c="dimmed">
-                {data.news_available
-                  ? "No saved outlook. At least 21 recent completed daily bars are required."
-                  : "The outlook requires access to News as well as Markets."}
-              </Text>
-            )}
           </Paper>
         </>
       ) : (
@@ -237,42 +513,43 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
       {data.news_available && (
         <section>
           <Title order={2} size="h3" mb="md">
-            Company news and sentiment scores
+            Company news
           </Title>
           <Text size="sm" c="dimmed" mb="md">
-            Latest 30 linked articles. Sentiment: -1 to +1; relevance: 0 to 1.
+            Latest 30 linked articles. Sentiment ranges from -1 (negative) to +1 (positive);
+            relevance ranges from 0 to 1. Sentiment is not a prediction.
           </Text>
-          <Stack gap="md">
-            {data.news.length ? (
-              data.news.map((story) => {
-                const href = sourceLink(story.url);
-                return (
-                  <Paper p="md" withBorder key={story.url}>
-                    {href ? (
-                      <Anchor href={href} target="_blank" rel="noopener noreferrer">
-                        {story.title}
-                      </Anchor>
-                    ) : (
-                      <Text>{story.title}</Text>
-                    )}
-                    <Text size="sm" c="dimmed">
-                      {story.source} |{" "}
-                      {story.published_at
-                        ? savedTime(story.published_at) + " IST"
-                        : "Publication time unavailable"}
-                    </Text>
-                    <Group>
-                      <Text>Sentiment: {score(story.sentiment_score)}</Text>
-                      <Text>Relevance: {score(story.relevance)}</Text>
-                    </Group>
-                    <Text>{story.sentiment_reason || "No scoring reason saved."}</Text>
-                  </Paper>
-                );
-              })
-            ) : (
-              <Text c="dimmed">No linked news saved.</Text>
-            )}
-          </Stack>
+          {data.news.length ? (
+            <DataTable
+              data={data.news}
+              label="Company news"
+              columns={companyNewsColumns}
+              initialSort={[{ id: "published_at", desc: true }]}
+              filters={[
+                {
+                  label: "Source",
+                  value: (story) => story.source,
+                  options: [
+                    ...new Set(data.news.map((story) => story.source).filter(Boolean)),
+                  ].sort(),
+                },
+                {
+                  label: "Sentiment",
+                  value: (story) =>
+                    story.sentiment_score === null
+                      ? "Not scored"
+                      : story.sentiment_score > 0
+                        ? "Positive"
+                        : story.sentiment_score < 0
+                          ? "Negative"
+                          : "Neutral",
+                  options: ["Positive", "Neutral", "Negative", "Not scored"],
+                },
+              ]}
+            />
+          ) : (
+            <Text c="dimmed">No linked news saved.</Text>
+          )}
         </section>
       )}
       {data.ipos_available && (

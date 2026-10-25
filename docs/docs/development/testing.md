@@ -25,6 +25,30 @@ uv run pytest
 A root `conftest.py` clears the settings cache before and after each test, because `conf` keeps
 saved settings in memory for 5 seconds.
 
+The React app has its own checks. Run them in `frontend/`:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm format:check     # formatting
+pnpm api:check        # the generated client matches frontend/openapi/app.json
+pnpm typecheck        # TypeScript
+pnpm test             # Vitest
+pnpm build            # production build
+```
+
+If you change a private API endpoint, export the contract and regenerate the client:
+
+```bash
+uv run python manage.py export_openapi --api app --output frontend/openapi/app.json
+cd frontend && pnpm api:generate
+```
+
+A Python test fails when `frontend/openapi/app.json` is not current. For the public API, export
+`docs/openapi/v1.json` in the same way (without `--api app`).
+
+CI runs four jobs: **Frontend** (the commands above), **Python** (the Python checks),
+**Documentation** (the docstring gate and the site build) and **Docker config and docs image**.
+
 For a check of the production settings, give a complete production-like environment:
 
 ```bash
@@ -38,7 +62,8 @@ Do not read errors from a check with placeholder values as defects of the code.
 | Place | What |
 | --- | --- |
 | `apps/<app>/tests/` | Tests of one app. |
-| `apps/api/tests/` | Tokens, authentication, rate limit, endpoints, middleware, and the OpenAPI file. |
+| `apps/api/tests/` | Tokens, authentication, rate limit, endpoints, middleware, live updates, and the two OpenAPI contracts. |
+| `frontend/src/**/*.test.tsx` | The React app (Vitest and Testing Library). |
 | `tests/test_deploy_config.py` | The Compose files and the Caddyfile. A test that adapts the Caddyfile with the real Caddy runs only when `caddy` is on the `PATH`. |
 | `tests/test_docs_scripts.py` | The OpenAPI compatibility check. |
 | `tests/test_docgen.py` | The docstring parser, the contract checks, the baseline, and a gate test that runs the contract check on the whole repository. |

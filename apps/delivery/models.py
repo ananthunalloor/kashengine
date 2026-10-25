@@ -12,10 +12,14 @@ class DeliveryLog(models.Model):
     """One try to send a report on one channel."""
 
     class Channel(models.TextChoices):
+        """The channels for a report. Only Telegram is used now. Email is for later."""
+
         TELEGRAM = "telegram", "Telegram"
         EMAIL = "email", "Email"
 
     class Status(models.TextChoices):
+        """The result of one try: the chat got the report, or the try failed."""
+
         SENT = "sent", "Sent"
         FAILED = "failed", "Failed"
 
@@ -36,6 +40,7 @@ class DeliveryLog(models.Model):
         ordering: ClassVar[list[str]] = ["-created_at"]
 
     def __str__(self):
+        """Return the channel, the status and the time of the try."""
         return f"{self.channel} {self.status} {self.created_at:%Y-%m-%d %H:%M}"
 
 
@@ -51,6 +56,7 @@ class DeliveryPreference(models.Model):
     telegram_chat_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
 
     def __str__(self):
+        """Return a label with the user name, for the admin."""
         return f"Report delivery settings for {self.user}"
 
 
@@ -64,6 +70,7 @@ class EmailVerification(models.Model):
     expires_at = models.DateTimeField()
 
     def __str__(self):
+        """Return a label with the user name, without the token digest."""
         return f"Email verification for {self.user}"
 
 
@@ -77,6 +84,7 @@ class TelegramLink(models.Model):
     expires_at = models.DateTimeField()
 
     def __str__(self):
+        """Return a label with the user name, without the token digest."""
         return f"Telegram link for {self.user}"
 
 
@@ -102,10 +110,21 @@ class SignupInvite(models.Model):
     revoked = models.BooleanField(default=False)
 
     def __str__(self):
+        """Return the invitation number, never the code."""
         return f"Sign-up invitation #{self.pk}"
 
     def generate_code(self) -> str:
-        """Set a new invitation's digest and return the code without persisting plaintext."""
+        """Make a new code, keep only its SHA-256 digest on the object, and return the code.
+
+        The caller must save the object and show the code one time. The code is never saved.
+
+        Returns:
+            The code as a URL-safe text of 43 characters (32 random bytes).
+
+        Raises:
+            ValueError: If the invitation is already saved. A saved invitation cannot get a new
+                code.
+        """
         if self.pk is not None:
             raise ValueError("An existing invitation cannot generate a new code.")
         code = secrets.token_urlsafe(32)
@@ -123,4 +142,5 @@ class LegalAcceptance(models.Model):
     accepted_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
+        """Return the user name and the accepted version."""
         return f"Legal acceptance for {self.user}: {self.version}"

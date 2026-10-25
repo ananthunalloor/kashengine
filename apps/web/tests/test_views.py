@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from apps.access.models import FeatureBlock
 from apps.companies.models import Company
-from apps.delivery.models import DeliveryLog
+from apps.delivery.models import DeliveryLog, DeliveryPreference
 from apps.ipos.models import Ipo
 from apps.markets.models import IndexQuote, Prediction
 from apps.news.models import NewsArticle
@@ -37,10 +37,12 @@ PAGES = [
 
 @pytest.fixture
 def user(db):
-    return get_user_model().objects.create_user(  # ty: ignore[unresolved-attribute]  # Django manager
+    account = get_user_model().objects.create_user(  # ty: ignore[unresolved-attribute]  # Django manager
         "anan",
         password="pass-123-word",
     )
+    DeliveryPreference.objects.create(user=account, email_verified_at=timezone.now())
+    return account
 
 
 @pytest.fixture

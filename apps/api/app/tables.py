@@ -12,7 +12,21 @@ class TableFilters(Schema):
 
 
 def ordered[T: Model](rows: QuerySet[T], sort: str, fields: dict[str, str]) -> QuerySet[T]:
-    """Apply a validated display sort with nulls last and a stable primary-key tie breaker."""
+    """Apply a validated display sort with nulls last and a stable primary-key tie breaker.
+
+    The caller must check `sort` first (the schema of the filters has a pattern). A key that is not
+    in `fields` raises `KeyError`.
+
+    Args:
+        rows: The query set to sort.
+        sort: A key of `fields`. A leading minus sign means descending order. An empty text means
+            that the caller wants no sort.
+        fields: A dict from the display key to the name of the model field.
+
+    Returns:
+        The query set unchanged for an empty `sort`. Else the query set ordered by the field, with
+        empty values last, and then by `pk` so that the order is stable.
+    """
     if not sort:
         return rows
     field = F(fields[sort.removeprefix("-")])

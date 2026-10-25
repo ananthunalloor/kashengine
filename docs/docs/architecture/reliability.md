@@ -27,9 +27,11 @@ again:
   The function `apps.ops.schedule.next_after` converts the time first. Do not call the Celery
   method directly.
 - The API gives date-time values in UTC with `Z`.
-- The code has no list of market holidays. A holiday counts as a trading day. A prediction for
-  a holiday ends as **void** and is not counted in the accuracy.
-- Weekends: `markets.predict` and `delivery.send_daily_report` do nothing on Saturday and Sunday.
+- Staff enter the market holidays and special sessions in the trading calendar. The code has no
+  official feed. A holiday that nobody entered counts as a trading day. A prediction for it ends
+  as **void** and is not counted in the accuracy.
+- Closed days: `markets.predict` and `delivery.send_daily_report` do nothing on a weekend or a
+  saved holiday. A saved special session opens a weekend day.
 
 ## Errors and logs
 

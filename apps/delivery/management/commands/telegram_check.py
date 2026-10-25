@@ -16,7 +16,19 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args, **options):
-        """Run the command."""
+        """Check the bot token and print the bot name and the chats that wrote to the bot.
+
+        The command prints the chat IDs that are in the settings. A chat that is in the settings
+        has the mark `(set)`. Telegram keeps the messages to the bot for 24 hours, so a chat
+        that wrote a longer time ago is not shown.
+
+        Args:
+            args: Positional arguments. The command has none.
+            options: The parsed options. The command has none.
+
+        Raises:
+            CommandError: If the bot token is not set or if Telegram refuses the request.
+        """
         if not conf.TELEGRAM_BOT_TOKEN:
             raise CommandError("TELEGRAM_BOT_TOKEN is not set. Get a token from @BotFather.")
         try:

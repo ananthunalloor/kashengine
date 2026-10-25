@@ -217,7 +217,15 @@ def unlink_telegram(request: HttpRequest):
 
 
 def _delivery_summary(preference: DeliveryPreference) -> dict:
-    """Return safe delivery preference fields without revealing the Telegram chat ID."""
+    """Return the delivery choices of a user in a form that is safe for the browser.
+
+    Args:
+        preference: The delivery preference of the signed-in user.
+
+    Returns:
+        A dict with `email_verified`, `email_reports`, `telegram_connected`, `telegram_reports`
+        and `telegram_bot_username`. It never has the Telegram chat ID.
+    """
     return {
         "email_verified": preference.email_verified_at is not None,
         "email_reports": preference.email_reports,

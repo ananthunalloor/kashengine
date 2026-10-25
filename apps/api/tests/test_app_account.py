@@ -66,7 +66,7 @@ def test_resend_verification_is_owner_scoped_and_can_verify_later(client, member
     )
     assert client.post(VERIFY).status_code == 200
     assert EmailVerification.objects.get(user=member).token_hash != previous
-    url = re.search(r"https?://\S+/verify-email/[^/\s]+/", mail.outbox[-1].body)
+    url = re.search(r"https?://\S+/verify-email/[^/\s]+/", str(mail.outbox[-1].body))
     assert url
     assert client.get(urlparse(url.group()).path).status_code == 200
     assert DeliveryPreference.objects.get(user=member).email_verified_at is not None
@@ -449,3 +449,14 @@ def test_telegram_webhook_requires_secret_and_ignores_invalid_tokens(client, set
     )
     assert response.status_code == 200
     assert not DeliveryPreference.objects.filter(telegram_chat_id="55").exists()
+
+
+def test_telegram_webhook_rejects_a_non_ascii_secret_header_with_401(client, settings):
+    settings.TELEGRAM_WEBHOOK_SECRET = "webhook-secret-for-tests"
+    response = client.post(
+        "/api/telegram/webhook/",
+        data="{}",
+        content_type="application/json",
+        headers={"X-Telegram-Bot-Api-Secret-Token": "é-not-ascii"},
+    )
+    assert response.status_code == 401
