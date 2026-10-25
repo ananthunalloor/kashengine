@@ -460,8 +460,8 @@ def sync_ipos(client: UpstoxClient) -> dict:
                     if existing:
                         record.name = existing.name
                         record.isin = existing.isin or record.isin
-                    counts[save_record(record)] += 1
-                    ipo = find_existing(record)
+                    counts[save_record(record, upstox_id=issue.id)] += 1
+                    ipo = find_existing(record, upstox_id=issue.id)
                     if ipo is not None:
                         ipo.upstox_id = issue.id
                         ipo.upstox_data = detail.data

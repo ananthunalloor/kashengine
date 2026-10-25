@@ -5,6 +5,7 @@ import logging
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from urllib.parse import urlparse
 
 from django.utils import timezone
 
@@ -15,11 +16,20 @@ from apps.news.scraper import PoliteFetcher
 from apps.siteconfig import conf
 
 from .models import Ipo
-from .sources import MAINBOARD, SME, IpoRecord, IpoSourceError, fetch_records, parse_date
+from .sources import (
+    MAINBOARD,
+    SME,
+    IpoRecord,
+    IpoSourceError,
+    clean_name,
+    fetch_records,
+    parse_date,
+)
 
 logger = logging.getLogger(__name__)
 
 FY_START_MONTH = 4  # The Indian financial year starts in April.
+MIN_SOURCE_URL_SEGMENTS = 3
 
 # Fields that a record can set. A value of None never replaces a value that we have.
 PLAIN_FIELDS = (
@@ -83,24 +93,31 @@ def refresh_statuses(today: date | None = None) -> int:
     return changed
 
 
-def find_existing(record: IpoRecord) -> Ipo | None:
+def find_existing(record: IpoRecord, upstox_id: str | None = None) -> Ipo | None:
     """Find the saved IPO that a record is about.
 
-    1. The same name and the same open date.
-    2. The same company (the name without "Ltd" and so on) with no result yet. This covers an IPO
+    1. The same Upstox ID or specific source detail URL.
+    2. The same ISIN, name and open date, or normalized company name.
+    3. The same company (the name without "Ltd" and so on) with no result yet. This covers an IPO
        that moved to other dates. A company does not make two IPOs at the same time.
     """
-    if record.isin:
+    identified = Ipo.objects.filter(upstox_id=upstox_id).first() if upstox_id else None
+    if identified is None and record.isin:
         identified = Ipo.objects.filter(isin=record.isin).first()
-        if identified:
-            return identified
+    if identified is None:
+        source_path = urlparse(record.source_url).path.rstrip("/").split("/")
+        if len(source_path) >= MIN_SOURCE_URL_SEGMENTS and source_path[-1].isdigit():
+            source_urls = {record.source_url.rstrip("/"), record.source_url.rstrip("/") + "/"}
+            identified = Ipo.objects.filter(source_url__in=source_urls).first()
+    if identified:
+        return identified
     exact = Ipo.objects.filter(name=record.name, open_date=record.open_date).first()
     if exact:
         return exact
-    key = normalize_name(record.name)
+    key = normalize_name(clean_name(record.name))
     if not key:
         return None
-    candidates = [ipo for ipo in Ipo.objects.all() if normalize_name(ipo.name) == key]
+    candidates = [ipo for ipo in Ipo.objects.all() if normalize_name(clean_name(ipo.name)) == key]
     for ipo in candidates:
         if ipo.open_date == record.open_date:
             return ipo
@@ -110,16 +127,16 @@ def find_existing(record: IpoRecord) -> Ipo | None:
     return pending[0] if pending else None
 
 
-def save_record(record: IpoRecord, today: date | None = None) -> str:
+def save_record(record: IpoRecord, today: date | None = None, upstox_id: str | None = None) -> str:
     """Save one record. Return "created", "updated", "unchanged", or "skipped"."""
     today = today or today_ist()
-    ipo = find_existing(record)
+    ipo = find_existing(record, upstox_id)
 
     if ipo is None:
         oldest = today - timedelta(days=conf.IPO_KEEP_DAYS)
         if record.open_date and record.open_date < oldest:
             return "skipped"  # An old IPO. We have no score for it, so it is no use to us.
-        ipo = Ipo(name=record.name, category=record.category or MAINBOARD)
+        ipo = Ipo(name=record.name, category=record.category or MAINBOARD, upstox_id=upstox_id)
         outcome = "created"
     else:
         outcome = "updated"

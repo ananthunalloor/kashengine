@@ -179,6 +179,10 @@ it("renders saved company data and a history-only trend projection", async () =>
   expect(screen.getByRole("link", { name: /Market pressure story/ })).toBeInTheDocument();
   expect(screen.queryByText("Company story")).not.toBeInTheDocument();
   expect(screen.getByText(/not been backtested/)).toBeInTheDocument();
+  expect(screen.getByText("Engine Outlook")).toBeInTheDocument();
+  expect(screen.getByText("Bullish")).toBeInTheDocument();
+  expect(screen.getByText("Signal Score: 0.500")).toBeInTheDocument();
+  expect(screen.getByRole("navigation", { name: "Company sections" })).toBeInTheDocument();
   expect(fetch).toHaveBeenCalledWith("/api/app/companies/1", expect.anything());
 });
 

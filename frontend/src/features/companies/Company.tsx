@@ -13,8 +13,22 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { Link } from "@tanstack/react-router";
-import { LuInfo } from "react-icons/lu";
 import { useEffect, useState } from "react";
+import {
+  LuActivity,
+  LuArrowDownRight,
+  LuArrowLeft,
+  LuArrowUpRight,
+  LuBuilding2,
+  LuChartNoAxesCombined,
+  LuExternalLink,
+  LuInfo,
+  LuLayers,
+  LuMinus,
+  LuNewspaper,
+  LuTrendingDown,
+  LuTrendingUp,
+} from "react-icons/lu";
 
 import type {
   CompanyBar,
@@ -70,12 +84,18 @@ export function QuoteFreshness({ quote }: { quote: CompanyPrice }) {
   }, []);
   const stale = now - Date.parse(quote.as_of) > (quote.mode === "stream" ? 15_000 : 600_000);
   return (
-    <Text size="sm" c={stale ? "dimmed" : undefined}>
-      {quote.mode === "stream" ? "Stream observation" : "Scheduled snapshot"}
-      {stale ? " - older observation, not live" : ""}
-      {" | "}
-      <time dateTime={quote.as_of}>{savedTime(quote.as_of)} IST</time>
-    </Text>
+    <Group gap="xs" align="center" className="company-quote-freshness">
+      <span
+        className={`company-freshness-dot ${stale ? "is-stale" : "is-live"}`}
+        aria-hidden="true"
+      />
+      <Text size="sm" c={stale ? "dimmed" : undefined}>
+        {quote.mode === "stream" ? "Stream observation" : "Scheduled snapshot"}
+        {stale ? " - older observation, not live" : ""}
+        {" | "}
+        <time dateTime={quote.as_of}>{savedTime(quote.as_of)} IST</time>
+      </Text>
+    </Group>
   );
 }
 
@@ -89,25 +109,33 @@ export function PriceSummary({ quote }: { quote: CompanyPrice | null }) {
   return (
     <Stack gap="xs" className="company-quote-summary">
       <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
-        <div>
-          <Text size="xs" c="dimmed">
+        <div className="company-quote-metric">
+          <Text size="xs" c="dimmed" fw={600} tt="uppercase">
             Last price
           </Text>
           <Title order={3}>INR {number.format(quote.price)}</Title>
         </div>
-        <div>
-          <Text size="xs" c="dimmed">
+        <div className="company-quote-metric">
+          <Text size="xs" c="dimmed" fw={600} tt="uppercase">
             Change
           </Text>
-          <Text
-            fw={600}
-            c={quote.change_pct === null ? "dimmed" : quote.change_pct >= 0 ? "teal" : "red"}
-          >
-            {quote.change_pct === null ? "Not available" : `${number.format(quote.change_pct)}%`}
-          </Text>
+          <Group gap={4} align="center">
+            {quote.change_pct !== null &&
+              (quote.change_pct >= 0 ? (
+                <LuArrowUpRight aria-hidden="true" />
+              ) : (
+                <LuArrowDownRight aria-hidden="true" />
+              ))}
+            <Text
+              fw={600}
+              c={quote.change_pct === null ? "dimmed" : quote.change_pct >= 0 ? "teal" : "red"}
+            >
+              {quote.change_pct === null ? "Not available" : `${number.format(quote.change_pct)}%`}
+            </Text>
+          </Group>
         </div>
-        <div>
-          <Text size="xs" c="dimmed">
+        <div className="company-quote-metric">
+          <Text size="xs" c="dimmed" fw={600} tt="uppercase">
             Previous close
           </Text>
           <Text fw={600}>
@@ -116,8 +144,8 @@ export function PriceSummary({ quote }: { quote: CompanyPrice | null }) {
               : `INR ${number.format(quote.previous_close)}`}
           </Text>
         </div>
-        <div>
-          <Text size="xs" c="dimmed">
+        <div className="company-quote-metric">
+          <Text size="xs" c="dimmed" fw={600} tt="uppercase">
             Volume
           </Text>
           <Text fw={600}>
@@ -160,11 +188,13 @@ function PriceTrend({ candles }: { candles: CompanyBar[] }) {
         ariaLabel={`Daily candlestick chart from ${candles.at(-60)?.day ?? candles[0].day} to ${candles.at(-1)?.day}${projection.length ? ", followed by a 20-session history-only linear projection" : ""}; each candle shows open, high, low and close in INR`}
         height={240}
       />
-      <Text c="dimmed" size="sm">
-        Each candle shows open, high, low and close in INR. The dashed line extends a linear fit of
-        the latest 20 closes across 20 future sessions; it is not a price target or financial
-        advice, has not been backtested, and splits or dividends can distort it.
-      </Text>
+      <div className="company-chart-note">
+        <Text c="dimmed" size="sm">
+          Each candle shows open, high, low and close in INR. The dashed line extends a linear fit
+          of the latest 20 closes across 20 future sessions; it is not a price target or financial
+          advice, has not been backtested, and splits or dividends can distort it.
+        </Text>
+      </div>
       {projection.length === 0 && (
         <Text c="dimmed">At least 20 saved daily closes are needed to show a projection.</Text>
       )}
@@ -298,7 +328,7 @@ function factDescription(label: string) {
     return "The market value of the company's listed equity, not the sector's market capitalization.";
   if (/dividend yield/.test(key))
     return "Annual dividend relative to share price. Past distributions do not guarantee future dividends.";
-  return `Provider-reported ${humanize(label)}. Check its unit, reporting period and sector context before comparing; significance describes analytical relevance, not whether the value is good or bad.`;
+  return `Provider-reported ${humanize(label)}. Check its unit, reporting period and sector context before comparing; significance describes analytical relevance, not whether a value is good or bad.`;
 }
 
 function factValue(value: unknown) {
@@ -317,10 +347,12 @@ function Fundamentals({ data }: { data: CompanyDetail }) {
 
   return (
     <Stack gap="lg" className="company-fundamentals">
-      <Text size="sm" c="dimmed">
-        Significance indicates common analytical relevance, not whether a value is favorable. Always
-        check source units, reporting periods and sector context.
-      </Text>
+      <div className="company-callout">
+        <Text size="sm" c="dimmed">
+          Significance indicates common analytical relevance, not whether a value is favorable.
+          Always check source units, reporting periods and sector context.
+        </Text>
+      </div>
       {categories.map((category) => (
         <section
           key={category.label}
@@ -328,19 +360,25 @@ function Fundamentals({ data }: { data: CompanyDetail }) {
           className="company-fundamental-group"
         >
           <Group justify="space-between" mb="sm" align="baseline">
-            <Title order={3} size="h4" tt="capitalize">
-              {category.label}
-            </Title>
-            <Text size="xs" c="dimmed">
-              {category.facts.length} metrics
-            </Text>
+            <Group gap="xs" align="center">
+              <Title order={3} size="h4" tt="capitalize">
+                {category.label}
+              </Title>
+              <Badge size="xs" variant="light" color="gray">
+                {category.facts.length} metrics
+              </Badge>
+            </Group>
           </Group>
-          <SimpleGrid cols={{ base: 1, xs: 2, lg: 4 }} spacing="xs">
+          <SimpleGrid cols={{ base: 1, xs: 2, lg: 4 }} spacing="sm">
             {category.facts.map((fact, index) => {
               const rank = significance(fact.label, category.label);
               const assessment = metricAssessment(fact.label, fact.value, fact.comparison);
               return (
-                <div key={`${fact.label}-${index}`} className="company-fact-item">
+                <div
+                  key={`${fact.label}-${index}`}
+                  className="company-fact-item"
+                  data-assessment={assessment.color}
+                >
                   <Group justify="space-between" align="flex-start" wrap="nowrap" gap="xs">
                     <Text size="sm" fw={600} className="company-fact-label">
                       {humanize(fact.label)}
@@ -361,11 +399,11 @@ function Fundamentals({ data }: { data: CompanyDetail }) {
                     {factValue(fact.value)}
                   </Text>
                   {fact.comparison !== undefined && (
-                    <Text size="xs" c="dimmed">
+                    <Text size="xs" c="dimmed" className="company-fact-comparison">
                       Sector comparison: {factValue(fact.comparison)}
                     </Text>
                   )}
-                  <Group gap="xs" mt="xs" wrap="wrap">
+                  <Group gap="xs" mt="xs" wrap="wrap" align="center">
                     <Badge size="xs" variant="light" color={assessment.color}>
                       {assessment.label}
                     </Badge>
@@ -454,33 +492,328 @@ const companyNewsColumns: TableColumn<CompanyStory>[] = [
 
 export function CompanyView({ data }: { data: CompanyDetail }) {
   usePageTitle(data.company.name);
+
+  const hasMarkets = data.markets_available;
+  const hasNews = data.news_available;
+  const hasIpos = data.ipos_available;
+
   return (
-    <Stack gap="xl">
-      <header>
-        <Anchor component={Link} to="/companies/">
-          Companies
-        </Anchor>
-        <Title order={1}>{data.company.name}</Title>
-        <Text>
-          {data.company.symbol} | {data.company.sector || "Sector not available"}
-        </Text>
-        <Text c="dimmed">{data.instrument_key || "No Upstox instrument mapping configured."}</Text>
+    <Stack gap="xl" className="company-page-root">
+      {/* 1. Modern Header / Hero Section */}
+      <header className="company-header-hero">
+        <Group justify="space-between" align="center" wrap="wrap" gap="sm" mb="xs">
+          <Anchor component={Link} to="/companies/" className="company-back-link">
+            <LuArrowLeft aria-hidden="true" />
+            <span>Companies</span>
+          </Anchor>
+          {data.company.screener_url && sourceLink(data.company.screener_url) && (
+            <Anchor
+              href={sourceLink(data.company.screener_url)!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="company-screener-link"
+            >
+              <span>Screener</span>
+              <LuExternalLink aria-hidden="true" />
+              <span className="sr-only"> (opens in a new tab)</span>
+            </Anchor>
+          )}
+        </Group>
+
+        <Group justify="space-between" align="flex-end" wrap="wrap" gap="md">
+          <div className="company-identity">
+            <Title order={1} className="company-title">
+              {data.company.name}
+            </Title>
+            <Group gap="xs" mt="xs" wrap="wrap" align="center">
+              <Badge size="md" variant="filled" color="violet">
+                {data.company.symbol}
+              </Badge>
+              <Badge size="md" variant="light" color="gray">
+                {data.company.sector || "Sector not available"}
+              </Badge>
+              {data.instrument_key && (
+                <Badge size="md" variant="outline" color="gray" className="company-key-badge">
+                  Key: {data.instrument_key}
+                </Badge>
+              )}
+            </Group>
+            <Text size="xs" c="dimmed" mt="xs">
+              {data.company.symbol} | {data.company.sector || "Sector not available"}
+            </Text>
+            <Text size="xs" c="dimmed">
+              {data.instrument_key || "No Upstox instrument mapping configured."}
+            </Text>
+          </div>
+        </Group>
       </header>
+
+      {/* 2. System Alerts / Section Refresh Errors */}
       {Object.entries(data.errors).map(([section, message]) => (
         <Alert key={section} color="orange" title={`${section} refresh failed`}>
           {message} Previously saved data is retained.
         </Alert>
       ))}
-      <Paper p="lg" withBorder>
-        <Title order={2} size="h3" mb="md">
-          Company summary
-        </Title>
-        <Text>{data.summary || "No provider business summary has been saved yet."}</Text>
+
+      {/* 3. At-a-Glance Snapshot KPI Row */}
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: hasMarkets && data.outlook ? 4 : 3 }} spacing="md">
+        {/* KPI Card 1: Trading session / Company profile */}
+        {hasMarkets && data.quote ? (
+          <Paper p="md" withBorder className="company-stat-card">
+            <Group justify="space-between" align="center">
+              <Text size="xs" c="dimmed" fw={600} tt="uppercase">
+                Trading Session
+              </Text>
+              <LuActivity className="company-stat-icon" aria-hidden="true" />
+            </Group>
+            <div>
+              <Text size="sm" c="dimmed">
+                Previous close:{" "}
+                <Text component="span" fw={600} c="var(--brand-ink)">
+                  {data.quote.previous_close !== null
+                    ? `INR ${number.format(data.quote.previous_close)}`
+                    : "Not available"}
+                </Text>
+              </Text>
+              <Text size="sm" c="dimmed" mt={4}>
+                Volume:{" "}
+                <Text component="span" fw={600} c="var(--brand-ink)">
+                  {data.quote.volume !== null ? number.format(data.quote.volume) : "Not supplied"}
+                </Text>
+              </Text>
+            </div>
+            <Group justify="space-between" mt="xs" pt="xs" className="company-stat-subrow">
+              <Text size="xs" c="dimmed">
+                Observation:{" "}
+                {data.quote.mode === "stream" ? "Realtime stream" : "Scheduled snapshot"}
+              </Text>
+            </Group>
+          </Paper>
+        ) : (
+          <Paper p="md" withBorder className="company-stat-card">
+            <Group justify="space-between" align="center">
+              <Text size="xs" c="dimmed" fw={600} tt="uppercase">
+                Company Profile
+              </Text>
+              <LuBuilding2 className="company-stat-icon" aria-hidden="true" />
+            </Group>
+            <div>
+              <Text size="sm" fw={600}>
+                {data.company.sector || "Unclassified Sector"}
+              </Text>
+              <Text size="xs" c="dimmed" mt={4}>
+                {data.instrument_key ? "Upstox instrument configured" : "No instrument key mapped"}
+              </Text>
+            </div>
+            <Group justify="space-between" mt="xs" pt="xs" className="company-stat-subrow">
+              <Text size="xs" c="dimmed">
+                Symbol: {data.company.symbol}
+              </Text>
+            </Group>
+          </Paper>
+        )}
+
+        {/* KPI Card 2: Engine Outlook / Direction Signal */}
+        {hasMarkets && data.outlook && (
+          <Paper p="md" withBorder className="company-stat-card">
+            <Group justify="space-between" align="center">
+              <Text size="xs" c="dimmed" fw={600} tt="uppercase">
+                Engine Outlook
+              </Text>
+              <span className="report-outlook" data-tone={data.outlook.direction}>
+                {data.outlook.direction === "up" ? (
+                  <LuTrendingUp aria-hidden="true" />
+                ) : data.outlook.direction === "down" ? (
+                  <LuTrendingDown aria-hidden="true" />
+                ) : (
+                  <LuMinus aria-hidden="true" />
+                )}{" "}
+                {data.outlook.direction === "up"
+                  ? "Bullish"
+                  : data.outlook.direction === "down"
+                    ? "Bearish"
+                    : "Neutral"}
+              </span>
+            </Group>
+            <div>
+              <Text size="sm" fw={600}>
+                Signal Score: {score(data.outlook.score)}
+              </Text>
+              <Text size="xs" c="dimmed" mt={2}>
+                Target: {data.outlook.target_date}
+              </Text>
+            </div>
+            <Group justify="space-between" mt="xs" pt="xs" className="company-stat-subrow">
+              <Text size="xs" c="dimmed">
+                Momentum: {score(data.outlook.momentum_score)}
+              </Text>
+              <Text size="xs" c="dimmed">
+                News: {data.outlook.news_score !== null ? score(data.outlook.news_score) : "None"}
+              </Text>
+            </Group>
+          </Paper>
+        )}
+
+        {/* KPI Card 3: News Sentiment */}
+        {hasNews && (
+          <Paper p="md" withBorder className="company-stat-card">
+            <Group justify="space-between" align="center">
+              <Text size="xs" c="dimmed" fw={600} tt="uppercase">
+                News Sentiment
+              </Text>
+              <LuNewspaper className="company-stat-icon" aria-hidden="true" />
+            </Group>
+            <div>
+              <Text size="lg" fw={700}>
+                {data.news.length} {data.news.length === 1 ? "article" : "articles"}
+              </Text>
+              <Text size="xs" c="dimmed" mt={2}>
+                {data.news.length > 0 ? "Latest market coverage" : "No linked coverage"}
+              </Text>
+            </div>
+            {data.news.length > 0 ? (
+              <Group gap="xs" mt="xs" pt="xs" className="company-stat-subrow">
+                <Badge size="xs" variant="light" color="teal">
+                  {
+                    data.news.filter((s) => s.sentiment_score !== null && s.sentiment_score > 0)
+                      .length
+                  }{" "}
+                  Positive
+                </Badge>
+                <Badge size="xs" variant="light" color="gray">
+                  {
+                    data.news.filter((s) => s.sentiment_score === null || s.sentiment_score === 0)
+                      .length
+                  }{" "}
+                  Neutral
+                </Badge>
+                <Badge size="xs" variant="light" color="red">
+                  {
+                    data.news.filter((s) => s.sentiment_score !== null && s.sentiment_score < 0)
+                      .length
+                  }{" "}
+                  Negative
+                </Badge>
+              </Group>
+            ) : (
+              <Group mt="xs" pt="xs" className="company-stat-subrow">
+                <Text size="xs" c="dimmed">
+                  No sentiment feed
+                </Text>
+              </Group>
+            )}
+          </Paper>
+        )}
+
+        {/* KPI Card 4: Data & Records Availability */}
+        <Paper p="md" withBorder className="company-stat-card">
+          <Group justify="space-between" align="center">
+            <Text size="xs" c="dimmed" fw={600} tt="uppercase">
+              Fundamentals &amp; Records
+            </Text>
+            <LuLayers className="company-stat-icon" aria-hidden="true" />
+          </Group>
+          <div>
+            <Text size="sm">
+              <Text component="span" c="dimmed">
+                Source:{" "}
+              </Text>
+              <Text component="span" fw={600}>
+                {data.fundamentals_source || "None"}
+              </Text>
+            </Text>
+            <Text size="sm" mt={2}>
+              <Text component="span" c="dimmed">
+                Price history:{" "}
+              </Text>
+              <Text component="span" fw={600}>
+                {data.candles.length} sessions
+              </Text>
+            </Text>
+          </div>
+          <Group justify="space-between" mt="xs" pt="xs" className="company-stat-subrow">
+            <Text size="xs" c="dimmed">
+              IPO scores: {data.ipos.length ? `${data.ipos.length} recorded` : "None"}
+            </Text>
+          </Group>
+        </Paper>
+      </SimpleGrid>
+
+      {/* 4. Quick-Jump In-Page Nav Bar */}
+      <nav aria-label="Company sections" className="company-section-nav">
+        {hasMarkets && (
+          <a href="#market-panel" className="company-nav-pill">
+            <LuChartNoAxesCombined aria-hidden="true" />
+            <span>Market &amp; Trend</span>
+          </a>
+        )}
+        <a href="#company-summary" className="company-nav-pill">
+          <LuBuilding2 aria-hidden="true" />
+          <span>About</span>
+        </a>
+        <a href="#fundamentals" className="company-nav-pill">
+          <LuActivity aria-hidden="true" />
+          <span>Fundamentals</span>
+        </a>
+        {hasNews && (
+          <a href="#company-news" className="company-nav-pill">
+            <LuNewspaper aria-hidden="true" />
+            <span>News ({data.news.length})</span>
+          </a>
+        )}
+        {hasIpos && data.ipos.length > 0 && (
+          <a href="#company-ipos" className="company-nav-pill">
+            <LuLayers aria-hidden="true" />
+            <span>IPOs ({data.ipos.length})</span>
+          </a>
+        )}
+      </nav>
+
+      {/* 5. Company Summary / Business Overview Card */}
+      <Paper id="company-summary" p="lg" withBorder className="company-summary-card">
+        <Group gap="xs" mb="sm" align="center">
+          <LuBuilding2 className="company-summary-icon" aria-hidden="true" />
+          <Title order={2} size="h3">
+            Company summary
+          </Title>
+        </Group>
+        <Text className="company-summary-text">
+          {data.summary || "No provider business summary has been saved yet."}
+        </Text>
       </Paper>
-      <section aria-label="Company fundamentals">
-        <Title order={2} size="h3">
-          Fundamentals
-        </Title>
+
+      {/* 6. Market Price & Trend Section */}
+      {hasMarkets ? (
+        <Paper id="market-panel" p="lg" withBorder className="company-market-panel">
+          <Group justify="space-between" align="flex-start" mb="md" gap="md" wrap="wrap">
+            <div>
+              <Title order={2} size="h3">
+                Market price &amp; trend
+              </Title>
+              <Text size="sm" c="dimmed">
+                Daily OHLC candles with a history-only projection.
+              </Text>
+            </div>
+            <PriceSummary quote={data.quote} />
+          </Group>
+          <PriceTrend candles={data.candles} />
+        </Paper>
+      ) : (
+        <Text c="dimmed">Market prices, stock trends and outlooks require Markets access.</Text>
+      )}
+
+      {/* 7. Fundamentals Section */}
+      <section id="fundamentals" aria-label="Company fundamentals">
+        <Group justify="space-between" align="baseline" wrap="wrap" gap="sm">
+          <Title order={2} size="h3">
+            Fundamentals
+          </Title>
+          {data.fundamentals_source && (
+            <Badge variant="light" color="violet">
+              Provider: {data.fundamentals_source}
+            </Badge>
+          )}
+        </Group>
         <Text c="dimmed" my="sm">
           {data.fundamentals_source
             ? `${data.fundamentals_source} | saved ${data.fundamentals_as_of ? savedTime(data.fundamentals_as_of) + " IST" : "at an unknown time"}`
@@ -490,31 +823,40 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
         </Text>
         <Fundamentals data={data} />
       </section>
-      {data.markets_available ? (
-        <>
-          <Paper p="md" withBorder className="company-market-panel">
-            <Group justify="space-between" align="flex-start" mb="md" gap="md">
-              <div>
-                <Title order={2} size="h3">
-                  Market price &amp; trend
-                </Title>
-                <Text size="sm" c="dimmed">
-                  Daily OHLC candles with a history-only projection.
-                </Text>
-              </div>
-              <PriceSummary quote={data.quote} />
-            </Group>
-            <PriceTrend candles={data.candles} />
-          </Paper>
-        </>
-      ) : (
-        <Text c="dimmed">Market prices, stock trends and outlooks require Markets access.</Text>
-      )}
-      {data.news_available && (
-        <section>
-          <Title order={2} size="h3" mb="md">
-            Company news
-          </Title>
+
+      {/* 8. Company News Section */}
+      {hasNews && (
+        <section id="company-news" aria-label="Company news">
+          <Group justify="space-between" align="baseline" wrap="wrap" gap="sm" mb="xs">
+            <Title order={2} size="h3">
+              Company news
+            </Title>
+            {data.news.length > 0 && (
+              <Group gap="xs">
+                <Badge variant="light" color="teal" size="sm">
+                  {
+                    data.news.filter((s) => s.sentiment_score !== null && s.sentiment_score > 0)
+                      .length
+                  }{" "}
+                  Positive
+                </Badge>
+                <Badge variant="light" color="gray" size="sm">
+                  {
+                    data.news.filter((s) => s.sentiment_score === null || s.sentiment_score === 0)
+                      .length
+                  }{" "}
+                  Neutral
+                </Badge>
+                <Badge variant="light" color="red" size="sm">
+                  {
+                    data.news.filter((s) => s.sentiment_score !== null && s.sentiment_score < 0)
+                      .length
+                  }{" "}
+                  Negative
+                </Badge>
+              </Group>
+            )}
+          </Group>
           <Text size="sm" c="dimmed" mb="md">
             Latest 30 linked articles. Sentiment ranges from -1 (negative) to +1 (positive);
             relevance ranges from 0 to 1. Sentiment is not a prediction.
@@ -552,22 +894,47 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
           )}
         </section>
       )}
-      {data.ipos_available && (
-        <section>
+
+      {/* 9. IPO Scores Section */}
+      {hasIpos && (
+        <section id="company-ipos" aria-label="IPO scores">
           <Title order={2} size="h3" mb="md">
             IPO scores
           </Title>
-          <Stack>
+          <Stack gap="md">
             {data.ipos.length ? (
               data.ipos.map((ipo) => (
-                <Paper key={ipo.id} p="md" withBorder>
-                  <Link to="/ipos/$id/" params={{ id: String(ipo.id) }}>
-                    {ipo.name}
-                  </Link>
-                  <Text>
+                <Paper key={ipo.id} p="md" withBorder className="company-ipo-card">
+                  <Group justify="space-between" align="center" wrap="wrap" gap="sm" mb="xs">
+                    <Link
+                      to="/ipos/$id/"
+                      params={{ id: String(ipo.id) }}
+                      className="company-ipo-link"
+                    >
+                      <Text fw={650} size="md">
+                        {ipo.name}
+                      </Text>
+                    </Link>
+                    <Group gap="xs">
+                      {ipo.verdict && (
+                        <Badge
+                          variant="light"
+                          color={ipo.verdict.toLowerCase().includes("avoid") ? "red" : "teal"}
+                        >
+                          {ipo.verdict}
+                        </Badge>
+                      )}
+                      {ipo.score !== null && (
+                        <Badge variant="filled" color="violet">
+                          Score: {score(ipo.score)}
+                        </Badge>
+                      )}
+                    </Group>
+                  </Group>
+                  <Text size="sm" c="dimmed" mb="sm">
                     Score (-1 to +1): {score(ipo.score)} | {ipo.verdict || "No verdict"}
                   </Text>
-                  <Accordion>
+                  <Accordion variant="separated">
                     <Accordion.Item value="inputs">
                       <Accordion.Control>All IPO scoring inputs</Accordion.Control>
                       <Accordion.Panel>

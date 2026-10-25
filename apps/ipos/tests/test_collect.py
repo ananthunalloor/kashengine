@@ -112,6 +112,35 @@ def test_save_record_saves_the_exchange_codes_and_keeps_them_when_a_record_has_n
     assert (ipo.nse_symbol, ipo.bse_code, ipo.isin) == ("ACME", "544001", "INE000A01010")
 
 
+def test_different_names_for_one_source_url_update_the_same_ipo():
+    source_url = "https://www.chittorgarh.com/ipo/acme-foods-ipo/1234/"
+    first = record("Acme Foods Ltd. CT", source_url=source_url)
+    renamed = record("Acme Foods Ltd.", source_url=source_url)
+
+    assert save_record(first, TODAY) == "created"
+    assert save_record(renamed, TODAY) == "unchanged"
+
+    assert Ipo.objects.count() == 1
+    assert Ipo.objects.get().name == "Acme Foods Ltd. CT"
+
+
+def test_ipo_suffix_and_company_suffix_match_the_same_name():
+    assert save_record(record("Acme Foods IPO"), TODAY) == "created"
+
+    assert save_record(record("Acme Foods Limited"), TODAY) == "unchanged"
+
+    assert Ipo.objects.count() == 1
+
+
+def test_upstox_id_matches_an_ipo_even_when_its_name_changes():
+    assert save_record(record("Acme Foods IPO"), TODAY, upstox_id="acme-ipo-123") == "created"
+
+    assert save_record(record("Acme Foods Limited"), TODAY, upstox_id="acme-ipo-123") == "unchanged"
+
+    assert Ipo.objects.count() == 1
+    assert Ipo.objects.get().upstox_id == "acme-ipo-123"
+
+
 def test_save_record_updates_and_does_not_erase_known_values():
     make_ipo(lot_size=150, issue_size_cr=D("500"))
 
