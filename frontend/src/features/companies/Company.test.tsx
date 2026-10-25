@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { ThemeProvider } from "../../app/ThemeProvider";
@@ -20,7 +20,13 @@ const detail: CompanyDetail = {
   },
   summary: "A saved business summary.",
   instrument_key: "NSE_EQ|INE002A01018",
-  fundamentals: { "key-ratios": [{ name: "P/E", company_value: "20", sector_value: "15" }] },
+  fundamentals: {
+    "key-ratios": [
+      { name: "P/E", company_value: "20", sector_value: "15" },
+      { name: "ROE", company_value: "20", sector_value: "15" },
+      { name: "Debt to equity", company_value: "2", sector_value: "1" },
+    ],
+  },
   fundamentals_source: "Upstox",
   fundamentals_as_of: "2026-10-22T10:00:00Z",
   errors: {},
@@ -58,6 +64,15 @@ const detail: CompanyDetail = {
       sentiment_score: 0.3,
       relevance: 0.8,
       sentiment_reason: "Saved reason",
+    },
+    {
+      title: "Market pressure story",
+      url: "https://news.example.test/market-pressure",
+      source: "Wire",
+      published_at: "2026-10-22T09:00:00Z",
+      sentiment_score: -0.4,
+      relevance: 0.7,
+      sentiment_reason: "Saved negative reason",
     },
   ],
   ipos: [],
@@ -145,10 +160,24 @@ it("renders saved company data and a history-only trend projection", async () =>
   expect(screen.getByText(/older observation, not live/)).toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "Company story" })).not.toBeInTheDocument();
   expect(screen.getByText("P/E")).toBeInTheDocument();
-  expect(screen.getByText("20")).toBeInTheDocument();
-  expect(screen.getByText("Sector comparison: 15")).toBeInTheDocument();
-  expect(screen.getByText("Supporting")).toBeInTheDocument();
+  expect(screen.getAllByText("20")).toHaveLength(2);
+  expect(screen.getAllByText("Sector comparison: 15")).toHaveLength(2);
+  expect(screen.getByText("Higher multiple · context needed")).toBeInTheDocument();
+  expect(screen.getByText("Stronger vs sector")).toBeInTheDocument();
+  expect(screen.getByText("Higher leverage")).toBeInTheDocument();
+  expect(screen.getByText("Supporting relevance")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "About P/E" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("region", {
+      name: "Company news table, scroll horizontally for more columns",
+    }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("Positive · 0.3")).toBeInTheDocument();
+  fireEvent.change(screen.getByRole("combobox", { name: "Sentiment" }), {
+    target: { value: "Negative" },
+  });
+  expect(screen.getByRole("link", { name: /Market pressure story/ })).toBeInTheDocument();
+  expect(screen.queryByText("Company story")).not.toBeInTheDocument();
   expect(screen.getByText(/not been backtested/)).toBeInTheDocument();
   expect(fetch).toHaveBeenCalledWith("/api/app/companies/1", expect.anything());
 });

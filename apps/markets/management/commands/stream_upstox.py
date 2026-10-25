@@ -23,18 +23,38 @@ class Command(BaseCommand):
     help = "Stream Upstox V3 quotes to the database (one observation per company per 5 seconds)."
 
     def add_arguments(self, parser):
-        """Allow a bounded subset of the saved company directory."""
+        """Add the option `--symbols`, a list of company symbols to follow.
+
+        Args:
+            parser: The argument parser of the command.
+        """
         parser.add_argument(
             "--symbols", nargs="+", help="Saved company symbols; default: all mapped."
         )
 
     def handle(self, *args, **options):
-        """Reconnect with bounded backoff, refresh authorization, and stop cleanly on signals."""
+        """Run the feed worker until it gets a stop signal or fails.
+
+        Args:
+            *args: Positional arguments of Django. The command ignores them.
+            **options: The command options. `symbols` is the optional list of symbols.
+        """
         by_key = self.companies(options["symbols"])
         self.stream(FeedWriter(by_key))
 
     def companies(self, symbols):
-        """Reject unknown symbols and provider subscription-limit overflows explicitly."""
+        """Find the companies to follow, as a dict from the instrument key to the company.
+
+        Args:
+            symbols: The symbols from `--symbols`, or None for all companies that have a key.
+
+        Returns:
+            A dict from the Upstox instrument key to the `Company`.
+
+        Raises:
+            CommandError: If a symbol is unknown or has no key, or if the count is not between 1
+                and 100.
+        """
         companies = mapped_companies()
         if symbols:
             companies = companies.filter(symbol__in=symbols)
@@ -46,11 +66,22 @@ class Command(BaseCommand):
         return by_key
 
     def stream(self, writer):
-        """Own the socket lifecycle and restore process signal handlers on every exit."""
+        """Connect to the feed and reconnect after a failure, at most 5 times.
+
+        The wait before a new try grows by powers of 2 seconds, up to 30. A stop signal (`SIGINT`
+        or `SIGTERM`) closes the socket. The old signal handlers are restored at the end.
+
+        Args:
+            writer: The `FeedWriter` that saves the messages.
+
+        Raises:
+            CommandError: If the stream stops after a failure (a bad message, or 5 attempts).
+        """
         stop = threading.Event()
         socket = None
 
         def shutdown(*_args):
+            """Set the stop flag and close the socket. Signal handlers call it."""
             stop.set()
             if socket:
                 socket.close()

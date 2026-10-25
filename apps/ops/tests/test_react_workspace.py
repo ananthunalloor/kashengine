@@ -430,6 +430,7 @@ def test_session_actions_never_expose_usable_session_keys(boss_client, member):
     other = Client()
     other.force_login(member)
     key = other.session.session_key
+    assert key is not None
     endpoint = f"{BASE}pages/users/{member.pk}/"
     body = boss_client.get(endpoint).json()
     assert key not in json.dumps(body)

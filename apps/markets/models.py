@@ -52,10 +52,18 @@ class TradingCalendarDay(models.Model):
         ]
 
     def __str__(self) -> str:
+        """Return the day and the reason, for the admin and for logs."""
         return f"{self.day}: {self.reason}"
 
     def clean(self) -> None:
-        """Reject missing reasons and ambiguous or overnight session hours."""
+        """Reject a missing reason and wrong session hours.
+
+        The method also removes spaces around the reason.
+
+        Raises:
+            ValidationError: If the reason is empty, if a holiday has session hours, or if a
+                special session has no start, no end, or an end that is not after the start.
+        """
         super().clean()
         self.reason = self.reason.strip()
         if not self.reason:

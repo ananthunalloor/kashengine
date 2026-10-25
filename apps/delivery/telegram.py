@@ -27,17 +27,42 @@ class TelegramError(Exception):
     """A request to Telegram failed. `retryable` says if a later try can work."""
 
     def __init__(self, message: str, retryable: bool = False):
+        """Save the message and the retry hint.
+
+        Args:
+            message: The error text. It must not contain the bot token.
+            retryable: True if a later try can work, for example after a network error.
+        """
         super().__init__(message)
         self.retryable = retryable
 
 
 def redact(text: str, token: str) -> str:
-    """Remove the bot token from a text."""
+    """Remove the bot token from a text.
+
+    Args:
+        text: The text, for example an error message.
+        token: The bot token to remove. An empty token changes nothing.
+
+    Returns:
+        The text with each copy of the token replaced by `<token>`.
+    """
     return text.replace(token, "<token>") if token else text
 
 
 def split_message(text: str, limit: int = SAFE_MESSAGE_CHARS) -> list[str]:
-    """Split a text into parts of `limit` characters at most. Split at blank lines if we can."""
+    """Split a text into parts of `limit` characters at most. Split at blank lines if we can.
+
+    A block (text between blank lines) that is longer than `limit` is cut at line breaks, then at
+    spaces, then at any place.
+
+    Args:
+        text: The text to split. The function trims it first.
+        limit: The most characters in one part.
+
+    Returns:
+        The parts, in order. The list is empty if the text is empty.
+    """
     text = text.strip()
     if len(text) <= limit:
         return [text] if text else []
@@ -58,7 +83,15 @@ def split_message(text: str, limit: int = SAFE_MESSAGE_CHARS) -> list[str]:
 
 
 def _fit(block: str, limit: int) -> list[str]:
-    """Cut one block that is too long, at line breaks, then at spaces, then anywhere."""
+    """Cut one block that is too long, at line breaks, then at spaces, then anywhere.
+
+    Args:
+        block: The text of one block, without blank lines.
+        limit: The most characters in one piece.
+
+    Returns:
+        The pieces, in order. A block that is short enough is returned as one piece.
+    """
     if len(block) <= limit:
         return [block]
     pieces: list[str] = []
@@ -94,6 +127,19 @@ class TelegramClient:
         timeout: float | None = None,
         sleep=time.sleep,
     ):
+        """Set the token, the HTTP client and the sleep function.
+
+        Args:
+            token: The bot token. The default is the setting `TELEGRAM_BOT_TOKEN`.
+            client: An HTTP client. The default is a new `httpx.Client`. The object closes only a
+                client that it made.
+            timeout: The request timeout in seconds. The default is `TELEGRAM_TIMEOUT_SECONDS`.
+            sleep: The function that waits when Telegram says "too many requests". Tests give a
+                fake.
+
+        Raises:
+            TelegramError: If there is no bot token.
+        """
         self.token = conf.TELEGRAM_BOT_TOKEN if token is None else token
         if not self.token:
             raise TelegramError("TELEGRAM_BOT_TOKEN is not set.")
@@ -107,12 +153,33 @@ class TelegramClient:
             self._client.close()
 
     def __enter__(self):
+        """Return the client, for a `with` block."""
         return self
 
     def __exit__(self, *exc_info):
+        """Close the HTTP client at the end of a `with` block."""
         self.close()
 
     def _call(self, method: str, payload: dict | None = None, _retried: bool = False):
+        """Call one method of the Telegram Bot API and return its `result`.
+
+        If Telegram answers `429` with a wait time of 30 seconds or less, the method waits and
+        tries one more time. The error texts never contain the bot token, because the URL has
+        the token and the method hides it.
+
+        Args:
+            method: The method name, for example `sendMessage`.
+            payload: The JSON body. The default is an empty body.
+            _retried: True on the second try after a `429`. Do not set it from outside.
+
+        Returns:
+            The `result` value of the Telegram answer.
+
+        Raises:
+            TelegramError: If Telegram cannot be reached, answers an error, or asks to wait
+                longer than 30 seconds. `retryable` is True for network errors, `429` and
+                `5xx` answers.
+        """
         url = f"{conf.TELEGRAM_API_URL.rstrip('/')}/bot{self.token}/{method}"
         try:
             response = self._client.post(url, json=payload or {})
@@ -144,11 +211,23 @@ class TelegramClient:
         raise TelegramError(f"Telegram error {response.status_code}: {description}")
 
     def get_me(self) -> dict:
-        """Return the bot profile (Telegram getMe)."""
+        """Return the bot profile (Telegram getMe).
+
+        Returns:
+            The bot data as Telegram sends it, for example `username` and `first_name`.
+        """
         return self._call("getMe")
 
     def get_chats(self) -> list[dict]:
-        """The chats that sent a message to the bot lately: [{"id", "type", "name"}]."""
+        """Return the chats that sent a message to the bot lately.
+
+        The method reads the pending updates (`getUpdates`). Telegram keeps them for 24 hours.
+        A chat appears one time, even if it sent many messages.
+
+        Returns:
+            A list of dicts with the keys `id`, `type` and `name`. The name is the title of a
+            group, or the first and last name of a person, or the user name.
+        """
         chats: dict[int, dict] = {}
         for update in self._call("getUpdates", {"timeout": 0}) or []:
             message = (
@@ -171,7 +250,20 @@ class TelegramClient:
         return list(chats.values())
 
     def send_message(self, chat_id: str, text: str) -> int:
-        """Send a text. Long texts go in more than one message. Return the number of messages."""
+        """Send a text. Long texts go in more than one message.
+
+        The method sends plain text (no parse mode) and turns off the link preview.
+
+        Args:
+            chat_id: The ID of the chat.
+            text: The text. The method splits it with `split_message`.
+
+        Returns:
+            The number of messages that the method sent. It is 0 for an empty text.
+
+        Raises:
+            TelegramError: If a message fails. Messages that were sent before stay sent.
+        """
         parts = split_message(text)
         for part in parts:
             self._call(

@@ -2092,7 +2092,7 @@
     "/api/app/ops/runs/{pk}/stop": {
       "post": {
         "operationId": "stop_app_ops_run",
-        "summary": "Stop an active task run as staff",
+        "summary": "Stop an active task run as a superuser",
         "parameters": [
           {
             "in": "path",
@@ -2168,7 +2168,7 @@
             }
           }
         },
-        "description": "Stop a pending or started task run and mark it failed.\n\nThe request is allowed only for staff, and the Celery worker is instructed to terminate the task\nso the app does not leave a hung task in the queue.",
+        "description": "Stop a pending or started task run and mark it failed.\n\nThe request is allowed only for superusers, like every change in Ops. The Celery worker is\ninstructed to terminate the task so the app does not leave a hung task in the queue. The\naction is written to the audit trail.",
         "tags": [
           "Ops"
         ],

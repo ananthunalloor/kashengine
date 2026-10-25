@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from apps.access.models import FeatureBlock, Subscription
 from apps.api.app.ops_pages import ACTIONS, PAGES
+from apps.delivery.models import DeliveryPreference
 from apps.ops.urls import urlpatterns as ops_patterns
 from apps.siteconfig import service
 from apps.web.legacy_urls import urlpatterns as web_patterns
@@ -31,7 +32,9 @@ def presentation(response):
 
 @pytest.fixture
 def member(django_user_model):
-    return django_user_model.objects.create_user("preview-member", password=PASSWORD)
+    user = django_user_model.objects.create_user("preview-member", password=PASSWORD)
+    DeliveryPreference.objects.create(user=user, email_verified_at=timezone.now())
+    return user
 
 
 @pytest.mark.parametrize(("path", "page"), [("/", "landing"), ("/login/", "login")])
@@ -169,10 +172,10 @@ def test_all_legacy_product_pages_and_actions_have_react_equivalents():
     legacy = {
         pattern.name
         for pattern in web_patterns
-        if isinstance(pattern, URLPattern) and not pattern.name.startswith("react_")
+        if isinstance(pattern, URLPattern) and not str(pattern.name).startswith("react_")
     }
     assert legacy == set(equivalents)
     for path in equivalents.values():
         assert resolve(path)
     ops_names = {pattern.name for pattern in ops_patterns}
-    assert ops_names == PAGES | ACTIONS | {"runs", "run", "audit"}
+    assert ops_names == PAGES | ACTIONS | {"runs", "run", "run_stop", "audit"}

@@ -26,7 +26,14 @@ _LOAD = object()  # Means: read the subscription from the database.
 
 
 def is_exempt(user) -> bool:
-    """Staff and superusers are never blocked."""
+    """Return True for staff and superusers. They are never blocked.
+
+    Args:
+        user: A user object. It must have `is_staff` and `is_superuser`.
+
+    Returns:
+        True if the user is staff or a superuser.
+    """
     return bool(user.is_staff or user.is_superuser)
 
 
@@ -98,7 +105,14 @@ class Access:
         return features.KEYS - self.blocked
 
     def can(self, feature: str) -> bool:
-        """True if the user may use the feature."""
+        """Return True if the user may use the feature.
+
+        Args:
+            feature: The key of the feature, for example `reports`.
+
+        Returns:
+            True if the key is in the set of allowed features. An unknown key gives False.
+        """
         return feature in self.allowed
 
     @property
@@ -114,7 +128,15 @@ class Access:
         return "trial" if sub.kind == Subscription.Kind.TRIAL else "active"
 
     def notice(self) -> str:
-        """A short text for the menu: a locked user, or an end that is near. Empty if none."""
+        """Return a short text for the menu: an unverified email, a locked user, or a near end.
+
+        Returns:
+            `Verify your email in Account settings to unlock all features.` for a signed-in user
+            whose email is not verified. Else an empty text for staff, for anonymous users, and
+            when subscriptions are not required. `Your access has ended.` if the subscription rule
+            fails. Else a text that says when the trial or subscription ends, if it ends within
+            `SUBSCRIPTION_NOTICE_DAYS` days. Else an empty text.
+        """
         if self.authenticated and not self.email_verified:
             return "Verify your email in Account settings to unlock all features."
         if self.exempt or not conf.SUBSCRIPTIONS_REQUIRED or not self.authenticated:

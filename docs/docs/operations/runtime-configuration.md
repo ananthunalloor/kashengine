@@ -62,7 +62,7 @@ An invalid value is not saved. The page shows the reason.
 
 ## Secrets
 
-A secret (the Telegram bot token) is **encrypted with Fernet** before it goes in the database.
+A secret (the Telegram bot token and the Upstox access token) is **encrypted with Fernet** before it goes in the database.
 
 - The key comes from `SETTINGS_ENCRYPTION_KEY`. If that is empty, it comes from `DJANGO_SECRET_KEY`.
 - The page never shows a saved secret. It shows only whether one is set. An empty field keeps the

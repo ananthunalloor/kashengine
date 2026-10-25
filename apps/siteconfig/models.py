@@ -23,4 +23,5 @@ class Setting(models.Model):
     )
 
     def __str__(self) -> str:
+        """Return the key of the setting."""
         return self.key

@@ -30,6 +30,7 @@ class FeatureBlock(models.Model):
         ]
 
     def __str__(self) -> str:
+        """Return the user and the blocked feature."""
         return f"{self.user} without {self.feature}"
 
 
@@ -41,6 +42,8 @@ class Subscription(models.Model):
     """
 
     class Kind(models.TextChoices):
+        """The kinds of subscription: a trial, a paid one, or a gift from an admin."""
+
         TRIAL = "trial", "Trial"
         PAID = "paid", "Paid"
         GIFT = "gift", "Gift from an admin"
@@ -54,15 +57,31 @@ class Subscription(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
+        """Return the user and the kind."""
         return f"{self.user}: {self.kind}"
 
     def is_active(self, now: datetime | None = None) -> bool:
-        """True if the subscription has not ended."""
+        """True if the subscription has not ended.
+
+        Args:
+            now: The time to compare with. The default is the current time.
+
+        Returns:
+            True if `ends_at` is empty (it does not end) or is later than `now`.
+        """
         now = now or timezone.now()
         return self.ends_at is None or self.ends_at > now
 
     def days_left(self, now: datetime | None = None) -> int | None:
-        """Whole days until the end (rounded up). None if it does not end. 0 if it ended."""
+        """Return the whole days until the end, rounded up.
+
+        Args:
+            now: The time to compare with. The default is the current time.
+
+        Returns:
+            None if the subscription does not end. 0 if it has ended. Else the days, so 1 means
+            that less than a day is left.
+        """
         if self.ends_at is None:
             return None
         now = now or timezone.now()
@@ -74,6 +93,8 @@ class SubscriptionEvent(models.Model):
     """One change of a subscription. This is the history of the user."""
 
     class Action(models.TextChoices):
+        """What happened: a trial started, a subscription was given, or it was ended."""
+
         STARTED = "started", "Trial started"
         GIVEN = "given", "Given"
         ENDED = "ended", "Ended"
@@ -99,4 +120,5 @@ class SubscriptionEvent(models.Model):
         ordering: ClassVar[list[str]] = ["-created_at", "-id"]
 
     def __str__(self) -> str:
+        """Return the user and the action."""
         return f"{self.user}: {self.action}"

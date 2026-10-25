@@ -36,7 +36,17 @@ class Tick(BaseModel):
 
 
 def authorized_uri() -> str:
-    """Refresh authorization on every reconnect and reject non-Upstox/non-TLS destinations."""
+    """Ask Upstox for a new address of the market-data feed.
+
+    The function runs at each connect, because the address is short-lived. It accepts only a
+    `wss://` address on a host that ends with `.upstox.com`.
+
+    Returns:
+        The authorized WebSocket address. It can contain a one-time credential, so never log it.
+
+    Raises:
+        UpstoxError: If the request fails or the answer has no valid address.
+    """
     with UpstoxClient() as client:
         response = client.get("v3/feed/market-data-feed/authorize")
     data = response.data
@@ -53,12 +63,21 @@ class FeedWriter:
     """Keep bounded observations rather than writing every exchange tick."""
 
     def __init__(self, companies: dict[str, Company]):
+        """Start with the companies to follow and no saved quotes.
+
+        Args:
+            companies: A dict from the Upstox instrument key to the `Company`.
+        """
         self.companies = companies
         self.saved_at: dict[str, float] = {}
         self.invalid = False
 
     def on_open(self, ws):
-        """Subscribe using the binary V3 request format."""
+        """Send the subscription for all companies, in `ltpc` mode, in the binary V3 format.
+
+        Args:
+            ws: The open WebSocket.
+        """
         logger.info("Upstox V3 connected; subscribing to %d instruments.", len(self.companies))
         ws.send(
             json.dumps(
@@ -72,7 +91,19 @@ class FeedWriter:
         )
 
     def save(self, key: str, raw: dict) -> None:
-        """Validate exchange data and preserve provider last-trade time, not receive time."""
+        """Check one tick and save it as a `CompanyQuote`, at most one time in 5 seconds per key.
+
+        The saved time is the last-trade time from Upstox, not the time of receipt. A repeated
+        tick with the same time makes no new row. A saved quote clears an old `quotes` error of the
+        company.
+
+        Args:
+            key: The Upstox instrument key.
+            raw: The `ltpc` part of the feed message (`ltp`, `ltt`, `cp`).
+
+        Raises:
+            ValidationError: If the values are not valid (for example a price of zero).
+        """
         now = time.monotonic()
         if now - self.saved_at.get(key, -SAVE_INTERVAL) < SAVE_INTERVAL:
             return
@@ -94,7 +125,15 @@ class FeedWriter:
         self.saved_at[key] = now
 
     def on_message(self, ws, message):
-        """Stop on malformed data rather than accepting a partial/guessed quote."""
+        """Decode one feed message and save the quotes in it.
+
+        A message that is not binary, cannot be decoded or is not valid stops the connection and
+        sets `invalid`. The code does not guess a quote.
+
+        Args:
+            ws: The WebSocket.
+            message: The message from Upstox. It must be bytes (protobuf).
+        """
         if not isinstance(message, bytes):
             logger.warning("Upstox stream returned a non-protobuf message.")
             self.invalid = True
@@ -112,6 +151,13 @@ class FeedWriter:
             ws.close()
 
     def on_error(self, ws, _error):
-        """Never log SDK errors containing signed URLs or authorization headers."""
+        """Log a short fixed text and close the connection.
+
+        The method ignores the error text, because it can hold the signed address or a header.
+
+        Args:
+            ws: The WebSocket.
+            _error: The error from the library. It is not logged.
+        """
         logger.warning("Upstox stream failed. Check token, entitlement and connectivity.")
         ws.close()

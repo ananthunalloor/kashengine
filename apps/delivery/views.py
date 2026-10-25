@@ -22,12 +22,26 @@ START_COMMAND_PARTS = 2
 @login_not_required
 @csrf_exempt
 def telegram_webhook(request: HttpRequest) -> HttpResponse:
-    """Consume only the configured Telegram webhook secret and one-time start payloads."""
+    """Receive an update from the Telegram bot webhook and link a chat to an account.
+
+    The view is public and has no CSRF check, because Telegram calls it. The request must carry the
+    header `X-Telegram-Bot-Api-Secret-Token` with the secret `TELEGRAM_WEBHOOK_SECRET`. The
+    comparison takes constant time. If the secret is not set, every request gets 401.
+
+    Args:
+        request: The HTTP request. Only `POST` is allowed, with a JSON body of at most 64 KiB.
+
+    Returns:
+        `405` for a method other than `POST`, `401` for a missing or wrong secret, `413` for a
+        large body, `400` for a body that is not a JSON object, else the result of the update
+        (`200 {"ok": true}` also for an update that the code ignores).
+    """
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
     secret = settings.TELEGRAM_WEBHOOK_SECRET
     supplied = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
-    if not secret or not hmac.compare_digest(supplied, secret):
+    # Compare bytes: `compare_digest` raises TypeError for a non-ASCII str, which gave a 500.
+    if not secret or not hmac.compare_digest(supplied.encode(), secret.encode()):
         return JsonResponse({"error": "unauthorized"}, status=401)
     if len(request.body) > MAX_WEBHOOK_BODY_BYTES:
         return JsonResponse({"error": "payload_too_large"}, status=413)
@@ -41,7 +55,17 @@ def telegram_webhook(request: HttpRequest) -> HttpResponse:
 
 
 def _handle_start_update(update: dict[str, Any]) -> JsonResponse:
-    """Link an unexpired token from a Telegram private-chat /start update."""
+    """Link an account when the update is a `/start <token>` message in a private chat.
+
+    The function ignores any other update. It answers `200` for an unknown or expired token, so a
+    caller cannot test which tokens exist.
+
+    Args:
+        update: The decoded Telegram update.
+
+    Returns:
+        A JSON response. See `_link_account` for the case that can give `403`.
+    """
     message = update.get("message") or {}
     if not isinstance(message, dict):
         return JsonResponse({"ok": True})
@@ -70,7 +94,19 @@ def _handle_start_update(update: dict[str, Any]) -> JsonResponse:
 
 
 def _link_account(link: TelegramLink, chat_id: str) -> JsonResponse:
-    """Check current account eligibility before consuming a Telegram link."""
+    """Save the chat ID for the user of a link, and delete the link.
+
+    A chat that belongs to another account is not moved. The link is then deleted and the answer
+    is still `200`. A new chat starts with Telegram reports off. The user turns them on later.
+
+    Args:
+        link: The unexpired link that the token matched.
+        chat_id: The Telegram chat ID of the private chat.
+
+    Returns:
+        `200 {"ok": true}`, or `403 {"error": "email_verification_required"}` if the user is not
+        active or has no verified email (the link is kept).
+    """
     if not link.user.is_active or not Access(link.user).email_verified:
         return JsonResponse({"error": "email_verification_required"}, status=403)
     linked_elsewhere = DeliveryPreference.objects.filter(telegram_chat_id=str(chat_id)).exclude(

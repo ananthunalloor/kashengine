@@ -11,13 +11,16 @@ documentation site is one of the services (`docs`). Caddy shows it at `https://<
 
 | Service | Job | Port inside Docker |
 | --- | --- | --- |
-| `caddy` | TLS, routing, headers | 80, 443 (published) |
-| `web` | Django (gunicorn in production, `runserver` in development) | 8000 |
+| `caddy` | TLS, routing, headers. It serves `SITE_ADDRESS` and the archive host `OLD_SITE_ADDRESS`. | 80, 443 (published) |
+| `web` | Django (gunicorn in production, `runserver` in development). It serves the React app. | 8000 |
 | `worker` | Celery worker | none |
 | `beat` | Celery Beat. The schedule is in the database. | none |
 | `db` | PostgreSQL 17 | 5432 |
 | `redis` | Celery broker and Django cache | 6379 |
 | `ollama` | Local LLM | 11434 |
+| `silo` | S3-compatible storage for backups | 9000 (API), 9001 (console) |
+| `silo-init` | Makes the private buckets one time, then stops | none |
+| `frontend` | Vite development server (development only) | 5173 |
 | `docs` | nginx with the static documentation site | 8080 |
 
 The `docs` service gets no Django, database, Redis or Telegram settings.
@@ -28,6 +31,12 @@ You need Docker and the Compose plugin.
 
 ```bash
 cp .env.example .env.dev
+```
+
+Set `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` in `.env.dev`. Silo keeps these variable names
+from the old MinIO service. Compose refuses to start `silo` when they are empty. Then:
+
+```bash
 docker compose up --build
 ```
 
@@ -37,6 +46,9 @@ Compose loads `docker-compose.override.yml` by itself. The override file:
 - sets `SITE_ADDRESS=localhost`, so Caddy makes a certificate with its own CA (the browser shows a
   warning the first time);
 - sets the CSP to report-only;
+- sets `OLD_SITE_ADDRESS=old.localhost` for the archived interface;
+- runs the `frontend` service (`pnpm dev` on `127.0.0.1:5173`) and sets `DJANGO_VITE_DEV_MODE`,
+  so Django loads the React app from the Vite server with hot reload;
 - mounts the source tree and reloads `web`, `worker` and `beat` when a `.py` file changes.
 
 Then:
@@ -47,15 +59,30 @@ docker compose exec ollama ollama pull llama3.2:3b
 ```
 
 Open `https://localhost/` for the app and `https://localhost/docs/` for these docs.
+`https://old.localhost/` shows the archived Django interface. Only a superuser can sign in there.
 
-Rebuild only when `pyproject.toml` or `uv.lock` changes.
+Rebuild only when `pyproject.toml` or `uv.lock` changes. A change to `frontend/package.json` or
+`frontend/pnpm-lock.yaml` needs a restart of the `frontend` service.
+
+To work on the React app without Docker, use Node.js 22 and pnpm 10:
+
+```bash
+cd frontend
+pnpm install --frozen-lockfile
+pnpm dev          # Vite server at http://127.0.0.1:5173
+pnpm test         # unit tests
+pnpm typecheck    # TypeScript
+pnpm build        # production build in frontend/dist
+```
 
 ## Production
 
 Use a Linux host with Docker Engine and the Compose plugin. The production model needs 16 GB of
 RAM or more. The size depends on the model that you choose.
 
-1. Point the DNS record of your domain to the server. Open TCP 80, TCP 443 and UDP 443.
+1. Point the DNS record of your domain to the server. Open TCP 80, TCP 443 and UDP 443. Add a
+   second record for the archive host (for example `old.your-domain.com`), or leave it out if you
+   do not publish the archive. Caddy gets a certificate for each host name.
 2. Make the environment file and protect it:
 
    ```bash
@@ -65,7 +92,9 @@ RAM or more. The size depends on the model that you choose.
 
 3. Set real values for `SITE_ADDRESS`, `ACME_EMAIL`, `DJANGO_ALLOWED_HOSTS`,
    `DJANGO_CSRF_TRUSTED_ORIGINS`, `DJANGO_SECRET_KEY`, `POSTGRES_PASSWORD` (and the same password
-   in `DATABASE_URL`), and `TELEGRAM_BOT_TOKEN`. Keep `localhost` in `DJANGO_ALLOWED_HOSTS`:
+   in `DATABASE_URL`), `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD` (the Silo credentials), and
+   `TELEGRAM_BOT_TOKEN`. `OLD_SITE_ADDRESS` is `old.<SITE_ADDRESS>` by default. Add that host to
+   `DJANGO_ALLOWED_HOSTS` and `DJANGO_CSRF_TRUSTED_ORIGINS` if you use it. Keep `localhost` in `DJANGO_ALLOWED_HOSTS`:
    the Docker health check needs it. Set `ADMIN_ALLOWED_IPS` and `DOCS_ALLOWED_IPS`.
    Configure SMTP values, `TELEGRAM_BOT_USERNAME`, and a random
    `TELEGRAM_WEBHOOK_SECRET` if users should self-register and receive reports. Register
@@ -105,14 +134,23 @@ RAM or more. The size depends on the model that you choose.
      exec web python manage.py check --deploy
    ```
 
-7. Open `https://<SITE_ADDRESS>/`, `https://<SITE_ADDRESS>/docs/` and
+7. Open `https://<SITE_ADDRESS>/`, sign in and open the app, `https://<SITE_ADDRESS>/docs/` and
    `https://<SITE_ADDRESS>/api/v1/docs`. Make sure that no file returns 404 and that the browser
-   console shows no CSP violation.
+   console shows no CSP violation. Open **Trading calendar** in the app and enter the holidays
+   of the year at `/admin/markets/tradingcalendarday/` (see
+   [Markets](../domains/markets-and-predictions.md#the-trading-calendar)).
 8. Test the controls before you depend on the system: a login lockout, the
    `ADMIN_ALLOWED_IPS` rule from a blocked address, a report, Telegram delivery, the next run
    times on **Ops > Schedule**, a backup and a restore.
 
-On start, `web` runs `migrate` and `collectstatic`, then starts gunicorn with 3 workers.
+On start, `web` runs `migrate` and `collectstatic`, then starts gunicorn with 3 workers and 16
+threads for each worker (`--worker-class gthread`). The threads are needed because each open
+browser tab holds one live update stream. Update `web`, `worker` and `beat` together, because
+they share the database tables of the live updates.
+
+The `Dockerfile` has a first stage (`frontend-build`) that runs `pnpm install --frozen-lockfile`
+and `pnpm build`. The second stage copies `frontend/dist` into the image. A production build
+fails if the React app does not compile, so the image never has an old app.
 
 To test the production stack on your own computer, set `SITE_ADDRESS=localhost`.
 
@@ -192,6 +230,7 @@ migration.
 | `caddy_data` | TLS certificates and keys | Yes. Let's Encrypt limits new certificates. |
 | `caddy_config` | Caddy autosave | No |
 | `ollama_data` | Downloaded models | Optional. You can download them again. |
+| `minio_data` | The data of Silo (backups). The old MinIO name stays, so Silo reads old data. | Yes. See [Backups](./backups-and-recovery.md). |
 | `logs` | `app.log` (10 MB, 5 files) | Optional |
 | `staticfiles` | The result of `collectstatic` | No. The `web` service makes it again. |
 
@@ -201,6 +240,9 @@ migration.
   publishes. This is why only Caddy has published ports.
 - `ADMIN_ALLOWED_IPS` and `DOCS_ALLOWED_IPS` use the address that Caddy sees. With Docker and IPv6,
   this can be the address of the Docker gateway. Test from an allowed and from a blocked address.
+- Live updates use the database, not Redis. Each open tab holds one `web` thread. For many
+  users, raise the thread count in `docker-compose.prod.yml` and check the database connection
+  limit.
 - The API rate limit needs the Redis cache. In production, the cache URL is `CACHE_URL`. The
   default is the `REDIS_URL` with database `1`.
 - Most settings are first values only. A superuser can change them on **Ops > Settings**. See

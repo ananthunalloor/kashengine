@@ -27,7 +27,15 @@ logger = logging.getLogger(__name__)
 
 @shared_task(name="markets.upstox_quotes", soft_time_limit=240)
 def upstox_quotes() -> dict:
-    """Refresh snapshots during saved trading sessions, including special weekend sessions."""
+    """Save a snapshot quote of each Upstox company, during a trading session only.
+
+    The task needs the setting `UPSTOX_ENABLED`. It uses the trading calendar, so it also runs in a
+    saved special session on a weekend.
+
+    Returns:
+        A dict with `skipped` and a reason when Upstox is off or the market is closed. Else
+        `saved` (the count of new quotes) and `failed` (a dict from the symbol to a safe error).
+    """
     if not conf.UPSTOX_ENABLED:
         return {"skipped": "Upstox is disabled."}
     now = timezone.now()
@@ -40,7 +48,16 @@ def upstox_quotes() -> dict:
 
 @shared_task(name="markets.upstox_refresh", soft_time_limit=1800)
 def upstox_refresh() -> dict:
-    """Persist company history, due fundamentals, news and IPOs; trigger existing scoring."""
+    """Download company history, fundamentals, news and IPOs from Upstox, then score them.
+
+    The task needs the setting `UPSTOX_ENABLED`. Each part can fail on its own and the task still
+    saves the other parts. New news articles start the scoring task. The task then updates the
+    IPO scores and the saved outlook of each company.
+
+    Returns:
+        A dict with `skipped` when Upstox is off. Else the results `companies`, `news`, `ipos` and
+        `ipo_scores`.
+    """
     if not conf.UPSTOX_ENABLED:
         return {"skipped": "Upstox is disabled."}
     from apps.ipos.scoring import score_ipos  # noqa: PLC0415

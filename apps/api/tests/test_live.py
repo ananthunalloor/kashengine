@@ -180,7 +180,9 @@ def test_task_changes_publish_after_commit_without_output(django_capture_on_comm
     with django_capture_on_commit_callbacks(execute=True):
         run.status = TaskRun.Status.SUCCESS
         run.save()
-    assert LiveEvent.objects.order_by("-pk").first().payload["run"]["status"] == "success"
+    latest = LiveEvent.objects.order_by("-pk").first()
+    assert latest is not None
+    assert latest.payload["run"]["status"] == "success"
 
 
 def test_rollback_does_not_publish(django_capture_on_commit_callbacks):

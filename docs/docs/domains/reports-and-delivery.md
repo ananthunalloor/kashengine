@@ -28,11 +28,20 @@ that the strength is not a probability.
 `Report.text` is plain text. There is no markup, so Telegram cannot refuse the message because of
 bad markup. `Report.data` keeps the numbers and the lists for the web page and the API.
 
+### How scores are shown
+
+The database keeps news scores, IPO scores and prediction scores from -1 to 1. It keeps the
+confidence (shown as "strength") from 0 to 1. The Telegram report, the React app and the archived
+pages show them on a scale of 1 to 10. The formula is `1 + 9 * value`. A signed score first
+becomes `(score + 1) / 2`, so 0 is shown as 5.5/10. The function is `score_out_of_ten` in
+`apps/reports/formatting.py`. The HTTP API returns the stored values, not the 1 to 10 text.
+
 ## Delivery
 
-`delivery.send_daily_report` runs on weekdays at 07:30 and 07:50 IST. On a Saturday or a Sunday it
-does nothing. It builds today's report (or reuses it), sends Telegram deliveries, then emails
-reports to accounts that have verified their email and opted in.
+`delivery.send_daily_report` runs on weekdays at 07:30 and 07:50 IST. On a day when the market is
+closed (a weekend or a saved holiday) it does nothing. It builds today's report (or reuses it),
+sends Telegram deliveries, then emails reports to accounts that have verified their email and
+opted in.
 
 `deliver_report` sends the text to each configured Telegram chat and each linked user chat whose
 owner selected Telegram delivery:

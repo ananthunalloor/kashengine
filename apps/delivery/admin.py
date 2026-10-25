@@ -1,4 +1,4 @@
-"""Admin for the delivery log."""
+"""Admin for the delivery log, sign-up invitations, legal records and email verification."""
 
 from django.contrib import admin, messages
 from django.contrib.auth import get_user_model
@@ -26,19 +26,40 @@ class VerifiedUserAdmin(UserAdmin):
     actions = ("verify_email",)
 
     def get_queryset(self, request):
-        """Load verification state with the users rather than once per row."""
+        """Load the delivery preference together with the users, so the list needs one query.
+
+        Args:
+            request: The admin request.
+
+        Returns:
+            The user query set with `select_related("delivery_preference")`.
+        """
         return super().get_queryset(request).select_related("delivery_preference")
 
     @admin.display(boolean=True, description="Email verified")
     def email_verified(self, obj):
-        """Show actual email verification, independently of staff feature exemptions."""
+        """Show whether the email of the user is verified. Staff exemptions do not count here.
+
+        Args:
+            obj: The user.
+
+        Returns:
+            True if the user has a verified time. False if not, or if there is no preference.
+        """
         try:
             return obj.delivery_preference.email_verified_at is not None
         except ObjectDoesNotExist:
             return False
 
     def has_verify_email_permission(self, request):
-        """Only superusers may attest to email ownership."""
+        """Allow the verify-email action for superusers only.
+
+        Args:
+            request: The admin request.
+
+        Returns:
+            True if the user is a superuser.
+        """
         return request.user.is_superuser
 
     @admin.action(
@@ -47,7 +68,19 @@ class VerifiedUserAdmin(UserAdmin):
     )
     @transaction.atomic
     def verify_email(self, request, queryset):
-        """Verify valid emails, invalidate pending links, and audit each changed account."""
+        """Mark the email of the selected users as verified, after a superuser confirms ownership.
+
+        The action skips a user who has no valid email address (and shows an error), and a user who
+        is already verified. For each changed user it removes the pending verification link,
+        writes an Ops audit event and adds an entry to the admin history.
+
+        Args:
+            request: The admin request. The user must be a superuser.
+            queryset: The users that the admin selected.
+
+        Raises:
+            PermissionDenied: If the user is not a superuser.
+        """
         if not request.user.is_superuser:
             raise PermissionDenied
         verified = 0
@@ -108,7 +141,16 @@ class SignupInviteAdmin(admin.ModelAdmin):
     fields = (*readonly_fields, "revoked")
 
     def save_model(self, request, obj, form, change):
-        """Keep only the code digest; never reset the redemption record."""
+        """Save an invitation. For a new one, make the code and show it one time in a message.
+
+        Only the SHA-256 digest of the code is saved.
+
+        Args:
+            request: The admin request. Its user becomes the creator of a new invitation.
+            obj: The invitation to save.
+            form: The admin form.
+            change: True when the invitation exists already. The code is then not changed.
+        """
         if not change:
             code = obj.generate_code()
             obj.created_by = request.user
@@ -127,13 +169,36 @@ class LegalAcceptanceAdmin(admin.ModelAdmin):
     readonly_fields = ("user", "version", "accepted_at")
 
     def has_add_permission(self, request):
-        """Acceptances are created only during registration."""
+        """Return False. A record is created only during registration.
+
+        Args:
+            request: The admin request.
+
+        Returns:
+            Always False.
+        """
         return False
 
     def has_change_permission(self, request, obj=None):
-        """Do not allow accepted versions or timestamps to be rewritten."""
+        """Return False. An accepted version and its time cannot be rewritten.
+
+        Args:
+            request: The admin request.
+            obj: The record, or None for the list page.
+
+        Returns:
+            Always False.
+        """
         return False
 
     def has_delete_permission(self, request, obj=None):
-        """Keep the agreement record for the lifetime of the account."""
+        """Return False. The record stays for the lifetime of the account.
+
+        Args:
+            request: The admin request.
+            obj: The record, or None for the list page.
+
+        Returns:
+            Always False.
+        """
         return False

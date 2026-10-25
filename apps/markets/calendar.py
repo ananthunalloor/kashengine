@@ -11,7 +11,20 @@ SOURCE_URL = "https://www.nseindia.com/resources/exchange-communication-holidays
 
 
 def calendar_snapshot(year: int, now: datetime | None = None) -> dict:
-    """Return yearly exceptions and current scheduled status, never a live exchange feed."""
+    """Return the saved calendar exceptions of a year and the scheduled market status now.
+
+    The status comes from the saved calendar and the regular hours. It is not a live feed from
+    the exchange.
+
+    Args:
+        year: The calendar year of the `days` list.
+        now: The time to use as the current time. The default is the current time.
+
+    Returns:
+        A dict with `year`, `as_of`, `next_change_at` (the next open or close boundary, or
+        midnight), `is_open`, `status_key`, `reason`, `special_reason`, `source_url` and `days`
+        (the saved holidays and special sessions of the year).
+    """
     local = (now or timezone.now()).astimezone(market_tz())
     day = local.date()
     exception = TradingCalendarDay.objects.filter(day=day).first()

@@ -16,7 +16,12 @@ import { Link } from "@tanstack/react-router";
 import { LuInfo } from "react-icons/lu";
 import { useEffect, useState } from "react";
 
-import type { CompanyBar, CompanyDetail, CompanyPrice } from "../../shared/api/generated/types.gen";
+import type {
+  CompanyBar,
+  CompanyDetail,
+  CompanyPrice,
+  CompanyStory,
+} from "../../shared/api/generated/types.gen";
 import { DataTable } from "../../shared/ui/DataTable";
 import type { TableColumn } from "../../shared/ui/DataTable";
 import { SavedFacts } from "../../shared/ui/SavedFacts";
@@ -243,6 +248,42 @@ function significance(label: string, category: string) {
   return { label: "Contextual", color: "gray" };
 }
 
+function comparableNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  const parsed = Number(value.replaceAll(",", "").replace(/%$/, "").trim());
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function metricAssessment(label: string, value: unknown, comparison: unknown) {
+  const actual = comparableNumber(value);
+  const sector = comparableNumber(comparison);
+  if (actual === null || sector === null) return { label: "No sector benchmark", color: "gray" };
+  if (actual === sector) return { label: "In line with sector", color: "gray" };
+
+  const key = label.toLowerCase();
+  const profitability =
+    /roe|roce|return on|profit margin|operating margin|net margin|revenue growth|earnings growth|eps growth|interest coverage/.test(
+      key,
+    );
+  const leverage = /debt.*equity|debt ratio|gearing|leverage/.test(key);
+  const valuation =
+    /p\/e|price.*earnings|p\/b|price.*book|ev\s*\/\s*ebitda|valuation multiple/.test(key);
+  const above = actual > sector;
+
+  if (profitability)
+    return above
+      ? { label: "Stronger vs sector", color: "teal" }
+      : { label: "Weaker vs sector", color: "orange" };
+  if (leverage)
+    return above
+      ? { label: "Higher leverage", color: "orange" }
+      : { label: "Lower leverage", color: "teal" };
+  if (valuation)
+    return { label: `${above ? "Higher" : "Lower"} multiple · context needed`, color: "yellow" };
+  return { label: `${above ? "Above" : "Below"} sector · context needed`, color: "gray" };
+}
+
 function factDescription(label: string) {
   const key = label.toLowerCase();
   if (/price to earnings|\bp\/e\b/.test(key))
@@ -297,13 +338,9 @@ function Fundamentals({ data }: { data: CompanyDetail }) {
           <SimpleGrid cols={{ base: 1, xs: 2, lg: 4 }} spacing="xs">
             {category.facts.map((fact, index) => {
               const rank = significance(fact.label, category.label);
+              const assessment = metricAssessment(fact.label, fact.value, fact.comparison);
               return (
-                <Paper
-                  key={`${fact.label}-${index}`}
-                  p="sm"
-                  withBorder
-                  className="company-fact-card"
-                >
+                <div key={`${fact.label}-${index}`} className="company-fact-item">
                   <Group justify="space-between" align="flex-start" wrap="nowrap" gap="xs">
                     <Text size="sm" fw={600} className="company-fact-label">
                       {humanize(fact.label)}
@@ -328,10 +365,15 @@ function Fundamentals({ data }: { data: CompanyDetail }) {
                       Sector comparison: {factValue(fact.comparison)}
                     </Text>
                   )}
-                  <Badge size="sm" variant="light" color={rank.color} mt="sm">
-                    {rank.label}
-                  </Badge>
-                </Paper>
+                  <Group gap="xs" mt="xs" wrap="wrap">
+                    <Badge size="xs" variant="light" color={assessment.color}>
+                      {assessment.label}
+                    </Badge>
+                    <Text size="xs" c="dimmed">
+                      {rank.label} relevance
+                    </Text>
+                  </Group>
+                </div>
               );
             })}
           </SimpleGrid>
@@ -340,6 +382,75 @@ function Fundamentals({ data }: { data: CompanyDetail }) {
     </Stack>
   );
 }
+
+function companyNewsSentiment(value: number | null) {
+  if (value === null) return { label: "Not scored", color: "gray" };
+  if (value > 0) return { label: `Positive · ${number.format(value)}`, color: "teal" };
+  if (value < 0) return { label: `Negative · ${number.format(value)}`, color: "red" };
+  return { label: "Neutral · 0", color: "gray" };
+}
+
+const companyNewsColumns: TableColumn<CompanyStory>[] = [
+  {
+    id: "title",
+    label: "Article & context",
+    value: (story) => story.title,
+    render: (story) => {
+      const href = sourceLink(story.url);
+      return (
+        <div className="table-story">
+          <div className="table-primary">
+            {href ? (
+              <a href={href} target="_blank" rel="noopener noreferrer">
+                {story.title}
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            ) : (
+              story.title
+            )}
+          </div>
+          {story.sentiment_reason && (
+            <Text size="sm" mt="xs">
+              {story.sentiment_reason}
+            </Text>
+          )}
+        </div>
+      );
+    },
+  },
+  { id: "source", label: "Source", value: (story) => story.source },
+  {
+    id: "published_at",
+    label: "Published",
+    value: (story) => story.published_at,
+    render: (story) =>
+      story.published_at ? (
+        <time dateTime={story.published_at}>{savedTime(story.published_at)} IST</time>
+      ) : (
+        "Not available"
+      ),
+  },
+  {
+    id: "sentiment_score",
+    label: "Sentiment",
+    value: (story) => story.sentiment_score,
+    render: (story) => {
+      const sentiment = companyNewsSentiment(story.sentiment_score);
+      return (
+        <Badge size="sm" variant="light" color={sentiment.color}>
+          {sentiment.label}
+        </Badge>
+      );
+    },
+  },
+  {
+    id: "relevance",
+    label: "Relevance",
+    value: (story) => story.relevance,
+    render: (story) =>
+      story.relevance === null ? "Not available" : number.format(story.relevance),
+  },
+];
 
 export function CompanyView({ data }: { data: CompanyDetail }) {
   usePageTitle(data.company.name);
@@ -402,42 +513,43 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
       {data.news_available && (
         <section>
           <Title order={2} size="h3" mb="md">
-            Company news and sentiment scores
+            Company news
           </Title>
           <Text size="sm" c="dimmed" mb="md">
-            Latest 30 linked articles. Sentiment: -1 to +1; relevance: 0 to 1.
+            Latest 30 linked articles. Sentiment ranges from -1 (negative) to +1 (positive);
+            relevance ranges from 0 to 1. Sentiment is not a prediction.
           </Text>
-          <Stack gap="md">
-            {data.news.length ? (
-              data.news.map((story) => {
-                const href = sourceLink(story.url);
-                return (
-                  <Paper p="md" withBorder key={story.url}>
-                    {href ? (
-                      <Anchor href={href} target="_blank" rel="noopener noreferrer">
-                        {story.title}
-                      </Anchor>
-                    ) : (
-                      <Text>{story.title}</Text>
-                    )}
-                    <Text size="sm" c="dimmed">
-                      {story.source} |{" "}
-                      {story.published_at
-                        ? savedTime(story.published_at) + " IST"
-                        : "Publication time unavailable"}
-                    </Text>
-                    <Group>
-                      <Text>Sentiment: {score(story.sentiment_score)}</Text>
-                      <Text>Relevance: {score(story.relevance)}</Text>
-                    </Group>
-                    <Text>{story.sentiment_reason || "No scoring reason saved."}</Text>
-                  </Paper>
-                );
-              })
-            ) : (
-              <Text c="dimmed">No linked news saved.</Text>
-            )}
-          </Stack>
+          {data.news.length ? (
+            <DataTable
+              data={data.news}
+              label="Company news"
+              columns={companyNewsColumns}
+              initialSort={[{ id: "published_at", desc: true }]}
+              filters={[
+                {
+                  label: "Source",
+                  value: (story) => story.source,
+                  options: [
+                    ...new Set(data.news.map((story) => story.source).filter(Boolean)),
+                  ].sort(),
+                },
+                {
+                  label: "Sentiment",
+                  value: (story) =>
+                    story.sentiment_score === null
+                      ? "Not scored"
+                      : story.sentiment_score > 0
+                        ? "Positive"
+                        : story.sentiment_score < 0
+                          ? "Negative"
+                          : "Neutral",
+                  options: ["Positive", "Neutral", "Negative", "Not scored"],
+                },
+              ]}
+            />
+          ) : (
+            <Text c="dimmed">No linked news saved.</Text>
+          )}
         </section>
       )}
       {data.ipos_available && (

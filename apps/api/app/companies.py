@@ -19,7 +19,19 @@ router = Router(tags=["Companies"], auth=AppSession("companies"))
 
 
 def saved_price(quote: CompanyQuote | None) -> dict | None:
-    """Expose price units and provider timestamps without labelling old prices live."""
+    """Return a saved price in the form of the API.
+
+    The answer has the time of the exchange (`as_of`) and the time of receipt, so the page can show
+    how old the price is. The code never calls a price live.
+
+    Args:
+        quote: The newest saved quote of a company, or None.
+
+    Returns:
+        None if there is no quote. Else a dict with `as_of`, `received_at`, `price`,
+        `previous_close`, `change_pct` (None without a previous close), `volume` and `mode`
+        (`snapshot` or `stream`).
+    """
     if quote is None:
         return None
     return {

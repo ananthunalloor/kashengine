@@ -41,7 +41,12 @@ ACCOUNT_TOKEN_ROWS = 20
 
 
 def latest_deliveries() -> QuerySet[DeliveryLog]:
-    """The newest 50 send attempts, with their reports, in the existing display order."""
+    """Return the newest 50 send attempts, with their reports, in the existing display order.
+
+    Returns:
+        A sliced query set of `DeliveryLog` rows. It uses `select_related("report")`, so the
+        report of each row costs no extra query.
+    """
     return DeliveryLog.objects.select_related("report")[:DELIVERY_LOG_ROWS]
 
 

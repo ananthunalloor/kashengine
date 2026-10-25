@@ -37,7 +37,14 @@ STATE_NAMES = dict(STATE_FILTERS)
 
 @staff_required
 def invite_list(request: HttpRequest) -> HttpResponse:
-    """List invitation metadata without exposing code digests or plaintext."""
+    """List the sign-up invitations. The list never shows a code or a digest.
+
+    Args:
+        request: The request. The user must be staff.
+
+    Returns:
+        The page `ops/invites.html`, newest invitation first.
+    """
     return TemplateResponse(
         request,
         "ops/invites.html",
@@ -53,7 +60,16 @@ def invite_list(request: HttpRequest) -> HttpResponse:
 @superuser_post_required
 @transaction.atomic
 def invite_generate(request: HttpRequest) -> HttpResponse:
-    """Issue a single-use code and audit its reference, never its secret."""
+    """Make a single-use invitation and show its code one time in a message.
+
+    The audit event names the invitation number, never the code.
+
+    Args:
+        request: The `POST` request. The user must be a superuser.
+
+    Returns:
+        A redirect to the invitation list.
+    """
     invite = SignupInvite(created_by=request.user)
     code = invite.generate_code()
     invite.save()
@@ -68,7 +84,17 @@ def invite_generate(request: HttpRequest) -> HttpResponse:
 @superuser_post_required
 @transaction.atomic
 def invite_revoke(request: HttpRequest, pk: int) -> HttpResponse:
-    """Revoke only an unused invitation; preserve redemption history."""
+    """Revoke an invitation that is not used and not revoked.
+
+    A used invitation keeps its history. The audit event names the invitation number.
+
+    Args:
+        request: The `POST` request. The user must be a superuser.
+        pk: The invitation primary key.
+
+    Returns:
+        A redirect to the invitation list, with a message for success or for a failed revoke.
+    """
     invite = get_object_or_404(SignupInvite, pk=pk)
     updated = SignupInvite.objects.filter(pk=invite.pk, used_at__isnull=True, revoked=False).update(
         revoked=True

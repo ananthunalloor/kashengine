@@ -25,3 +25,5 @@ First release of the API.
 - `limit` and `offset` paging, `ETag` and `If-None-Match`.
 - The OpenAPI 3.1 file and the Swagger UI at `/api/v1/docs`.
 - The `API-Version` header, and the `Deprecation` and `Sunset` headers for the future.
+- A regular user needs a verified email address to use the API. A user without one gets `403` with
+  the code `email_verification_required`. Staff and superusers are exempt.

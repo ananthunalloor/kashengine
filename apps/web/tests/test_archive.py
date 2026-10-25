@@ -3,7 +3,9 @@
 import pytest
 from django.test import Client
 from django.urls import resolve
+from django.utils import timezone
 
+from apps.delivery.models import DeliveryPreference
 from apps.news.models import NewsFeed
 from apps.siteconfig import service
 
@@ -22,8 +24,10 @@ def archive_settings(settings):
 
 @pytest.fixture
 def identities(django_user_model):
+    member = django_user_model.objects.create_user("archive-member", password=PASSWORD)
+    DeliveryPreference.objects.create(user=member, email_verified_at=timezone.now())
     return {
-        "member": django_user_model.objects.create_user("archive-member", password=PASSWORD),
+        "member": member,
         "staff": django_user_model.objects.create_user(
             "archive-staff", password=PASSWORD, is_staff=True
         ),

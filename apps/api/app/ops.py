@@ -8,7 +8,9 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from ninja import Field, Query, Router
 
+from apps.api.errors import ApiError
 from apps.api.v1.common import ERRORS_WITH_NOT_FOUND, ERRORS_WITH_VALIDATION
+from apps.ops import audit
 from apps.ops.models import AuditEvent, TaskRun
 from apps.ops.templatetags.ops_extras import duration
 from apps.siteconfig import conf
@@ -177,14 +179,17 @@ def list_runs(request: HttpRequest, filters: Query[RunFilters]):
     "/ops/runs/{pk}/stop",
     response={200: dict, **ERRORS_WITH_NOT_FOUND},
     operation_id="stop_app_ops_run",
-    summary="Stop an active task run as staff",
+    summary="Stop an active task run as a superuser",
 )
 def stop_run(request: HttpRequest, pk: int):
     """Stop a pending or started task run and mark it failed.
 
-    The request is allowed only for staff, and the Celery worker is instructed to terminate the task
-    so the app does not leave a hung task in the queue.
+    The request is allowed only for superusers, like every change in Ops. The Celery worker is
+    instructed to terminate the task so the app does not leave a hung task in the queue. The
+    action is written to the audit trail.
     """
+    if not getattr(request.user, "is_superuser", False):
+        raise ApiError("feature_not_available", "Only a superuser can stop a task run.")
     run = get_object_or_404(TaskRun, pk=pk)
     if not run.is_active:
         return {"ok": False, "status": run.status}
@@ -200,6 +205,7 @@ def stop_run(request: HttpRequest, pk: int):
         run.duration_ms = 0
     run.error = run.error or "The run was stopped by an admin."
     run.save(update_fields=["status", "finished_at", "duration_ms", "error"])
+    audit.record(request.user, "stop run", run.label, f"run {run.pk}", request)
     return {"ok": True, "status": run.status}
 
 

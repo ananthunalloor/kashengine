@@ -77,7 +77,16 @@ def _filter_view(request, template, partial, names, build_queryset, extra=None):
 
 @login_not_required
 def landing(request: HttpRequest) -> HttpResponse:
-    """Introduce the app without exposing account or market data."""
+    """Introduce the app without exposing account or market data.
+
+    The page needs no sign-in.
+
+    Args:
+        request: The request.
+
+    Returns:
+        The rendered landing page.
+    """
     return render(request, "web/landing.html")
 
 
@@ -120,7 +129,15 @@ def dashboard(request):
 @login_required(login_url="web:login")
 @safe_only
 def react_company(request: HttpRequest, pk: int) -> HttpResponse:
-    """Serve the uncached company detail shell for an existing saved company."""
+    """Serve the React shell for the page of one saved company.
+
+    Args:
+        request: The authenticated browser request.
+        pk: The company primary key from the URL.
+
+    Returns:
+        The React app shell, uncached.
+    """
     get_object_or_404(Company.objects.only("id"), pk=pk)
     return react_app(request)
 

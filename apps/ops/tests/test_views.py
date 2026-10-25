@@ -192,6 +192,8 @@ def test_a_superuser_can_stop_a_running_task(boss_client, monkeypatch):
     run.refresh_from_db()
     assert run.status == TaskRun.Status.FAILURE
     assert "stopped" in run.error.lower()
+    event = AuditEvent.objects.get(action="stop run")
+    assert event.target == "running task"
 
 
 def test_a_missing_run_is_a_404(staff_client):

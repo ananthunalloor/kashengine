@@ -28,7 +28,8 @@ The API cannot change data. Every endpoint uses the `GET` method.
 
 ## Make your first call
 
-1. Sign in to the web app and open the **Account** page.
+1. Sign in to the web app, verify your email address if the **Account** page asks for it, and open
+   the **Account** page. Without a verified email you cannot make a token.
 2. In **API access**, enter a name and select **Make token**. Copy the token. The page shows it
    one time only.
 3. Send a request with the token:
@@ -63,8 +64,10 @@ If the call fails, read [Errors](./errors.md).
 ## Rules that apply to every endpoint
 
 - **Same access as the web app.** The API uses the same rules as the web pages. A user needs the
-  feature of the endpoint. If an admin turned on subscriptions, the user also needs an active trial
-  or subscription. A staff user needs neither.
+  feature of the endpoint and a **verified email address**. If an admin turned on subscriptions, the
+  user also needs an active trial or subscription. A staff user needs none of these. A regular user
+  without a verified email gets `403` with the code
+  [`email_verification_required`](./errors.md#email_verification_required).
 - **Rate limit.** Each token has a limit for each minute. See [Rate limits](./rate-limits.md).
 - **Paging.** List endpoints return one page. See [Pagination](./pagination.md).
 - **Errors.** Errors use `application/problem+json`. See [Errors](./errors.md).
@@ -86,6 +89,22 @@ If the call fails, read [Errors](./errors.md).
 | Endpoint reference | [HTTP API reference](../reference/generated/http/index.md). The pages are made from the OpenAPI file. |
 
 You can make a client with any OpenAPI generator. Use the OpenAPI file as the input.
+
+## The private application API
+
+The React app uses a second API at `/api/app/`. It is **not** part of the public contract.
+
+- It accepts a browser session only. A bearer token gets `401`.
+- A user without a verified email gets `403 email_verification_required`, except on the Account
+  and verification endpoints.
+- It has its own limit (`APP_API_RATE_LIMIT_PER_MINUTE`, 300 for each user). See
+  [Rate limits](./rate-limits.md#the-private-api).
+- Its answers have `Cache-Control: private, no-store`.
+- It can change in any release. It has no version promise.
+- The `/api/app/ops/` paths are only for staff. A change there needs a superuser.
+- It does not stop when a superuser sets `API_ENABLED` to false.
+
+Do not build a program on `/api/app/`. Use `/api/v1/`.
 
 ## Turn the API off
 

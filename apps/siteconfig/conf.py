@@ -31,6 +31,16 @@ _loaded_at = 0.0
 
 
 def _decode(row: Setting) -> Any:
+    """Turn the saved text of one setting into a value.
+
+    Args:
+        row: The saved setting.
+
+    Returns:
+        The clean value. A secret is decrypted. None if the setting no longer exists, if a
+        secret cannot be decrypted, or if the saved value is not valid for its spec. A
+        secret that is saved as an empty text gives an empty text.
+    """
     spec = SPECS.get(row.key)
     if spec is None:
         return None  # A setting that no longer exists.
@@ -45,7 +55,11 @@ def _decode(row: Setting) -> Any:
 
 
 def _load() -> dict[str, Any]:
-    """Read all saved values. An unreadable value is left out."""
+    """Read all saved values. An unreadable value is left out.
+
+    Returns:
+        A dict from the setting key to the clean value.
+    """
     values: dict[str, Any] = {}
     with transaction.atomic():  # A savepoint, so an error does not break a caller's transaction.
         rows = list(Setting.objects.all())
@@ -57,7 +71,15 @@ def _load() -> dict[str, Any]:
 
 
 def overrides() -> dict[str, Any]:
-    """The values that were saved on the dashboard. A secret is included (decrypted)."""
+    """Return the values that were saved on the dashboard. A secret is included (decrypted).
+
+    The result is kept in memory for `CACHE_SECONDS` seconds in each process. If the database
+    cannot answer (for example before `migrate`), the result is empty, so the caller uses the
+    environment values.
+
+    Returns:
+        A dict from the setting key to the clean value. Do not change it.
+    """
     global _cache, _loaded_at  # noqa: PLW0603
     now = time.monotonic()
     if _cache is None or now - _loaded_at > CACHE_SECONDS:
@@ -78,7 +100,17 @@ def invalidate() -> None:
 
 
 def get(key: str) -> Any:
-    """The value of a setting."""
+    """Return the value of a setting: the dashboard value, else the environment value.
+
+    Args:
+        key: The name of a setting that the registry knows, for example `LLM_MODEL`.
+
+    Returns:
+        The value.
+
+    Raises:
+        AttributeError: If the key is not a setting that the dashboard manages.
+    """
     if key not in SPECS:
         msg = f"{key} is not a setting that the dashboard manages."
         raise AttributeError(msg)
@@ -89,12 +121,26 @@ def get(key: str) -> Any:
 
 
 def default(key: str) -> Any:
-    """The value from the environment or the default. A dashboard value is ignored."""
+    """Return the value from the environment or the default. A dashboard value is ignored.
+
+    Args:
+        key: The name of a Django setting.
+
+    Returns:
+        The value of that Django setting.
+    """
     return getattr(settings, key)
 
 
 def is_saved(key: str) -> bool:
-    """True if an admin saved a value for this setting."""
+    """Return True if an admin saved a value for this setting.
+
+    Args:
+        key: The name of a setting.
+
+    Returns:
+        True if the dashboard has a valid saved value for the key.
+    """
     return key in overrides()
 
 
