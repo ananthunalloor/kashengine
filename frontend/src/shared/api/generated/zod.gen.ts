@@ -547,6 +547,7 @@ export const zCompanyDetail = z.object({
     quote: zCompanyPrice.nullable(),
     candles: z.array(zCompanyBar),
     outlook: zCompanySignal.nullable(),
+    outlook_history: z.array(zCompanySignal).optional(),
     news: z.array(zCompanyStory),
     ipos: z.array(zCompanyIssue)
 });

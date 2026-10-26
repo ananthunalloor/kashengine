@@ -4175,6 +4175,14 @@
               }
             ]
           },
+          "outlook_history": {
+            "description": "Latest 120 saved outlooks for this instrument; requires Markets and News.",
+            "items": {
+              "$ref": "#/components/schemas/CompanySignal"
+            },
+            "title": "Outlook History",
+            "type": "array"
+          },
           "news": {
             "items": {
               "$ref": "#/components/schemas/CompanyStory"

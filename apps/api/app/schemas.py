@@ -725,6 +725,10 @@ class CompanyDetail(Schema):
     quote: CompanyPrice | None
     candles: list[CompanyBar]
     outlook: CompanySignal | None
+    outlook_history: list[CompanySignal] = Field(
+        default_factory=list,
+        description="Latest 120 saved outlooks for this instrument; requires Markets and News.",
+    )
     news: list[CompanyStory]
     ipos: list[CompanyIssue]
 

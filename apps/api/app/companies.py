@@ -94,6 +94,11 @@ def get_company(request: HttpRequest, pk: int):
         if markets
         else [],
         "outlook": outlook,
+        "outlook_history": list(
+            company.outlooks.filter(inputs__instrument_key=company.upstox_instrument_key)[:120]
+        )
+        if markets and news
+        else [],
         "news": list(company.news_articles.all()[:30]) if news else [],
         "ipos": list(company.ipos.all()[:30]) if ipos else [],
     }

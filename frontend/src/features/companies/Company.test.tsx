@@ -1,11 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { ThemeProvider } from "../../app/ThemeProvider";
 import { routeTree } from "../../routeTree.gen";
-import { projectClosingPrices } from "./Company";
+import { metricAssessment, projectClosingPrices } from "./Company";
 import type { CompanyDetail } from "../../shared/api/generated/types.gen";
 import { session } from "../../test/session";
 
@@ -159,13 +159,30 @@ it("renders saved company data and a history-only trend projection", async () =>
   expect(screen.getByRole("img", { name: /Daily candlestick chart/ })).toBeInTheDocument();
   expect(screen.getByText(/older observation, not live/)).toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "Company story" })).not.toBeInTheDocument();
-  expect(screen.getByText("P/E")).toBeInTheDocument();
+  expect(
+    within(screen.getByRole("table", { name: "Fundamental metrics" })).getByText("P/E"),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Is this company overvalued?" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Valuation" })).toHaveAttribute(
+    "href",
+    "#company-valuation",
+  );
   expect(screen.getAllByText("20")).toHaveLength(2);
-  expect(screen.getAllByText("Sector comparison: 15")).toHaveLength(2);
-  expect(screen.getByText("Higher multiple · context needed")).toBeInTheDocument();
-  expect(screen.getByText("Stronger vs sector")).toBeInTheDocument();
-  expect(screen.getByText("Higher leverage")).toBeInTheDocument();
-  expect(screen.getByText("Supporting relevance")).toBeInTheDocument();
+  expect(screen.getAllByText("15")).toHaveLength(2);
+  const fundamentals = within(screen.getByRole("table", { name: "Fundamental metrics" }));
+  expect(fundamentals.getByText("Higher multiple · context needed")).toBeInTheDocument();
+  expect(fundamentals.getByText("Favorable · stronger vs sector")).toBeInTheDocument();
+  expect(fundamentals.getByText("Unfavorable · higher leverage")).toBeInTheDocument();
+  fireEvent.change(screen.getByRole("combobox", { name: "Assessment" }), {
+    target: { value: "Favorable · stronger vs sector" },
+  });
+  expect(fundamentals.getByText("ROE")).toBeInTheDocument();
+  expect(fundamentals.queryByText("Debt to equity")).not.toBeInTheDocument();
+  fireEvent.change(screen.getByRole("combobox", { name: "Assessment" }), {
+    target: { value: "" },
+  });
+  expect(screen.queryByText(/Upstox/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Provider:/)).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "About P/E" })).toBeInTheDocument();
   expect(
     screen.getByRole("region", {
@@ -179,10 +196,15 @@ it("renders saved company data and a history-only trend projection", async () =>
   expect(screen.getByRole("link", { name: /Market pressure story/ })).toBeInTheDocument();
   expect(screen.queryByText("Company story")).not.toBeInTheDocument();
   expect(screen.getByText(/not been backtested/)).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "Prediction accuracy & deviations" }),
+  ).toBeInTheDocument();
   expect(screen.getByText("Engine Outlook")).toBeInTheDocument();
   expect(screen.getByText("Bullish")).toBeInTheDocument();
   expect(screen.getByText("Signal Score: 0.500")).toBeInTheDocument();
   expect(screen.getByRole("navigation", { name: "Company sections" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Trade setup watchlist" })).toBeInTheDocument();
+  expect(screen.getByText("Wait / insufficient data")).toBeInTheDocument();
   expect(fetch).toHaveBeenCalledWith("/api/app/companies/1", expect.anything());
 });
 
@@ -216,9 +238,29 @@ it("keeps unavailable market, news and IPO datasets out of the page", async () =
   });
   expect(await screen.findByText(/require Markets access/)).toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "Stock trend" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Trade setup watchlist" })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Prediction accuracy & deviations" }),
+  ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("heading", { name: "Company news and sentiment scores" }),
   ).not.toBeInTheDocument();
+});
+
+it("assesses only valid sector comparisons and does not treat blank values as zero", () => {
+  for (const missing of ["", " ", "-", "N/A", null, undefined, Number.NaN, true]) {
+    expect(metricAssessment("ROE", missing, "15").label).toBe("Not assessable");
+    expect(metricAssessment("ROE", "20", missing).label).toBe("No sector benchmark");
+  }
+  expect(metricAssessment("ROE", "0", "15").label).toBe("Unfavorable · weaker vs sector");
+  expect(metricAssessment("ROE", "20.5%", "15%").label).toBe("Favorable · stronger vs sector");
+  expect(metricAssessment("Debt to equity", "1", "2").label).toBe("Favorable · lower leverage");
+  expect(metricAssessment("Debt to equity", "-1", "2").label).toContain("Not comparable");
+  expect(metricAssessment("P/E", "-5", "15").label).toContain("Not comparable");
+  expect(metricAssessment("P/E", "0", "15").label).toContain("Not comparable");
+  expect(metricAssessment("P/E", "-5", "-5").label).toContain("Not comparable");
+  expect(metricAssessment("ROE", "15", 15).label).toBe("In line with sector");
+  expect(metricAssessment("Revenue", "1,200", "900").label).toBe("Above sector · context needed");
 });
 
 it("shows saved-company market observations and internal company links", async () => {

@@ -74,6 +74,66 @@ linked news and IPOs, and the evidence of the outlook. The API is `GET /api/app/
 part of the page needs a feature: prices and the outlook need `markets`, news needs `news`, IPOs
 need `ipos`. A user without the feature does not get that part.
 
+Fundamentals use a searchable, sortable, paginated table with category and assessment filters.
+Company and sector values are shown side by side. Profitability and leverage assessments are
+relative to the supplied sector benchmark, not an overall good/bad verdict on the stock.
+Missing or invalid numbers are not treated as zero; unsupported comparisons are marked as
+needing context. The page shows the saved timestamp rather than a provider badge.
+
+The **Is this company overvalued?** section compares positive saved P/E, P/B and EV/EBITDA
+company/sector pairs. Each shows `(company / sector - 1) * 100` as a premium or discount.
+All comparable ratios above the sector (allowing equal ones) give a sector-premium verdict;
+all below give a discount; opposing comparisons are mixed and equal ratios are in line.
+No comparable pairs gives insufficient data. Identical duplicates count once; conflicting
+values, unexpected percentage units and non-positive multiples are excluded. A one-ratio
+verdict is explicitly marked as limited evidence. The save time is shown, not implied live.
+This is relative pricing, not proof of over/undervaluation or an absolute fair-value target;
+growth, risks, accounting basis, reporting periods and sector composition still need review.
+
+The daily candle chart is 440px tall, with session ranges (20 sessions per month), zoom,
+horizontal drag/button panning, a snapped crosshair and OHLCV readout on hover/touch or keyboard
+inspection. Volume, SMA 20, SMA 50 and the illustrative projection can be toggled. Moving
+averages use all available prior history, not just the visible window. Fullscreen and reset
+controls are available. Arrow keys inspect candles; Shift+arrows pan; +/- zoom.
+
+### Prediction verification and deviations
+
+The page separates **historical chart simulations** from **saved engine outlook results**.
+The current dashed projection is unverified future data, not evidence of accuracy.
+The default view leads with a baseline verdict, direction-match rate, average price miss and
+the latest direction miss (or latest comparison if none missed), with up to two related news
+items. Saved outlooks have a separate summary of matched, pending and unverifiable results.
+Full result tables and methodology are collapsed by default to keep the overview readable.
+
+- At each historical cutoff, the simulation fits only the preceding 20 closes and extrapolates
+  exactly the same slope used by the chart. Horizons are 1, 5 or 20 saved sessions; only completed
+  targets are scored. The latest 60 eligible comparisons show projected/actual close, signed
+  deviation, MAE, RMSE, MAPE, mean deviation and direction match rate. A no-change-price MAE on
+  the same samples is the baseline. Overlapping windows are not independent; missing saved
+  sessions can stretch the horizon. This reconstruction is not an archived/live track record.
+- The API supplies up to 120 recent instrument-scoped saved outlooks, only with both Markets and
+  News access. The earliest saved record per target in that bounded history is evaluated.
+  Outlooks without baseline evidence, saved before their baseline completed, or saved at/after
+  target-session open (09:15 IST) are not verifiable. Pending targets are not scored, and a
+  missing target close is never replaced with another day's price.
+- Direction checks use an explicit **+/-0.5% realized-return flat band**. This is an evaluation
+  convention, not the outlook model's score threshold. A direction-only outlook has no price
+  target, so the page never calculates a fabricated price error from its score.
+- Deviation rows explain observed reversal/magnitude differences and saved momentum/news
+  contributions. Available timestamped company-linked news is linked only if published after
+  cutoff/issuance and by target-session close. Context is limited to the latest 30 saved articles;
+  missing/undated news does not establish that no event occurred. Sentiment and temporal overlap
+  do **not** prove causation. Without market benchmarks, corporate actions and event evidence,
+  the specific cause remains unknown. Revised historical data can affect these evaluations.
+
+The trade setup watchlist uses at least 21 valid daily candles. It reports the prior 20-session
+high/low, SMA 20, momentum and volume confirmation; positional trend alignment needs SMA 50.
+Swing scenarios require a completed close above resistance with above-average volume.
+An illustrative stop at support and 2R level describe arithmetic risk, not an execution signal
+or predicted target. History older than seven calendar days forces a wait state. Unsupported
+intraday/short-selling setups and missing data are explicitly marked as not assessable.
+These educational rules are not personalized advice and have not been backtested.
+
 ## Screener.in data
 
 :::warning

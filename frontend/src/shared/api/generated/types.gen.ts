@@ -1374,6 +1374,12 @@ export type CompanyDetail = {
     candles: Array<CompanyBar>;
     outlook: CompanySignal | null;
     /**
+     * Outlook History
+     *
+     * Latest 120 saved outlooks for this instrument; requires Markets and News.
+     */
+    outlook_history?: Array<CompanySignal>;
+    /**
      * News
      */
     news: Array<CompanyStory>;

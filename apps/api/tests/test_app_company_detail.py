@@ -65,6 +65,7 @@ def test_detail_saved_only_and_complete_scores(client, member, company, monkeypa
     assert body["fundamentals_source"] == "Upstox"
     assert body["quote"]["change_pct"] == pytest.approx(10)
     assert body["outlook"]["score"] == 0.5
+    assert body["outlook_history"][0]["score"] == 0.5
     assert body["news"][0]["sentiment_score"] == 0.3
     assert body["ipos"][0]["score_inputs"] == {"test": 0.4}
     assert CompanyOutlook.objects.count() == before
@@ -88,9 +89,11 @@ def test_detail_feature_gates(client, member, company, feature):
     if feature == "markets":
         assert body["quote"] is body["outlook"] is None
         assert body["candles"] == []
+        assert body["outlook_history"] == []
     elif feature == "news":
         assert body["news"] == []
         assert body["outlook"] is None
+        assert body["outlook_history"] == []
     else:
         assert body["ipos"] == []
 
@@ -117,3 +120,33 @@ def test_changed_mapping_does_not_mix_old_price_and_fundamentals(client, member,
     body = client.get(f"/api/app/companies/{company.pk}").json()
     assert body["quote"] is body["outlook"] is None
     assert body["fundamentals"] == {}
+    assert body["outlook_history"] == []
+
+
+def test_outlook_history_is_bounded_ordered_and_instrument_scoped(client, member, company):
+    CompanyOutlook.objects.bulk_create(
+        [
+            CompanyOutlook(
+                company=company,
+                target_date=date(2026, 10, 26),
+                direction="down",
+                score=-0.5,
+                momentum_score=-0.6,
+                inputs={"instrument_key": KEY, "method": f"test-{index}"},
+            )
+            for index in range(125)
+        ]
+    )
+    CompanyOutlook.objects.create(
+        company=company,
+        target_date=date(2026, 10, 26),
+        direction="up",
+        score=1,
+        momentum_score=1,
+        inputs={"instrument_key": "OTHER"},
+    )
+    client.force_login(member)
+    body = client.get(f"/api/app/companies/{company.pk}").json()
+    assert len(body["outlook_history"]) == 120
+    assert body["outlook_history"][0]["inputs"]["method"] == "test-124"
+    assert body["outlook_history"][-1]["inputs"]["method"] == "test-5"

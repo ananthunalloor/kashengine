@@ -630,6 +630,39 @@ button:not([class*="mantine-"]):not(.header-icon-button):not(.account-menu-trigg
   gap: var(--ui-space-1);
 }
 
+.stock-chart-svg {
+  display: block;
+  background: var(--brand-surface);
+  color: var(--brand-muted);
+  font-size: 11px;
+}
+
+.stock-chart-svg text {
+  fill: currentColor;
+}
+
+.stock-chart-grid {
+  stroke: var(--brand-line);
+}
+
+.stock-chart-crosshair {
+  stroke: var(--brand-muted);
+  stroke-dasharray: 4 3;
+  fill: var(--brand-purple);
+}
+
+.stock-chart-hit-area {
+  cursor: crosshair;
+  touch-action: pan-y;
+}
+
+.stock-chart-readout {
+  min-height: 3em;
+  padding: var(--ui-space-2);
+  background: var(--brand-soft);
+  font-variant-numeric: tabular-nums;
+}
+
 .company-chart-legend {
   color: var(--brand-muted);
   padding: var(--ui-space-2) 0;

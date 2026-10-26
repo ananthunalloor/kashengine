@@ -42,9 +42,14 @@ import { SavedFacts } from "../../shared/ui/SavedFacts";
 import { sourceLink } from "../../shared/ui/sourceLink";
 import { CandlestickTrendChart } from "../../shared/ui/TanStackCharts";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
+import { CompanyTradeSetups } from "./CompanyTradeSetups";
+import { PredictionReview } from "./PredictionReview";
+import { CompanyValuation } from "./CompanyValuation";
+import { collectFacts, comparableNumber, humanize } from "./fundamentalFacts";
+import { projectClosingPrices } from "./predictionAnalysis";
+export { projectClosingPrices } from "./predictionAnalysis";
 
 const number = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 });
-const projectionWindow = 20;
 const date = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
   dateStyle: "medium",
@@ -55,25 +60,6 @@ export function savedTime(value: string) {
 }
 export function score(value: number | null) {
   return value === null ? "Not scored" : value.toFixed(3);
-}
-
-export function projectClosingPrices(candles: CompanyBar[]): { label: string; value: number }[] {
-  if (candles.length < projectionWindow) return [];
-  const closes = candles.slice(-projectionWindow).map((bar) => bar.close);
-  const meanX = (closes.length - 1) / 2;
-  const meanY = closes.reduce((total, close) => total + close, 0) / closes.length;
-  const slope =
-    closes.reduce((total, close, index) => total + (index - meanX) * (close - meanY), 0) /
-    closes.reduce((total, _, index) => total + (index - meanX) ** 2, 0);
-  const last = candles.at(-1)!;
-
-  return [
-    { label: last.day, value: last.close },
-    ...Array.from({ length: projectionWindow }, (_, index) => ({
-      label: `T+${index + 1}`,
-      value: last.close + slope * (index + 1),
-    })),
-  ];
 }
 
 export function QuoteFreshness({ quote }: { quote: CompanyPrice }) {
@@ -103,7 +89,7 @@ export function PriceSummary({ quote }: { quote: CompanyPrice | null }) {
   if (!quote)
     return (
       <Text c="dimmed">
-        No saved quote. Configure the company's Upstox instrument key and run ingestion.
+        No saved quote. Configure the company's instrument key and run ingestion.
       </Text>
     );
   return (
@@ -183,16 +169,17 @@ function PriceTrend({ candles }: { candles: CompanyBar[] }) {
         </Text>
       </Group>
       <CandlestickTrendChart
-        candles={candles.slice(-60).map((bar) => ({ ...bar, label: bar.day }))}
+        candles={candles.map((bar) => ({ ...bar, label: bar.day }))}
         projectionPoints={projectionPoints}
-        ariaLabel={`Daily candlestick chart from ${candles.at(-60)?.day ?? candles[0].day} to ${candles.at(-1)?.day}${projection.length ? ", followed by a 20-session history-only linear projection" : ""}; each candle shows open, high, low and close in INR`}
-        height={240}
+        ariaLabel="Daily candlestick chart; each candle shows open, high, low and close in INR"
+        height={440}
       />
       <div className="company-chart-note">
         <Text c="dimmed" size="sm">
           Each candle shows open, high, low and close in INR. The dashed line extends a linear fit
           of the latest 20 closes across 20 future sessions; it is not a price target or financial
-          advice, has not been backtested, and splits or dividends can distort it.
+          advice. Historical simulation results below do not validate future performance; splits or
+          dividends can distort it.
         </Text>
       </div>
       {projection.length === 0 && (
@@ -225,71 +212,11 @@ const barColumns: TableColumn<CompanyBar>[] = [
   })),
 ];
 
-type FundamentalFact = {
-  label: string;
-  value: unknown;
-  comparison?: unknown;
-};
-
-function humanize(value: string) {
-  return value.replaceAll("_", " ").replaceAll("-", " ").replace(/\s+/g, " ").trim();
-}
-
-function collectFacts(value: unknown, path: string[] = []): FundamentalFact[] {
-  if (Array.isArray(value)) {
-    return value.flatMap((item, index) => {
-      const rowName =
-        item && typeof item === "object" && !Array.isArray(item) && typeof item.name === "string"
-          ? item.name
-          : `Record ${index + 1}`;
-      return collectFacts(item, [...path, rowName]);
-    });
-  }
-  if (!value || typeof value !== "object") return [];
-
-  const record = value as Record<string, unknown>;
-  if (typeof record.name === "string" && Object.hasOwn(record, "company_value")) {
-    return [
-      {
-        label: record.name,
-        value: record.company_value,
-        ...(Object.hasOwn(record, "sector_value") ? { comparison: record.sector_value } : {}),
-      },
-    ];
-  }
-
-  return Object.entries(record).flatMap(([key, item]) => {
-    if (key === "name" && typeof item === "string") return [];
-    const label = [...path, humanize(key)].filter(Boolean).join(" · ");
-    if (item === null || ["string", "number", "boolean"].includes(typeof item)) {
-      return [{ label, value: item }];
-    }
-    return collectFacts(item, [...path, humanize(key)]);
-  });
-}
-
-function significance(label: string, category: string) {
-  const coreMetric =
-    /valuation|market cap|revenue|profit|earnings|eps|return on|roe|roce|debt|cash flow|margin/i.test(
-      label,
-    );
-  if (coreMetric) return { label: "High significance", color: "teal" };
-  if (category === "key ratios") return { label: "Supporting", color: "blue" };
-  return { label: "Contextual", color: "gray" };
-}
-
-function comparableNumber(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value !== "string") return null;
-  const parsed = Number(value.replaceAll(",", "").replace(/%$/, "").trim());
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function metricAssessment(label: string, value: unknown, comparison: unknown) {
+export function metricAssessment(label: string, value: unknown, comparison: unknown) {
   const actual = comparableNumber(value);
   const sector = comparableNumber(comparison);
-  if (actual === null || sector === null) return { label: "No sector benchmark", color: "gray" };
-  if (actual === sector) return { label: "In line with sector", color: "gray" };
+  if (actual === null) return { label: "Not assessable", color: "gray" };
+  if (sector === null) return { label: "No sector benchmark", color: "gray" };
 
   const key = label.toLowerCase();
   const profitability =
@@ -301,14 +228,17 @@ function metricAssessment(label: string, value: unknown, comparison: unknown) {
     /p\/e|price.*earnings|p\/b|price.*book|ev\s*\/\s*ebitda|valuation multiple/.test(key);
   const above = actual > sector;
 
+  if ((leverage && (actual < 0 || sector < 0)) || (valuation && (actual <= 0 || sector <= 0)))
+    return { label: "Not comparable · context needed", color: "gray" };
+  if (actual === sector) return { label: "In line with sector", color: "gray" };
   if (profitability)
     return above
-      ? { label: "Stronger vs sector", color: "teal" }
-      : { label: "Weaker vs sector", color: "orange" };
+      ? { label: "Favorable · stronger vs sector", color: "teal" }
+      : { label: "Unfavorable · weaker vs sector", color: "orange" };
   if (leverage)
     return above
-      ? { label: "Higher leverage", color: "orange" }
-      : { label: "Lower leverage", color: "teal" };
+      ? { label: "Unfavorable · higher leverage", color: "orange" }
+      : { label: "Favorable · lower leverage", color: "teal" };
   if (valuation)
     return { label: `${above ? "Higher" : "Lower"} multiple · context needed`, color: "yellow" };
   return { label: `${above ? "Above" : "Below"} sector · context needed`, color: "gray" };
@@ -328,12 +258,13 @@ function factDescription(label: string) {
     return "The market value of the company's listed equity, not the sector's market capitalization.";
   if (/dividend yield/.test(key))
     return "Annual dividend relative to share price. Past distributions do not guarantee future dividends.";
-  return `Provider-reported ${humanize(label)}. Check its unit, reporting period and sector context before comparing; significance describes analytical relevance, not whether a value is good or bad.`;
+  return `Reported ${humanize(label)}. Check its unit, reporting period and sector context before comparing. A sector comparison alone does not establish investment quality.`;
 }
 
 function factValue(value: unknown) {
   if (value === null || value === undefined || value === "") return "Not available";
-  if (typeof value === "number") return number.format(value);
+  if (typeof value === "number")
+    return Number.isFinite(value) ? number.format(value) : "Not available";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   return String(value);
 }
@@ -345,78 +276,80 @@ function Fundamentals({ data }: { data: CompanyDetail }) {
 
   if (!categories.length) return <Text c="dimmed">No saved fundamentals.</Text>;
 
+  const facts = categories.flatMap((category) =>
+    category.facts.map((fact) => ({
+      ...fact,
+      category: category.label,
+      assessment: metricAssessment(fact.label, fact.value, fact.comparison),
+    })),
+  );
+  type Row = (typeof facts)[number];
+  const columns: TableColumn<Row>[] = [
+    {
+      id: "metric",
+      label: "Metric",
+      value: (fact) => humanize(fact.label),
+      render: (fact) => (
+        <Group gap="xs" wrap="nowrap">
+          <Text size="sm" fw={600}>
+            {humanize(fact.label)}
+          </Text>
+          <Tooltip label={factDescription(fact.label)} multiline w={280} withArrow>
+            <ActionIcon variant="subtle" size="sm" aria-label={`About ${humanize(fact.label)}`}>
+              <LuInfo aria-hidden="true" />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
+      ),
+    },
+    {
+      id: "value",
+      label: "Company value",
+      value: (fact) => comparableNumber(fact.value) ?? factValue(fact.value),
+      render: (fact) => factValue(fact.value),
+    },
+    {
+      id: "sector",
+      label: "Sector benchmark",
+      value: (fact) => comparableNumber(fact.comparison),
+      render: (fact) => factValue(fact.comparison),
+    },
+    {
+      id: "assessment",
+      label: "Assessment",
+      value: (fact) => fact.assessment.label,
+      render: (fact) => (
+        <Badge variant="light" color={fact.assessment.color}>
+          {fact.assessment.label}
+        </Badge>
+      ),
+    },
+    { id: "category", label: "Category", value: (fact) => fact.category },
+  ];
   return (
-    <Stack gap="lg" className="company-fundamentals">
-      <div className="company-callout">
-        <Text size="sm" c="dimmed">
-          Significance indicates common analytical relevance, not whether a value is favorable.
-          Always check source units, reporting periods and sector context.
-        </Text>
-      </div>
-      {categories.map((category) => (
-        <section
-          key={category.label}
-          aria-label={category.label}
-          className="company-fundamental-group"
-        >
-          <Group justify="space-between" mb="sm" align="baseline">
-            <Group gap="xs" align="center">
-              <Title order={3} size="h4" tt="capitalize">
-                {category.label}
-              </Title>
-              <Badge size="xs" variant="light" color="gray">
-                {category.facts.length} metrics
-              </Badge>
-            </Group>
-          </Group>
-          <SimpleGrid cols={{ base: 1, xs: 2, lg: 4 }} spacing="sm">
-            {category.facts.map((fact, index) => {
-              const rank = significance(fact.label, category.label);
-              const assessment = metricAssessment(fact.label, fact.value, fact.comparison);
-              return (
-                <div
-                  key={`${fact.label}-${index}`}
-                  className="company-fact-item"
-                  data-assessment={assessment.color}
-                >
-                  <Group justify="space-between" align="flex-start" wrap="nowrap" gap="xs">
-                    <Text size="sm" fw={600} className="company-fact-label">
-                      {humanize(fact.label)}
-                    </Text>
-                    <Tooltip label={factDescription(fact.label)} multiline w={280} withArrow>
-                      <ActionIcon
-                        variant="subtle"
-                        size="sm"
-                        aria-label={`About ${humanize(fact.label)}`}
-                      >
-                        <LuInfo aria-hidden="true" />
-                      </ActionIcon>
-                    </Tooltip>
-                  </Group>
-                  <Text
-                    className={`company-fact-value${typeof fact.value === "string" && fact.value.length > 100 ? " company-fact-value-text" : ""}`}
-                  >
-                    {factValue(fact.value)}
-                  </Text>
-                  {fact.comparison !== undefined && (
-                    <Text size="xs" c="dimmed" className="company-fact-comparison">
-                      Sector comparison: {factValue(fact.comparison)}
-                    </Text>
-                  )}
-                  <Group gap="xs" mt="xs" wrap="wrap" align="center">
-                    <Badge size="xs" variant="light" color={assessment.color}>
-                      {assessment.label}
-                    </Badge>
-                    <Text size="xs" c="dimmed">
-                      {rank.label} relevance
-                    </Text>
-                  </Group>
-                </div>
-              );
-            })}
-          </SimpleGrid>
-        </section>
-      ))}
+    <Stack gap="sm">
+      <Text size="sm" c="dimmed">
+        Favorable/unfavorable compares a metric with its supplied sector benchmark, not the stock's
+        overall investment quality. Lower valuation multiples are not automatically better. Missing
+        benchmarks, units or periods require context.
+      </Text>
+      <DataTable
+        data={facts}
+        columns={columns}
+        label="Fundamental metrics"
+        filters={[
+          {
+            label: "Category",
+            value: (fact) => fact.category,
+            options: categories.map((category) => category.label),
+          },
+          {
+            label: "Assessment",
+            value: (fact) => fact.assessment.label,
+            options: [...new Set(facts.map((fact) => fact.assessment.label))],
+          },
+        ]}
+      />
     </Stack>
   );
 }
@@ -542,7 +475,7 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
               {data.company.symbol} | {data.company.sector || "Sector not available"}
             </Text>
             <Text size="xs" c="dimmed">
-              {data.instrument_key || "No Upstox instrument mapping configured."}
+              {data.instrument_key || "No instrument mapping configured."}
             </Text>
           </div>
         </Group>
@@ -602,7 +535,7 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
                 {data.company.sector || "Unclassified Sector"}
               </Text>
               <Text size="xs" c="dimmed" mt={4}>
-                {data.instrument_key ? "Upstox instrument configured" : "No instrument key mapped"}
+                {data.instrument_key ? "Instrument configured" : "No instrument key mapped"}
               </Text>
             </div>
             <Group justify="space-between" mt="xs" pt="xs" className="company-stat-subrow">
@@ -716,10 +649,12 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
           <div>
             <Text size="sm">
               <Text component="span" c="dimmed">
-                Source:{" "}
+                Last saved:{" "}
               </Text>
               <Text component="span" fw={600}>
-                {data.fundamentals_source || "None"}
+                {data.fundamentals_as_of
+                  ? savedTime(data.fundamentals_as_of) + " IST"
+                  : "Not available"}
               </Text>
             </Text>
             <Text size="sm" mt={2}>
@@ -747,6 +682,12 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
             <span>Market &amp; Trend</span>
           </a>
         )}
+        {hasMarkets && (
+          <a href="#prediction-review" className="company-nav-pill">
+            <LuActivity aria-hidden="true" />
+            <span>Prediction accuracy</span>
+          </a>
+        )}
         <a href="#company-summary" className="company-nav-pill">
           <LuBuilding2 aria-hidden="true" />
           <span>About</span>
@@ -754,6 +695,10 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
         <a href="#fundamentals" className="company-nav-pill">
           <LuActivity aria-hidden="true" />
           <span>Fundamentals</span>
+        </a>
+        <a href="#company-valuation" className="company-nav-pill">
+          <LuLayers aria-hidden="true" />
+          <span>Valuation</span>
         </a>
         {hasNews && (
           <a href="#company-news" className="company-nav-pill">
@@ -797,10 +742,14 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
             <PriceSummary quote={data.quote} />
           </Group>
           <PriceTrend candles={data.candles} />
+          <PredictionReview data={data} />
+          <CompanyTradeSetups candles={data.candles} />
         </Paper>
       ) : (
         <Text c="dimmed">Market prices, stock trends and outlooks require Markets access.</Text>
       )}
+
+      <CompanyValuation data={data} />
 
       {/* 7. Fundamentals Section */}
       <section id="fundamentals" aria-label="Company fundamentals">
@@ -808,15 +757,10 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
           <Title order={2} size="h3">
             Fundamentals
           </Title>
-          {data.fundamentals_source && (
-            <Badge variant="light" color="violet">
-              Provider: {data.fundamentals_source}
-            </Badge>
-          )}
         </Group>
         <Text c="dimmed" my="sm">
           {data.fundamentals_source
-            ? `${data.fundamentals_source} | saved ${data.fundamentals_as_of ? savedTime(data.fundamentals_as_of) + " IST" : "at an unknown time"}`
+            ? `Saved ${data.fundamentals_as_of ? savedTime(data.fundamentals_as_of) + " IST" : "at an unknown time"}`
             : "No saved fundamentals."}{" "}
           Financial-statement units and reporting periods are supplied by the source. Sector market
           cap is not the company's market cap.
