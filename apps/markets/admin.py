@@ -20,15 +20,29 @@ class ForecastEvidenceAdmin(admin.ModelAdmin):
     """Inspect training metrics and point-in-time audits without manually editing them."""
 
     def has_add_permission(self, request):
-        """Only forecasting jobs can create evidence."""
+        """Only forecasting jobs can create evidence.
+
+        Args:
+            request: The current admin request.
+        """
         return False
 
     def has_change_permission(self, request, obj=None):
-        """Do not allow manual changes to training evidence or validation gates."""
+        """Do not allow manual changes to training evidence or validation gates.
+
+        Args:
+            request: The current admin request.
+            obj: The evidence object, or None for the list view.
+        """
         return False
 
     def has_delete_permission(self, request, obj=None):
-        """Keep model evidence for reproducibility."""
+        """Keep model evidence for reproducibility.
+
+        Args:
+            request: The current admin request.
+            obj: The evidence object, or None for the list view.
+        """
         return False
 
 

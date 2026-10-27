@@ -10,7 +10,18 @@ logger = logging.getLogger(__name__)
 def check_model(
     parameters: dict, features: list[float], label: str, score: float, strength: float
 ) -> list[str]:
-    """Replay the classifier independently with vector operations, not the producer's infer."""
+    """Replay the classifier independently with vector operations, not the producer's infer.
+
+    Args:
+        parameters: The classifier coefficients, scaling values, and class labels.
+        features: The input values in the trained feature order.
+        label: The label reported by the producer.
+        score: The directional score reported by the producer.
+        strength: The winning class probability reported by the producer.
+
+    Returns:
+        Reasons to block the model output, or an empty list when checks pass.
+    """
     import numpy as np  # noqa: PLC0415
 
     means = np.asarray(parameters["mean"], dtype=float)
@@ -54,7 +65,18 @@ def check_model(
 def check_rule(
     kind: str, features: list[float], score: float, label: str, context: dict
 ) -> list[str]:
-    """Recalculate the rule independently of the prediction producer."""
+    """Recalculate the rule independently of the prediction producer.
+
+    Args:
+        kind: The forecast family whose rule to replay.
+        features: The normalized input values used by the rule.
+        score: The score reported by the producer.
+        label: The label reported by the producer.
+        context: The rule's weights and decision thresholds.
+
+    Returns:
+        Reasons to block the rule output, or an empty list when checks pass.
+    """
     if not all(math.isfinite(value) for value in features):
         return ["Non-finite source evidence."]
     if kind == "market":
@@ -104,7 +126,20 @@ def check_forecast(
     deadline: datetime,
     reasons: list[str],
 ) -> dict:
-    """Reject missing, non-finite, out-of-range or late evidence before publication."""
+    """Reject missing, non-finite, out-of-range or late evidence before publication.
+
+    Args:
+        features: The normalized input values to validate.
+        score: The calculated directional score.
+        label: The proposed prediction label.
+        allowed: The labels permitted for this forecast.
+        now: The forecast issue time.
+        deadline: The cutoff for publishing the forecast.
+        reasons: Existing reasons to withhold publication.
+
+    Returns:
+        The audit status, check time, blocking reasons, and watchdog version.
+    """
     problems = list(reasons)
     if not features or not all(math.isfinite(value) and -1 <= value <= 1 for value in features):
         problems.append("Inputs must be finite normalized values between -1 and 1.")

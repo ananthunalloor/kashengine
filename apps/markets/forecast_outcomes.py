@@ -14,7 +14,15 @@ logger = logging.getLogger(__name__)
 
 
 def _actual(sample: ForecastSample, now: datetime) -> float | None:
-    """Read only a final, positive price whose session has completed."""
+    """Read only a final, positive price whose session has completed.
+
+    Args:
+        sample: The forecast evidence and its outcome reference values.
+        now: The latest time allowed for completed outcomes.
+
+    Returns:
+        The actual percentage change, or None when no final outcome is available.
+    """
     if now < session_close(sample.target_date) + final_buffer():
         return None
     if sample.kind == "ipo":
@@ -46,7 +54,14 @@ def _actual(sample: ForecastSample, now: datetime) -> float | None:
 
 
 def collect_outcomes(now: datetime) -> dict:
-    """Label one snapshot per entity/session, without using post-deadline features."""
+    """Label one snapshot per entity/session, without using post-deadline features.
+
+    Args:
+        now: The observation time and cutoff for available outcomes.
+
+    Returns:
+        Counts of evaluated samples and samples still waiting for outcomes.
+    """
     result = {"evaluated": 0, "waiting": 0}
     pending = ForecastSample.objects.filter(
         observed_at__isnull=True,

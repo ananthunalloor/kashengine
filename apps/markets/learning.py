@@ -31,7 +31,15 @@ MAX_TRAIN_SAMPLES = 20_000
 
 
 def _policy(kind: str, context: dict) -> dict:
-    """Keep incompatible outcome definitions out of the same training cohort."""
+    """Keep incompatible outcome definitions out of the same training cohort.
+
+    Args:
+        kind: The forecast family.
+        context: The reference values and outcome thresholds for the forecast.
+
+    Returns:
+        The context values that define a compatible training cohort.
+    """
     keys = (
         ("symbol", "band")
         if kind == "market"
@@ -43,7 +51,18 @@ def _policy(kind: str, context: dict) -> dict:
 
 
 def infer(parameters: dict, features: list[float]) -> tuple[str, float, float]:
-    """Evaluate JSON logistic coefficients without loading an executable model artifact."""
+    """Evaluate JSON logistic coefficients without loading an executable model artifact.
+
+    Args:
+        parameters: The classifier coefficients, scaling values, and class labels.
+        features: The input values in the trained feature order.
+
+    Returns:
+        The predicted label, directional score, and winning class probability.
+
+    Raises:
+        ValueError: If the input feature count does not match the model schema.
+    """
     if len(features) != len(parameters["mean"]):
         raise ValueError("Forecast model feature schema does not match the inputs.")
     normalized = [
@@ -85,7 +104,27 @@ def forecast(  # noqa: PLR0913
     reasons: list[str],
     rule_strength: float | None = None,
 ) -> tuple[str, float, dict]:
-    """Choose a validated model or explicit experimental rule, then apply the watchdog."""
+    """Choose a validated model or explicit experimental rule, then apply the watchdog.
+
+    Args:
+        kind: The forecast family.
+        entity: The identifier of the forecast subject.
+        target: The session date being forecast.
+        features: The normalized input values in the family's feature order.
+        rule_label: The experimental rule's predicted label.
+        rule_score: The experimental rule's directional score.
+        now: The forecast issue time.
+        deadline: The cutoff for publishing the forecast.
+        context: The reference values and settings used by the rule and outcome policy.
+        reasons: Existing reasons to withhold publication.
+        rule_strength: The optional signal strength of the experimental rule.
+
+    Returns:
+        The chosen label, score, and metadata containing the watchdog audit.
+
+    Raises:
+        ValueError: If the feature count does not match the forecast family.
+    """
     label, score = rule_label, rule_score
     reasons = list(reasons)
     if len(features) != FEATURE_COUNTS[kind]:
@@ -149,7 +188,15 @@ def forecast(  # noqa: PLR0913
 
 
 def _training_rows(kind: str, now: datetime) -> list[ForecastSample]:
-    """Read only outcomes actually available before this training run."""
+    """Read only outcomes actually available before this training run.
+
+    Args:
+        kind: The forecast family to train.
+        now: The training time and cutoff for observed outcomes.
+
+    Returns:
+        Eligible samples in chronological order, capped per session date.
+    """
     eligible = ForecastSample.objects.filter(
         kind=kind,
         observed_at__lte=now,
@@ -176,7 +223,18 @@ def _training_rows(kind: str, now: datetime) -> list[ForecastSample]:
 
 
 def train_model(kind: str, now: datetime) -> dict:
-    """Test one fixed regularized model on untouched later dates before promoting it."""
+    """Test one fixed regularized model on untouched later dates before promoting it.
+
+    Args:
+        kind: The forecast family to train.
+        now: The training time and cutoff for available evidence.
+
+    Returns:
+        Training and validation metrics with the model's approval status.
+
+    Raises:
+        ValueError: If the fitted scaler has no vector parameters.
+    """
     from numpy import ndarray  # noqa: PLC0415
     from sklearn.linear_model import LogisticRegression  # noqa: PLC0415
     from sklearn.preprocessing import StandardScaler  # noqa: PLC0415

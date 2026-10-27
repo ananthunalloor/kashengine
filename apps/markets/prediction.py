@@ -403,6 +403,9 @@ def decide(
     Returns:
         An `Outcome`. If there is no data at all (coverage is 0), the direction is `FLAT`, the
         confidence is 0.1 and the score is 0.0.
+
+    Raises:
+        ValueError: If the news weight, threshold, or minimum article count is invalid.
     """
     notes: list[str] = []
     if not 0 <= news_weight <= 1 or not 0 < threshold <= 1 or min_articles < 1:

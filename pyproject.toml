@@ -11,7 +11,7 @@ dependencies = [
     "cryptography>=50.0.2",
     "django>=6.1.1",
     "django-axes>=8.3.1",
-    "django-celery-beat>=2.1.0",
+    "django-celery-beat>=2.9.0",
     "django-environ>=0.14.0",
     "django-ninja>=1.7.1",
     "django-stubs>=6.1.1",
@@ -146,3 +146,8 @@ exclude = ["**/migrations/**", "staticfiles/**", "frontend/**", ".venv/**"]
 [tool.ty.terminal]
 error-on-warning = true
 output-format = "concise"
+
+[tool.uv]
+# django-celery-beat 2.9.0 caps Django below 6.1, and older releases (which uv would otherwise
+# pick) still assume pytz and crash Celery 5.6 beat. Keep our Django pin for it.
+override-dependencies = ["django>=6.1.1"]

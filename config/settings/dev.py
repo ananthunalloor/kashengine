@@ -13,6 +13,18 @@ DATABASES = {
     "default": env.db("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
 }
 
+# Web, realtime, the streamer and several Celery workers write to the same SQLite file in dev.
+# WAL lets readers run beside a writer, IMMEDIATE takes the write lock at the start of a
+# transaction (no deadlocked upgrades), and the timeout waits for the lock instead of failing.
+if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":
+    DATABASES["default"].setdefault("OPTIONS", {}).update(
+        {
+            "timeout": 20,
+            "transaction_mode": "IMMEDIATE",
+            "init_command": "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;",
+        }
+    )
+
 # Caddy (https://localhost/) ends TLS and sets X-Forwarded-Proto. Django then sees HTTPS, and the
 # CSRF check accepts the https origin.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

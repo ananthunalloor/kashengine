@@ -31,7 +31,11 @@ logger = logging.getLogger(__name__)
 
 @shared_task(name="markets.refresh_forecasts", soft_time_limit=600)
 def refresh_forecasts() -> dict:
-    """Refresh all forecast families from saved inputs; never revise an open session."""
+    """Refresh all forecast families from saved inputs; never revise an open session.
+
+    Returns:
+        Market, company, IPO, and outcome refresh results.
+    """
     from apps.companies.models import Company  # noqa: PLC0415
     from apps.ipos.scoring import score_ipos  # noqa: PLC0415
 
@@ -56,7 +60,11 @@ def refresh_forecasts() -> dict:
 
 @shared_task(name="markets.train_forecasts", soft_time_limit=1800)
 def train_forecasts() -> dict:
-    """Collect actual outcomes, then replace each model only through its validation gate."""
+    """Collect actual outcomes, then replace each model only through its validation gate.
+
+    Returns:
+        Outcome counts and training results for each forecast family.
+    """
     now = timezone.now()
     return {
         "outcomes": collect_outcomes(now),
@@ -66,7 +74,11 @@ def train_forecasts() -> dict:
 
 @shared_task(name="markets.watchdog", soft_time_limit=300)
 def watchdog() -> dict:
-    """Audit stored publications separately from their producer and withhold corruption."""
+    """Audit stored publications separately from their producer and withhold corruption.
+
+    Returns:
+        Counts of publications checked and blocked by the watchdog.
+    """
     from .forecast_audit import audit_publications  # noqa: PLC0415
 
     return audit_publications(timezone.now())

@@ -269,7 +269,19 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [env("CHANNELS_REDIS_URL", default="redis://redis:6379/2")],
+            # Each consumer waits for messages with a blocking BZPOPMIN that lasts 5 seconds.
+            # redis-py 8 also defaults its socket read timeout to 5 seconds, so the two race
+            # and idle WebSockets crash with "Timeout reading from redis". The read timeout
+            # must be longer than that wait.
+            "hosts": [
+                {
+                    "address": env("CHANNELS_REDIS_URL", default="redis://redis:6379/2"),
+                    "socket_timeout": 30,
+                    "socket_connect_timeout": 5,
+                    "socket_keepalive": True,
+                    "health_check_interval": 30,
+                }
+            ],
             "capacity": 500,
             "expiry": 10,
         },

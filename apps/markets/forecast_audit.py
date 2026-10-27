@@ -18,7 +18,12 @@ logger = logging.getLogger(__name__)
 
 
 def withhold_market_reports(target, reasons: list[str]) -> None:
-    """Withdraw cached report copies too, including reports not yet delivered."""
+    """Withdraw cached report copies too, including reports not yet delivered.
+
+    Args:
+        target: The forecast session date.
+        reasons: The reasons the forecast was withheld.
+    """
     from apps.reports.builder import render_text  # noqa: PLC0415
     from apps.reports.models import Report  # noqa: PLC0415
 
@@ -35,7 +40,12 @@ def withhold_market_reports(target, reasons: list[str]) -> None:
 
 
 def withhold_ipo_reports(ipo: Ipo, now: datetime) -> None:
-    """Remove a withheld issue from current cached report recommendations."""
+    """Remove a withheld issue from current cached report recommendations.
+
+    Args:
+        ipo: The issue whose recommendation was withheld.
+        now: The time used to select current and future reports.
+    """
     from apps.reports.builder import render_text  # noqa: PLC0415
     from apps.reports.models import Report  # noqa: PLC0415
 
@@ -80,7 +90,11 @@ def withhold_ipo_reports(ipo: Ipo, now: datetime) -> None:
 
 
 def _publication(sample: ForecastSample):
-    """Find the currently published result for this evidence."""
+    """Find the currently published result for this evidence.
+
+    Args:
+        sample: The forecast evidence identifying the publication.
+    """
     if sample.kind == "market":
         return Prediction.objects.filter(target_date=sample.target_date).first()
     if sample.kind == "company":
@@ -92,7 +106,13 @@ def _publication(sample: ForecastSample):
 
 @transaction.atomic
 def _withhold(publication: Prediction | CompanyOutlook | Ipo, audit: dict, now: datetime) -> None:
-    """Withdraw a publication and its cached copies in the same transaction."""
+    """Withdraw a publication and its cached copies in the same transaction.
+
+    Args:
+        publication: The published forecast to withdraw.
+        audit: The watchdog result with reasons for withholding.
+        now: The time used to select current IPO reports.
+    """
     if isinstance(publication, Ipo):
         publication.verdict, publication.score = "unknown", None
         inputs = publication.score_inputs
@@ -112,7 +132,14 @@ def _withhold(publication: Prediction | CompanyOutlook | Ipo, audit: dict, now: 
 
 
 def _withhold_legacy(now: datetime) -> int:
-    """Do not certify active pre-watchdog forecasts retrospectively without provenance."""
+    """Do not certify active pre-watchdog forecasts retrospectively without provenance.
+
+    Args:
+        now: The audit time used to identify active forecasts.
+
+    Returns:
+        The number of legacy publications withheld.
+    """
     today = today_ist(now)
     queries = (
         Prediction.objects.filter(target_date__gte=today).exclude(inputs__has_key="learning"),
@@ -142,7 +169,14 @@ def _withhold_legacy(now: datetime) -> int:
 
 
 def audit_publications(now: datetime) -> dict:
-    """Recalculate rules and compare published values to recorded model decisions."""
+    """Recalculate rules and compare published values to recorded model decisions.
+
+    Args:
+        now: The audit time used to select active publications.
+
+    Returns:
+        Counts of publications checked and blocked, including legacy forecasts.
+    """
     legacy = _withhold_legacy(now)
     result = {"checked": legacy, "blocked": legacy}
     for sample in ForecastSample.objects.filter(
