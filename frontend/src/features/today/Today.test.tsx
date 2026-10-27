@@ -190,6 +190,7 @@ it("filters and searches the bounded story table without removing context", asyn
   fireEvent.change(news.getByRole("combobox", { name: "Sentiment" }), {
     target: { value: "Bad for stocks" },
   });
+
   expect(news.getByRole("cell", { name: /^Weak sales/ })).toBeInTheDocument();
   expect(news.queryByText("<b>Strong sales</b>")).not.toBeInTheDocument();
   fireEvent.change(news.getByRole("searchbox"), { target: { value: "no match" } });
@@ -201,6 +202,27 @@ it("filters and searches the bounded story table without removing context", asyn
     "aria-sort",
     "ascending",
   );
+});
+
+it("shows the news-driven stock watchlist when supplied by the feature-filtered API", async () => {
+  await showToday({
+    body: {
+      ...data,
+      stocks_watch: {
+        as_of: "2026-10-19T04:30:00Z",
+        since: "2026-10-17T16:30:00Z",
+        session_date: "2026-10-19",
+        next_session: "2026-10-19",
+        session_state: "open",
+        sampled_articles: 0,
+        truncated: false,
+        items: [],
+      },
+    },
+    account: { ...fullSession, features: [...fullSession.features, "companies"] },
+  });
+  expect(await screen.findByRole("heading", { name: "Stocks to watch today" })).toBeInTheDocument();
+  expect(screen.getByText("No news-backed stocks to watch yet")).toBeInTheDocument();
 });
 
 it("keeps the latest report link inside React", async () => {
@@ -228,6 +250,7 @@ it("omits every unavailable section and its links", async () => {
   expect(screen.getByText(/No feature is on/)).toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "No outlook yet" })).not.toBeInTheDocument();
   expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Stocks to watch today" })).not.toBeInTheDocument();
   for (const name of ["See the history", "All news", "All IPOs", "Read it"])
     expect(screen.queryByRole("link", { name })).not.toBeInTheDocument();
 });

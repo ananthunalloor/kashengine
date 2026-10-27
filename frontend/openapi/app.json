@@ -1261,7 +1261,7 @@
             }
           }
         },
-        "description": "Gate each section before reading it; never refresh or evaluate saved data.\n\nArgs:\n    request: The authenticated browser request with feature/subscription access.\n\nReturns:\n    Saved dashboard sections; unavailable features contain no data.\n\nRaises:\n    ApiError: When the current subscription does not permit dashboard access.",
+        "description": "Gate each section before reading it; never refresh providers or write forecasts.\n\nArgs:\n    request: The authenticated browser request with feature/subscription access.\n\nReturns:\n    Saved dashboard sections; unavailable features contain no data.\n\nRaises:\n    ApiError: When the current subscription does not permit dashboard access.",
         "tags": [
           "Today"
         ],
@@ -4638,6 +4638,152 @@
         "title": "DeliveryPage",
         "type": "object"
       },
+      "StockWatchItem": {
+        "description": "Company-linked news bias, not a predicted return or probability.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "sector": {
+            "title": "Sector",
+            "type": "string"
+          },
+          "bias": {
+            "enum": [
+              "bullish",
+              "bearish",
+              "mixed",
+              "neutral"
+            ],
+            "title": "Bias",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "attention": {
+            "title": "Attention",
+            "type": "number"
+          },
+          "articles": {
+            "title": "Articles",
+            "type": "integer"
+          },
+          "sources": {
+            "title": "Sources",
+            "type": "integer"
+          },
+          "positive": {
+            "title": "Positive",
+            "type": "integer"
+          },
+          "negative": {
+            "title": "Negative",
+            "type": "integer"
+          },
+          "latest_news_at": {
+            "format": "date-time",
+            "title": "Latest News At",
+            "type": "string"
+          },
+          "stories": {
+            "items": {
+              "$ref": "#/components/schemas/WatchStory"
+            },
+            "title": "Stories",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "symbol",
+          "sector",
+          "bias",
+          "score",
+          "attention",
+          "articles",
+          "sources",
+          "positive",
+          "negative",
+          "latest_news_at",
+          "stories"
+        ],
+        "title": "StockWatchItem",
+        "type": "object"
+      },
+      "StocksWatch": {
+        "description": "Current-session, read-only news-based watchlist with explicit coverage.",
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "since": {
+            "format": "date-time",
+            "title": "Since",
+            "type": "string"
+          },
+          "session_date": {
+            "format": "date",
+            "title": "Session Date",
+            "type": "string"
+          },
+          "next_session": {
+            "format": "date",
+            "title": "Next Session",
+            "type": "string"
+          },
+          "session_state": {
+            "enum": [
+              "pre_open",
+              "open",
+              "closed",
+              "ended"
+            ],
+            "title": "Session State",
+            "type": "string"
+          },
+          "sampled_articles": {
+            "title": "Sampled Articles",
+            "type": "integer"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StockWatchItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "since",
+          "session_date",
+          "next_session",
+          "session_state",
+          "sampled_articles",
+          "truncated",
+          "items"
+        ],
+        "title": "StocksWatch",
+        "type": "object"
+      },
       "Today": {
         "description": "Feature-filtered daily overview; unavailable sections contain no data.",
         "properties": {
@@ -4687,6 +4833,17 @@
               }
             ],
             "description": "Latest report summary, without its text."
+          },
+          "stocks_watch": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StocksWatch"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "News-based company watchlist; requires Companies, Markets and News."
           }
         },
         "required": [
@@ -5030,6 +5187,51 @@
           "companies"
         ],
         "title": "TodayStory",
+        "type": "object"
+      },
+      "WatchStory": {
+        "description": "Saved news evidence for an experimental stock watchlist.",
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "sentiment_score": {
+            "title": "Sentiment Score",
+            "type": "number"
+          },
+          "relevance": {
+            "title": "Relevance",
+            "type": "number"
+          },
+          "sentiment_reason": {
+            "title": "Sentiment Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "url",
+          "source",
+          "published_at",
+          "sentiment_score",
+          "relevance",
+          "sentiment_reason"
+        ],
+        "title": "WatchStory",
         "type": "object"
       },
       "Account": {

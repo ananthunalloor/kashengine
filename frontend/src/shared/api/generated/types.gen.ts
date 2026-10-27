@@ -1692,6 +1692,106 @@ export type DeliveryPage = {
 };
 
 /**
+ * StockWatchItem
+ *
+ * Company-linked news bias, not a predicted return or probability.
+ */
+export type StockWatchItem = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Symbol
+     */
+    symbol: string;
+    /**
+     * Sector
+     */
+    sector: string;
+    /**
+     * Bias
+     */
+    bias: 'bullish' | 'bearish' | 'mixed' | 'neutral';
+    /**
+     * Score
+     */
+    score: number;
+    /**
+     * Attention
+     */
+    attention: number;
+    /**
+     * Articles
+     */
+    articles: number;
+    /**
+     * Sources
+     */
+    sources: number;
+    /**
+     * Positive
+     */
+    positive: number;
+    /**
+     * Negative
+     */
+    negative: number;
+    /**
+     * Latest News At
+     */
+    latest_news_at: string;
+    /**
+     * Stories
+     */
+    stories: Array<WatchStory>;
+};
+
+/**
+ * StocksWatch
+ *
+ * Current-session, read-only news-based watchlist with explicit coverage.
+ */
+export type StocksWatch = {
+    /**
+     * As Of
+     */
+    as_of: string;
+    /**
+     * Since
+     */
+    since: string;
+    /**
+     * Session Date
+     */
+    session_date: string;
+    /**
+     * Next Session
+     */
+    next_session: string;
+    /**
+     * Session State
+     */
+    session_state: 'pre_open' | 'open' | 'closed' | 'ended';
+    /**
+     * Sampled Articles
+     */
+    sampled_articles: number;
+    /**
+     * Truncated
+     */
+    truncated: boolean;
+    /**
+     * Items
+     */
+    items: Array<StockWatchItem>;
+};
+
+/**
  * Today
  *
  * Feature-filtered daily overview; unavailable sections contain no data.
@@ -1710,6 +1810,10 @@ export type Today = {
      * Latest report summary, without its text.
      */
     report: ReportSummary | null;
+    /**
+     * News-based company watchlist; requires Companies, Markets and News.
+     */
+    stocks_watch?: StocksWatch | null;
 };
 
 /**
@@ -1928,6 +2032,42 @@ export type TodayStory = {
      * Companies
      */
     companies: Array<string>;
+};
+
+/**
+ * WatchStory
+ *
+ * Saved news evidence for an experimental stock watchlist.
+ */
+export type WatchStory = {
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Url
+     */
+    url: string;
+    /**
+     * Source
+     */
+    source: string;
+    /**
+     * Published At
+     */
+    published_at: string;
+    /**
+     * Sentiment Score
+     */
+    sentiment_score: number;
+    /**
+     * Relevance
+     */
+    relevance: number;
+    /**
+     * Sentiment Reason
+     */
+    sentiment_reason: string;
 };
 
 /**

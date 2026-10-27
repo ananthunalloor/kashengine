@@ -706,6 +706,68 @@ export const zTodayNews = z.object({
 });
 
 /**
+ * WatchStory
+ *
+ * Saved news evidence for an experimental stock watchlist.
+ */
+export const zWatchStory = z.object({
+    title: z.string(),
+    url: z.string(),
+    source: z.string(),
+    published_at: z.iso.datetime(),
+    sentiment_score: z.number(),
+    relevance: z.number(),
+    sentiment_reason: z.string()
+});
+
+/**
+ * StockWatchItem
+ *
+ * Company-linked news bias, not a predicted return or probability.
+ */
+export const zStockWatchItem = z.object({
+    id: z.int(),
+    name: z.string(),
+    symbol: z.string(),
+    sector: z.string(),
+    bias: z.enum([
+        'bullish',
+        'bearish',
+        'mixed',
+        'neutral'
+    ]),
+    score: z.number(),
+    attention: z.number(),
+    articles: z.int(),
+    sources: z.int(),
+    positive: z.int(),
+    negative: z.int(),
+    latest_news_at: z.iso.datetime(),
+    stories: z.array(zWatchStory)
+});
+
+/**
+ * StocksWatch
+ *
+ * Current-session, read-only news-based watchlist with explicit coverage.
+ */
+export const zStocksWatch = z.object({
+    as_of: z.iso.datetime(),
+    since: z.iso.datetime(),
+    session_date: z.iso.date(),
+    next_session: z.iso.date(),
+    session_state: z.enum([
+        'pre_open',
+        'open',
+        'closed',
+        'ended'
+    ]),
+    sampled_articles: z.int(),
+    truncated: z.boolean(),
+    items: z.array(zStockWatchItem)
+});
+
+/**
  * Today
  *
  * Feature-filtered daily overview; unavailable sections contain no data.
@@ -715,7 +777,8 @@ export const zToday = z.object({
     markets: zTodayMarkets.nullable(),
     news: zTodayNews.nullable(),
     ipos: zTodayIpos.nullable(),
-    report: zReportSummary.nullable()
+    report: zReportSummary.nullable(),
+    stocks_watch: zStocksWatch.nullish()
 });
 
 /**

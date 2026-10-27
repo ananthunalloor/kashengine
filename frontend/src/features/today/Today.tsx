@@ -10,6 +10,7 @@ import { sourceLink } from "../../shared/ui/sourceLink";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { formatReportDate } from "../../shared/ui/formatReportDate";
 import { MarketCloses, MarketDate } from "../markets/MarketCloses";
+import { StocksToWatch } from "./StocksToWatch";
 
 export function Today({ data, session }: { data: TodayData; session: Session }) {
   usePageTitle("Today");
@@ -69,6 +70,7 @@ export function Today({ data, session }: { data: TodayData; session: Session }) 
           </Text>
         </section>
       )}
+      {data.stocks_watch && <StocksToWatch data={data.stocks_watch} />}
       {markets && (
         <>
           <section className="news-card today-outlook" aria-labelledby="today-outlook">

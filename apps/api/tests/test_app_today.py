@@ -94,6 +94,7 @@ def test_no_features_is_an_empty_overview_not_an_error(client, member, data):
         "news": None,
         "ipos": None,
         "report": None,
+        "stocks_watch": None,
     }
     assert client.get("/dashboard/").status_code == 200
 

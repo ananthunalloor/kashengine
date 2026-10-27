@@ -74,6 +74,33 @@ linked news and IPOs, and the evidence of the outlook. The API is `GET /api/app/
 part of the page needs a feature: prices and the outlook need `markets`, news needs `news`, IPOs
 need `ipos`. A user without the feature does not get that part.
 
+## Stocks to watch today
+
+The Today dashboard includes a news-only company watchlist when the account has **Companies,
+Markets and News** access. Access is checked before the watchlist reader runs. Reading never
+calls providers, scores news with an LLM, writes predictions or changes company records.
+
+The watchlist examines at most the latest 300 scored, timestamped, company-linked articles from
+the past 36 hours. Publication and scoring times must not be in the future. Sentiment must be in
+[-1, 1] and market relevance in [0.5, 1]. Truncated coverage is explicit. Up to eight companies
+are ranked by average absolute sentiment times relevance, with latest news time as a tie-breaker;
+this is news attention, not expected return or confidence.
+
+Each company shows a relevance-weighted sentiment balance. Above +0.15 gives a bullish news
+bias, below -0.15 gives bearish, otherwise neutral. If positive and negative individual stories
+both cross those thresholds, the view is mixed regardless of the average. Cards show article
+and source counts, latest publication time, and up to three news links with saved sentiment
+explanations. Mixed views include both positive and negative evidence even when one side is
+weaker. One-article evidence is labeled. Repeated outlets are not independent
+evidence, and article sentiment may not describe the impact on every linked company.
+
+The trading calendar respects holidays and special sessions. Closed days and completed sessions
+show the next session instead of today's movement calls. The snapshot is dated and not live;
+reload to obtain a fresh snapshot. It is **not an archived or backtested forecast**. No accuracy,
+probability, expected price return or price target is inferred from sentiment alone.
+
+## Company detail tools
+
 Fundamentals use a searchable, sortable, paginated table with category and assessment filters.
 Company and sector values are shown side by side. Profitability and leverage assessments are
 relative to the supplied sector benchmark, not an overall good/bad verdict on the stock.

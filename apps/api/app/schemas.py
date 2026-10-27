@@ -619,6 +619,49 @@ class TodayIpos(Schema):
     days_ahead: int
 
 
+class WatchStory(Schema):
+    """Saved news evidence for an experimental stock watchlist."""
+
+    title: str
+    url: str
+    source: str
+    published_at: datetime
+    sentiment_score: float
+    relevance: float
+    sentiment_reason: str
+
+
+class StockWatchItem(Schema):
+    """Company-linked news bias, not a predicted return or probability."""
+
+    id: int
+    name: str
+    symbol: str
+    sector: str
+    bias: Literal["bullish", "bearish", "mixed", "neutral"]
+    score: float
+    attention: float
+    articles: int
+    sources: int
+    positive: int
+    negative: int
+    latest_news_at: datetime
+    stories: list[WatchStory]
+
+
+class StocksWatch(Schema):
+    """Current-session, read-only news-based watchlist with explicit coverage."""
+
+    as_of: datetime
+    since: datetime
+    session_date: dt.date
+    next_session: dt.date
+    session_state: Literal["pre_open", "open", "closed", "ended"]
+    sampled_articles: int
+    truncated: bool
+    items: list[StockWatchItem]
+
+
 class Today(Schema):
     """Feature-filtered daily overview; unavailable sections contain no data."""
 
@@ -627,6 +670,10 @@ class Today(Schema):
     news: TodayNews | None
     ipos: TodayIpos | None
     report: ReportSummary | None = Field(description="Latest report summary, without its text.")
+    stocks_watch: StocksWatch | None = Field(
+        default=None,
+        description="News-based company watchlist; requires Companies, Markets and News.",
+    )
 
 
 class CompanyItem(Schema):
