@@ -760,6 +760,162 @@
         ]
       }
     },
+    "/api/app/markets/instruments": {
+      "get": {
+        "operationId": "list_app_exchange_instruments",
+        "summary": "Search active NSE/BSE equity, index, futures, and options instruments",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "Requested page; out-of-range values are clamped.",
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Requested page; out-of-range values are clamped."
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rows per page, 1-100.",
+              "title": "Page Size"
+            },
+            "required": false,
+            "description": "Rows per page, 1-100."
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "default": "",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "exchange",
+            "schema": {
+              "default": "",
+              "pattern": "^(|NSE|BSE)$",
+              "title": "Exchange",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "segment",
+            "schema": {
+              "default": "",
+              "pattern": "^[A-Z0-9_]{0,20}$",
+              "title": "Segment",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "instrument_type",
+            "schema": {
+              "default": "",
+              "pattern": "^[A-Z0-9_]{0,30}$",
+              "title": "Instrument Type",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "default": "",
+              "pattern": "^(|-?(exchange|trading_symbol|name|expiry))$",
+              "title": "Sort",
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeInstrumentPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read the latest imported instrument master without calling the provider.",
+        "tags": [
+          "Markets"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
     "/api/app/markets/companies": {
       "get": {
         "operationId": "list_app_company_markets",
@@ -1083,6 +1239,17 @@
           },
           {
             "in": "query",
+            "name": "index",
+            "schema": {
+              "default": "",
+              "pattern": "^($|NIFTY_50|NIFTY_NEXT_50|NIFTY_100|NIFTY_200|NIFTY_500|NIFTY_MIDCAP_50|NIFTY_MIDCAP_100|NIFTY_MIDCAP_150|NIFTY_SMALLCAP_50|NIFTY_SMALLCAP_100|NIFTY_SMALLCAP_250)$",
+              "title": "Index",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
             "name": "sort",
             "schema": {
               "default": "",
@@ -1261,7 +1428,7 @@
             }
           }
         },
-        "description": "Gate each section before reading it; never refresh or evaluate saved data.\n\nArgs:\n    request: The authenticated browser request with feature/subscription access.\n\nReturns:\n    Saved dashboard sections; unavailable features contain no data.\n\nRaises:\n    ApiError: When the current subscription does not permit dashboard access.",
+        "description": "Gate each section before reading it; never refresh providers or write forecasts.\n\nArgs:\n    request: The authenticated browser request with feature/subscription access.\n\nReturns:\n    Saved dashboard sections; unavailable features contain no data.\n\nRaises:\n    ApiError: When the current subscription does not permit dashboard access.",
         "tags": [
           "Today"
         ],
@@ -3659,6 +3826,214 @@
         "type": "object"
       },
       "JsonValue": {},
+      "ExchangeInstrumentFilters": {
+        "description": "Bound search and supported NSE/BSE catalog filters.",
+        "properties": {
+          "page": {
+            "default": 1,
+            "description": "Requested page; out-of-range values are clamped.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rows per page, 1-100.",
+            "title": "Page Size"
+          },
+          "q": {
+            "default": "",
+            "maxLength": 100,
+            "title": "Q",
+            "type": "string"
+          },
+          "exchange": {
+            "default": "",
+            "pattern": "^(|NSE|BSE)$",
+            "title": "Exchange",
+            "type": "string"
+          },
+          "segment": {
+            "default": "",
+            "pattern": "^[A-Z0-9_]{0,20}$",
+            "title": "Segment",
+            "type": "string"
+          },
+          "instrument_type": {
+            "default": "",
+            "pattern": "^[A-Z0-9_]{0,30}$",
+            "title": "Instrument Type",
+            "type": "string"
+          },
+          "sort": {
+            "default": "",
+            "pattern": "^(|-?(exchange|trading_symbol|name|expiry))$",
+            "title": "Sort",
+            "type": "string"
+          }
+        },
+        "title": "ExchangeInstrumentFilters",
+        "type": "object"
+      },
+      "ExchangeInstrumentItem": {
+        "description": "One active instrument in the NSE/BSE daily catalog.",
+        "properties": {
+          "instrument_key": {
+            "title": "Instrument Key",
+            "type": "string"
+          },
+          "exchange": {
+            "title": "Exchange",
+            "type": "string"
+          },
+          "segment": {
+            "title": "Segment",
+            "type": "string"
+          },
+          "trading_symbol": {
+            "title": "Trading Symbol",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "instrument_type": {
+            "title": "Instrument Type",
+            "type": "string"
+          },
+          "isin": {
+            "title": "Isin",
+            "type": "string"
+          },
+          "underlying_symbol": {
+            "title": "Underlying Symbol",
+            "type": "string"
+          },
+          "expiry": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiry"
+          },
+          "strike_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strike Price"
+          },
+          "lot_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Size"
+          },
+          "company_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Id"
+          }
+        },
+        "required": [
+          "instrument_key",
+          "exchange",
+          "segment",
+          "trading_symbol",
+          "name",
+          "instrument_type",
+          "isin",
+          "underlying_symbol",
+          "expiry",
+          "strike_price",
+          "lot_size",
+          "company_id"
+        ],
+        "title": "ExchangeInstrumentItem",
+        "type": "object"
+      },
+      "ExchangeInstrumentPage": {
+        "description": "Paginated NSE/BSE equity, index, futures, and options instruments.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ExchangeInstrumentItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "title": "Pages",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "segments": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Segments",
+            "type": "array"
+          },
+          "instrument_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Instrument Types",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pages",
+          "total",
+          "page_size",
+          "segments",
+          "instrument_types"
+        ],
+        "title": "ExchangeInstrumentPage",
+        "type": "object"
+      },
       "CompanyMarketFilters": {
         "description": "Search the saved directory, including companies without a quote.",
         "properties": {
@@ -4175,6 +4550,14 @@
               }
             ]
           },
+          "outlook_history": {
+            "description": "Latest 120 saved outlooks for this instrument; requires Markets and News.",
+            "items": {
+              "$ref": "#/components/schemas/CompanySignal"
+            },
+            "title": "Outlook History",
+            "type": "array"
+          },
           "news": {
             "items": {
               "$ref": "#/components/schemas/CompanyStory"
@@ -4285,6 +4668,14 @@
             "title": "Symbol",
             "type": "string"
           },
+          "listings": {
+            "description": "Available exchange-specific equity listings.",
+            "items": {
+              "$ref": "#/components/schemas/CompanyListing"
+            },
+            "title": "Listings",
+            "type": "array"
+          },
           "sector": {
             "description": "Sector, or empty when unknown.",
             "title": "Sector",
@@ -4313,11 +4704,36 @@
           "id",
           "name",
           "symbol",
+          "listings",
           "sector",
           "screener_url",
           "last_updated"
         ],
         "title": "CompanyItem",
+        "type": "object"
+      },
+      "CompanyListing": {
+        "description": "One exchange-specific equity ticker for a company.",
+        "properties": {
+          "exchange": {
+            "title": "Exchange",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "instrument_key": {
+            "title": "Instrument Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "exchange",
+          "symbol",
+          "instrument_key"
+        ],
+        "title": "CompanyListing",
         "type": "object"
       },
       "CompanySignal": {
@@ -4479,6 +4895,12 @@
             "title": "Sector",
             "type": "string"
           },
+          "index": {
+            "default": "",
+            "pattern": "^($|NIFTY_50|NIFTY_NEXT_50|NIFTY_100|NIFTY_200|NIFTY_500|NIFTY_MIDCAP_50|NIFTY_MIDCAP_100|NIFTY_MIDCAP_150|NIFTY_SMALLCAP_50|NIFTY_SMALLCAP_100|NIFTY_SMALLCAP_250)$",
+            "title": "Index",
+            "type": "string"
+          },
           "sort": {
             "default": "",
             "pattern": "^(|-?(name|symbol|sector|last_updated))$",
@@ -4489,11 +4911,35 @@
         "title": "CompanyFilters",
         "type": "object"
       },
+      "CompanyIndexFilter": {
+        "description": "A supported Nifty index filter and its current locally matched company count.",
+        "properties": {
+          "value": {
+            "title": "Value",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "value",
+          "label",
+          "count"
+        ],
+        "title": "CompanyIndexFilter",
+        "type": "object"
+      },
       "CompanyPage": {
         "description": "A page of the company directory, ordered by name.",
         "properties": {
           "items": {
-            "description": "Companies matching name, symbol, or sector.",
+            "description": "Companies matching the current search and filter criteria.",
             "items": {
               "$ref": "#/components/schemas/CompanyItem"
             },
@@ -4527,6 +4973,14 @@
               "type": "string"
             },
             "title": "Sectors",
+            "type": "array"
+          },
+          "indices": {
+            "description": "Supported index constituent filters and their counts.",
+            "items": {
+              "$ref": "#/components/schemas/CompanyIndexFilter"
+            },
+            "title": "Indices",
             "type": "array"
           }
         },
@@ -4630,6 +5084,250 @@
         "title": "DeliveryPage",
         "type": "object"
       },
+      "CompanyMover": {
+        "description": "One company with the strongest positive or negative saved session change.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "price": {
+            "title": "Price",
+            "type": "number"
+          },
+          "change_pct": {
+            "title": "Change Pct",
+            "type": "number"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "symbol",
+          "price",
+          "change_pct",
+          "as_of"
+        ],
+        "title": "CompanyMover",
+        "type": "object"
+      },
+      "MarketMovers": {
+        "description": "Top changes and breadth across companies with saved Upstox quote snapshots.",
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "coverage": {
+            "title": "Coverage",
+            "type": "integer"
+          },
+          "advancing": {
+            "title": "Advancing",
+            "type": "integer"
+          },
+          "declining": {
+            "title": "Declining",
+            "type": "integer"
+          },
+          "unchanged": {
+            "title": "Unchanged",
+            "type": "integer"
+          },
+          "gainers": {
+            "items": {
+              "$ref": "#/components/schemas/CompanyMover"
+            },
+            "title": "Gainers",
+            "type": "array"
+          },
+          "losers": {
+            "items": {
+              "$ref": "#/components/schemas/CompanyMover"
+            },
+            "title": "Losers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "coverage",
+          "advancing",
+          "declining",
+          "unchanged",
+          "gainers",
+          "losers"
+        ],
+        "title": "MarketMovers",
+        "type": "object"
+      },
+      "StockWatchItem": {
+        "description": "Company-linked news bias, not a predicted return or probability.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "sector": {
+            "title": "Sector",
+            "type": "string"
+          },
+          "bias": {
+            "enum": [
+              "bullish",
+              "bearish",
+              "mixed",
+              "neutral"
+            ],
+            "title": "Bias",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "attention": {
+            "title": "Attention",
+            "type": "number"
+          },
+          "articles": {
+            "title": "Articles",
+            "type": "integer"
+          },
+          "sources": {
+            "title": "Sources",
+            "type": "integer"
+          },
+          "positive": {
+            "title": "Positive",
+            "type": "integer"
+          },
+          "negative": {
+            "title": "Negative",
+            "type": "integer"
+          },
+          "latest_news_at": {
+            "format": "date-time",
+            "title": "Latest News At",
+            "type": "string"
+          },
+          "stories": {
+            "items": {
+              "$ref": "#/components/schemas/WatchStory"
+            },
+            "title": "Stories",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "symbol",
+          "sector",
+          "bias",
+          "score",
+          "attention",
+          "articles",
+          "sources",
+          "positive",
+          "negative",
+          "latest_news_at",
+          "stories"
+        ],
+        "title": "StockWatchItem",
+        "type": "object"
+      },
+      "StocksWatch": {
+        "description": "Current-session, read-only news-based watchlist with explicit coverage.",
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "since": {
+            "format": "date-time",
+            "title": "Since",
+            "type": "string"
+          },
+          "session_date": {
+            "format": "date",
+            "title": "Session Date",
+            "type": "string"
+          },
+          "next_session": {
+            "format": "date",
+            "title": "Next Session",
+            "type": "string"
+          },
+          "session_state": {
+            "enum": [
+              "pre_open",
+              "open",
+              "closed",
+              "ended"
+            ],
+            "title": "Session State",
+            "type": "string"
+          },
+          "sampled_articles": {
+            "title": "Sampled Articles",
+            "type": "integer"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StockWatchItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "since",
+          "session_date",
+          "next_session",
+          "session_state",
+          "sampled_articles",
+          "truncated",
+          "items"
+        ],
+        "title": "StocksWatch",
+        "type": "object"
+      },
       "Today": {
         "description": "Feature-filtered daily overview; unavailable sections contain no data.",
         "properties": {
@@ -4679,6 +5377,17 @@
               }
             ],
             "description": "Latest report summary, without its text."
+          },
+          "stocks_watch": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StocksWatch"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "News-based company watchlist; requires Companies, Markets and News."
           }
         },
         "required": [
@@ -4860,12 +5569,16 @@
             },
             "title": "Quotes",
             "type": "array"
+          },
+          "movers": {
+            "$ref": "#/components/schemas/MarketMovers"
           }
         },
         "required": [
           "outlook",
           "stats",
-          "quotes"
+          "quotes",
+          "movers"
         ],
         "title": "TodayMarkets",
         "type": "object"
@@ -5022,6 +5735,51 @@
           "companies"
         ],
         "title": "TodayStory",
+        "type": "object"
+      },
+      "WatchStory": {
+        "description": "Saved news evidence for an experimental stock watchlist.",
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "sentiment_score": {
+            "title": "Sentiment Score",
+            "type": "number"
+          },
+          "relevance": {
+            "title": "Relevance",
+            "type": "number"
+          },
+          "sentiment_reason": {
+            "title": "Sentiment Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "url",
+          "source",
+          "published_at",
+          "sentiment_score",
+          "relevance",
+          "sentiment_reason"
+        ],
+        "title": "WatchStory",
         "type": "object"
       },
       "Account": {

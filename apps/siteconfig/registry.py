@@ -97,6 +97,16 @@ _SPECS: tuple[Spec, ...] = (
         minimum=1,
         maximum=365,
     ),
+    Spec(
+        "UPSTOX_STREAM_INDICES",
+        "Upstox live indices",
+        LIST,
+        "markets",
+        "One Upstox index instrument key for each line, for example NSE_INDEX|Nifty 50. "
+        "The stream worker follows them for the live dashboard; restart it after a change.",
+        item_pattern=r"^(NSE|BSE)_INDEX\|[A-Za-z0-9 &.\-]{1,60}$",
+        item_hint="an index key like NSE_INDEX|Nifty 50",
+    ),
     # Telegram
     Spec(
         "TELEGRAM_BOT_TOKEN",

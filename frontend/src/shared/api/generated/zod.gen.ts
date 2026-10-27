@@ -335,6 +335,56 @@ export const zIpoDetail = z.object({
 });
 
 /**
+ * ExchangeInstrumentFilters
+ *
+ * Bound search and supported NSE/BSE catalog filters.
+ */
+export const zExchangeInstrumentFilters = z.object({
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
+    q: z.string().max(100).optional().default(''),
+    exchange: z.string().regex(/^(|NSE|BSE)$/).optional().default(''),
+    segment: z.string().regex(/^[A-Z0-9_]{0,20}$/).optional().default(''),
+    instrument_type: z.string().regex(/^[A-Z0-9_]{0,30}$/).optional().default(''),
+    sort: z.string().regex(/^(|-?(exchange|trading_symbol|name|expiry))$/).optional().default('')
+});
+
+/**
+ * ExchangeInstrumentItem
+ *
+ * One active instrument in the NSE/BSE daily catalog.
+ */
+export const zExchangeInstrumentItem = z.object({
+    instrument_key: z.string(),
+    exchange: z.string(),
+    segment: z.string(),
+    trading_symbol: z.string(),
+    name: z.string(),
+    instrument_type: z.string(),
+    isin: z.string(),
+    underlying_symbol: z.string(),
+    expiry: z.iso.date().nullable(),
+    strike_price: z.number().nullable(),
+    lot_size: z.int().nullable(),
+    company_id: z.int().nullable()
+});
+
+/**
+ * ExchangeInstrumentPage
+ *
+ * Paginated NSE/BSE equity, index, futures, and options instruments.
+ */
+export const zExchangeInstrumentPage = z.object({
+    items: z.array(zExchangeInstrumentItem),
+    page: z.int(),
+    pages: z.int(),
+    total: z.int(),
+    page_size: z.int(),
+    segments: z.array(z.string()),
+    instrument_types: z.array(z.string())
+});
+
+/**
  * CompanyMarketFilters
  *
  * Search the saved directory, including companies without a quote.
@@ -485,6 +535,17 @@ export const zCompanyIssue = z.object({
 });
 
 /**
+ * CompanyListing
+ *
+ * One exchange-specific equity ticker for a company.
+ */
+export const zCompanyListing = z.object({
+    exchange: z.string(),
+    symbol: z.string(),
+    instrument_key: z.string()
+});
+
+/**
  * CompanyItem
  *
  * Company directory display fields, without scraped data or internal aliases.
@@ -493,6 +554,7 @@ export const zCompanyItem = z.object({
     id: z.int(),
     name: z.string(),
     symbol: z.string(),
+    listings: z.array(zCompanyListing),
     sector: z.string(),
     screener_url: z.string(),
     last_updated: z.iso.datetime().nullable()
@@ -547,6 +609,7 @@ export const zCompanyDetail = z.object({
     quote: zCompanyPrice.nullable(),
     candles: z.array(zCompanyBar),
     outlook: zCompanySignal.nullable(),
+    outlook_history: z.array(zCompanySignal).optional(),
     news: z.array(zCompanyStory),
     ipos: z.array(zCompanyIssue)
 });
@@ -561,7 +624,19 @@ export const zCompanyFilters = z.object({
     page_size: z.int().gte(1).lte(100).nullish(),
     q: z.string().max(100).optional().default(''),
     sector: z.string().max(100).optional().default(''),
+    index: z.string().regex(/^($|NIFTY_50|NIFTY_NEXT_50|NIFTY_100|NIFTY_200|NIFTY_500|NIFTY_MIDCAP_50|NIFTY_MIDCAP_100|NIFTY_MIDCAP_150|NIFTY_SMALLCAP_50|NIFTY_SMALLCAP_100|NIFTY_SMALLCAP_250)$/).optional().default(''),
     sort: z.string().regex(/^(|-?(name|symbol|sector|last_updated))$/).optional().default('')
+});
+
+/**
+ * CompanyIndexFilter
+ *
+ * A supported Nifty index filter and its current locally matched company count.
+ */
+export const zCompanyIndexFilter = z.object({
+    value: z.string(),
+    label: z.string(),
+    count: z.int()
 });
 
 /**
@@ -575,7 +650,8 @@ export const zCompanyPage = z.object({
     pages: z.int(),
     total: z.int(),
     page_size: z.int().optional().default(25),
-    sectors: z.array(z.string()).optional()
+    sectors: z.array(z.string()).optional(),
+    indices: z.array(zCompanyIndexFilter).optional()
 });
 
 /**
@@ -601,6 +677,35 @@ export const zDeliveryItem = z.object({
 export const zDeliveryPage = z.object({
     chat_count: z.int(),
     items: z.array(zDeliveryItem)
+});
+
+/**
+ * CompanyMover
+ *
+ * One company with the strongest positive or negative saved session change.
+ */
+export const zCompanyMover = z.object({
+    id: z.int(),
+    name: z.string(),
+    symbol: z.string(),
+    price: z.number(),
+    change_pct: z.number(),
+    as_of: z.iso.datetime()
+});
+
+/**
+ * MarketMovers
+ *
+ * Top changes and breadth across companies with saved Upstox quote snapshots.
+ */
+export const zMarketMovers = z.object({
+    as_of: z.iso.datetime().nullable(),
+    coverage: z.int(),
+    advancing: z.int(),
+    declining: z.int(),
+    unchanged: z.int(),
+    gainers: z.array(zCompanyMover),
+    losers: z.array(zCompanyMover)
 });
 
 /**
@@ -673,7 +778,8 @@ export const zTodayOutlook = z.object({
 export const zTodayMarkets = z.object({
     outlook: zTodayOutlook.nullable(),
     stats: zMarketStats,
-    quotes: z.array(zMarketQuote)
+    quotes: z.array(zMarketQuote),
+    movers: zMarketMovers
 });
 
 /**
@@ -705,6 +811,68 @@ export const zTodayNews = z.object({
 });
 
 /**
+ * WatchStory
+ *
+ * Saved news evidence for an experimental stock watchlist.
+ */
+export const zWatchStory = z.object({
+    title: z.string(),
+    url: z.string(),
+    source: z.string(),
+    published_at: z.iso.datetime(),
+    sentiment_score: z.number(),
+    relevance: z.number(),
+    sentiment_reason: z.string()
+});
+
+/**
+ * StockWatchItem
+ *
+ * Company-linked news bias, not a predicted return or probability.
+ */
+export const zStockWatchItem = z.object({
+    id: z.int(),
+    name: z.string(),
+    symbol: z.string(),
+    sector: z.string(),
+    bias: z.enum([
+        'bullish',
+        'bearish',
+        'mixed',
+        'neutral'
+    ]),
+    score: z.number(),
+    attention: z.number(),
+    articles: z.int(),
+    sources: z.int(),
+    positive: z.int(),
+    negative: z.int(),
+    latest_news_at: z.iso.datetime(),
+    stories: z.array(zWatchStory)
+});
+
+/**
+ * StocksWatch
+ *
+ * Current-session, read-only news-based watchlist with explicit coverage.
+ */
+export const zStocksWatch = z.object({
+    as_of: z.iso.datetime(),
+    since: z.iso.datetime(),
+    session_date: z.iso.date(),
+    next_session: z.iso.date(),
+    session_state: z.enum([
+        'pre_open',
+        'open',
+        'closed',
+        'ended'
+    ]),
+    sampled_articles: z.int(),
+    truncated: z.boolean(),
+    items: z.array(zStockWatchItem)
+});
+
+/**
  * Today
  *
  * Feature-filtered daily overview; unavailable sections contain no data.
@@ -714,7 +882,8 @@ export const zToday = z.object({
     markets: zTodayMarkets.nullable(),
     news: zTodayNews.nullable(),
     ipos: zTodayIpos.nullable(),
-    report: zReportSummary.nullable()
+    report: zReportSummary.nullable(),
+    stocks_watch: zStocksWatch.nullish()
 });
 
 /**
@@ -1207,6 +1376,21 @@ export const zGetAppIpoPath = z.object({
  */
 export const zGetAppIpoResponse = zIpoDetail;
 
+export const zListAppExchangeInstrumentsQuery = z.object({
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
+    q: z.string().max(100).optional().default(''),
+    exchange: z.string().regex(/^(|NSE|BSE)$/).optional().default(''),
+    segment: z.string().regex(/^[A-Z0-9_]{0,20}$/).optional().default(''),
+    instrument_type: z.string().regex(/^[A-Z0-9_]{0,30}$/).optional().default(''),
+    sort: z.string().regex(/^(|-?(exchange|trading_symbol|name|expiry))$/).optional().default('')
+});
+
+/**
+ * OK
+ */
+export const zListAppExchangeInstrumentsResponse = zExchangeInstrumentPage;
+
 export const zListAppCompanyMarketsQuery = z.object({
     page: z.int().optional().default(1),
     page_size: z.int().gte(1).lte(100).nullish(),
@@ -1237,6 +1421,7 @@ export const zListAppCompaniesQuery = z.object({
     page_size: z.int().gte(1).lte(100).nullish(),
     q: z.string().max(100).optional().default(''),
     sector: z.string().max(100).optional().default(''),
+    index: z.string().regex(/^($|NIFTY_50|NIFTY_NEXT_50|NIFTY_100|NIFTY_200|NIFTY_500|NIFTY_MIDCAP_50|NIFTY_MIDCAP_100|NIFTY_MIDCAP_150|NIFTY_SMALLCAP_50|NIFTY_SMALLCAP_100|NIFTY_SMALLCAP_250)$/).optional().default(''),
     sort: z.string().regex(/^(|-?(name|symbol|sector|last_updated))$/).optional().default('')
 });
 

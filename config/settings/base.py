@@ -252,6 +252,29 @@ TELEGRAM_TIMEOUT_SECONDS = env.int("TELEGRAM_TIMEOUT_SECONDS", default=20)
 UPSTOX_ENABLED = env.bool("UPSTOX_ENABLED", default=False)
 UPSTOX_ACCESS_TOKEN = env("UPSTOX_ACCESS_TOKEN", default="")
 UPSTOX_FUNDAMENTALS_DAYS = env.int("UPSTOX_FUNDAMENTALS_DAYS", default=7)
+# Index instrument keys that the live stream worker follows for the dashboard.
+UPSTOX_STREAM_INDICES = env.list(
+    "UPSTOX_STREAM_INDICES",
+    default=[
+        "NSE_INDEX|Nifty 50",
+        "BSE_INDEX|SENSEX",
+        "NSE_INDEX|Nifty Bank",
+        "NSE_INDEX|India VIX",
+    ],
+)
+
+# Django Channels: the stream worker publishes live ticks; the ASGI `realtime` service relays them
+# to browser WebSockets. Database 2 keeps it apart from the Celery broker and the cache.
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [env("CHANNELS_REDIS_URL", default="redis://redis:6379/2")],
+            "capacity": 500,
+            "expiry": 10,
+        },
+    }
+}
 
 REPORT_NEWS_ITEMS = env.int("REPORT_NEWS_ITEMS", default=3)  # For good news, and for bad news.
 REPORT_NEWS_MIN_RELEVANCE = env.float("REPORT_NEWS_MIN_RELEVANCE", default=0.4)

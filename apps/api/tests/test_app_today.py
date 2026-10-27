@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from apps.access.features import KEYS
 from apps.access.models import FeatureBlock
+from apps.companies.models import Company, CompanyQuote
 from apps.ipos.models import Ipo
 from apps.markets.models import IndexQuote, Prediction
 from apps.news.models import NewsArticle
@@ -55,6 +56,15 @@ def test_empty_state_cache_and_legacy_page(client, member):
     body = response.json()
     assert body["markets"]["outlook"] is None
     assert body["markets"]["quotes"] == []
+    assert body["markets"]["movers"] == {
+        "as_of": None,
+        "coverage": 0,
+        "advancing": 0,
+        "declining": 0,
+        "unchanged": 0,
+        "gainers": [],
+        "losers": [],
+    }
     assert body["markets"]["stats"]["accuracy"] == "–"
     assert body["news"]["good"] == body["news"]["bad"] == []
     assert body["ipos"]["open_now"] == body["ipos"]["upcoming"] == []
@@ -94,6 +104,7 @@ def test_no_features_is_an_empty_overview_not_an_error(client, member, data):
         "news": None,
         "ipos": None,
         "report": None,
+        "stocks_watch": None,
     }
     assert client.get("/dashboard/").status_code == 200
 
@@ -140,6 +151,43 @@ def test_saved_outlook_actual_target_dates_cues_and_no_writes(client, member, da
     assert "Report text" not in str(body)
     assert body["markets"]["quotes"][0]["change"] == "+0.40%"
     assert {model: list(model.objects.values()) for model in before} == before
+
+
+def test_dashboard_movers_rank_latest_saved_company_quotes(client, member):
+    as_of = datetime(2026, 10, 19, 9, 15, tzinfo=ZoneInfo("Asia/Kolkata"))
+    quote_data = [
+        ("GAIN1", 110, 100),
+        ("GAIN2", 105, 100),
+        ("LOSS", 90, 100),
+        ("FLAT", 100, 100),
+        ("NOBASE", 110, None),
+        ("OLD", 1000, 100),
+    ]
+    for symbol, price, previous_close in quote_data:
+        company = Company.objects.create(
+            name=f"{symbol} Company",
+            symbol=symbol,
+            upstox_instrument_key=f"NSE_EQ|{symbol}",
+        )
+        CompanyQuote.objects.create(
+            company=company,
+            instrument_key=company.upstox_instrument_key,
+            as_of=as_of - timedelta(days=1) if symbol == "OLD" else as_of,
+            price=price,
+            previous_close=previous_close,
+            mode="snapshot",
+        )
+
+    client.force_login(member)
+    movers = client.get(URL).json()["markets"]["movers"]
+
+    assert movers["coverage"] == 4
+    assert movers["advancing"] == 2
+    assert movers["declining"] == 1
+    assert movers["unchanged"] == 1
+    assert [row["symbol"] for row in movers["gainers"]] == ["GAIN1", "GAIN2"]
+    assert [row["symbol"] for row in movers["losers"]] == ["LOSS"]
+    assert movers["gainers"][0]["change_pct"] == pytest.approx(10)
 
 
 def test_ist_date_news_window_ranking_and_ipo_group_parity(client, member, monkeypatch):

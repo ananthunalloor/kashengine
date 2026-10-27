@@ -1,7 +1,6 @@
 import { defineChart } from "@tanstack/charts";
 import { barY } from "@tanstack/charts/bar";
 import { group } from "@tanstack/charts/group";
-import { link } from "@tanstack/charts/link";
 import { lineY } from "@tanstack/charts/line";
 import { Chart } from "@tanstack/charts/react";
 import { scaleBand } from "@tanstack/charts/scales/band";
@@ -16,7 +15,7 @@ type OpsSeriesPoint = {
   value: number;
 };
 type TrendPoint = { label: string; value: number };
-type CandlePoint = { label: string; open: number; high: number; low: number; close: number };
+export { StockCandleChart as CandlestickTrendChart } from "./StockCandleChart";
 
 const illustrativePoints: TrendPoint[] = [
   { label: "1", value: 2 },
@@ -97,67 +96,6 @@ export function TrendChart({
       ariaLabel={ariaLabel}
     />
   );
-}
-
-export function CandlestickTrendChart({
-  candles,
-  projectionPoints = [],
-  ariaLabel,
-  height = 300,
-}: {
-  candles: CandlePoint[];
-  projectionPoints?: TrendPoint[];
-  ariaLabel: string;
-  height?: number;
-}) {
-  const projectionRows = useMemo(
-    () => projectionPoints.map(({ label, value }) => ({ label, value })),
-    [projectionPoints],
-  );
-  const definition = useMemo(
-    () =>
-      defineChart({
-        marks: [
-          link(candles, {
-            id: "daily-wicks",
-            x1: "label",
-            y1: "low",
-            x2: "label",
-            y2: "high",
-            stroke: (bar) => (bar.close >= bar.open ? "var(--brand-gain)" : "var(--brand-loss)"),
-            strokeWidth: 1.5,
-          }),
-          barY(candles, {
-            id: "daily-candles",
-            x: "label",
-            y1: "open",
-            y2: "close",
-            fill: (bar) => (bar.close >= bar.open ? "var(--brand-gain)" : "var(--brand-loss)"),
-            inset: 2,
-            maxThickness: 12,
-          }),
-          ...(projectionRows.length
-            ? [
-                lineY(projectionRows, {
-                  id: "history-only-projection",
-                  x: "label",
-                  y: "value",
-                  stroke: "var(--brand-purple)",
-                  strokeDasharray: "6 5",
-                  strokeWidth: 2,
-                }),
-              ]
-            : []),
-        ],
-        scales: {
-          x: { scale: () => scaleBand().padding(0.18), axis: { ticks: { count: 7 } } },
-          y: { scale: scaleLinear, nice: true, grid: true },
-        },
-      }),
-    [candles, projectionRows],
-  );
-
-  return <Chart definition={definition} height={height} initialWidth={900} ariaLabel={ariaLabel} />;
 }
 
 export function IllustrativeTrendChart() {

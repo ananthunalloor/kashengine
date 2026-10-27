@@ -565,12 +565,36 @@ class TodayOutlook(Schema):
     notes: list[str]
 
 
+class CompanyMover(Schema):
+    """One company with the strongest positive or negative saved session change."""
+
+    id: int
+    name: str
+    symbol: str
+    price: float
+    change_pct: float
+    as_of: datetime
+
+
+class MarketMovers(Schema):
+    """Top changes and breadth across companies with saved Upstox quote snapshots."""
+
+    as_of: datetime | None
+    coverage: int
+    advancing: int
+    declining: int
+    unchanged: int
+    gainers: list[CompanyMover]
+    losers: list[CompanyMover]
+
+
 class TodayMarkets(Schema):
     """Markets section; omitted entirely when Markets is unavailable."""
 
     outlook: TodayOutlook | None
     stats: MarketStats
     quotes: list[MarketQuote]
+    movers: MarketMovers
 
 
 class TodayStory(Schema):
@@ -619,6 +643,49 @@ class TodayIpos(Schema):
     days_ahead: int
 
 
+class WatchStory(Schema):
+    """Saved news evidence for an experimental stock watchlist."""
+
+    title: str
+    url: str
+    source: str
+    published_at: datetime
+    sentiment_score: float
+    relevance: float
+    sentiment_reason: str
+
+
+class StockWatchItem(Schema):
+    """Company-linked news bias, not a predicted return or probability."""
+
+    id: int
+    name: str
+    symbol: str
+    sector: str
+    bias: Literal["bullish", "bearish", "mixed", "neutral"]
+    score: float
+    attention: float
+    articles: int
+    sources: int
+    positive: int
+    negative: int
+    latest_news_at: datetime
+    stories: list[WatchStory]
+
+
+class StocksWatch(Schema):
+    """Current-session, read-only news-based watchlist with explicit coverage."""
+
+    as_of: datetime
+    since: datetime
+    session_date: dt.date
+    next_session: dt.date
+    session_state: Literal["pre_open", "open", "closed", "ended"]
+    sampled_articles: int
+    truncated: bool
+    items: list[StockWatchItem]
+
+
 class Today(Schema):
     """Feature-filtered daily overview; unavailable sections contain no data."""
 
@@ -627,6 +694,18 @@ class Today(Schema):
     news: TodayNews | None
     ipos: TodayIpos | None
     report: ReportSummary | None = Field(description="Latest report summary, without its text.")
+    stocks_watch: StocksWatch | None = Field(
+        default=None,
+        description="News-based company watchlist; requires Companies, Markets and News.",
+    )
+
+
+class CompanyListing(Schema):
+    """One exchange-specific equity ticker for a company."""
+
+    exchange: str
+    symbol: str
+    instrument_key: str
 
 
 class CompanyItem(Schema):
@@ -635,20 +714,36 @@ class CompanyItem(Schema):
     id: int = Field(description="Company primary key.")
     name: str = Field(description="Company name, rendered as plain text.")
     symbol: str = Field(description="NSE or BSE symbol.")
+    listings: list[CompanyListing] = Field(
+        description="Available exchange-specific equity listings."
+    )
     sector: str = Field(description="Sector, or empty when unknown.")
     screener_url: str = Field(description="Source URL; the browser only links HTTP(S) URLs.")
     last_updated: datetime | None = Field(description="Last data fetch, or null if never fetched.")
 
 
+class CompanyIndexFilter(Schema):
+    """A supported Nifty index filter and its current locally matched company count."""
+
+    value: str
+    label: str
+    count: int
+
+
 class CompanyPage(Schema):
     """A page of the company directory, ordered by name."""
 
-    items: list[CompanyItem] = Field(description="Companies matching name, symbol, or sector.")
+    items: list[CompanyItem] = Field(
+        description="Companies matching the current search and filter criteria."
+    )
     page: int = Field(description="Resolved page number, starting at one.")
     pages: int = Field(description="Total pages; one when empty.")
     total: int = Field(description="Total matching companies.")
     page_size: int = Field(default=25, description="Resolved number of rows per page.")
     sectors: list[str] = Field(default_factory=list, description="All nonempty sectors, sorted.")
+    indices: list[CompanyIndexFilter] = Field(
+        default_factory=list, description="Supported index constituent filters and their counts."
+    )
 
 
 class CompanyPrice(Schema):
@@ -725,6 +820,10 @@ class CompanyDetail(Schema):
     quote: CompanyPrice | None
     candles: list[CompanyBar]
     outlook: CompanySignal | None
+    outlook_history: list[CompanySignal] = Field(
+        default_factory=list,
+        description="Latest 120 saved outlooks for this instrument; requires Markets and News.",
+    )
     news: list[CompanyStory]
     ipos: list[CompanyIssue]
 
@@ -748,6 +847,35 @@ class CompanyMarketPage(Schema):
     total: int
     page_size: int
     upstox_enabled: bool
+
+
+class ExchangeInstrumentItem(Schema):
+    """One active instrument in the NSE/BSE daily catalog."""
+
+    instrument_key: str
+    exchange: str
+    segment: str
+    trading_symbol: str
+    name: str
+    instrument_type: str
+    isin: str
+    underlying_symbol: str
+    expiry: dt.date | None
+    strike_price: float | None
+    lot_size: int | None
+    company_id: int | None
+
+
+class ExchangeInstrumentPage(Schema):
+    """Paginated NSE/BSE equity, index, futures, and options instruments."""
+
+    items: list[ExchangeInstrumentItem]
+    page: int
+    pages: int
+    total: int
+    page_size: int
+    segments: list[str]
+    instrument_types: list[str]
 
 
 class DeliveryItem(ReportDelivery):

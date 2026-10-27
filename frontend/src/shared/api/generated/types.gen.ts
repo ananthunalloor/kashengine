@@ -994,6 +994,138 @@ export type IpoSignal = {
 export type JsonValue = unknown;
 
 /**
+ * ExchangeInstrumentFilters
+ *
+ * Bound search and supported NSE/BSE catalog filters.
+ */
+export type ExchangeInstrumentFilters = {
+    /**
+     * Page
+     *
+     * Requested page; out-of-range values are clamped.
+     */
+    page?: number;
+    /**
+     * Page Size
+     *
+     * Rows per page, 1-100.
+     */
+    page_size?: number | null;
+    /**
+     * Q
+     */
+    q?: string;
+    /**
+     * Exchange
+     */
+    exchange?: string;
+    /**
+     * Segment
+     */
+    segment?: string;
+    /**
+     * Instrument Type
+     */
+    instrument_type?: string;
+    /**
+     * Sort
+     */
+    sort?: string;
+};
+
+/**
+ * ExchangeInstrumentItem
+ *
+ * One active instrument in the NSE/BSE daily catalog.
+ */
+export type ExchangeInstrumentItem = {
+    /**
+     * Instrument Key
+     */
+    instrument_key: string;
+    /**
+     * Exchange
+     */
+    exchange: string;
+    /**
+     * Segment
+     */
+    segment: string;
+    /**
+     * Trading Symbol
+     */
+    trading_symbol: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Instrument Type
+     */
+    instrument_type: string;
+    /**
+     * Isin
+     */
+    isin: string;
+    /**
+     * Underlying Symbol
+     */
+    underlying_symbol: string;
+    /**
+     * Expiry
+     */
+    expiry: string | null;
+    /**
+     * Strike Price
+     */
+    strike_price: number | null;
+    /**
+     * Lot Size
+     */
+    lot_size: number | null;
+    /**
+     * Company Id
+     */
+    company_id: number | null;
+};
+
+/**
+ * ExchangeInstrumentPage
+ *
+ * Paginated NSE/BSE equity, index, futures, and options instruments.
+ */
+export type ExchangeInstrumentPage = {
+    /**
+     * Items
+     */
+    items: Array<ExchangeInstrumentItem>;
+    /**
+     * Page
+     */
+    page: number;
+    /**
+     * Pages
+     */
+    pages: number;
+    /**
+     * Total
+     */
+    total: number;
+    /**
+     * Page Size
+     */
+    page_size: number;
+    /**
+     * Segments
+     */
+    segments: Array<string>;
+    /**
+     * Instrument Types
+     */
+    instrument_types: Array<string>;
+};
+
+/**
  * CompanyMarketFilters
  *
  * Search the saved directory, including companies without a quote.
@@ -1374,6 +1506,12 @@ export type CompanyDetail = {
     candles: Array<CompanyBar>;
     outlook: CompanySignal | null;
     /**
+     * Outlook History
+     *
+     * Latest 120 saved outlooks for this instrument; requires Markets and News.
+     */
+    outlook_history?: Array<CompanySignal>;
+    /**
      * News
      */
     news: Array<CompanyStory>;
@@ -1442,6 +1580,12 @@ export type CompanyItem = {
      */
     symbol: string;
     /**
+     * Listings
+     *
+     * Available exchange-specific equity listings.
+     */
+    listings: Array<CompanyListing>;
+    /**
      * Sector
      *
      * Sector, or empty when unknown.
@@ -1459,6 +1603,26 @@ export type CompanyItem = {
      * Last data fetch, or null if never fetched.
      */
     last_updated: string | null;
+};
+
+/**
+ * CompanyListing
+ *
+ * One exchange-specific equity ticker for a company.
+ */
+export type CompanyListing = {
+    /**
+     * Exchange
+     */
+    exchange: string;
+    /**
+     * Symbol
+     */
+    symbol: string;
+    /**
+     * Instrument Key
+     */
+    instrument_key: string;
 };
 
 /**
@@ -1566,9 +1730,33 @@ export type CompanyFilters = {
      */
     sector?: string;
     /**
+     * Index
+     */
+    index?: string;
+    /**
      * Sort
      */
     sort?: string;
+};
+
+/**
+ * CompanyIndexFilter
+ *
+ * A supported Nifty index filter and its current locally matched company count.
+ */
+export type CompanyIndexFilter = {
+    /**
+     * Value
+     */
+    value: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Count
+     */
+    count: number;
 };
 
 /**
@@ -1580,7 +1768,7 @@ export type CompanyPage = {
     /**
      * Items
      *
-     * Companies matching name, symbol, or sector.
+     * Companies matching the current search and filter criteria.
      */
     items: Array<CompanyItem>;
     /**
@@ -1613,6 +1801,12 @@ export type CompanyPage = {
      * All nonempty sectors, sorted.
      */
     sectors?: Array<string>;
+    /**
+     * Indices
+     *
+     * Supported index constituent filters and their counts.
+     */
+    indices?: Array<CompanyIndexFilter>;
 };
 
 /**
@@ -1686,6 +1880,174 @@ export type DeliveryPage = {
 };
 
 /**
+ * CompanyMover
+ *
+ * One company with the strongest positive or negative saved session change.
+ */
+export type CompanyMover = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Symbol
+     */
+    symbol: string;
+    /**
+     * Price
+     */
+    price: number;
+    /**
+     * Change Pct
+     */
+    change_pct: number;
+    /**
+     * As Of
+     */
+    as_of: string;
+};
+
+/**
+ * MarketMovers
+ *
+ * Top changes and breadth across companies with saved Upstox quote snapshots.
+ */
+export type MarketMovers = {
+    /**
+     * As Of
+     */
+    as_of: string | null;
+    /**
+     * Coverage
+     */
+    coverage: number;
+    /**
+     * Advancing
+     */
+    advancing: number;
+    /**
+     * Declining
+     */
+    declining: number;
+    /**
+     * Unchanged
+     */
+    unchanged: number;
+    /**
+     * Gainers
+     */
+    gainers: Array<CompanyMover>;
+    /**
+     * Losers
+     */
+    losers: Array<CompanyMover>;
+};
+
+/**
+ * StockWatchItem
+ *
+ * Company-linked news bias, not a predicted return or probability.
+ */
+export type StockWatchItem = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Symbol
+     */
+    symbol: string;
+    /**
+     * Sector
+     */
+    sector: string;
+    /**
+     * Bias
+     */
+    bias: 'bullish' | 'bearish' | 'mixed' | 'neutral';
+    /**
+     * Score
+     */
+    score: number;
+    /**
+     * Attention
+     */
+    attention: number;
+    /**
+     * Articles
+     */
+    articles: number;
+    /**
+     * Sources
+     */
+    sources: number;
+    /**
+     * Positive
+     */
+    positive: number;
+    /**
+     * Negative
+     */
+    negative: number;
+    /**
+     * Latest News At
+     */
+    latest_news_at: string;
+    /**
+     * Stories
+     */
+    stories: Array<WatchStory>;
+};
+
+/**
+ * StocksWatch
+ *
+ * Current-session, read-only news-based watchlist with explicit coverage.
+ */
+export type StocksWatch = {
+    /**
+     * As Of
+     */
+    as_of: string;
+    /**
+     * Since
+     */
+    since: string;
+    /**
+     * Session Date
+     */
+    session_date: string;
+    /**
+     * Next Session
+     */
+    next_session: string;
+    /**
+     * Session State
+     */
+    session_state: 'pre_open' | 'open' | 'closed' | 'ended';
+    /**
+     * Sampled Articles
+     */
+    sampled_articles: number;
+    /**
+     * Truncated
+     */
+    truncated: boolean;
+    /**
+     * Items
+     */
+    items: Array<StockWatchItem>;
+};
+
+/**
  * Today
  *
  * Feature-filtered daily overview; unavailable sections contain no data.
@@ -1704,6 +2066,10 @@ export type Today = {
      * Latest report summary, without its text.
      */
     report: ReportSummary | null;
+    /**
+     * News-based company watchlist; requires Companies, Markets and News.
+     */
+    stocks_watch?: StocksWatch | null;
 };
 
 /**
@@ -1814,6 +2180,7 @@ export type TodayMarkets = {
      * Quotes
      */
     quotes: Array<MarketQuote>;
+    movers: MarketMovers;
 };
 
 /**
@@ -1922,6 +2289,42 @@ export type TodayStory = {
      * Companies
      */
     companies: Array<string>;
+};
+
+/**
+ * WatchStory
+ *
+ * Saved news evidence for an experimental stock watchlist.
+ */
+export type WatchStory = {
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Url
+     */
+    url: string;
+    /**
+     * Source
+     */
+    source: string;
+    /**
+     * Published At
+     */
+    published_at: string;
+    /**
+     * Sentiment Score
+     */
+    sentiment_score: number;
+    /**
+     * Relevance
+     */
+    relevance: number;
+    /**
+     * Sentiment Reason
+     */
+    sentiment_reason: string;
 };
 
 /**
@@ -3209,6 +3612,76 @@ export type GetAppIpoResponses = {
 
 export type GetAppIpoResponse = GetAppIpoResponses[keyof GetAppIpoResponses];
 
+export type ListAppExchangeInstrumentsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page
+         *
+         * Requested page; out-of-range values are clamped.
+         */
+        page?: number;
+        /**
+         * Page Size
+         *
+         * Rows per page, 1-100.
+         */
+        page_size?: number | null;
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * Exchange
+         */
+        exchange?: string;
+        /**
+         * Segment
+         */
+        segment?: string;
+        /**
+         * Instrument Type
+         */
+        instrument_type?: string;
+        /**
+         * Sort
+         */
+        sort?: string;
+    };
+    url: '/api/app/markets/instruments';
+};
+
+export type ListAppExchangeInstrumentsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type ListAppExchangeInstrumentsError = ListAppExchangeInstrumentsErrors[keyof ListAppExchangeInstrumentsErrors];
+
+export type ListAppExchangeInstrumentsResponses = {
+    /**
+     * OK
+     */
+    200: ExchangeInstrumentPage;
+};
+
+export type ListAppExchangeInstrumentsResponse = ListAppExchangeInstrumentsResponses[keyof ListAppExchangeInstrumentsResponses];
+
 export type ListAppCompanyMarketsData = {
     body?: never;
     path?: never;
@@ -3370,6 +3843,10 @@ export type ListAppCompaniesData = {
          * Exact sector, or all.
          */
         sector?: string;
+        /**
+         * Index
+         */
+        index?: string;
         /**
          * Sort
          */

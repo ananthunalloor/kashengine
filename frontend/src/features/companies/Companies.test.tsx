@@ -14,6 +14,10 @@ const data: CompanyPage = {
       id: 1,
       name: "<b>Alpha Bank</b>",
       symbol: "ALPHA",
+      listings: [
+        { exchange: "NSE", symbol: "ALPHA", instrument_key: "NSE_EQ|INE000A01001" },
+        { exchange: "BSE", symbol: "500001", instrument_key: "BSE_EQ|INE000A01001" },
+      ],
       sector: "Finance",
       screener_url: "https://www.screener.in/company/ALPHA/",
       last_updated: "2026-10-16T23:00:00Z",
@@ -22,6 +26,7 @@ const data: CompanyPage = {
       id: 2,
       name: "Beta Tools",
       symbol: "BETA",
+      listings: [],
       sector: "",
       screener_url: "javascript:alert(1)",
       last_updated: null,
@@ -30,6 +35,7 @@ const data: CompanyPage = {
   page: 1,
   pages: 3,
   total: 5,
+  indices: [{ value: "NIFTY_50", label: "Nifty 50", count: 50 }],
 };
 const clients: QueryClient[] = [];
 afterEach(() => {
@@ -106,6 +112,11 @@ it("shows directory fields, safe source links, IST dates and preview navigation"
   expect(screen.getByText("17 Oct 2026")).toBeInTheDocument();
   expect(screen.getByText("Not fetched")).toBeInTheDocument();
   expect(screen.getByText("Not available")).toBeInTheDocument();
+  expect(screen.getByText("NSE")).toBeInTheDocument();
+  expect(screen.getByText("500001")).toBeInTheDocument();
+  expect(screen.getByText("Not imported")).toBeInTheDocument();
+  expect(screen.getByRole("combobox", { name: "Nifty index" })).toHaveValue("NIFTY_50");
+  expect(screen.getByRole("combobox", { name: "Nifty index" })).toHaveTextContent("Nifty 50 (50)");
   expect(screen.getByText("5 companies")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Compare with/ })).toHaveAttribute("href", "/companies/");
   expect(screen.getByRole("link", { name: "Companies", current: "page" })).toHaveAttribute(
@@ -114,6 +125,31 @@ it("shows directory fields, safe source links, IST dates and preview navigation"
   );
   expect(screen.getAllByRole("main")).toHaveLength(1);
   expect(document.querySelector("style")).toBeNull();
+});
+
+it("filters and bookmarks companies by Nifty index", async () => {
+  const router = await showCompanies();
+
+  fireEvent.change(await screen.findByRole("combobox", { name: "Nifty index" }), {
+    target: { value: "NIFTY_50" },
+  });
+
+  await waitFor(() => expect(router.state.location.search.index).toBe("NIFTY_50"));
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/app/companies?q=&page=1&index=NIFTY_50",
+    expect.anything(),
+  );
+});
+
+it("allows switching from the default Nifty 50 to all companies", async () => {
+  const router = await showCompanies();
+
+  fireEvent.change(await screen.findByRole("combobox", { name: "Nifty index" }), {
+    target: { value: "" },
+  });
+
+  await waitFor(() => expect(router.state.location.search.index).toBe(""));
+  expect(fetch).toHaveBeenCalledWith("/api/app/companies?q=&page=1", expect.anything());
 });
 
 it("restores bookmarked search, debounces typing, resets page and keeps focus", async () => {
@@ -128,7 +164,10 @@ it("restores bookmarked search, debounces typing, resets page and keeps focus", 
   expect(router.state.location.search).toMatchObject({ q: "bank", page: 2 });
   await waitFor(() => expect(router.state.location.search).toMatchObject({ q: "tools", page: 1 }));
   expect(input).toHaveFocus();
-  expect(fetch).toHaveBeenCalledWith("/api/app/companies?q=tools&page=1", expect.anything());
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/app/companies?q=tools&page=1&index=NIFTY_50",
+    expect.anything(),
+  );
 });
 
 it("submits immediately and cancels pending typing on clear", async () => {
@@ -152,7 +191,7 @@ it("preserves search while paging and restores it on back navigation", async () 
     body: { ...data, page: 2 },
   });
   const next = await screen.findByRole("link", { name: "Next" });
-  expect(next).toHaveAttribute("href", "/companies/?q=bank&page=3");
+  expect(next).toHaveAttribute("href", "/companies/?q=bank&page=3&index=NIFTY_50");
   fireEvent.click(next);
   await waitFor(() => expect(router.state.location.search).toMatchObject({ q: "bank", page: 3 }));
   router.history.back();

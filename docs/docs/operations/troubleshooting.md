@@ -160,8 +160,11 @@ A new account can sign in, but a regular user sees only **Account** until the em
 3. Look at **Ops > Runs** for `markets.upstox_quotes` and `markets.upstox_refresh`. Quotes are
    saved only in a trading session. Check the [trading calendar](../domains/markets-and-predictions.md#the-trading-calendar).
 4. The page `/markets/live` shows the error of each company.
-5. The stream worker is a separate process. It stops after 5 failed tries. Read its log and start
-   it again. Restart it after you change a token or a mapping.
+5. Live prices come from the `streamer` service. Read its log: `docker compose logs streamer`.
+   It retries forever, so a new token or mapping is used at the next connect.
+6. If the Today page shows "Connecting" or "Reconnecting" all the time, check the `realtime`
+   service (`docker compose logs realtime`) and that Caddy routes `/ws/*` to it. A socket closed
+   with code 4403 means the account has no Markets access.
 
 ## A Celery job is late or does not run
 

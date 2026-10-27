@@ -192,7 +192,12 @@ def company_queryset(filters: dict[str, str]):
             Q(name__icontains=filters["q"])
             | Q(symbol__icontains=filters["q"])
             | Q(sector__icontains=filters["q"])
-        )
+            | Q(
+                market_instruments__is_active=True,
+                market_instruments__segment__in=["NSE_EQ", "BSE_EQ"],
+                market_instruments__trading_symbol__icontains=filters["q"],
+            )
+        ).distinct()
     return companies
 
 

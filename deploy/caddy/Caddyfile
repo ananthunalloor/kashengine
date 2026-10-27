@@ -89,7 +89,15 @@
 		}
 	}
 
-	# 3. Everything else is the Django app. Caddy replaces any X-Forwarded-* header from the
+	# 3. Live market WebSockets go to the ASGI realtime service. It checks the session, the
+	# Origin header and Markets access itself. Caddy upgrades the connection automatically.
+	handle /ws/* {
+		reverse_proxy realtime:8001 {
+			header_down -Server
+		}
+	}
+
+	# 4. Everything else is the Django app. Caddy replaces any X-Forwarded-* header from the
 	# client, so the app can trust X-Forwarded-Proto (SECURE_PROXY_SSL_HEADER).
 	handle {
 		reverse_proxy web:8000 {

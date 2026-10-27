@@ -10,6 +10,12 @@ export const companySearchSchema = z.object({
   q: z.string().trim().max(100).default(""),
   page: z.coerce.number().int().positive().safe().default(1),
   sector: z.string().max(100).optional(),
+  index: z
+    .string()
+    .regex(
+      /^(|NIFTY_50|NIFTY_NEXT_50|NIFTY_100|NIFTY_200|NIFTY_500|NIFTY_MIDCAP_50|NIFTY_MIDCAP_100|NIFTY_MIDCAP_150|NIFTY_SMALLCAP_50|NIFTY_SMALLCAP_100|NIFTY_SMALLCAP_250)$/,
+    )
+    .default("NIFTY_50"),
   sort: z
     .string()
     .regex(/^(|-?(name|symbol|sector|last_updated))$/)
@@ -25,6 +31,7 @@ export function companiesQuery(filters: CompanySearch) {
       const params = new URLSearchParams({ q: filters.q, page: String(filters.page) });
       tableParams(params, filters);
       if (filters.sector) params.set("sector", filters.sector);
+      if (filters.index) params.set("index", filters.index);
       const result = zCompanyPage.safeParse(
         await appRequest(`/api/app/companies?${params}`, { signal }),
       );

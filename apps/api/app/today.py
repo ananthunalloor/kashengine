@@ -18,9 +18,10 @@ from apps.web.queries import DASHBOARD_ITEMS, NEWS_WINDOW_HOURS, dashboard_ipos,
 from apps.web.templatetags.web_extras import rupees, signed, times
 
 from .auth import AppSession
-from .markets import market_quotes, market_stats
+from .markets import company_movers, market_quotes, market_stats
 from .reports import summary as report_summary
 from .schemas import Today
+from .stocks_watch import stocks_to_watch
 
 router = Router(tags=["Today"], auth=AppSession())
 
@@ -32,7 +33,7 @@ router = Router(tags=["Today"], auth=AppSession())
     summary="Read the daily overview for the current account's available features",
 )
 def get_today(request: HttpRequest):
-    """Gate each section before reading it; never refresh or evaluate saved data.
+    """Gate each section before reading it; never refresh providers or write forecasts.
 
     Args:
         request: The authenticated browser request with feature/subscription access.
@@ -49,6 +50,11 @@ def get_today(request: HttpRequest):
     now = timezone.now()
     today = today_ist(now)
     result = {"today": today, "markets": None, "news": None, "ipos": None, "report": None}
+    result["stocks_watch"] = (
+        stocks_to_watch(now)
+        if all(access.can(feature) for feature in ("companies", "markets", "news"))
+        else None
+    )
     if access.can("markets"):
         saved = outlook(Prediction.objects.order_by("-target_date").first())
         formatted = None
@@ -78,6 +84,7 @@ def get_today(request: HttpRequest):
             "outlook": formatted,
             "stats": market_stats(),
             "quotes": market_quotes(),
+            "movers": company_movers(),
         }
     if access.can("news"):
         news = gather_news(now - timedelta(hours=NEWS_WINDOW_HOURS), limit=DASHBOARD_ITEMS)

@@ -3,9 +3,9 @@
 `IndexQuote` holds one daily close for each symbol. `quotes.py` writes it. `Prediction` holds the
 prediction for one trading day and, later, the real result. `prediction.py` creates it and
 `evaluation.py` fills in the result. `Instrument` is the list of symbols to download, with the
-weight and scale of each global cue. Admins edit `Instrument` on the Ops pages. The web pages, the
-reports and the Ops health checks read these models. `TradingCalendarDay` stores
-staff-maintained NSE holidays and special-session hours.
+weight and scale of each global cue. `MarketInstrument` is the provider-refreshed NSE/BSE catalog.
+Admins edit `Instrument` on the Ops pages. `TradingCalendarDay` stores staff-maintained NSE
+holidays and special-session hours.
 """
 
 from typing import ClassVar
@@ -75,6 +75,72 @@ class TradingCalendarDay(models.Model):
             self.opens_at is None or self.closes_at is None or self.closes_at <= self.opens_at
         ):
             raise ValidationError("Special sessions need a start and a later end time in IST.")
+
+
+class MarketInstrument(models.Model):
+    """One active NSE or BSE instrument from the Upstox daily instrument master."""
+
+    instrument_key = models.CharField(max_length=100, unique=True)
+    exchange = models.CharField(max_length=3)
+    segment = models.CharField(max_length=20)
+    trading_symbol = models.CharField(max_length=100)
+    name = models.CharField(max_length=200)
+    instrument_type = models.CharField(max_length=30)
+    isin = models.CharField(max_length=12, blank=True)
+    underlying_symbol = models.CharField(max_length=100, blank=True)
+    expiry = models.DateField(null=True, blank=True)
+    strike_price = models.DecimalField(max_digits=20, decimal_places=6, null=True, blank=True)
+    lot_size = models.PositiveIntegerField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    refreshed_at = models.DateTimeField(auto_now=True)
+    company = models.ForeignKey(
+        "companies.Company",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="market_instruments",
+    )
+
+    class Meta:
+        ordering: ClassVar[list[str]] = ["exchange", "trading_symbol", "expiry", "pk"]
+        indexes: ClassVar[list[models.Index]] = [
+            models.Index(fields=["exchange", "segment", "instrument_type"]),
+            models.Index(fields=["exchange", "trading_symbol"]),
+            models.Index(fields=["expiry"]),
+        ]
+
+    def __str__(self):
+        """Return the exchange and trading symbol."""
+        return f"{self.exchange}:{self.trading_symbol}"
+
+
+class IndexConstituent(models.Model):
+    """A company membership in an official Nifty index constituent file."""
+
+    index_code = models.CharField(max_length=30)
+    symbol = models.CharField(max_length=50)
+    isin = models.CharField(max_length=12)
+    company = models.ForeignKey(
+        "companies.Company",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="index_memberships",
+    )
+    refreshed_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering: ClassVar[list[str]] = ["index_code", "symbol"]
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            models.UniqueConstraint(fields=["index_code", "symbol"], name="unique_index_symbol"),
+        ]
+        indexes: ClassVar[list[models.Index]] = [
+            models.Index(fields=["index_code", "company"]),
+        ]
+
+    def __str__(self):
+        """Return the index and its company symbol."""
+        return f"{self.index_code}: {self.symbol}"
 
 
 class IndexQuote(models.Model):
@@ -219,3 +285,33 @@ class Instrument(models.Model):
     def __str__(self) -> str:
         """Return the name and the symbol, for example `Nifty 50 (^NSEI)`."""
         return f"{self.name} ({self.symbol})"
+
+
+class LiveSnapshot(models.Model):
+    """The newest normalized Upstox stream payload of one instrument or of the market status.
+
+    The stream worker upserts these rows in bulk (no model signals, so no SSE invalidation storm).
+    The WebSocket consumer reads them to send a first snapshot to a new browser subscriber.
+    """
+
+    class Kind(models.TextChoices):
+        """What the payload describes."""
+
+        EQUITY = "equity", "Company"
+        INDEX = "index", "Index"
+        STATUS = "status", "Market status"
+
+    key = models.CharField(max_length=100, unique=True)
+    kind = models.CharField(max_length=10, choices=Kind.choices)
+    company = models.ForeignKey(
+        "companies.Company", null=True, blank=True, on_delete=models.CASCADE, related_name="+"
+    )
+    payload = models.JSONField(default=dict)
+    updated_at = models.DateTimeField()
+
+    class Meta:
+        ordering: ClassVar[list[str]] = ["key"]
+
+    def __str__(self) -> str:
+        """Return the key and the time of the last update."""
+        return f"{self.key} @ {self.updated_at}"

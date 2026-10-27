@@ -7,6 +7,8 @@ import { ThemeProvider } from "../../app/ThemeProvider";
 import { routeTree } from "../../routeTree.gen";
 import type { Session, Today } from "../../shared/api/generated/types.gen";
 import { session } from "../../test/session";
+import { MockWebSocket } from "../../test/websocket";
+import { act } from "@testing-library/react";
 
 const data: Today = {
   today: "2026-10-19",
@@ -34,6 +36,33 @@ const data: Today = {
       enough_results: false,
     },
     quotes: [{ name: "Nifty 50", day: "2026-10-16", close: "24500.00", change: "+0.40%" }],
+    movers: {
+      as_of: "2026-10-19T03:45:00Z",
+      coverage: 3,
+      advancing: 1,
+      declining: 1,
+      unchanged: 1,
+      gainers: [
+        {
+          id: 1,
+          name: "Alpha Company",
+          symbol: "ALPHA",
+          price: 110,
+          change_pct: 10,
+          as_of: "2026-10-19T03:45:00Z",
+        },
+      ],
+      losers: [
+        {
+          id: 2,
+          name: "Beta Company",
+          symbol: "BETA",
+          price: 90,
+          change_pct: -10,
+          as_of: "2026-10-19T03:45:00Z",
+        },
+      ],
+    },
   },
   news: {
     since: "2026-10-17T15:30:00Z",
@@ -169,6 +198,12 @@ it("renders the dated overview, evidence, baseline and colored values without in
   expect(screen.getByText("2.8/10")).toHaveAttribute("data-tone", "negative");
   expect(screen.getByText("\u22121.25%")).toHaveAttribute("data-tone", "negative");
   expect(screen.getByText("+0.40%")).toHaveAttribute("data-tone", "positive");
+  expect(screen.getByRole("heading", { name: "Stock movement" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "ALPHA" })).toHaveAttribute("href", "/companies/1/");
+  expect(screen.getByText("+10.00%")).toBeInTheDocument();
+  expect(screen.getByRole("article", { name: "Market breadth" })).toHaveTextContent(
+    "3 saved quotes with a previous close",
+  );
   expect(screen.getByText(/right on 1 of 2/)).toHaveTextContent("too few results");
   expect(screen.getByText("<b>Saved outlook note</b>")).toBeInTheDocument();
   expect(screen.getByText("<b>Plain explanation</b>")).toBeInTheDocument();
@@ -190,6 +225,7 @@ it("filters and searches the bounded story table without removing context", asyn
   fireEvent.change(news.getByRole("combobox", { name: "Sentiment" }), {
     target: { value: "Bad for stocks" },
   });
+
   expect(news.getByRole("cell", { name: /^Weak sales/ })).toBeInTheDocument();
   expect(news.queryByText("<b>Strong sales</b>")).not.toBeInTheDocument();
   fireEvent.change(news.getByRole("searchbox"), { target: { value: "no match" } });
@@ -201,6 +237,27 @@ it("filters and searches the bounded story table without removing context", asyn
     "aria-sort",
     "ascending",
   );
+});
+
+it("shows the news-driven stock watchlist when supplied by the feature-filtered API", async () => {
+  await showToday({
+    body: {
+      ...data,
+      stocks_watch: {
+        as_of: "2026-10-19T04:30:00Z",
+        since: "2026-10-17T16:30:00Z",
+        session_date: "2026-10-19",
+        next_session: "2026-10-19",
+        session_state: "open",
+        sampled_articles: 0,
+        truncated: false,
+        items: [],
+      },
+    },
+    account: { ...fullSession, features: [...fullSession.features, "companies"] },
+  });
+  expect(await screen.findByRole("heading", { name: "Stocks to watch today" })).toBeInTheDocument();
+  expect(screen.getByText("No news-backed stocks to watch yet")).toBeInTheDocument();
 });
 
 it("keeps the latest report link inside React", async () => {
@@ -228,6 +285,7 @@ it("omits every unavailable section and its links", async () => {
   expect(screen.getByText(/No feature is on/)).toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "No outlook yet" })).not.toBeInTheDocument();
   expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Stocks to watch today" })).not.toBeInTheDocument();
   for (const name of ["See the history", "All news", "All IPOs", "Read it"])
     expect(screen.queryByRole("link", { name })).not.toBeInTheDocument();
 });
@@ -291,4 +349,68 @@ it("rejects contract drift instead of showing a success-shaped empty dashboard",
   await showToday({ body: { today: "2026-10-19" } });
   expect(await screen.findByRole("alert")).toHaveTextContent("The Today response does not match");
   expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+});
+
+it("streams live index levels and watchlist prices over the WebSocket", async () => {
+  const item = {
+    id: 7,
+    name: "Example Industries",
+    symbol: "EXAMPLE",
+    sector: "Energy",
+    bias: "bullish",
+    score: 0.8,
+    attention: 0.7,
+    articles: 1,
+    sources: 1,
+    positive: 1,
+    negative: 0,
+    latest_news_at: "2026-10-19T03:30:00Z",
+    stories: [],
+  };
+  await showToday({
+    body: {
+      ...data,
+      stocks_watch: {
+        as_of: "2026-10-19T04:30:00Z",
+        since: "2026-10-17T16:30:00Z",
+        session_date: "2026-10-19",
+        next_session: "2026-10-19",
+        session_state: "open",
+        sampled_articles: 1,
+        truncated: false,
+        items: [item],
+      },
+    },
+    account: { ...fullSession, features: [...fullSession.features, "companies"] },
+  });
+  expect(await screen.findByRole("heading", { name: "Live market" })).toBeInTheDocument();
+  expect(screen.getByText(/Connecting to the live feed/)).toBeInTheDocument();
+  const socket = MockWebSocket.latest;
+  act(() => socket.open());
+  expect(socket.sent).toEqual([{ type: "subscribe", companies: [7] }]);
+  const as_of = new Date().toISOString();
+  act(() =>
+    socket.receive({
+      type: "snapshot",
+      quotes: [
+        { key: "NSE_INDEX|Nifty 50", kind: "index", name: "Nifty 50", ltp: 24500, as_of },
+        {
+          key: "NSE_EQ|X",
+          kind: "equity",
+          company_id: 7,
+          ltp: 101.5,
+          as_of,
+          change: 1,
+          change_pct: 1,
+        },
+      ],
+      status: { segments: { NSE_EQ: "NORMAL_OPEN" }, as_of },
+    }),
+  );
+  expect(screen.getByRole("article", { name: "Nifty 50 live" })).toBeInTheDocument();
+  expect(screen.getByText("Market open")).toBeInTheDocument();
+  expect(
+    within(screen.getByRole("article", { name: "EXAMPLE news watch" })).getByText("INR 101.50"),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/prices are streamed live/)).toBeInTheDocument();
 });

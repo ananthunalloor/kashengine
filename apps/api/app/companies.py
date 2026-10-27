@@ -1,6 +1,7 @@
 """Private company directory preview, sharing the existing name/symbol/sector query."""
 
 from django.core.paginator import Paginator
+from django.db.models import Count, Prefetch
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
 from ninja import Field, Query, Router
@@ -8,6 +9,8 @@ from ninja import Field, Query, Router
 from apps.access.middleware import access_for
 from apps.api.v1.common import ERRORS_WITH_NOT_FOUND, ERRORS_WITH_VALIDATION
 from apps.companies.models import Company, CompanyQuote
+from apps.markets.index_constituents import INDEXES
+from apps.markets.models import IndexConstituent, MarketInstrument
 from apps.siteconfig import conf
 from apps.web.queries import company_queryset
 
@@ -16,6 +19,34 @@ from .schemas import CompanyDetail, CompanyPage
 from .tables import TableFilters, ordered
 
 router = Router(tags=["Companies"], auth=AppSession("companies"))
+
+
+def company_item(company: Company, listings: list[MarketInstrument] | None = None) -> dict:
+    """Return display-safe company fields and all active exchange equity listings."""
+    if listings is None:
+        listings = list(
+            MarketInstrument.objects.filter(
+                company=company,
+                is_active=True,
+                segment__in=["NSE_EQ", "BSE_EQ"],
+            ).order_by("exchange", "trading_symbol")
+        )
+    return {
+        "id": company.pk,
+        "name": company.name,
+        "symbol": company.symbol,
+        "listings": [
+            {
+                "exchange": listing.exchange,
+                "symbol": listing.trading_symbol,
+                "instrument_key": listing.instrument_key,
+            }
+            for listing in listings
+        ],
+        "sector": company.sector,
+        "screener_url": company.screener_url,
+        "last_updated": company.last_updated,
+    }
 
 
 def saved_price(quote: CompanyQuote | None) -> dict | None:
@@ -67,7 +98,7 @@ def get_company(request: HttpRequest, pk: int):
         else None
     )
     return {
-        "company": company,
+        "company": company_item(company),
         "summary": profile.get("company_profile", "") if isinstance(profile, dict) else "",
         "instrument_key": company.upstox_instrument_key,
         "fundamentals": data,
@@ -94,6 +125,11 @@ def get_company(request: HttpRequest, pk: int):
         if markets
         else [],
         "outlook": outlook,
+        "outlook_history": list(
+            company.outlooks.filter(inputs__instrument_key=company.upstox_instrument_key)[:120]
+        )
+        if markets and news
+        else [],
         "news": list(company.news_articles.all()[:30]) if news else [],
         "ipos": list(company.ipos.all()[:30]) if ipos else [],
     }
@@ -104,6 +140,10 @@ class CompanyFilters(TableFilters):
 
     q: str = Field(default="", max_length=100, description="Name, symbol, or sector search.")
     sector: str = Field(default="", max_length=100, description="Exact sector, or all.")
+    index: str = Field(
+        default="",
+        pattern=r"^($|NIFTY_50|NIFTY_NEXT_50|NIFTY_100|NIFTY_200|NIFTY_500|NIFTY_MIDCAP_50|NIFTY_MIDCAP_100|NIFTY_MIDCAP_150|NIFTY_SMALLCAP_50|NIFTY_SMALLCAP_100|NIFTY_SMALLCAP_250)$",
+    )
     sort: str = Field(default="", pattern="^(|-?(name|symbol|sector|last_updated))$")
 
 
@@ -115,9 +155,21 @@ class CompanyFilters(TableFilters):
 )
 def list_companies(request: HttpRequest, filters: Query[CompanyFilters]):
     """Read display fields without fetching or exposing scraped company data."""
-    companies = company_queryset({"q": filters.q.strip()}).defer("aliases", "screener_data")
+    listing_rows = MarketInstrument.objects.filter(
+        is_active=True,
+        segment__in=["NSE_EQ", "BSE_EQ"],
+    ).order_by("exchange", "trading_symbol")
+    companies = (
+        company_queryset({"q": filters.q.strip()})
+        .defer("aliases", "screener_data")
+        .prefetch_related(
+            Prefetch("market_instruments", queryset=listing_rows, to_attr="active_equity_listings")
+        )
+    )
     if filters.sector:
         companies = companies.filter(sector=filters.sector)
+    if filters.index:
+        companies = companies.filter(index_memberships__index_code=filters.index).distinct()
     companies = ordered(
         companies,
         filters.sort,
@@ -131,8 +183,15 @@ def list_companies(request: HttpRequest, filters: Query[CompanyFilters]):
     page = Paginator(companies, filters.page_size or conf.WEB_PAGE_SIZE).get_page(
         max(1, filters.page)
     )
+    index_counts = dict(
+        IndexConstituent.objects.filter(company__isnull=False)
+        .values_list("index_code")
+        .annotate(count=Count("company_id", distinct=True))
+    )
     return {
-        "items": list(page.object_list),
+        "items": [
+            company_item(company, company.active_equity_listings) for company in page.object_list
+        ],
         "page": page.number,
         "pages": page.paginator.num_pages,
         "total": page.paginator.count,
@@ -144,4 +203,8 @@ def list_companies(request: HttpRequest, filters: Query[CompanyFilters]):
             .values_list("sector", flat=True)
             .distinct()
         ),
+        "indices": [
+            {"value": code, "label": label, "count": index_counts.get(code, 0)}
+            for code, label, _filename in INDEXES
+        ],
     }

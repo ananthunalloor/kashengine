@@ -6,9 +6,11 @@
 # - Only Caddy publishes ports (80 and 443). No other service is reachable from outside.
 # - The networks keep the services apart:
 #     edge     Caddy only. It has the published ports and can reach the internet (for TLS).
-#     proxy    Caddy, web and docs. No route to the internet.
-#     backend  web, worker, beat, db, redis, ollama, silo, silo-init. No route to the internet.
-#     egress   worker, beat, ollama. Outbound only: news, quotes, Telegram, model downloads.
+#     proxy    Caddy, web, realtime and docs. No route to the internet.
+#     backend  web, realtime, streamer, worker, beat, db, redis, ollama, silo, silo-init.
+#              No route to the internet.
+#     egress   streamer, worker, beat, ollama. Outbound only: news, quotes (including the
+#              Upstox market-data WebSocket), Telegram, model downloads.
 # - Every container drops all Linux capabilities and cannot gain new ones.
 # - The app containers and Caddy have a read-only root file system (Caddy: see docker-compose.yml).
 
@@ -26,7 +28,7 @@ x-hardened: &hardened
     - ALL
   logging: *logging
 
-# Web, worker, and beat run as the "app" user. They write only to the volumes and to /tmp.
+# Web, realtime, streamer, worker, and beat run as the "app" user. They write only to the volumes and to /tmp.
 x-app-runtime: &app-runtime
   <<: *hardened
   env_file: .env.prod
@@ -80,6 +82,24 @@ services:
     networks:
       - proxy
       - backend
+
+  # Browser WebSockets only (/ws/*). No internet route; it reads Redis and the database.
+  realtime:
+    <<: *app-runtime
+    command: >
+      uvicorn config.asgi:application --host 0.0.0.0 --port 8001 --workers 2
+      --proxy-headers --forwarded-allow-ips=* --ws-max-size 16384
+    networks:
+      - proxy
+      - backend
+
+  # The single Upstox market-data feed. Run only one: Upstox limits connections per token.
+  streamer:
+    <<: *app-runtime
+    command: python manage.py stream_upstox
+    networks:
+      - backend
+      - egress
 
   worker:
     <<: *app-runtime

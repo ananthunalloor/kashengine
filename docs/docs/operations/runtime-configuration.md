@@ -17,7 +17,8 @@ That page is generated from the registry, so it is always current.
 | **Environment variable** | `.env.dev`, `.env.prod`, `config/settings/*.py`. | Change the file and restart the services. |
 
 Values that decide how the process starts stay in the environment: `DJANGO_SECRET_KEY`,
-`DATABASE_URL`, `REDIS_URL`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, the security
+`DATABASE_URL`, `REDIS_URL`, `CHANNELS_REDIS_URL` (the Channels layer for live quotes, default
+Redis database 2), `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, the security
 flags and the log mode. The schedule, the news feeds and the market instruments are rows in the
 database, and have their own Ops pages.
 

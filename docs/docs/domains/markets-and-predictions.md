@@ -70,6 +70,29 @@ health of the exchange.
 
 ## Upstox data
 
+### NSE/BSE instrument catalog
+
+The `markets.refresh_instruments` task downloads Upstox's public daily BOD JSON master; it does not
+need an Upstox API token. It runs daily at 06:20 IST and can also be started with
+`python manage.py refresh_instruments`. The import validates the complete file before writing and
+deactivates removed contracts only after a successful refresh. It includes Upstox-provided NSE and
+BSE cash, index and derivative records, including the NSE currency/commodity and BSE currency
+segments present in the source, but excludes other exchanges such as MCX. The company directory
+groups equity listings with the same ISIN and shows each exchange symbol.
+
+The app's `/markets/instruments/` page and `/api/app/markets/instruments` endpoint provide search
+and filters for exchange, segment and instrument type. The listing is an instrument catalog, not a
+quote feed: it does not create historical or live prices for every catalog entry. Coverage follows
+the current Upstox instrument master and can differ from the exchanges' complete official security
+lists. See the [Upstox instrument master documentation](https://upstox.com/developer/api-documentation/instruments/).
+
+The Companies filters use NSE Indices constituent CSVs for Nifty broad-market, Midcap and Smallcap
+indexes. `markets.refresh_index_constituents` validates and saves these lists daily at 06:30 IST;
+`python manage.py refresh_index_constituents` runs it manually. On Today, the gainers, losers and
+market-breadth cards use the latest saved company quotes with a previous close, restricted to the
+most recent quote date. They are not full-market rankings: coverage depends on companies with
+Upstox quotes saved in this app.
+
 Upstox is **off** until a superuser turns on `UPSTOX_ENABLED` and saves `UPSTOX_ACCESS_TOKEN` on
 **Ops > Settings**. The token is a secret. It goes in the `Authorization` header only, never in a
 URL, a log line or an error text. The code does not renew the token. An expired token gives a clear
@@ -85,16 +108,41 @@ Two beat entries start with the first migration. They do nothing while Upstox is
 A part that fails records a safe error for the company (`upstox_errors`). The old good data stays,
 and the page shows the error.
 
-For faster prices, run **one** optional stream worker: `python manage.py stream_upstox` (add
-`--symbols` for a subset of at most 100 companies). It is not part of the Compose services. Run
-it under your own process supervisor. The worker:
+Live prices come from the stream worker `python manage.py stream_upstox`. Compose runs it as
+the `streamer` service in dev and prod. Run only **one** for each Upstox token. The worker:
 
+- follows every mapped company and the indices of `UPSTOX_STREAM_INDICES` (default Nifty 50,
+  Sensex, Nifty Bank and India VIX) in **full** mode. This mode has the last price, the day OHLC,
+  volume, the average price, the total buy and sell quantity and 5 levels of depth. Upstox
+  allows 2000 instruments for each connection. `--symbols` limits the companies, and
+  `--no-indices` drops the indices;
 - asks Upstox for a new feed address at each connect, and accepts only a `wss://` address on a
   host that ends with `.upstox.com`;
 - checks the certificate;
-- saves at most one quote for each company in 5 seconds, with the exchange time;
-- stops with an error after 5 failed tries, or at once on invalid data, and never saves a guessed
-  price.
+- keeps the newest value of each instrument in `LiveSnapshot`, and saves at most one
+  `CompanyQuote` for each company in 5 seconds, with the exchange time. These writes send no
+  model signal;
+- broadcasts the changed quotes and the exchange session state about once a second to the
+  `realtime` service, through the Redis channel layer;
+- reconnects forever, with a wait that doubles up to 60 seconds. While Upstox is off or has no
+  token, it waits and tries again. It reads the companies and the indices again at each connect.
+  `--max-attempts N` stops it after N failed connections in a row. It never saves a guessed price.
+
+The browser opens `wss://<site>/ws/live/quotes/`. Caddy sends it to `realtime`. The Today page
+shows a *Live market* strip with the indices, and live prices next to the stocks to watch. The
+company page shows the live price, the change, OHLC, volume, the buy and sell pressure and the
+market depth. Without live data, the pages show the saved quote.
+
+| Message (server to browser) | Content |
+| --- | --- |
+| `{"type": "snapshot", "quotes": [...], "status": {...}}` | The newest saved values, sent after connect and after each `subscribe`. |
+| `{"type": "quotes", "quotes": [...]}` | Changed quotes, about once a second. |
+| `{"type": "status", "status": {"segments": {"NSE_EQ": "NORMAL_OPEN"}}}` | The exchange session state. |
+| `{"type": "error", "detail": "..."}` | A message from the browser was not valid. |
+
+The browser sends `{"type": "subscribe", "companies": [1, 2]}` (25 company ids at most) to
+follow companies. The indices are always sent. The server closes the socket with code 4401 for a
+signed-out user and 4403 for an account without Markets access.
 
 The page `/markets/live` lists the saved quotes of the companies. It reads the database only.
 

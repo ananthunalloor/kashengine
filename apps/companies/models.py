@@ -17,6 +17,7 @@ class Company(models.Model):
 
     name = models.CharField(max_length=200)
     symbol = models.CharField(max_length=50, unique=True, help_text="NSE or BSE symbol.")
+    isin = models.CharField(max_length=12, blank=True, db_index=True)
     aliases = models.JSONField(
         default=list,
         blank=True,
@@ -57,6 +58,11 @@ class Company(models.Model):
                 fields=["upstox_instrument_key"],
                 condition=~models.Q(upstox_instrument_key=""),
                 name="unique_mapped_upstox_company",
+            ),
+            models.UniqueConstraint(
+                fields=["isin"],
+                condition=~models.Q(isin=""),
+                name="unique_company_isin",
             ),
         ]
 

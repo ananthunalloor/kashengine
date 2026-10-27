@@ -7,10 +7,74 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 
 from apps.markets import tasks
+from apps.markets.index_constituents import IndexConstituentError
+from apps.markets.instrument_master import InstrumentMasterError
 from apps.markets.management.commands import fetch_quotes as fetch_quotes_command
+from apps.markets.management.commands import (
+    refresh_index_constituents as refresh_index_constituents_command,
+)
 from apps.markets.models import Prediction
 
 from .helpers import MON, SAT, ist, prediction
+
+
+def test_instrument_refresh_task_returns_catalog_counts(monkeypatch):
+    result = {"instruments": 12, "equities": 4, "companies_created": 2, "instruments_added": 12}
+    monkeypatch.setattr(tasks, "refresh_instruments", lambda: result)
+
+    assert tasks.refresh_instrument_master() == result
+
+
+def test_instrument_refresh_task_does_not_hide_provider_failures(monkeypatch):
+    monkeypatch.setattr(
+        tasks,
+        "refresh_instruments",
+        lambda: (_ for _ in ()).throw(InstrumentMasterError("invalid master")),
+    )
+
+    with pytest.raises(InstrumentMasterError, match="invalid master"):
+        tasks.refresh_instrument_master()
+
+
+def test_index_constituent_refresh_task_returns_counts(monkeypatch):
+    result = {"NIFTY_50": 50}
+    monkeypatch.setattr(tasks, "refresh_index_constituents", lambda: result)
+
+    assert tasks.refresh_index_memberships() == result
+
+
+def test_index_constituent_refresh_task_does_not_hide_provider_failures(monkeypatch):
+    monkeypatch.setattr(
+        tasks,
+        "refresh_index_constituents",
+        lambda: (_ for _ in ()).throw(IndexConstituentError("invalid index CSV")),
+    )
+
+    with pytest.raises(IndexConstituentError, match="invalid index CSV"):
+        tasks.refresh_index_memberships()
+
+
+def test_index_constituent_command_reports_refresh_result(monkeypatch, capsys):
+    monkeypatch.setattr(
+        refresh_index_constituents_command,
+        "refresh_index_constituents",
+        lambda: {"NIFTY_50": 50, "NIFTY_100": 100},
+    )
+
+    call_command("refresh_index_constituents")
+
+    assert "Refreshed 2 indexes with 150 constituents." in capsys.readouterr().out
+
+
+def test_index_constituent_command_surfaces_source_failures(monkeypatch):
+    monkeypatch.setattr(
+        refresh_index_constituents_command,
+        "refresh_index_constituents",
+        lambda: (_ for _ in ()).throw(IndexConstituentError("source unavailable")),
+    )
+
+    with pytest.raises(CommandError, match="source unavailable"):
+        call_command("refresh_index_constituents")
 
 
 def test_the_fetch_task_downloads_and_then_checks_the_predictions(monkeypatch):
