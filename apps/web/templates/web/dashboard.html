@@ -19,10 +19,11 @@
   <div class="mt-3 flex items-start gap-4">
     <span aria-hidden="true" class="mt-1 text-4xl leading-none sm:text-5xl {% if p.direction == 'up' %}text-gain{% elif p.direction == 'down' %}text-loss{% else %}text-muted{% endif %}">{{ p.direction|arrow }}</span>
     <h1 id="outlook-title" class="font-serif text-3xl font-semibold leading-tight sm:text-4xl">
-      The Nifty 50 is likely to {% if p.direction == "up" %}rise{% elif p.direction == "down" %}fall{% else %}stay flat{% endif %}.
+      {% if p.direction == "withheld" %}Prediction withheld by the watchdog{% else %}The Nifty 50 is likely to {% if p.direction == "up" %}rise{% elif p.direction == "down" %}fall{% else %}stay flat{% endif %}.{% endif %}
     </h1>
   </div>
 
+  {% if p.direction != "withheld" %}
   <div class="mt-6 grid gap-x-10 gap-y-6 md:grid-cols-2">
     <div>
       <p class="text-sm"><span class="font-medium">{{ outlook.strength|capfirst }} signal.</span>
@@ -32,6 +33,7 @@
         <span class="absolute top-0 h-2 w-px bg-paper" style="left: 40%"></span>
         <span class="absolute top-0 h-2 w-px bg-paper" style="left: 60%"></span>
       </div>
+      {% endif %}
       <p class="mt-1 grid grid-cols-[40fr_20fr_40fr] text-xs text-muted"><span>weak</span><span>moderate</span><span>strong</span></p>
     </div>
 

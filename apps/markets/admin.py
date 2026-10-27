@@ -5,7 +5,31 @@
 
 from django.contrib import admin
 
-from .models import IndexQuote, MarketInstrument, Prediction, TradingCalendarDay
+from .models import (
+    ForecastModel,
+    ForecastSample,
+    IndexQuote,
+    MarketInstrument,
+    Prediction,
+    TradingCalendarDay,
+)
+
+
+@admin.register(ForecastModel, ForecastSample)
+class ForecastEvidenceAdmin(admin.ModelAdmin):
+    """Inspect training metrics and point-in-time audits without manually editing them."""
+
+    def has_add_permission(self, request):
+        """Only forecasting jobs can create evidence."""
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        """Do not allow manual changes to training evidence or validation gates."""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """Keep model evidence for reproducibility."""
+        return False
 
 
 @admin.register(TradingCalendarDay)

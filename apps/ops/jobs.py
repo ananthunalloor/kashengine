@@ -64,6 +64,30 @@ class Job:
 
 JOBS: tuple[Job, ...] = (
     Job(
+        "forecasts-refresh",
+        "Refresh all forecasts",
+        "Refresh market, company and IPO predictions with fail-closed data checks.",
+        TASK,
+        "markets.refresh_forecasts",
+        group="Markets",
+    ),
+    Job(
+        "forecasts-train",
+        "Train and validate forecast models",
+        "Train chronological challengers; deploy only models that beat both baselines.",
+        TASK,
+        "markets.train_forecasts",
+        group="Checks",
+    ),
+    Job(
+        "forecasts-watchdog",
+        "Audit predictions",
+        "Independently verify stored forecast calculations and withhold invalid values.",
+        TASK,
+        "markets.watchdog",
+        group="Checks",
+    ),
+    Job(
         "upstox-refresh",
         "Refresh Upstox data",
         "Save company history, due fundamentals, news and IPOs. Requires opt-in and a valid token.",

@@ -4,6 +4,7 @@ import pytest
 from django.test import Client
 
 from apps.api.v1.delivery import mask
+from apps.markets.models import Prediction
 from apps.news.models import NewsArticle
 from apps.siteconfig import conf
 
@@ -148,6 +149,13 @@ def test_outlook(api, data):
 
 def test_outlook_before_the_first_prediction_is_404(api):
     assert api("/api/v1/markets/outlook").status_code == 404
+
+
+def test_withheld_outlook_is_not_published_by_v1(api, data):
+    Prediction.objects.update(direction="withheld", confidence=0, score=0, correct=None)
+    assert api("/api/v1/markets/outlook").status_code == 404
+    assert api("/api/v1/markets/predictions").json()["count"] == 0
+    assert api("/api/v1/markets/accuracy").json()["total"] == 0
 
 
 def test_predictions_accuracy_and_quotes(api, data):

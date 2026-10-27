@@ -289,6 +289,7 @@ def _ipo_item(ipo: Ipo) -> dict:
     """
     gmp_pct = ipo.gmp_pct
     return {
+        "id": ipo.pk,
         "name": ipo.name,
         "category": ipo.category,
         "status": ipo.status,
@@ -448,6 +449,12 @@ def _render_outlook(data: dict) -> list[str]:
     """
     p = data["prediction"]
     target = date.fromisoformat(p["target_date"])
+    if p["direction"] == "withheld":
+        return [
+            f"NIFTY 50 OUTLOOK, {_day(target)}",
+            "Prediction withheld by the watchdog; no direction or strength is published.",
+            *(f"Note: {note}" for note in p["notes"]),
+        ]
     lines = [
         f"NIFTY 50 OUTLOOK, {_day(target)}",
         f"{ARROWS[p['direction']]} {p['direction'].upper()}: {_strength(p['confidence'])} signal "
@@ -589,6 +596,7 @@ def _render_ipos(ipos: dict) -> list[str]:
             f"{subject} no verdict: the GMP or the subscription is not entered. "
             "The GMP is not official data."
         )
+    lines.extend(ipos.get("watchdog_notes", []))
     return lines
 
 
@@ -619,9 +627,8 @@ def render_text(data: dict) -> str:
 def _refresh_ipos(day: date, now: datetime) -> None:
     """Update the IPO status and scores, so the report shows the newest GMP and subscription.
 
-    The function calls `refresh_statuses` and then `score_ipos`. It uses no network. If any
-    exception happens, the function logs it and returns. The report is then built with the
-    scores that the database already has.
+    The function calls `refresh_statuses` and then `score_ipos`. It uses no network. Errors
+    propagate so a failed watchdog/scoring run cannot publish cached, unchecked verdicts.
 
     Args:
         day: The date of the report. `refresh_statuses` uses it to set the IPO status.
@@ -631,11 +638,8 @@ def _refresh_ipos(day: date, now: datetime) -> None:
         Updates the status and the listing gain of IPO rows, and the score, the verdict and the
         score time of the IPO rows that are not listed.
     """
-    try:
-        refresh_statuses(day)
-        score_ipos(now)
-    except Exception:
-        logger.exception("The IPO scores could not be updated. The report uses the saved scores.")
+    refresh_statuses(day)
+    score_ipos(now)
 
 
 def build_report(
@@ -684,8 +688,8 @@ def build_report(
         date=day,
         defaults={
             "text": render_text(data),
-            "prediction": prediction.direction,
-            "confidence": prediction.confidence,
+            "prediction": "" if prediction.direction == "withheld" else prediction.direction,
+            "confidence": None if prediction.direction == "withheld" else prediction.confidence,
             "data": data,
         },
     )

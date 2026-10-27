@@ -1,5 +1,6 @@
 """Tests for the metrics step, the new task, and the refresh_ipo_data command."""
 
+from datetime import timedelta
 from decimal import Decimal
 
 import pytest
@@ -8,6 +9,7 @@ from django.core.management import call_command
 from apps.ipos import metrics, tasks
 from apps.ipos.gmp import GmpResult, GmpSourceError
 from apps.ipos.models import Ipo
+from apps.markets.trading import today_ist
 
 from .helpers import make_ipo
 
@@ -85,7 +87,7 @@ def test_a_broken_listing_step_does_not_stop_the_scores(settings, monkeypatch, s
 def test_the_new_gmp_updates_the_score(settings, monkeypatch):
     settings.IPO_GMP_ENABLED = True
     settings.IPO_LISTING_ENABLED = False
-    ipo = make_ipo("Acme Foods Limited")
+    ipo = make_ipo("Acme Foods Limited", listing_date=today_ist() + timedelta(days=7))
 
     def fake_gmp():
         ipo.gmp = Decimal("30")

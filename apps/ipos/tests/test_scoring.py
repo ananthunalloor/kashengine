@@ -166,8 +166,10 @@ def test_the_subscription_is_used_only_when_it_is_final():
 
     assert early_outcome.verdict == UNKNOWN
     assert any("not final" in note for note in early_outcome.notes)
-    assert last_outcome.verdict == GOOD
-    assert last_outcome.signals[0].name == "subscription"
+    assert last_outcome.verdict == UNKNOWN
+    final_outcome = score_ipo(last_day, NOW + timedelta(days=1))
+    assert final_outcome.verdict == GOOD
+    assert final_outcome.signals[0].name == "subscription"
 
 
 @pytest.mark.django_db

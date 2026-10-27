@@ -22,6 +22,7 @@ def open_ipo(name="Acme Foods Limited", **kwargs) -> Ipo:
     today = today_ist()
     kwargs.setdefault("open_date", today)
     kwargs.setdefault("close_date", today + timedelta(days=2))
+    kwargs.setdefault("listing_date", today + timedelta(days=7))
     kwargs.setdefault("price_band_high", D("100"))
     return Ipo.objects.create(name=name, **kwargs)
 
@@ -91,8 +92,11 @@ def test_collect_command_shows_failed_pages(monkeypatch, capsys):
 def test_import_csv_command(tmp_path, capsys):
     path = tmp_path / "ipos.csv"
     today = today_ist().isoformat()
+    listing = (today_ist() + timedelta(days=7)).isoformat()
     path.write_text(
-        f"name,open_date,price_band_high,gmp\nCsv Foods Ltd,{today},100,30\n", encoding="utf-8"
+        "name,open_date,listing_date,price_band_high,gmp\n"
+        f"Csv Foods Ltd,{today},{listing},100,30\n",
+        encoding="utf-8",
     )
 
     call_command("import_ipo_csv", str(path))

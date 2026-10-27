@@ -15,8 +15,9 @@ from the threshold, when the news and the global score agree, and when we have m
 not fitted to data. Do not trust the prediction before `prediction_stats` shows that it beats the
 baseline (always guess the most common result) over many days.
 
-Make the prediction in the morning, before the market opens. A later run can see quotes of the
-same day.
+The rule is the experimental fallback for a chronologically validated logistic challenger.
+The independent watchdog checks publication. Make forecasts before opening; later default
+runs target the following session and forced runs cannot revise an opened session.
 
 Callers: the Celery task `markets.predict`, the command `predict_market` and the report builder
 call `make_prediction`. The module reads `NewsArticle` rows (the scores come from the news app),
@@ -26,6 +27,7 @@ call `make_prediction`. The module reads `NewsArticle` rows (the scores come fro
 """
 
 import logging
+import math
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 
@@ -35,9 +37,17 @@ from django.utils import timezone
 from apps.news.models import NewsArticle
 from apps.siteconfig import conf
 
-from .instruments import global_cues, total_cue_weight
+from .instruments import global_cues, target_symbol, total_cue_weight
+from .learning import forecast
 from .models import IndexQuote, Prediction
-from .trading import next_trading_day, previous_trading_day, session_close, today_ist
+from .trading import (
+    is_trading_day,
+    next_trading_day,
+    previous_trading_day,
+    session_close,
+    session_open,
+    today_ist,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +90,7 @@ def news_window_start(target_day: date) -> datetime:
     return session_close(previous_trading_day(target_day))
 
 
-def news_signal(since: datetime) -> NewsSignal:
+def news_signal(since: datetime, until: datetime | None = None) -> NewsSignal:
     """Return the average sentiment of the scored articles since a time.
 
     Each article counts as much as its relevance. The function uses only articles that have a
@@ -89,16 +99,26 @@ def news_signal(since: datetime) -> NewsSignal:
 
     Args:
         since: The start of the window. It must be timezone-aware.
+        until: The latest publication, fetch and scoring time allowed in the evidence.
 
     Returns:
         A `NewsSignal`. If no article matches, or if the total relevance is zero, the score is
         `None` and the number of articles is 0.
     """
+    until = until or timezone.now()
     rows = (
         NewsArticle.objects.filter(
             scored_at__isnull=False, sentiment_score__isnull=False, relevance__gte=MIN_RELEVANCE
         )
         .filter(Q(published_at__gte=since) | Q(published_at__isnull=True, fetched_at__gte=since))
+        .filter(
+            Q(published_at__lte=until) | Q(published_at__isnull=True, fetched_at__lte=until),
+            fetched_at__lte=until,
+            scored_at__lte=until,
+            sentiment_score__gte=-1,
+            sentiment_score__lte=1,
+            relevance__lte=1,
+        )
         .values_list("sentiment_score", "relevance")
     )
     pairs = list(rows)
@@ -143,7 +163,7 @@ def cue_signal(change_pct: float, scale: float) -> float:
     return max(-1.0, min(1.0, change_pct / scale))
 
 
-def read_cues(target_day: date) -> list[CueReading]:
+def read_cues(target_day: date, now: datetime | None = None) -> list[CueReading]:
     """Read the latest change of each enabled global cue.
 
     For each cue, the function takes the newest quote that has a change, on `target_day` or
@@ -152,25 +172,35 @@ def read_cues(target_day: date) -> list[CueReading]:
 
     Args:
         target_day: The trading day that we predict.
+        now: The latest receipt time allowed; defaults to the current time.
 
     Returns:
         A list of `CueReading` values, in the order of `global_cues()`. It is empty when no cue
         has a recent quote.
     """
     oldest = target_day - timedelta(days=MAX_CUE_AGE_DAYS)
+    now = now or timezone.now()
     readings = []
     for cue in global_cues():
         quote = (
             IndexQuote.objects.filter(
                 symbol=cue.symbol,
-                day__lte=target_day,
+                day__lt=target_day,
                 day__gte=oldest,
                 change_pct__isnull=False,
+                updated_at__lte=now,
             )
             .order_by("-day")
             .first()
         )
         if quote is None:
+            continue
+        if (
+            not math.isfinite(quote.close)
+            or quote.close <= 0
+            or not math.isfinite(quote.change_pct)
+        ):
+            logger.warning("Ignoring invalid quote for %s on %s", cue.symbol, quote.day)
             continue
         readings.append(
             CueReading(
@@ -200,6 +230,8 @@ def global_score(readings: list[CueReading]) -> float | None:
     if not readings:
         return None
     total_weight = sum(abs(r.weight) for r in readings)
+    if total_weight <= 0:
+        return None
     return sum(r.weight * r.signal for r in readings) / total_weight
 
 
@@ -373,6 +405,10 @@ def decide(
         confidence is 0.1 and the score is 0.0.
     """
     notes: list[str] = []
+    if not 0 <= news_weight <= 1 or not 0 < threshold <= 1 or min_articles < 1:
+        raise ValueError(
+            "Prediction settings require weight 0..1, threshold 0..1 and articles >=1."
+        )
     n_score = news.score
     g_score = global_score(readings)
 
@@ -396,9 +432,9 @@ def make_prediction(
     """Make and save the prediction for a trading day. Return (prediction, created).
 
     The target day is the next trading day, from today (IST) on. Today counts if it is one. If a
-    prediction for the day exists, the function returns it and does not change it, so the report
-    stays the same all day. With `force`, the function makes it again, but only until the result
-    is known (`evaluated_at` is empty).
+    prediction for the day exists, the function returns it without force. Scheduled refreshes
+    use `force` only before opening. Once the target opens or is evaluated, evidence is frozen.
+    No-data or late new predictions are explicitly withheld by the watchdog.
 
     The function reads the news since `news_window_start`, reads the cues, and calls `decide` with
     the site settings. It saves the direction, the confidence, the scores and an `inputs` dict
@@ -420,27 +456,69 @@ def make_prediction(
         Creates or updates one row in the `Prediction` table. Writes a log line.
     """
     now = now or timezone.now()
-    target = target_day or next_trading_day(today_ist(now))
+    today = today_ist(now)
+    target = target_day or next_trading_day(
+        today + timedelta(days=1) if now >= session_open(today) else today
+    )
     existing = Prediction.objects.filter(target_date=target).first()
-    if existing and (existing.evaluated_at or not force):
+    if existing and (existing.evaluated_at or not force or now >= session_open(target)):
         return existing, False
 
     since = news_window_start(target)
-    news = news_signal(since)
-    readings = read_cues(target)
+    news = news_signal(since, now)
+    readings = read_cues(target, now)
     config = {
         "news_weight": conf.PREDICTION_NEWS_WEIGHT,
         "threshold": conf.PREDICTION_THRESHOLD,
         "min_articles": conf.PREDICTION_MIN_ARTICLES,
     }
     outcome = decide(news, readings, **config)
+    reasons = []
+    if not is_trading_day(target):
+        reasons.append("The target has no saved trading session.")
+    if outcome.coverage <= 0:
+        reasons.append("No usable news or recent global quotes.")
+    if not 0 <= config["news_weight"] <= 1 or not 0 < config["threshold"] <= 1:
+        reasons.append("Prediction settings are outside their supported range.")
+    direction, score, learning = forecast(
+        "market",
+        "nifty",
+        target,
+        [
+            outcome.news_score or 0.0,
+            outcome.global_score or 0.0,
+            min(1.0, news.articles / max(config["min_articles"], 1)),
+            outcome.coverage,
+        ],
+        rule_label=outcome.direction,
+        rule_score=outcome.score,
+        now=now,
+        deadline=session_open(target),
+        context={
+            "band": conf.MARKET_FLAT_BAND_PCT,
+            "news_weight": config["news_weight"],
+            "threshold": config["threshold"],
+            "symbol": target_symbol(),
+        },
+        reasons=reasons,
+        rule_strength=outcome.confidence,
+    )
+    blocked = learning["watchdog"]["status"] == "blocked"
+    notes = outcome.notes + learning["watchdog"]["reasons"]
+    notes.append(
+        "Withheld by the prediction watchdog."
+        if blocked
+        else "Experimental rule; no validated ML advantage yet."
+        if learning["experimental"]
+        else "Logistic model passed chronological validation; future accuracy is not guaranteed."
+    )
 
     prediction, _ = Prediction.objects.update_or_create(
         target_date=target,
         defaults={
-            "direction": outcome.direction,
-            "confidence": outcome.confidence,
-            "score": outcome.score,
+            "direction": "withheld" if blocked else direction,
+            "confidence": 0.0 if blocked else learning.get("model_strength", outcome.confidence),
+            "score": 0.0 if blocked else score,
             "news_score": None if outcome.news_score is None else round(outcome.news_score, 4),
             "global_score": None
             if outcome.global_score is None
@@ -461,10 +539,16 @@ def make_prediction(
                     for r in readings
                 ],
                 "coverage": round(outcome.coverage, 3),
-                "notes": outcome.notes,
+                "notes": notes,
                 "settings": config,
+                "evaluation_band": conf.MARKET_FLAT_BAND_PCT,
+                "learning": learning,
             },
         },
     )
+    if blocked and existing and existing.direction != "withheld":
+        from .forecast_audit import withhold_market_reports  # noqa: PLC0415
+
+        withhold_market_reports(target, learning["watchdog"]["reasons"])
     logger.info("Prediction for %s: %s (%.2f)", target, prediction.direction, prediction.confidence)
     return prediction, True

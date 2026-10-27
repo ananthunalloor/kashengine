@@ -32,6 +32,8 @@ def get_outlook(request: HttpRequest):
     prediction = Prediction.objects.order_by("-target_date").first()
     if prediction is None:
         raise Http404
+    if prediction.direction == "withheld":
+        raise Http404("The newest prediction was withheld by the data-quality watchdog.")
     outlook = queries.outlook(prediction)
     assert outlook is not None  # noqa: S101 - a prediction object always gives an outlook.
     base = PredictionItem.model_validate(prediction, from_attributes=True).model_dump()
@@ -51,7 +53,7 @@ def list_predictions(request: HttpRequest, params: Query[PageParams]):
 
     **Required feature:** `markets`.
     """
-    return paginate(Prediction.objects.all(), params)
+    return paginate(Prediction.objects.exclude(direction="withheld"), params)
 
 
 @router.get(

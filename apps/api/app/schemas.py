@@ -530,7 +530,7 @@ class MarketPrediction(Schema):
     strength: str = Field(description="Signal strength on the 1.0-10.0 scale, not a probability.")
     actual_direction: str = Field(description="Actual direction, or empty while unavailable.")
     change: str = Field(description="Signed actual percentage change, or a dash.")
-    result: Literal["Right", "Wrong", "No session", "Waiting"] = Field(
+    result: Literal["Right", "Wrong", "No session", "Waiting", "Withheld"] = Field(
         description="Saved evaluation state."
     )
 
@@ -555,7 +555,7 @@ class TodayOutlook(Schema):
     """The latest saved prediction, with its actual target date and evidence."""
 
     date: dt.date
-    direction: Literal["up", "down", "flat"]
+    direction: Literal["up", "down", "flat", "withheld"]
     strength: str
     strength_label: str
     news_score: str

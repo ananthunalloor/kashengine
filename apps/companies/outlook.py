@@ -1,11 +1,14 @@
 """Persist an explainable, deliberately experimental next-session company signal."""
 
+import math
 from datetime import timedelta
 from statistics import mean
 
 from django.utils import timezone
 
-from apps.markets.trading import latest_completed_day, next_trading_day
+from apps.markets.learning import forecast
+from apps.markets.trading import latest_completed_day, next_trading_day, session_open
+from apps.siteconfig import conf
 
 from .models import Company, CompanyOutlook
 
@@ -42,6 +45,44 @@ def save_outlook(company: Company) -> CompanyOutlook | None:
     if len(candles) < MIN_CLOSES or candles[0].day != completed:
         return None
     latest, oldest = candles[0], candles[-1]
+    target = next_trading_day(completed + timedelta(days=1))
+    previous = company.outlooks.first()
+    if previous and previous.target_date == target and timezone.now() >= session_open(target):
+        return previous
+    valid_prices = all(
+        all(
+            math.isfinite(value) and value > 0
+            for value in (candle.open, candle.high, candle.low, candle.close)
+        )
+        and candle.low
+        <= min(candle.open, candle.close)
+        <= max(candle.open, candle.close)
+        <= candle.high
+        and candle.volume >= 0
+        for candle in candles
+    )
+    if not valid_prices:
+        _, _, learning = forecast(
+            "company",
+            str(company.pk),
+            target,
+            [0.0, 0.0, 0.0],
+            rule_label="flat",
+            rule_score=0.0,
+            now=timezone.now(),
+            deadline=session_open(target),
+            context={"band": conf.MARKET_FLAT_BAND_PCT, "threshold": FLAT_THRESHOLD},
+            reasons=["Invalid or inconsistent OHLCV history; company outlook withheld."],
+        )
+        return CompanyOutlook.objects.create(
+            company=company,
+            target_date=target,
+            direction="withheld",
+            score=0.0,
+            momentum_score=0.0,
+            news_score=None,
+            inputs={"instrument_key": company.upstox_instrument_key, "learning": learning},
+        )
     change = (latest.close / oldest.close - 1) * 100
     momentum = max(-1.0, min(1.0, change / 10))
     cutoff = timezone.now() - timedelta(days=7)
@@ -50,7 +91,11 @@ def save_outlook(company: Company) -> CompanyOutlook | None:
             published_at__gte=cutoff,
             published_at__lte=timezone.now(),
             sentiment_score__isnull=False,
+            sentiment_score__gte=-1,
+            sentiment_score__lte=1,
+            scored_at__lte=timezone.now(),
             relevance__gt=0,
+            relevance__lte=1,
         ).values("id", "sentiment_score", "relevance")
     )
     total = sum(article["relevance"] for article in articles)
@@ -75,16 +120,45 @@ def save_outlook(company: Company) -> CompanyOutlook | None:
         "news_weight": 0.0 if news is None else 0.3,
         "flat_threshold": FLAT_THRESHOLD,
     }
-    target = next_trading_day(completed + timedelta(days=1))
-    previous = company.outlooks.first()
     # A scheduled REST refresh and a stream worker must not create identical evidence.
-    if previous and previous.target_date == target and previous.inputs == inputs:
+    direction, predicted_score, learning = forecast(
+        "company",
+        str(company.pk),
+        target,
+        [momentum, news or 0.0, 0.0 if news is None else 1.0],
+        rule_label="up"
+        if score > FLAT_THRESHOLD
+        else "down"
+        if score < -FLAT_THRESHOLD
+        else "flat",
+        rule_score=score,
+        now=timezone.now(),
+        deadline=session_open(target),
+        context={
+            "instrument_key": company.upstox_instrument_key,
+            "reference_close": latest.close,
+            "band": conf.MARKET_FLAT_BAND_PCT,
+            "threshold": FLAT_THRESHOLD,
+        },
+        reasons=[],
+    )
+    inputs["learning"] = learning
+    if (
+        previous
+        and previous.target_date == target
+        and {key: value for key, value in previous.inputs.items() if key != "learning"}
+        == {key: value for key, value in inputs.items() if key != "learning"}
+        and previous.inputs.get("learning", {}).get("method") == learning["method"]
+        and previous.inputs.get("learning", {}).get("trained_at") == learning.get("trained_at")
+        and previous.inputs.get("learning", {}).get("watchdog", {}).get("status")
+        == learning["watchdog"]["status"]
+    ):
         return previous
     return CompanyOutlook.objects.create(
         company=company,
         target_date=target,
-        direction="up" if score > FLAT_THRESHOLD else "down" if score < -FLAT_THRESHOLD else "flat",
-        score=score,
+        direction="withheld" if learning["watchdog"]["status"] == "blocked" else direction,
+        score=0.0 if learning["watchdog"]["status"] == "blocked" else predicted_score,
         momentum_score=momentum,
         news_score=news,
         inputs=inputs,

@@ -29,8 +29,7 @@ def ist(day: date, hour: int = 0, minute: int = 0) -> datetime:
 def quote(symbol: str, day: date, change_pct: float | None, close: float = 100.0, saved_at=None):
     """Save a quote. `saved_at` sets updated_at (auto_now would use the real time)."""
     row = IndexQuote.objects.create(symbol=symbol, day=day, close=close, change_pct=change_pct)
-    if saved_at is not None:
-        IndexQuote.objects.filter(pk=row.pk).update(updated_at=saved_at)
+    IndexQuote.objects.filter(pk=row.pk).update(updated_at=saved_at or ist(day, 17))
     return row
 
 
@@ -48,6 +47,9 @@ def article(number: int, score, relevance, published_at=None, fetched_at=None, s
         published_at=published_at, sentiment_score=score, relevance=relevance,
         scored_at=timezone.now() if scored else None,
     )  # fmt: skip
-    if fetched_at is not None:
-        NewsArticle.objects.filter(pk=row.pk).update(fetched_at=fetched_at)
+    received = fetched_at or published_at
+    if received is not None:
+        NewsArticle.objects.filter(pk=row.pk).update(
+            fetched_at=received, scored_at=received if scored else None
+        )
     return row

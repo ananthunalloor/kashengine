@@ -4,6 +4,60 @@ A bot that sends a daily report on Indian financial news. It reads news from the
 
 > Not financial advice. Predictions can be wrong.
 
+## Automated forecasts and watchdog
+
+Market direction, mapped-company outlooks and pre-listing IPO scores refresh from saved
+provider/news inputs every **15 minutes**. Existing data-collection and news-scoring jobs still
+provide those inputs; a forecast never fabricates a missing price. Celery **worker and beat**
+must both be running, and Upstox company history still requires its opt-in and a valid token.
+Apply migrations and restore dependencies (`uv sync`) before restarting web and workers.
+
+Each forecast family has a trained, regularized logistic-regression challenger. Daily at
+**05:00 IST**, the trainer collects completed outcomes and tests a new model chronologically:
+
+- At least **60 training dates**, followed by at least **20 untouched validation dates**.
+  Company rows sharing a target date stay together; many stocks on one day do not count as
+  many independent validation dates.
+- Training outcomes must have been observable before the first validation forecast.
+  Late inputs, blocked samples and incompatible outcome definitions are excluded.
+- The model must beat **both** the holdout's most-common-result baseline and the existing
+  rule by at least **5 percentage points**. Otherwise it is not deployed.
+- Until sufficient prospective evidence exists, the explainable rule remains explicitly
+  **experimental**. No historical training examples are invented from today's revised data.
+  Model strengths are not calibrated probabilities. Models expire after seven days without
+  revalidation, and failed validation removes their approval.
+
+An independent deterministic watchdog recalculates rule and classifier outputs before publication, checks
+normalized values and deadlines, and audits saved predictions every **15 minutes**, offset
+seven minutes from refreshes. Versioned model coefficients are retained for independent replay.
+Invalid, missing, stale or late evidence is withheld, not
+presented as “flat,” “neutral,” or “likely good.” Reports, UI and accuracy statistics respect
+withholding; cached market-report copies are withdrawn if the scheduled audit finds corruption.
+The watchdog checks consistency and available evidence, **not the truth of an external feed or
+future market movements**. It is not a second LLM asserting that another model is correct.
+
+Forecast evidence refreshes only before the target session opens and freezes at that deadline.
+Company outcomes use the next completed close versus the recorded reference close. Market
+outcomes use final target-index changes. IPO outcomes use the actual listing price versus the
+recorded issue price (good means the configured `IPO_GOOD_GAIN_PCT`). Same-day subscription
+figures are not treated as final during the bidding close date.
+
+Use **Ops > Jobs** for **Refresh all forecasts**, **Train and validate forecast models**, and
+**Audit predictions**. Read-only Django admin entries for **Forecast models** and
+**Forecast samples** expose validation metrics and watchdog reasons. Public API v1 omits
+withheld predictions from history and returns 404 for a withheld latest outlook, preserving
+its existing direction enum; the browser history explicitly shows **Withheld**.
+
+Unexpected IPO scoring/watchdog errors abort new report generation rather than falling back to
+cached, unchecked recommendations.
+
+The first audit also withholds active legacy forecasts without watchdog provenance rather than
+retroactively certifying them or inventing training snapshots. New valid pre-session evidence
+replaces these on subsequent refreshes.
+
+The company's client-side chart projection remains an illustrative linear extrapolation,
+not the trained next-session forecast or a validated price target.
+
 ## Status
 
 Early development. Phase 1 (project setup) is done. The features below are planned.

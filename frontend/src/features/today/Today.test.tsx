@@ -124,6 +124,18 @@ const fullSession: Session = {
 };
 const clients: QueryClient[] = [];
 
+it("shows a withheld forecast without publishing a flat prediction or strength", async () => {
+  const body = structuredClone(data);
+  if (!body.markets?.outlook) throw new Error("Missing test outlook");
+  body.markets.outlook.direction = "withheld";
+  body.markets.outlook.notes = ["No fresh inputs. Prediction withheld."];
+  await showToday({ body });
+  expect(await screen.findByText("Prediction withheld by the watchdog")).toBeInTheDocument();
+  expect(screen.queryByText(/likely to stay flat/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Signal strength \(/)).not.toBeInTheDocument();
+  expect(screen.getByText("No fresh inputs. Prediction withheld.")).toBeInTheDocument();
+});
+
 afterEach(() => {
   document.cookie = "csrftoken=; Max-Age=0; path=/";
   clients.forEach((client) => client.clear());

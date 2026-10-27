@@ -84,6 +84,22 @@ const detail: CompanyDetail = {
   ipos: [],
 };
 const clients: QueryClient[] = [];
+
+it("shows blocked company forecasts with their reason, not a neutral signal", async () => {
+  const body = structuredClone(detail);
+  if (!body.outlook) throw new Error("Missing test outlook");
+  body.outlook.direction = "withheld";
+  body.outlook.inputs.learning = {
+    experimental: true,
+    watchdog: { status: "blocked", reasons: ["Invalid OHLCV history."] },
+  };
+  await show("/companies/1/", body);
+  expect(await screen.findByText("Prediction withheld by the watchdog")).toBeInTheDocument();
+  expect(screen.getByText(/Watchdog: Invalid OHLCV history/)).toBeInTheDocument();
+  const outlook = screen.getByText("Engine Outlook").closest(".company-stat-card");
+  if (!(outlook instanceof HTMLElement)) throw new Error("Missing outlook card");
+  expect(within(outlook).queryByText("Neutral")).not.toBeInTheDocument();
+});
 afterEach(() => {
   clients.forEach((client) => client.clear());
   clients.length = 0;

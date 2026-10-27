@@ -7,7 +7,7 @@ from apps.reports.formatting import score_out_of_ten
 register = template.Library()
 
 ARROWS = {"up": "▲", "down": "▼", "flat": "▬"}
-DIRECTION_WORDS = {"up": "Up", "down": "Down", "flat": "Flat"}
+DIRECTION_WORDS = {"up": "Up", "down": "Down", "flat": "Flat", "withheld": "Withheld"}
 
 TONE_CLASSES = {
     "gain": "bg-gain-soft text-gain",

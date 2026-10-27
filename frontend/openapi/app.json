@@ -4276,7 +4276,8 @@
               "Right",
               "Wrong",
               "No session",
-              "Waiting"
+              "Waiting",
+              "Withheld"
             ],
             "title": "Result",
             "type": "string"
@@ -5641,7 +5642,8 @@
             "enum": [
               "up",
               "down",
-              "flat"
+              "flat",
+              "withheld"
             ],
             "title": "Direction",
             "type": "string"

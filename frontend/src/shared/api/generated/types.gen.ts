@@ -1303,7 +1303,7 @@ export type MarketPrediction = {
      *
      * Saved evaluation state.
      */
-    result: 'Right' | 'Wrong' | 'No session' | 'Waiting';
+    result: 'Right' | 'Wrong' | 'No session' | 'Waiting' | 'Withheld';
 };
 
 /**
@@ -2228,7 +2228,7 @@ export type TodayOutlook = {
     /**
      * Direction
      */
-    direction: 'up' | 'down' | 'flat';
+    direction: 'up' | 'down' | 'flat' | 'withheld';
     /**
      * Strength
      */

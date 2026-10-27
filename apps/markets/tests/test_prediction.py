@@ -221,7 +221,7 @@ def seed_good_data():
 def test_make_prediction_saves_the_result_and_all_the_inputs():
     seed_good_data()
 
-    prediction, created = make_prediction(now=ist(SAT, 7))
+    prediction, created = make_prediction(now=ist(SAT, 9))
 
     assert created is True
     assert prediction.target_date == NEXT_MON  # Saturday: the next trading day is Monday.
@@ -243,12 +243,13 @@ def test_on_a_trading_day_the_target_is_today():
     assert prediction.target_date == MON
 
 
-def test_make_prediction_without_data_saves_flat_with_notes():
+def test_make_prediction_without_data_is_withheld_with_notes():
     prediction, created = make_prediction(MON, now=ist(MON, 7))
 
     assert created
-    assert prediction.direction == FLAT
-    assert prediction.confidence == 0.1
+    assert prediction.direction == "withheld"
+    assert prediction.confidence == 0.0
+    assert prediction.inputs["learning"]["watchdog"]["status"] == "blocked"
     assert prediction.news_score is None
     assert prediction.global_score is None
     assert prediction.inputs["notes"]

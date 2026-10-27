@@ -41,6 +41,12 @@ def test_every_scheduled_task_can_be_started_by_hand():
     assert {entry.task for entry in schedule.entries()} <= targets
 
 
+def test_all_forecast_automation_tasks_are_scheduled_and_available_as_jobs():
+    required = {"markets.refresh_forecasts", "markets.train_forecasts", "markets.watchdog"}
+    assert required <= {entry.task for entry in schedule.entries()}
+    assert required <= {item.target for item in jobs.JOBS if item.kind == jobs.TASK}
+
+
 def test_the_allow_list_has_the_fixed_arguments():
     assert ("predict_market", ("--force",)) in jobs.COMMAND_ALLOWLIST
     assert ("predict_market", ()) not in jobs.COMMAND_ALLOWLIST

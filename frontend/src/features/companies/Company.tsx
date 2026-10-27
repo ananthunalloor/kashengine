@@ -34,6 +34,7 @@ import type {
   CompanyBar,
   CompanyDetail,
   CompanyPrice,
+  CompanySignal,
   CompanyStory,
 } from "../../shared/api/generated/types.gen";
 import { useLiveQuotes } from "../../shared/api/liveQuotes";
@@ -425,6 +426,28 @@ const companyNewsColumns: TableColumn<CompanyStory>[] = [
   },
 ];
 
+function ForecastChecks({ inputs }: { inputs: CompanySignal["inputs"] }) {
+  const learning = inputs.learning;
+  if (!learning || typeof learning !== "object" || Array.isArray(learning)) return null;
+  const watchdog = "watchdog" in learning ? learning.watchdog : null;
+  const reasons =
+    watchdog &&
+    typeof watchdog === "object" &&
+    !Array.isArray(watchdog) &&
+    "reasons" in watchdog &&
+    Array.isArray(watchdog.reasons)
+      ? watchdog.reasons.filter((reason): reason is string => typeof reason === "string")
+      : [];
+  return (
+    <Text size="xs" c="dimmed" mt="xs">
+      {"experimental" in learning && learning.experimental === false
+        ? "ML model passed chronological validation; future accuracy is not guaranteed."
+        : "Experimental rule; no validated ML advantage yet."}
+      {reasons.length > 0 && ` Watchdog: ${reasons.join(" ")}`}
+    </Text>
+  );
+}
+
 export function CompanyView({ data }: { data: CompanyDetail }) {
   usePageTitle(data.company.name);
 
@@ -589,16 +612,21 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
                   ? "Bullish"
                   : data.outlook.direction === "down"
                     ? "Bearish"
-                    : "Neutral"}
+                    : data.outlook.direction === "withheld"
+                      ? "Withheld"
+                      : "Neutral"}
               </span>
             </Group>
             <div>
               <Text size="sm" fw={600}>
-                Signal Score: {score(data.outlook.score)}
+                {data.outlook.direction === "withheld"
+                  ? "Prediction withheld by the watchdog"
+                  : `Signal Score: ${score(data.outlook.score)}`}
               </Text>
               <Text size="xs" c="dimmed" mt={2}>
                 Target: {data.outlook.target_date}
               </Text>
+              <ForecastChecks inputs={data.outlook.inputs} />
             </div>
             <Group justify="space-between" mt="xs" pt="xs" className="company-stat-subrow">
               <Text size="xs" c="dimmed">

@@ -6,13 +6,57 @@ description: Instruments, quotes, the Nifty 50 prediction rule, its confidence, 
 
 # Markets and predictions
 
-Code: `apps/markets/`. Tasks: `markets.fetch_quotes`, `markets.predict`.
+Code: `apps/markets/`. Tasks: `markets.fetch_quotes`, `markets.predict`,
+`markets.refresh_forecasts`, `markets.train_forecasts`, `markets.watchdog`.
 
 :::caution
-The prediction is a simple rule. It is not a trading signal. Confidence is not a probability.
+The prediction is an experimental rule unless a trained challenger passes chronological
+validation. It is not a trading signal. Confidence is not a calibrated probability.
 Do not trust the prediction before the accuracy page shows that it beats the baseline over many
 days.
 :::
+
+## Dynamic forecasts and independent watchdog
+
+Migrations add three editable beat entries without replacing operator-edited schedules:
+forecast refresh every 15 minutes, an independent audit seven minutes later, and daily model
+training at 05:00 IST. Restart workers and beat after applying migrations and restoring
+dependencies with `uv sync`. Provider collection and sentiment scoring remain separate jobs;
+company history requires Upstox, valid instrument mappings and sufficient completed candles.
+
+`ForecastSample` records point-in-time features for each entity and target session. Refreshes
+can replace a pending snapshot only before its opening deadline. Afterwards it is frozen;
+actual outcomes are attached separately. Future-published or not-yet-scored news cannot be
+used, same-session closes cannot enter premarket cues, and forced market prediction runs
+cannot rewrite an issued forecast after opening.
+
+`ForecastModel` stores a scikit-learn regularized logistic classifier as JSON coefficients and
+scaling parameters, never executable pickle data. Each family (market, pooled companies,
+IPOs) trains separately. Validation needs 60 earlier training dates and at least 20 later dates,
+with all entities on a date kept together. Outcomes unavailable at the first validation
+forecast are purged from training. At least two classes with ten training examples each are
+required. The model must outperform both the holdout majority-class baseline and the existing
+rule by five percentage points. The validated fit itself is deployed, not an unvalidated refit
+using holdout labels. Seven-day model expiry and daily revalidation limit stale model use.
+Until enough prospective samples exist, the rule is explicitly experimental; this is not a
+claim that either rule or model is accurate.
+
+The watchdog is independent deterministic verification, not an LLM review. It recalculates
+rules and independently replays classifier outputs using retained model versions, validates
+finite normalized inputs and publication deadlines, and compares stored
+publications with their recorded decisions and strengths. It withholds invalid predictions,
+withdraws cached market-report copies and logs reasons. Withheld market predictions do not
+enter accuracy statistics. The browser shows **Withheld**, never a flat/neutral substitute;
+API v1 omits withheld history and returns 404 if the newest outlook is withheld.
+
+The first audit withholds active legacy forecasts without verified point-in-time provenance.
+It does not fabricate historical training examples; subsequent valid pre-session refreshes
+create new evidence.
+
+**Ops > Jobs** exposes refresh, training and audit jobs. Read-only **Forecast models** and
+**Forecast samples** in Django admin show metrics, evidence, actual outcomes and audit reasons.
+The watchdog cannot prove upstream prices are true or certify future accuracy. The client-side
+company chart extrapolation remains illustrative and is not this trained forecast.
 
 ## Instruments
 

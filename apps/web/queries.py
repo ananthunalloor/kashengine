@@ -78,7 +78,9 @@ def outlook(prediction: Prediction | None) -> dict | None:
     )
     return {
         "prediction": prediction,
-        "strength": strength_label(prediction.confidence),
+        "strength": "withheld"
+        if prediction.direction == "withheld"
+        else strength_label(prediction.confidence),
         "cues": cues[:5],
         "notes": prediction.inputs.get("notes", []),
     }

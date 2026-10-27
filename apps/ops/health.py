@@ -541,6 +541,12 @@ def check_prediction() -> Check:
     exists = Prediction.objects.filter(target_date=today).exists()
     if not is_trading_day(today):
         return Check("prediction", "Prediction", OK, "Market closed today")
+    blocked = Prediction.objects.filter(target_date=today, direction="withheld").first()
+    if blocked:
+        reasons = blocked.inputs.get("learning", {}).get("watchdog", {}).get("reasons", [])
+        return Check(
+            "prediction", "Prediction", WARN, "Withheld by the watchdog", "; ".join(reasons)
+        )
     if exists:
         return Check("prediction", "Prediction", OK, f"Made for {today}")
     late = _late("markets.predict", PREDICTION_GRACE_MINUTES)
