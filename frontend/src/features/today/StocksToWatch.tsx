@@ -13,6 +13,8 @@ import {
 import { AppLink } from "../../shared/ui/AppLink";
 import type { StocksWatch, StockWatchItem } from "../../shared/api/generated/types.gen";
 import { sourceLink } from "../../shared/ui/sourceLink";
+import type { LiveQuote } from "../../shared/api/liveQuotes";
+import { LivePrice } from "../../shared/ui/LiveMarket";
 import { formatReportDate } from "../../shared/ui/formatReportDate";
 
 const time = new Intl.DateTimeFormat("en-IN", {
@@ -44,7 +46,7 @@ const biasLabels = {
   },
 } as const;
 
-function WatchCompany({ item }: { item: StockWatchItem }) {
+function WatchCompany({ item, quote }: { item: StockWatchItem; quote?: LiveQuote }) {
   const bias = biasLabels[item.bias];
   return (
     <Paper withBorder p="md" component="article" aria-label={`${item.symbol} news watch`}>
@@ -63,6 +65,7 @@ function WatchCompany({ item }: { item: StockWatchItem }) {
             {bias.label}
           </Badge>
         </Group>
+        <LivePrice quote={quote} />
         <Text size="sm">{bias.explanation}</Text>
         <Group gap="xs">
           <Badge variant="light" color="gray">
@@ -117,7 +120,13 @@ function WatchCompany({ item }: { item: StockWatchItem }) {
   );
 }
 
-export function StocksToWatch({ data }: { data: StocksWatch }) {
+export function StocksToWatch({
+  data,
+  live,
+}: {
+  data: StocksWatch;
+  live?: Map<number, LiveQuote>;
+}) {
   const active = data.session_state === "pre_open" || data.session_state === "open";
   return (
     <Stack component="section" gap="md" aria-labelledby="stocks-to-watch">
@@ -160,7 +169,7 @@ export function StocksToWatch({ data }: { data: StocksWatch }) {
       ) : data.items.length ? (
         <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md">
           {data.items.map((item) => (
-            <WatchCompany key={item.id} item={item} />
+            <WatchCompany key={item.id} item={item} quote={live?.get(item.id)} />
           ))}
         </SimpleGrid>
       ) : (
@@ -170,8 +179,8 @@ export function StocksToWatch({ data }: { data: StocksWatch }) {
         </Alert>
       )}
       <Text size="xs" c="dimmed">
-        Snapshot <time dateTime={data.as_of}>{time.format(new Date(data.as_of))} IST</time> · not a
-        live feed.
+        Snapshot <time dateTime={data.as_of}>{time.format(new Date(data.as_of))} IST</time> · the
+        news bias is not a live feed{live?.size ? "; prices are streamed live" : ""}.
         {active && (
           <>
             {" "}

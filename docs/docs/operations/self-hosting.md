@@ -243,6 +243,9 @@ migration.
 - Live updates use the database, not Redis. Each open tab holds one `web` thread. For many
   users, raise the thread count in `docker-compose.prod.yml` and check the database connection
   limit.
+- Live market prices use two services: `streamer` (the Upstox feed) and `realtime` (the browser
+  WebSockets at `/ws/*`). They share Redis database 2 (`CHANNELS_REDIS_URL`). Each open tab
+  holds one WebSocket on `realtime`, not a `web` thread.
 - The API rate limit needs the Redis cache. In production, the cache URL is `CACHE_URL`. The
   default is the `REDIS_URL` with database `1`.
 - Most settings are first values only. A superuser can change them on **Ops > Settings**. See

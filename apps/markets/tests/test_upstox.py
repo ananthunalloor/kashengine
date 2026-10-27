@@ -1,5 +1,6 @@
 """Stored provider ingestion, exact contracts and safe failure behavior."""
 
+import json
 import signal
 import ssl
 from datetime import UTC, date, datetime, timedelta
@@ -7,7 +8,7 @@ from unittest.mock import Mock
 
 import httpx
 import pytest
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from django.utils import timezone
 
 from apps.companies.models import Company, CompanyCandle, CompanyFundamentals, CompanyQuote
@@ -399,3 +400,31 @@ def test_stream_worker_requires_tls_verification_and_restores_signals(company, m
         "check_hostname": True,
     }
     assert signal.getsignal(signal.SIGTERM) is previous
+
+
+def test_stream_worker_retries_with_backoff_then_gives_up(company, monkeypatch):
+    waits = []
+    monkeypatch.setattr(FeedWriter, "start", lambda self: None)
+    monkeypatch.setattr(
+        stream_upstox.threading.Event, "wait", lambda self, timeout=None: waits.append(timeout)
+    )
+    monkeypatch.setattr(
+        stream_upstox, "authorized_uri", Mock(side_effect=UpstoxError("Upstox is disabled."))
+    )
+    with pytest.raises(CommandError, match="stopped after failure"):
+        call_command("stream_upstox", "--max-attempts", "3")
+    assert waits == [1, 2]
+
+
+def test_stream_subscribes_companies_and_indices_in_full_mode(company, settings):
+    settings.UPSTOX_STREAM_INDICES = ["NSE_INDEX|Nifty 50"]
+    conf.invalidate()
+    command = stream_upstox.Command()
+    command.symbols, command.indices = None, True
+    writer = command.writer()
+    socket = Mock()
+    writer.on_open(socket)
+    sent = json.loads(socket.send.call_args.args[0])
+    assert sent["data"] == {"instrumentKeys": ["NSE_INDEX|Nifty 50", KEY], "mode": "full"}
+    command.indices = False
+    assert list(command.writer().targets) == [KEY]

@@ -19,23 +19,23 @@ the app and two HTTP APIs for it.
                           |
                   +-------v-------+
                   |     caddy     |  TLS, security headers, admin IP limit
-                  +---+-------+---+
-          /docs/*     |       |    everything else
-              +-------v-+   +-v-------------------+
-              |  docs   |   |   web (Django)      |
-              | (nginx) |   |  gunicorn 3x16 thr  |
-              +---------+   +--+---------------+--+
-                               |               |
-                        +------v-----+   +-----v------+
-                        | PostgreSQL |   |   Redis    |
+                  +---+-------+---+-----------------+
+          /docs/*     |       |    everything else  |  /ws/*
+              +-------v-+   +-v-------------------+ +-v--------------------+
+              |  docs   |   |   web (Django)      | | realtime (Channels)  |
+              | (nginx) |   |  gunicorn 3x16 thr  | | uvicorn, WebSockets  |
+              +---------+   +--+---------------+--+ +----------+-----------+
+                               |               |               |
+                        +------v-----+   +-----v------+        |
+                        | PostgreSQL |   |   Redis    |<-------+
                         +------^-----+   +-----^------+
                                |               |
               +----------------+---------------+--------------+
-              |  worker (Celery)      beat (Celery)           |
+              |  worker (Celery)   beat (Celery)   streamer   |
               +--------+----------------------+---------------+
                        |                      |
-                 +-----v-----+        news, quotes, Telegram
-                 |  Ollama   |        (network egress)
+                 +-----v-----+        news, quotes, Telegram,
+                 |  Ollama   |        Upstox market feed (egress)
                  +-----------+
 ```
 
@@ -43,12 +43,14 @@ the app and two HTTP APIs for it.
 
 | Service | What it does | Network (production) |
 | --- | --- | --- |
-| `caddy` | Terminates TLS. Routes `/docs` to `docs` and all other paths to `web`. Adds security headers. Limits `/admin/`, `/ops/`, `/app/ops/`, and `/api/app/ops/` to `ADMIN_ALLOWED_IPS`. Serves the archive host (`OLD_SITE_ADDRESS`) as a second site. | `edge` and `proxy` |
+| `caddy` | Terminates TLS. Routes `/docs` to `docs`, `/ws/*` to `realtime` and all other paths to `web`. Adds security headers. Limits `/admin/`, `/ops/`, `/app/ops/`, and `/api/app/ops/` to `ADMIN_ALLOWED_IPS`. Serves the archive host (`OLD_SITE_ADDRESS`) as a second site. | `edge` and `proxy` |
 | `web` | Django. The production command runs `migrate`, then `collectstatic`, then Gunicorn with 3 workers and 16 threads for each worker (`gthread`). | `proxy` and `backend` |
+| `realtime` | Django Channels on Uvicorn (ASGI). It serves only the live quote WebSocket `/ws/live/quotes/`. It relays the messages of the stream worker from the Redis channel layer. | `proxy` and `backend` |
+| `streamer` | `python manage.py stream_upstox`: the one Upstox market-data WebSocket (full mode). It saves the newest value of each instrument and broadcasts it about once a second. | `backend` and `egress` |
 | `worker` | Runs the Celery tasks. | `backend` and `egress` |
 | `beat` | Sends the scheduled tasks. The schedule is in the database (`django-celery-beat`). | `backend` and `egress` |
 | `db` | PostgreSQL 17. It keeps all data. | `backend` |
-| `redis` | The Celery broker, and the Django cache (database 1) for the API rate limit. | `backend` |
+| `redis` | The Celery broker, the Django cache (database 1) for the API rate limit, and the Channels layer (database 2) for live quotes. | `backend` |
 | `ollama` | The local language model server. | `backend` and `egress` (model download) |
 | `silo` | S3-compatible object storage for backups. It replaced MinIO. The volume name `minio_data` and the `MINIO_ROOT_*` variables stay the same. | `backend` |
 | `silo-init` | Runs one time at start. It makes the private buckets and never deletes objects. | `backend` |
@@ -122,6 +124,21 @@ The React app refreshes its data without a page reload. The mechanism is simple:
 3. An event says which part of the app changed (the `scope`). It never contains business data,
    task output or a secret. A task event holds only the run id, the label and the status.
 4. The app refetches only the queries of that scope.
+
+Live market prices use a second, separate path. SSE stays on the WSGI `web` service, because
+Django buffers a blocking stream under ASGI.
+
+1. The `streamer` service reads the Upstox V3 feed in full mode. It writes the newest value of
+   each instrument to `LiveSnapshot`, and one `CompanyQuote` in 5 seconds at most. It writes with
+   `bulk_create`, so no model signal and no SSE event is sent for a tick.
+2. About once a second, it sends the changed quotes to the Redis channel layer: the group
+   `live.indices` for indices, and `live.company.<id>` for each company.
+3. The `realtime` service holds the browser WebSocket `/ws/live/quotes/`. It accepts a socket
+   only from the same origin, for a signed-in account with Markets access. It re-checks the
+   session each minute. It sends a snapshot from `LiveSnapshot` first, then relays the group
+   messages.
+4. The Today page and the company page show the values. A tick older than a minute is shown as
+   delayed.
 
 Each stream lasts about 20 seconds. Then the server sends `reconnect`, and the browser opens a
 new stream with `Last-Event-ID`, so no event is lost. If the browser is too late, the server

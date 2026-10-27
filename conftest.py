@@ -4,6 +4,12 @@ from apps.siteconfig import conf
 
 
 @pytest.fixture(autouse=True)
+def in_memory_channel_layer(settings):
+    """Tests never need Redis for live quote broadcasts."""
+    settings.CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+
+
+@pytest.fixture(autouse=True)
 def fresh_site_settings():
     """The saved settings are cached in memory. Each test starts without the cache."""
     conf.invalidate()

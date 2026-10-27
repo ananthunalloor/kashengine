@@ -7,6 +7,8 @@ import { ThemeProvider } from "../../app/ThemeProvider";
 import { routeTree } from "../../routeTree.gen";
 import type { Session, Today } from "../../shared/api/generated/types.gen";
 import { session } from "../../test/session";
+import { MockWebSocket } from "../../test/websocket";
+import { act } from "@testing-library/react";
 
 const data: Today = {
   today: "2026-10-19",
@@ -314,4 +316,68 @@ it("rejects contract drift instead of showing a success-shaped empty dashboard",
   await showToday({ body: { today: "2026-10-19" } });
   expect(await screen.findByRole("alert")).toHaveTextContent("The Today response does not match");
   expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+});
+
+it("streams live index levels and watchlist prices over the WebSocket", async () => {
+  const item = {
+    id: 7,
+    name: "Example Industries",
+    symbol: "EXAMPLE",
+    sector: "Energy",
+    bias: "bullish",
+    score: 0.8,
+    attention: 0.7,
+    articles: 1,
+    sources: 1,
+    positive: 1,
+    negative: 0,
+    latest_news_at: "2026-10-19T03:30:00Z",
+    stories: [],
+  };
+  await showToday({
+    body: {
+      ...data,
+      stocks_watch: {
+        as_of: "2026-10-19T04:30:00Z",
+        since: "2026-10-17T16:30:00Z",
+        session_date: "2026-10-19",
+        next_session: "2026-10-19",
+        session_state: "open",
+        sampled_articles: 1,
+        truncated: false,
+        items: [item],
+      },
+    },
+    account: { ...fullSession, features: [...fullSession.features, "companies"] },
+  });
+  expect(await screen.findByRole("heading", { name: "Live market" })).toBeInTheDocument();
+  expect(screen.getByText(/Connecting to the live feed/)).toBeInTheDocument();
+  const socket = MockWebSocket.latest;
+  act(() => socket.open());
+  expect(socket.sent).toEqual([{ type: "subscribe", companies: [7] }]);
+  const as_of = new Date().toISOString();
+  act(() =>
+    socket.receive({
+      type: "snapshot",
+      quotes: [
+        { key: "NSE_INDEX|Nifty 50", kind: "index", name: "Nifty 50", ltp: 24500, as_of },
+        {
+          key: "NSE_EQ|X",
+          kind: "equity",
+          company_id: 7,
+          ltp: 101.5,
+          as_of,
+          change: 1,
+          change_pct: 1,
+        },
+      ],
+      status: { segments: { NSE_EQ: "NORMAL_OPEN" }, as_of },
+    }),
+  );
+  expect(screen.getByRole("article", { name: "Nifty 50 live" })).toBeInTheDocument();
+  expect(screen.getByText("Market open")).toBeInTheDocument();
+  expect(
+    within(screen.getByRole("article", { name: "EXAMPLE news watch" })).getByText("INR 101.50"),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/prices are streamed live/)).toBeInTheDocument();
 });

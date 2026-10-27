@@ -36,8 +36,10 @@ import type {
   CompanyPrice,
   CompanyStory,
 } from "../../shared/api/generated/types.gen";
+import { useLiveQuotes } from "../../shared/api/liveQuotes";
 import { DataTable } from "../../shared/ui/DataTable";
 import type { TableColumn } from "../../shared/ui/DataTable";
+import { LiveCompanyQuote, LivePrice } from "../../shared/ui/LiveMarket";
 import { SavedFacts } from "../../shared/ui/SavedFacts";
 import { sourceLink } from "../../shared/ui/sourceLink";
 import { CandlestickTrendChart } from "../../shared/ui/TanStackCharts";
@@ -429,6 +431,11 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
   const hasMarkets = data.markets_available;
   const hasNews = data.news_available;
   const hasIpos = data.ipos_available;
+  const streamable = hasMarkets && Boolean(data.instrument_key);
+  const live = useLiveQuotes(streamable ? [data.company.id] : [], streamable);
+  const liveQuote = live.companies.get(data.company.id);
+  const previousClose = liveQuote?.previous_close ?? data.quote?.previous_close ?? null;
+  const volume = liveQuote?.volume ?? data.quote?.volume ?? null;
 
   return (
     <Stack gap="xl" className="company-page-root">
@@ -471,6 +478,11 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
                 </Badge>
               )}
             </Group>
+            {liveQuote && (
+              <div className="company-hero-live" aria-label="Live price">
+                <LivePrice quote={liveQuote} />
+              </div>
+            )}
             <Text size="xs" c="dimmed" mt="xs">
               {data.company.symbol} | {data.company.sector || "Sector not available"}
             </Text>
@@ -503,22 +515,24 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
               <Text size="sm" c="dimmed">
                 Previous close:{" "}
                 <Text component="span" fw={600} c="var(--brand-ink)">
-                  {data.quote.previous_close !== null
-                    ? `INR ${number.format(data.quote.previous_close)}`
-                    : "Not available"}
+                  {previousClose !== null ? `INR ${number.format(previousClose)}` : "Not available"}
                 </Text>
               </Text>
               <Text size="sm" c="dimmed" mt={4}>
                 Volume:{" "}
                 <Text component="span" fw={600} c="var(--brand-ink)">
-                  {data.quote.volume !== null ? number.format(data.quote.volume) : "Not supplied"}
+                  {volume !== null ? number.format(volume) : "Not supplied"}
                 </Text>
               </Text>
             </div>
             <Group justify="space-between" mt="xs" pt="xs" className="company-stat-subrow">
               <Text size="xs" c="dimmed">
                 Observation:{" "}
-                {data.quote.mode === "stream" ? "Realtime stream" : "Scheduled snapshot"}
+                {liveQuote
+                  ? "Live stream"
+                  : data.quote.mode === "stream"
+                    ? "Realtime stream"
+                    : "Scheduled snapshot"}
               </Text>
             </Group>
           </Paper>
@@ -739,7 +753,15 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
                 Daily OHLC candles with a history-only projection.
               </Text>
             </div>
-            <PriceSummary quote={data.quote} />
+            {liveQuote ? (
+              <LiveCompanyQuote
+                quote={liveQuote}
+                connection={live.connection}
+                status={live.status}
+              />
+            ) : (
+              <PriceSummary quote={data.quote} />
+            )}
           </Group>
           <PriceTrend candles={data.candles} />
           <PredictionReview data={data} />

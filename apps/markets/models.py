@@ -219,3 +219,33 @@ class Instrument(models.Model):
     def __str__(self) -> str:
         """Return the name and the symbol, for example `Nifty 50 (^NSEI)`."""
         return f"{self.name} ({self.symbol})"
+
+
+class LiveSnapshot(models.Model):
+    """The newest normalized Upstox stream payload of one instrument or of the market status.
+
+    The stream worker upserts these rows in bulk (no model signals, so no SSE invalidation storm).
+    The WebSocket consumer reads them to send a first snapshot to a new browser subscriber.
+    """
+
+    class Kind(models.TextChoices):
+        """What the payload describes."""
+
+        EQUITY = "equity", "Company"
+        INDEX = "index", "Index"
+        STATUS = "status", "Market status"
+
+    key = models.CharField(max_length=100, unique=True)
+    kind = models.CharField(max_length=10, choices=Kind.choices)
+    company = models.ForeignKey(
+        "companies.Company", null=True, blank=True, on_delete=models.CASCADE, related_name="+"
+    )
+    payload = models.JSONField(default=dict)
+    updated_at = models.DateTimeField()
+
+    class Meta:
+        ordering: ClassVar[list[str]] = ["key"]
+
+    def __str__(self) -> str:
+        """Return the key and the time of the last update."""
+        return f"{self.key} @ {self.updated_at}"

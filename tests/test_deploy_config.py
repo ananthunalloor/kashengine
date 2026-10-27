@@ -56,7 +56,9 @@ def test_backend_and_proxy_networks_have_no_internet(prod):
     assert prod["networks"]["proxy"]["internal"] is True
 
 
-@pytest.mark.parametrize("name", ["web", "worker", "beat", "db", "redis", "ollama"])
+@pytest.mark.parametrize(
+    "name", ["web", "realtime", "streamer", "worker", "beat", "db", "redis", "ollama"]
+)
 def test_services_are_not_on_the_edge_network(prod, name):
     assert "edge" not in prod["services"][name]["networks"]
 
@@ -68,6 +70,20 @@ def test_data_stores_are_on_the_backend_network_only(prod, name):
 
 def test_web_has_no_route_to_the_internet(prod):
     assert "egress" not in prod["services"]["web"]["networks"]
+
+
+def test_live_market_services_have_only_the_networks_they_need(prod):
+    """The browser socket service is reachable by Caddy only; the Upstox feed may go out."""
+    assert sorted(prod["services"]["realtime"]["networks"]) == ["backend", "proxy"]
+    assert sorted(prod["services"]["streamer"]["networks"]) == ["backend", "egress"]
+
+
+def test_caddy_sends_only_websockets_to_the_realtime_service():
+    text = "\n".join(site_block_lines())
+    assert "handle /ws/* {\n\t\treverse_proxy realtime:8001" in text
+    assert text.index("handle @admin_denied") < text.index("handle /ws/*")
+    assert text.index("handle /ws/*") < text.index("\thandle {\n")
+    assert text.count("realtime:8001") == 1
 
 
 def test_caddy_gets_no_app_secrets(prod):

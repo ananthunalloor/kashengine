@@ -102,12 +102,14 @@ services:
     depends_on:
       web:
         condition: service_healthy
+      realtime:
+        condition: service_healthy
       docs:
         condition: service_healthy
 
   # No service in this file publishes a port. Dev publishes ports on 127.0.0.1 in
   # docker-compose.override.yml. Prod publishes only Caddy (80 and 443) in docker-compose.prod.yml.
-  # The env_file for web, worker, and beat is set per environment.
+  # The env_file for web, realtime, streamer, worker, and beat is set per environment.
   web:
     <<: *app
     healthcheck:
@@ -116,6 +118,39 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+
+  # Browser WebSockets (Django Channels on Uvicorn, ASGI). Caddy sends only /ws/* here; every
+  # other request, including the SSE event stream, stays on the WSGI web service.
+  realtime:
+    <<: *app
+    command: >
+      uvicorn config.asgi:application --host 0.0.0.0 --port 8001
+      --proxy-headers --forwarded-allow-ips=* --ws-max-size 16384
+    depends_on:
+      web:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health/')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # One Upstox market-data WebSocket (full mode) for mapped companies and the stream indices.
+  # It saves the newest values and broadcasts them to `realtime` through Redis. It waits and
+  # retries while Upstox is off or has no token, so it is safe to keep running.
+  streamer:
+    <<: *app
+    command: python manage.py stream_upstox
+    restart: unless-stopped
+    stop_signal: SIGTERM
+    depends_on:
+      web:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   worker:
     <<: *app

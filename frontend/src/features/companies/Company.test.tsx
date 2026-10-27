@@ -8,6 +8,8 @@ import { routeTree } from "../../routeTree.gen";
 import { metricAssessment, projectClosingPrices } from "./Company";
 import type { CompanyDetail } from "../../shared/api/generated/types.gen";
 import { session } from "../../test/session";
+import { MockWebSocket } from "../../test/websocket";
+import { act } from "@testing-library/react";
 
 const detail: CompanyDetail = {
   company: {
@@ -277,4 +279,45 @@ it("shows saved-company market observations and internal company links", async (
   expect(screen.getByText("110")).toBeInTheDocument();
   expect(screen.getByText("Upstox ingestion is disabled")).toBeInTheDocument();
   expect(fetch).toHaveBeenCalledWith("/api/app/markets/companies?q=&page=1", expect.anything());
+});
+
+it("replaces the saved quote with the live Upstox stream when ticks arrive", async () => {
+  await show("/companies/1/", detail);
+  await screen.findByRole("heading", { level: 1, name: "<b>Example</b>" });
+  const socket = MockWebSocket.latest;
+  expect(socket.url).toMatch(/\/ws\/live\/quotes\/$/);
+  act(() => socket.open());
+  expect(socket.sent).toEqual([{ type: "subscribe", companies: [1] }]);
+  act(() =>
+    socket.receive({
+      type: "snapshot",
+      quotes: [
+        {
+          key: "NSE_EQ|INE002A01018",
+          kind: "equity",
+          name: "Example",
+          symbol: "EXAMPLE",
+          company_id: 1,
+          ltp: 2875.4,
+          as_of: new Date().toISOString(),
+          previous_close: 2850,
+          change: 25.4,
+          change_pct: 0.89,
+          volume: 4321,
+          depth: [{ bid_price: 2875.3, bid_qty: 12, ask_price: 2875.5, ask_qty: 8 }],
+        },
+      ],
+    }),
+  );
+  expect(screen.getByLabelText("Live quote")).toBeInTheDocument();
+  expect(screen.getAllByText("INR 2,875.40").length).toBeGreaterThan(0);
+  expect(screen.getByRole("table", { name: "Market depth (top 5)" })).toBeInTheDocument();
+  expect(screen.getByText("Observation: Live stream")).toBeInTheDocument();
+  expect(screen.queryByText(/older observation, not live/)).not.toBeInTheDocument();
+});
+
+it("does not open a live socket without Markets access", async () => {
+  await show("/companies/1/", { ...detail, markets_available: false, quote: null });
+  await screen.findByRole("heading", { level: 1, name: "<b>Example</b>" });
+  expect(MockWebSocket.instances).toHaveLength(0);
 });

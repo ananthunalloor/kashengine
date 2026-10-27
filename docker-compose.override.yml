@@ -5,11 +5,14 @@
 #   web    - Django runserver reloads when a .py file changes.
 #   worker - watchfiles restarts Celery when a .py file changes.
 #   beat   - watchfiles restarts Celery beat when a .py file changes.
+#   realtime - Uvicorn reloads when a .py file changes.
+#   streamer - watchfiles restarts the Upstox stream when a .py file changes.
 # Rebuild (docker compose up --build) only when pyproject.toml or uv.lock changes.
 #
 # Open https://localhost/ . Caddy makes a local certificate (see the README to trust it).
 # Every port is bound to 127.0.0.1, so only this computer can reach the services.
-# Port 8000 is a direct way to Django. It skips Caddy, so use it only to debug.
+# Port 8000 is a direct way to Django. It skips Caddy, so use it only to debug. It has no
+# /ws/ live quotes: those go through Caddy to the realtime service.
 
 services:
   caddy:
@@ -56,6 +59,31 @@ services:
       - ./frontend:/app/frontend
       - ./static/css/brand-tokens.css:/app/static/css/brand-tokens.css:ro
       - frontend_node_modules:/app/frontend/node_modules
+
+  realtime:
+    build:
+      args:
+        INSTALL_DEV: "true"
+    env_file: .env.dev
+    command: >
+      uvicorn config.asgi:application --host 0.0.0.0 --port 8001
+      --proxy-headers --forwarded-allow-ips=* --ws-max-size 16384
+      --reload --reload-dir /app/apps --reload-dir /app/config
+    environment:
+      WATCHFILES_FORCE_POLLING: "true"
+    volumes:
+      - .:/app
+
+  streamer:
+    build:
+      args:
+        INSTALL_DEV: "true"
+    env_file: .env.dev
+    command: watchfiles --filter python "python manage.py stream_upstox" /app/apps /app/config
+    environment:
+      WATCHFILES_FORCE_POLLING: "true"
+    volumes:
+      - .:/app
 
   worker:
     build:

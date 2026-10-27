@@ -118,23 +118,54 @@ The migrations add two editable beat schedules without overwriting existing sche
   key ratios, consolidated balance sheet, cash flow, annual income statement, shareholding and
   corporate actions. Monetary units and reporting periods remain attached to provider data.
 
-For higher-frequency updates, run **one dedicated optional stream worker**, alongside the normal
-snapshot schedule:
+### Live market data (WebSockets)
+
+The **Today** dashboard and company pages show live Upstox prices when the Markets feature is on:
+
+- **Today**: a *Live market* strip with index levels (Nifty 50, Sensex, Nifty Bank and India VIX
+  by default), the change from the previous close, the day range and the exchange session state.
+  Stocks in *Stocks to watch today* show their live price and change.
+- **Company page**: a live price in the header and a live quote panel with last price, change,
+  open/high/low/previous close, volume, average traded price, total buy/sell quantity, a buy/sell
+  pressure bar and the top 5 levels of market depth. The *Trading session* card uses live values.
+  Without live ticks, the page falls back to the saved quote.
+
+How it works:
+
+```
+Upstox V3 market feed --(wss, protobuf, full mode)--> streamer (stream_upstox)
+    --> LiveSnapshot (newest value per instrument) + CompanyQuote (at most one per 5 s)
+    --> Redis channel layer --> realtime (Django Channels on Uvicorn) --(wss /ws/live/quotes/)--> browser
+```
+
+- Compose runs two extra services in dev and prod. **`streamer`** keeps a single connection to
+  Upstox and **`realtime`** relays the quotes to browsers. Caddy sends only `/ws/*` to
+  `realtime`. Every other request, including the SSE event stream, stays on the WSGI `web`
+  service. The browser never connects to Upstox and never sees the token.
+- The socket accepts only same-origin, signed-in, email-verified accounts with an active
+  subscription and Markets access. It re-checks the session every minute. A browser follows all
+  streamed indices plus up to 25 companies.
+- Quotes are batched and broadcast about once a second. Stream writes do not fire model
+  signals, so they do not trigger SSE refetch storms.
+- The worker reconnects forever with backoff of up to 60 s. While Upstox is off or has no token,
+  it waits and retries, so a token saved in Ops is used without a restart. Company mappings and
+  stream indices are read again on each reconnect.
+- Set the indices with `UPSTOX_STREAM_INDICES` (**Ops > Settings > Markets and prediction**,
+  or the environment). Full mode allows 2000 instruments per connection, and indices count
+  towards this limit. Run **only one** streamer per Upstox token.
+- Ticks older than a minute are shown as *delayed*, not live.
+
+To run the worker outside Compose:
 
 ```bash
 uv run python manage.py stream_upstox
-# Or subscribe to a subset (maximum 100 mapped instruments per worker):
-uv run python manage.py stream_upstox --symbols RELIANCE INFY
-# With Compose:
-docker compose run --rm worker python manage.py stream_upstox
+# Or subscribe to a subset, or without indices:
+uv run python manage.py stream_upstox --symbols RELIANCE INFY --no-indices
+# Run the browser socket server:
+uv run uvicorn config.asgi:application --port 8001
 ```
 
-The worker uses Upstox V3 protobuf LTPC data over a certificate-verified WebSocket, reauthorizes
-with bounded backoff on disconnect, and stops with a visible error after repeated failures.
-Use your process supervisor for restarts. Restart it after changing company mappings or tokens.
-It persists at most **one observation per company per five seconds**, not every exchange tick.
-LTPC has no volume; the UI marks that field unavailable rather than inventing a value. REST
-snapshots continue as a fallback, and a late REST observation cannot hide a newer stream quote.
+REST snapshots continue as a fallback. A late REST observation cannot hide a newer stream quote.
 Streaming observations, daily bars, and fundamentals snapshots are retained, so plan database
 capacity and backups for the number of companies you track.
 
@@ -148,8 +179,9 @@ capacity and backups for the number of companies you track.
 
 These pages and their private APIs **only read the database**. They never call providers or
 recompute scores on a page request. Existing SSE invalidations update visible data when a worker
-saves changes; freshness labels age locally without API polling. Old observations are explicitly
-not labelled live, including when the stream disconnects or the market is closed.
+saves changes; freshness labels age locally without API polling. Live prices come over the
+`/ws/live/quotes/` WebSocket described above. Old observations are explicitly not labelled
+live, including when the stream disconnects or the market is closed.
 Each dataset continues to respect the account's Companies, Markets, News and IPO feature access.
 
 The company future-trend outlook is **experimental, unbacktested, and not financial advice**.

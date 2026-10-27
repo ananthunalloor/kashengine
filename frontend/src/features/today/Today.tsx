@@ -11,11 +11,17 @@ import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { formatReportDate } from "../../shared/ui/formatReportDate";
 import { MarketCloses, MarketDate } from "../markets/MarketCloses";
 import { StocksToWatch } from "./StocksToWatch";
+import { useLiveQuotes } from "../../shared/api/liveQuotes";
+import { LiveIndices } from "../../shared/ui/LiveMarket";
 
 export function Today({ data, session }: { data: TodayData; session: Session }) {
   usePageTitle("Today");
   const { markets, news, ipos, report } = data;
   const outlook = markets?.outlook;
+  const live = useLiveQuotes(
+    markets ? (data.stocks_watch?.items.map((item) => item.id) ?? []) : [],
+    Boolean(markets),
+  );
   const DirectionIcon =
     outlook?.direction === "up"
       ? LuArrowUpRight
@@ -70,7 +76,14 @@ export function Today({ data, session }: { data: TodayData; session: Session }) 
           </Text>
         </section>
       )}
-      {data.stocks_watch && <StocksToWatch data={data.stocks_watch} />}
+      {markets && (
+        <div className="news-card">
+          <LiveIndices live={live} />
+        </div>
+      )}
+      {data.stocks_watch && (
+        <StocksToWatch data={data.stocks_watch} live={markets ? live.companies : undefined} />
+      )}
       {markets && (
         <>
           <section className="news-card today-outlook" aria-labelledby="today-outlook">
