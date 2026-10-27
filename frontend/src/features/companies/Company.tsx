@@ -753,16 +753,11 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
                 Daily OHLC candles with a history-only projection.
               </Text>
             </div>
-            {liveQuote ? (
-              <LiveCompanyQuote
-                quote={liveQuote}
-                connection={live.connection}
-                status={live.status}
-              />
-            ) : (
-              <PriceSummary quote={data.quote} />
-            )}
+            {!liveQuote && <PriceSummary quote={data.quote} />}
           </Group>
+          {liveQuote && (
+            <LiveCompanyQuote quote={liveQuote} connection={live.connection} status={live.status} />
+          )}
           <PriceTrend candles={data.candles} />
           <PredictionReview data={data} />
           <CompanyTradeSetups candles={data.candles} />

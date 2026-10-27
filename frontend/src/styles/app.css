@@ -2351,3 +2351,17 @@ body:has(.trading-calendar-dialog) {
 .live-pressure > span {
   background: var(--brand-gain);
 }
+
+/* Price and metrics beside the order book on wide screens; stacked on narrow ones. */
+.live-company-quote-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ui-space-4);
+  align-items: start;
+}
+
+@media (min-width: 62em) {
+  .live-company-quote-body {
+    grid-template-columns: minmax(0, 3fr) minmax(16rem, 2fr);
+  }
+}

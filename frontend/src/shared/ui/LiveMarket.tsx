@@ -217,7 +217,12 @@ export function LiveCompanyQuote({
   const buyShare = buy + sell > 0 ? (buy / (buy + sell)) * 100 : null;
   const session = marketStatusLabel(status);
   return (
-    <Stack gap="xs" className="company-quote-summary live-company-quote" aria-label="Live quote">
+    <Stack
+      gap="sm"
+      className="company-quote-summary live-company-quote"
+      aria-label="Live quote"
+      mb="md"
+    >
       <Group justify="space-between" align="center" gap="xs">
         <Group gap="xs">
           <LiveBadge connection={connection} />
@@ -229,69 +234,79 @@ export function LiveCompanyQuote({
         </Group>
         <TickTime quote={quote} now={now} />
       </Group>
-      <Group align="baseline" gap="sm">
-        <Title order={3} className="live-price">
-          INR {price.format(quote.ltp)}
-        </Title>
-        <Change quote={quote} size="md" />
-      </Group>
-      <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
-        <Metric label="Open" value={rupees(quote.open)} />
-        <Metric label="High" value={rupees(quote.high)} />
-        <Metric label="Low" value={rupees(quote.low)} />
-        <Metric label="Previous close" value={rupees(quote.previous_close)} />
-        <Metric label="Volume" value={count(quote.volume)} />
-        <Metric label="Average price" value={rupees(quote.average_price)} />
-        <Metric label="Total buy qty" value={count(quote.total_buy_qty)} />
-        <Metric label="Total sell qty" value={count(quote.total_sell_qty)} />
-      </SimpleGrid>
-      {buyShare !== null && (
-        <div>
-          <div
-            className="live-pressure"
-            role="img"
-            aria-label={`Buy orders ${price.format(buyShare)}% of pending quantity`}
-          >
-            <span style={{ width: `${buyShare}%` }} />
-          </div>
-          <Group justify="space-between">
-            <Text size="xs" c="teal">
-              Buy {price.format(buyShare)}%
-            </Text>
-            <Text size="xs" c="red">
-              Sell {price.format(100 - buyShare)}%
-            </Text>
+      <div className="live-company-quote-body">
+        <Stack gap="sm">
+          <Group align="baseline" gap="sm">
+            <Title order={3} className="live-price">
+              INR {price.format(quote.ltp)}
+            </Title>
+            <Change quote={quote} size="md" />
           </Group>
-        </div>
-      )}
-      {quote.depth.length > 0 && (
-        <Table.ScrollContainer minWidth={320}>
-          <Table striped withTableBorder fz="xs" aria-label="Market depth (top 5)">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Bid qty</Table.Th>
-                <Table.Th>Bid</Table.Th>
-                <Table.Th>Ask</Table.Th>
-                <Table.Th>Ask qty</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {quote.depth.map((level, index) => (
-                <Table.Tr key={index}>
-                  <Table.Td>{quantity.format(level.bid_qty)}</Table.Td>
-                  <Table.Td c="teal">
-                    {level.bid_price ? price.format(level.bid_price) : "–"}
-                  </Table.Td>
-                  <Table.Td c="red">
-                    {level.ask_price ? price.format(level.ask_price) : "–"}
-                  </Table.Td>
-                  <Table.Td>{quantity.format(level.ask_qty)}</Table.Td>
+          <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
+            <Metric label="Open" value={rupees(quote.open)} />
+            <Metric label="High" value={rupees(quote.high)} />
+            <Metric label="Low" value={rupees(quote.low)} />
+            <Metric label="Previous close" value={rupees(quote.previous_close)} />
+            <Metric label="Volume" value={count(quote.volume)} />
+            <Metric label="Average price" value={rupees(quote.average_price)} />
+            <Metric label="Total buy qty" value={count(quote.total_buy_qty)} />
+            <Metric label="Total sell qty" value={count(quote.total_sell_qty)} />
+          </SimpleGrid>
+          {buyShare !== null && (
+            <div>
+              <div
+                className="live-pressure"
+                role="img"
+                aria-label={`Buy orders ${price.format(buyShare)}% of pending quantity`}
+              >
+                <span style={{ width: `${buyShare}%` }} />
+              </div>
+              <Group justify="space-between">
+                <Text size="xs" c="teal">
+                  Buy {price.format(buyShare)}%
+                </Text>
+                <Text size="xs" c="red">
+                  Sell {price.format(100 - buyShare)}%
+                </Text>
+              </Group>
+            </div>
+          )}
+        </Stack>
+        {quote.depth.length > 0 && (
+          <Table.ScrollContainer minWidth={280}>
+            <Table
+              striped
+              withTableBorder
+              fz="xs"
+              verticalSpacing={4}
+              aria-label="Market depth (top 5)"
+            >
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Bid qty</Table.Th>
+                  <Table.Th>Bid</Table.Th>
+                  <Table.Th>Ask</Table.Th>
+                  <Table.Th>Ask qty</Table.Th>
                 </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
-      )}
+              </Table.Thead>
+              <Table.Tbody>
+                {quote.depth.map((level, index) => (
+                  <Table.Tr key={index}>
+                    <Table.Td>{quantity.format(level.bid_qty)}</Table.Td>
+                    <Table.Td c="teal">
+                      {level.bid_price ? price.format(level.bid_price) : "–"}
+                    </Table.Td>
+                    <Table.Td c="red">
+                      {level.ask_price ? price.format(level.ask_price) : "–"}
+                    </Table.Td>
+                    <Table.Td>{quantity.format(level.ask_qty)}</Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
+        )}
+      </div>
       <Text size="xs" c="dimmed">
         Streamed from Upstox · received {dayClock.format(new Date(quote.as_of))} IST. Not investment
         advice.
