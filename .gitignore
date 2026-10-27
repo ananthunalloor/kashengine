@@ -17,6 +17,7 @@ readme.dev.md
 staticfiles/
 media/
 *.sqlite3
+*.sqlite3*
 
 # Editors and OS
 .vscode/
