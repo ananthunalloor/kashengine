@@ -76,6 +76,22 @@ def test_empty_state_cache_and_legacy_page(client, member):
     assert "web/dashboard.html" not in [t.name for t in preview.templates]
 
 
+def test_withheld_prediction_is_not_serialized_as_flat(client, member):
+    Prediction.objects.create(
+        target_date=timezone.localdate(),
+        direction="withheld",
+        confidence=0,
+        score=0,
+        inputs={"notes": ["No usable evidence."]},
+    )
+    client.force_login(member)
+    response = client.get(URL)
+    assert response.status_code == 200
+    outlook = response.json()["markets"]["outlook"]
+    assert outlook["direction"] == "withheld"
+    assert outlook["notes"] == ["No usable evidence."]
+
+
 @pytest.mark.parametrize("feature", ["markets", "news", "ipos", "reports"])
 def test_blocked_sections_are_neither_read_nor_serialized(client, member, feature, data):
     FeatureBlock.objects.create(user=member, feature=feature)

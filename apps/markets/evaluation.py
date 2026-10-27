@@ -18,6 +18,7 @@ Callers: the Celery task `markets.fetch_quotes` and the command `fetch_quotes` c
 """
 
 import logging
+import math
 from datetime import datetime
 
 from django.utils import timezone
@@ -95,16 +96,26 @@ def evaluate_pending(now: datetime | None = None) -> dict:
     now = now or timezone.now()
     stats = {"evaluated": 0, "void": 0, "waiting": 0}
     symbol = target_symbol()
-    pending = Prediction.objects.filter(
-        evaluated_at__isnull=True, target_date__lte=today_ist(now)
-    ).order_by("target_date")
+    pending = (
+        Prediction.objects.filter(evaluated_at__isnull=True, target_date__lte=today_ist(now))
+        .exclude(direction="withheld")
+        .order_by("target_date")
+    )
 
     for prediction in pending:
         quote = IndexQuote.objects.filter(symbol=symbol, day=prediction.target_date).first()
         final_after = session_close(prediction.target_date) + final_buffer()
 
-        if quote and quote.change_pct is not None and quote.updated_at >= final_after:
-            actual = classify_change(quote.change_pct)
+        if (
+            quote
+            and quote.change_pct is not None
+            and math.isfinite(quote.change_pct)
+            and math.isfinite(quote.close)
+            and quote.close > 0
+            and now >= final_after
+            and final_after <= quote.updated_at <= now
+        ):
+            actual = classify_change(quote.change_pct, prediction.inputs.get("evaluation_band"))
             prediction.actual_change_pct = quote.change_pct
             prediction.actual_direction = actual
             prediction.correct = actual == prediction.direction
@@ -164,12 +175,14 @@ def accuracy_stats() -> dict:
         - `pending`: the number of predictions that have no `evaluated_at`.
         - `enough_results`: True when `total` is 30 or more.
     """
-    results = Prediction.objects.filter(correct__isnull=False)
+    results = Prediction.objects.filter(correct__isnull=False).exclude(direction="withheld")
     total = results.count()
     right = results.filter(correct=True).count()
 
     actual_counts = {
-        d.value: results.filter(actual_direction=d).count() for d in Prediction.Direction
+        d.value: results.filter(actual_direction=d).count()
+        for d in Prediction.Direction
+        if d != Prediction.Direction.WITHHELD
     }
     baseline_direction, baseline_n = max(actual_counts.items(), key=lambda item: item[1])
     recent = list(
@@ -181,14 +194,20 @@ def accuracy_stats() -> dict:
         "correct": right,
         "accuracy": right / total if total else None,
         "by_prediction": {
-            d.value: _count(results.filter(direction=d)) for d in Prediction.Direction
+            d.value: _count(results.filter(direction=d))
+            for d in Prediction.Direction
+            if d != Prediction.Direction.WITHHELD
         },
         "actual_counts": actual_counts,
         "baseline_direction": baseline_direction if total else None,
         "baseline_accuracy": baseline_n / total if total else None,
         "high_confidence": _count(results.filter(confidence__gte=HIGH_CONFIDENCE)),
         "recent": {"n": len(recent), "correct": sum(recent)},
-        "void": Prediction.objects.filter(evaluated_at__isnull=False, correct__isnull=True).count(),
-        "pending": Prediction.objects.filter(evaluated_at__isnull=True).count(),
+        "void": Prediction.objects.filter(evaluated_at__isnull=False, correct__isnull=True)
+        .exclude(direction="withheld")
+        .count(),
+        "pending": Prediction.objects.filter(evaluated_at__isnull=True)
+        .exclude(direction="withheld")
+        .count(),
         "enough_results": total >= MIN_RESULTS_TO_TRUST,
     }

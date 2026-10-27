@@ -136,14 +136,15 @@ def test_predict_market_command_prints_the_prediction(capsys):
     call_command("predict_market", "--date", "2026-10-05")
 
     out = capsys.readouterr().out
-    assert "Prediction for 2026-10-05: FLAT" in out
+    assert "Prediction for 2026-10-05: WITHHELD" in out
     assert "Note: No scored news articles." in out
     assert "not a probability" in out
     assert Prediction.objects.get().target_date == MON
 
 
 @pytest.mark.django_db
-def test_predict_market_command_does_not_change_an_old_prediction(capsys):
+def test_predict_market_command_does_not_change_an_old_prediction(capsys, monkeypatch):
+    monkeypatch.setattr("apps.markets.prediction.timezone.now", lambda: ist(MON, 7))
     call_command("predict_market", "--date", "2026-10-05")
     capsys.readouterr()
 

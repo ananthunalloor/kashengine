@@ -6,7 +6,7 @@ The rule is simple on purpose. It uses three signals. Each one goes from -1 (bad
    full signal. GMP is unofficial data (a rumour price from a private market), so we use it only
    when it is fresh (IPO_METRIC_MAX_AGE_HOURS).
 2. Subscription: how many times the issue was bought, on a log scale. 1x is 0, 50x or more is 1,
-   and under 1x is negative. We use it only when it is final (after the close), because early
+   and under 1x is negative. We use it only after the close date, because early
    numbers are always low.
 3. News: the average sentiment (see apps/news/sentiment.py) of the news of the last
    IPO_NEWS_DAYS that names the IPO. It counts less when there are fewer than 3 articles.
@@ -18,7 +18,9 @@ We give a verdict only when we have the GMP or the subscription. News alone is t
     mixed    in between
     unknown  no GMP and no subscription that we can use
 
-The weights and the limits are a first guess. They are NOT fitted to data. A GMP of about 9%
+The fallback weights and limits are a first guess. A chronologically validated logistic
+challenger can replace the rule; the watchdog withholds unsupported or late verdicts.
+A GMP of about 9%
 gives a score of 0.3, and "did well" means a listing gain of IPO_GOOD_GAIN_PCT (default 10%).
 Check the rule with `python manage.py ipo_stats` after some IPOs have listed. At least 20 results
 are needed to say anything.
@@ -34,7 +36,8 @@ from typing import Any
 from django.utils import timezone
 
 from apps.companies.matching import normalize_name, normalize_text
-from apps.markets.trading import today_ist
+from apps.markets.learning import forecast
+from apps.markets.trading import session_open, today_ist
 from apps.news.models import NewsArticle
 from apps.siteconfig import conf
 
@@ -64,7 +67,9 @@ def _clip(value: float) -> float:
 
 def _is_fresh(stamp: datetime | None, now: datetime) -> bool:
     """Return True if the time is not older than IPO_METRIC_MAX_AGE_HOURS."""
-    return stamp is not None and now - stamp <= timedelta(hours=conf.IPO_METRIC_MAX_AGE_HOURS)
+    return stamp is not None and timedelta(0) <= now - stamp <= timedelta(
+        hours=conf.IPO_METRIC_MAX_AGE_HOURS
+    )
 
 
 def gmp_signal(pct: float) -> float:
@@ -80,10 +85,10 @@ def subscription_signal(times: float) -> float:
 
 
 def subscription_is_final(ipo: Ipo, today: date) -> bool:
-    """Return True if the subscription number is final: on or after the close date."""
+    """Return True only after the close date, never during its still-open bidding session."""
     if ipo.close_date is None:
         return False
-    return today >= ipo.close_date
+    return today > ipo.close_date
 
 
 def news_signal(ipo: Ipo, now: datetime) -> tuple[float, int] | None:
@@ -95,8 +100,14 @@ def news_signal(ipo: Ipo, now: datetime) -> tuple[float, int] | None:
     pattern = re.compile(rf"(?<![\w&]){re.escape(key)}(?![\w&])", re.IGNORECASE)
 
     candidates = NewsArticle.objects.filter(
-        scored_at__isnull=False, sentiment_score__isnull=False, relevance__gte=MIN_RELEVANCE
-    ).filter(fetched_at__gte=since)
+        scored_at__lte=now,
+        sentiment_score__gte=-1,
+        sentiment_score__lte=1,
+        relevance__gte=MIN_RELEVANCE,
+        relevance__lte=1,
+        fetched_at__gte=since,
+        fetched_at__lte=now,
+    ).exclude(published_at__gt=now)
     # The first word is a cheap filter in the database. The pattern checks the whole name.
     first_word = key.split()[0]
     pairs = [
@@ -217,6 +228,7 @@ def scorable_ipos(today: date):
     oldest = today - timedelta(days=RECENT_SCORING_DAYS)
     return (
         Ipo.objects.exclude(status=Ipo.Status.LISTED)
+        .exclude(listing_date__lte=today)
         .filter(listing_gain_pct__isnull=True)
         .exclude(open_date__lt=oldest)
     )
@@ -231,12 +243,64 @@ def score_ipos(now: datetime | None = None) -> dict:
     now = now or timezone.now()
     stats = {"scored": 0, "unknown": 0}
     for ipo in scorable_ipos(today_ist(now)):
+        previous_verdict = ipo.verdict
         outcome = score_ipo(ipo, now)
+        signals = {signal.name: signal for signal in outcome.signals}
+        target = ipo.listing_date
+        reasons = []
+        if ipo.price_band_high is None or ipo.price_band_high <= 0:
+            reasons.append("A positive issue price is required.")
+        if ipo.subscription_times is not None and ipo.subscription_times < 0:
+            reasons.append("Subscription cannot be negative.")
+        if target is None:
+            reasons.append("No listing date; cannot verify a pre-listing forecast.")
+            target = today_ist(now)
+        if outcome.score is None:
+            reasons.append("No fresh GMP or final subscription.")
+        label, score, learning = forecast(
+            "ipo",
+            str(ipo.pk),
+            target,
+            [
+                signals[name].signal if name in signals else 0.0
+                for name in ("gmp", "subscription", "news")
+            ]
+            + [
+                signals[name].strength if name in signals else 0.0
+                for name in ("gmp", "subscription", "news")
+            ],
+            rule_label=outcome.verdict,
+            rule_score=outcome.score or 0.0,
+            now=now,
+            deadline=session_open(target),
+            context={
+                "good_gain": conf.IPO_GOOD_GAIN_PCT,
+                "good": conf.IPO_GOOD_SCORE,
+                "weak": conf.IPO_WEAK_SCORE,
+                "issue_price": float(ipo.price_band_high) if ipo.price_band_high else 0.0,
+            },
+            reasons=reasons,
+        )
+        if learning["watchdog"]["status"] == "blocked":
+            outcome.verdict, outcome.score = UNKNOWN, None
+        else:
+            outcome.verdict, outcome.score = label, score
+        outcome.notes.extend(learning["watchdog"]["reasons"])
+        outcome.notes.append(
+            "Experimental rule; no validated ML advantage yet."
+            if learning["experimental"]
+            else "Chronologically validated logistic model; not a guarantee of listing gains."
+        )
         ipo.score = outcome.score
         ipo.verdict = outcome.verdict
         ipo.scored_at = now
         ipo.score_inputs = _inputs(outcome, now)
+        ipo.score_inputs["learning"] = learning
         ipo.save(update_fields=["score", "verdict", "scored_at", "score_inputs", "updated_at"])
+        if learning["watchdog"]["status"] == "blocked" and previous_verdict not in (UNKNOWN, ""):
+            from apps.markets.forecast_audit import withhold_ipo_reports  # noqa: PLC0415
+
+            withhold_ipo_reports(ipo, now)
         stats["unknown" if outcome.verdict == UNKNOWN else "scored"] += 1
     return stats
 

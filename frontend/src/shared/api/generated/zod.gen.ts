@@ -462,7 +462,8 @@ export const zMarketPrediction = z.object({
         'Right',
         'Wrong',
         'No session',
-        'Waiting'
+        'Waiting',
+        'Withheld'
     ])
 });
 
@@ -759,7 +760,8 @@ export const zTodayOutlook = z.object({
     direction: z.enum([
         'up',
         'down',
-        'flat'
+        'flat',
+        'withheld'
     ]),
     strength: z.string(),
     strength_label: z.string(),

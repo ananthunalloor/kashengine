@@ -15,6 +15,7 @@ NOW = datetime(2026, 10, 5, 8, 0, tzinfo=IST)
 def make_ipo(name: str = "Acme Foods Limited", **kwargs) -> Ipo:
     kwargs.setdefault("open_date", TODAY)
     kwargs.setdefault("close_date", TODAY + timedelta(days=2))
+    kwargs.setdefault("listing_date", TODAY + timedelta(days=7))
     kwargs.setdefault("price_band_high", Decimal("100"))
     return Ipo.objects.create(name=name, **kwargs)
 

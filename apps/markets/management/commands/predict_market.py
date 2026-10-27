@@ -35,7 +35,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--force",
             action="store_true",
-            help="Make it again. This works only until the result is known.",
+            help="Make it again before the target session opens; evaluated forecasts never change.",
         )
 
     def handle(self, *args, **options):
@@ -66,7 +66,7 @@ class Command(BaseCommand):
         if not created:
             self.stdout.write(
                 "A prediction for this day exists already, and it is not changed. "
-                "Use --force to make it again (before the result is known)."
+                "Use --force to make it again before the target session opens."
             )
 
         self.stdout.write(

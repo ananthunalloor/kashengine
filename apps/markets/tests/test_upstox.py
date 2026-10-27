@@ -245,6 +245,7 @@ def test_ipo_invalid_detail_is_skipped_without_aborting_refresh(company, caplog)
 
 def test_experimental_outlook_threshold_evidence_and_insufficient_data(company, monkeypatch):
     monkeypatch.setattr("apps.companies.outlook.latest_completed_day", lambda: date(2026, 10, 22))
+    monkeypatch.setattr(timezone, "now", lambda: datetime(2026, 10, 23, 2, tzinfo=UTC))
     assert save_outlook(company) is None
     for offset in range(21):
         CompanyCandle.objects.create(
@@ -274,6 +275,7 @@ def test_experimental_outlook_threshold_evidence_and_insufficient_data(company, 
         published_at=timezone.now(),
         sentiment_score=-1,
         relevance=1,
+        scored_at=timezone.now(),
     )
     article.companies.add(company)
     updated = save_outlook(company)
@@ -325,6 +327,7 @@ def test_completed_session_respects_close_buffer(company, settings, stamp, expec
 )
 def test_outlook_flat_threshold_and_after_close_target(company, monkeypatch, closing, direction):
     monkeypatch.setattr("apps.companies.outlook.latest_completed_day", lambda: date(2026, 10, 23))
+    monkeypatch.setattr(timezone, "now", lambda: datetime(2026, 10, 23, 12, tzinfo=UTC))
     for offset in range(21):
         price = closing if offset == 0 else 100
         CompanyCandle.objects.create(

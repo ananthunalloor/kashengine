@@ -32,7 +32,7 @@ D = Decimal
 
 def story(number, score, relevance=0.9, title=None, **kwargs) -> NewsArticle:
     kwargs.setdefault("published_at", ist(DAY, 6))
-    return NewsArticle.objects.create(
+    article = NewsArticle.objects.create(
         source="Test News",
         title=title or f"Story {number}",
         url=f"https://t.test/{number}",
@@ -42,11 +42,17 @@ def story(number, score, relevance=0.9, title=None, **kwargs) -> NewsArticle:
         scored_at=NOW,
         **kwargs,
     )
+    NewsArticle.objects.filter(pk=article.pk).update(fetched_at=NOW)
+    return article
 
 
 def ipo(name, **kwargs) -> Ipo:
     kwargs.setdefault("price_band_high", D("100"))
-    return Ipo.objects.create(name=name, **kwargs)
+    kwargs.setdefault("listing_date", DAY + timedelta(days=7))
+    issue = Ipo.objects.create(name=name, **kwargs)
+    if issue.gmp is not None:
+        Ipo.objects.filter(pk=issue.pk).update(gmp_updated_at=NOW)
+    return issue
 
 
 def test_news_picks_the_strongest_good_and_bad_stories():
@@ -414,13 +420,12 @@ def test_build_report_scores_the_ipos_first_so_the_gmp_is_current():
     assert "Hot Ltd (score 10.0/10)" in report.text
 
 
-def test_build_report_still_works_when_the_ipo_scoring_fails(monkeypatch):
+def test_build_report_does_not_publish_cached_verdicts_when_ipo_scoring_fails(monkeypatch):
     def broken(now):
         raise RuntimeError("boom")
 
     monkeypatch.setattr(builder, "score_ipos", broken)
 
-    report, created = build_report(DAY, now=NOW)
-
-    assert created
-    assert "DAILY REPORT" in report.text
+    with pytest.raises(RuntimeError, match="boom"):
+        build_report(DAY, now=NOW)
+    assert not Report.objects.exists()

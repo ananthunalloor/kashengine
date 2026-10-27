@@ -12,7 +12,7 @@ import { MarketCloses, MarketDate } from "./MarketCloses";
 function Direction({ value }: { value: string }) {
   return value ? (
     <span className="report-outlook" data-tone={value}>
-      {value === "up" ? "Up" : value === "down" ? "Down" : "Flat"}
+      {value === "up" ? "Up" : value === "down" ? "Down" : value === "flat" ? "Flat" : "Withheld"}
     </span>
   ) : (
     <span>Not available</span>

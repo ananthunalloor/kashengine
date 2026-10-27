@@ -201,6 +201,7 @@ class Prediction(models.Model):
         UP = "up", "Up"
         DOWN = "down", "Down"
         FLAT = "flat", "Flat"
+        WITHHELD = "withheld", "Withheld by watchdog"
 
     target_date = models.DateField(unique=True, help_text="The trading day that we predict.")
     direction = models.CharField(max_length=10, choices=Direction.choices)
@@ -222,7 +223,11 @@ class Prediction(models.Model):
 
     # The real result. We fill it in after the market closes.
     actual_change_pct = models.FloatField(null=True, blank=True)
-    actual_direction = models.CharField(max_length=10, choices=Direction.choices, blank=True)
+    actual_direction = models.CharField(
+        max_length=10,
+        choices=[choice for choice in Direction.choices if choice[0] != "withheld"],
+        blank=True,
+    )
     correct = models.BooleanField(
         null=True,
         blank=True,
@@ -236,6 +241,60 @@ class Prediction(models.Model):
     def __str__(self):
         """Return the target date, the direction and the confidence."""
         return f"{self.target_date} {self.direction} ({self.confidence:.2f})"
+
+
+class ForecastSample(models.Model):
+    """Point-in-time evidence, frozen at the forecast deadline, and its later outcome."""
+
+    kind = models.CharField(max_length=10)
+    entity = models.CharField(max_length=120)
+    target_date = models.DateField()
+    issued_at = models.DateTimeField()
+    deadline = models.DateTimeField()
+    features = models.JSONField()
+    context = models.JSONField(default=dict)
+    rule_label = models.CharField(max_length=10)
+    predicted_label = models.CharField(max_length=10)
+    audit = models.JSONField(default=dict)
+    actual_label = models.CharField(max_length=10, blank=True)
+    actual_change = models.FloatField(null=True)
+    observed_at = models.DateTimeField(null=True)
+
+    class Meta:
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            models.UniqueConstraint(
+                fields=["kind", "entity", "target_date"], name="unique_forecast_sample"
+            ),
+        ]
+        indexes: ClassVar[list[models.Index]] = [
+            models.Index(fields=["kind", "target_date"]),
+        ]
+
+    def __str__(self):
+        """Return the forecast identity."""
+        return f"{self.kind}:{self.entity} {self.target_date}"
+
+
+class ForecastModel(models.Model):
+    """A versioned logistic classifier in JSON, never executable pickle data."""
+
+    kind = models.CharField(max_length=10)
+    trained_at = models.DateTimeField()
+    parameters = models.JSONField(default=dict)
+    metrics = models.JSONField(default=dict)
+    approved = models.BooleanField(default=False)
+
+    class Meta:
+        ordering: ClassVar[list[str]] = ["-trained_at", "-pk"]
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            models.UniqueConstraint(
+                fields=["kind", "trained_at"], name="unique_forecast_model_version"
+            ),
+        ]
+
+    def __str__(self):
+        """Return the model family and validation state."""
+        return f"{self.kind}: {'validated' if self.approved else 'experimental'}"
 
 
 class Instrument(models.Model):

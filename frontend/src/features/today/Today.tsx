@@ -100,35 +100,39 @@ export function Today({ data, session }: { data: TodayData; session: Session }) 
                     <DirectionIcon aria-hidden="true" />
                   </span>
                   <Title order={2} id="today-outlook">
-                    The Nifty 50 is likely to{" "}
-                    {outlook.direction === "up"
-                      ? "rise"
-                      : outlook.direction === "down"
-                        ? "fall"
-                        : "stay flat"}
-                    .
+                    {outlook.direction === "withheld"
+                      ? "Prediction withheld by the watchdog"
+                      : `The Nifty 50 is likely to ${
+                          outlook.direction === "up"
+                            ? "rise"
+                            : outlook.direction === "down"
+                              ? "fall"
+                              : "stay flat"
+                        }.`}
                   </Title>
                 </div>
-                <dl className="market-summary">
-                  <div>
-                    <dt>Signal strength ({outlook.strength_label})</dt>
-                    <dd>
-                      <MetricValue kind="strength" value={outlook.strength} />
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>News, from {outlook.news_articles} articles</dt>
-                    <dd>
-                      <MetricValue kind="score" value={outlook.news_score} />
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Global markets</dt>
-                    <dd>
-                      <MetricValue kind="score" value={outlook.global_score} />
-                    </dd>
-                  </div>
-                </dl>
+                {outlook.direction !== "withheld" && (
+                  <dl className="market-summary">
+                    <div>
+                      <dt>Signal strength ({outlook.strength_label})</dt>
+                      <dd>
+                        <MetricValue kind="strength" value={outlook.strength} />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>News, from {outlook.news_articles} articles</dt>
+                      <dd>
+                        <MetricValue kind="score" value={outlook.news_score} />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Global markets</dt>
+                      <dd>
+                        <MetricValue kind="score" value={outlook.global_score} />
+                      </dd>
+                    </div>
+                  </dl>
+                )}
                 <Text size="sm" c="dimmed" mt="md">
                   Scores run from 1.0 to 10.0. News and global scores are neutral at 5.5.{" "}
                   <StrengthLegend />

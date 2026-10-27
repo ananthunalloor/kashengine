@@ -250,7 +250,9 @@ def get_markets(request: HttpRequest):
                 "change": f"{signed(prediction.actual_change_pct, 2)}%"
                 if prediction.actual_change_pct is not None
                 else "–",
-                "result": "Right"
+                "result": "Withheld"
+                if prediction.direction == "withheld"
+                else "Right"
                 if prediction.correct is True
                 else "Wrong"
                 if prediction.correct is False

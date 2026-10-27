@@ -16,8 +16,10 @@ from apps.companies.outlook import save_outlook
 from apps.siteconfig import conf
 
 from .evaluation import evaluate_pending
+from .forecast_outcomes import collect_outcomes
 from .index_constituents import refresh_index_constituents
 from .instrument_master import refresh_instruments
+from .learning import LABELS, train_model
 from .prediction import make_prediction
 from .quotes import fetch_quotes as fetch_all_quotes
 from .trading import is_trading_day, session_close, session_open, today_ist
@@ -25,6 +27,49 @@ from .upstox import mapped_companies, sync_companies, sync_ipos, sync_news, sync
 from .upstox_client import UpstoxClient
 
 logger = logging.getLogger(__name__)
+
+
+@shared_task(name="markets.refresh_forecasts", soft_time_limit=600)
+def refresh_forecasts() -> dict:
+    """Refresh all forecast families from saved inputs; never revise an open session."""
+    from apps.companies.models import Company  # noqa: PLC0415
+    from apps.ipos.scoring import score_ipos  # noqa: PLC0415
+
+    now = timezone.now()
+    prediction, changed = make_prediction(now=now, force=True)
+    companies = 0
+    company_withheld = 0
+    for company in Company.objects.exclude(upstox_instrument_key="").iterator():
+        outlook = save_outlook(company)
+        if outlook is not None:
+            companies += 1
+            company_withheld += outlook.direction == "withheld"
+    return {
+        "market": prediction.direction,
+        "market_changed": changed,
+        "companies": companies,
+        "company_withheld": company_withheld,
+        "ipos": score_ipos(now),
+        "outcomes": collect_outcomes(now),
+    }
+
+
+@shared_task(name="markets.train_forecasts", soft_time_limit=1800)
+def train_forecasts() -> dict:
+    """Collect actual outcomes, then replace each model only through its validation gate."""
+    now = timezone.now()
+    return {
+        "outcomes": collect_outcomes(now),
+        "models": {kind: train_model(kind, now) for kind in LABELS},
+    }
+
+
+@shared_task(name="markets.watchdog", soft_time_limit=300)
+def watchdog() -> dict:
+    """Audit stored publications separately from their producer and withhold corruption."""
+    from .forecast_audit import audit_publications  # noqa: PLC0415
+
+    return audit_publications(timezone.now())
 
 
 @shared_task(name="markets.refresh_instruments", soft_time_limit=600)
