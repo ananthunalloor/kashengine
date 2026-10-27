@@ -36,6 +36,19 @@ export function Markets({ data, isStaff }: { data: MarketsData; isStaff: boolean
         <Link to="/markets/live/" search={{ q: "", page: 1 }}>
           View company market data
         </Link>
+        {" · "}
+        <Link
+          to="/markets/instruments/"
+          search={{
+            q: "",
+            page: 1,
+            exchange: "",
+            segment: "",
+            instrument_type: "",
+          }}
+        >
+          NSE &amp; BSE instruments
+        </Link>
         <Anchor href="/markets/" size="sm">
           Compare with the original Markets page
         </Anchor>

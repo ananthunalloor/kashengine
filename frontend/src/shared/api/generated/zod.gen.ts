@@ -335,6 +335,56 @@ export const zIpoDetail = z.object({
 });
 
 /**
+ * ExchangeInstrumentFilters
+ *
+ * Bound search and supported NSE/BSE catalog filters.
+ */
+export const zExchangeInstrumentFilters = z.object({
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
+    q: z.string().max(100).optional().default(''),
+    exchange: z.string().regex(/^(|NSE|BSE)$/).optional().default(''),
+    segment: z.string().regex(/^[A-Z0-9_]{0,20}$/).optional().default(''),
+    instrument_type: z.string().regex(/^[A-Z0-9_]{0,30}$/).optional().default(''),
+    sort: z.string().regex(/^(|-?(exchange|trading_symbol|name|expiry))$/).optional().default('')
+});
+
+/**
+ * ExchangeInstrumentItem
+ *
+ * One active instrument in the NSE/BSE daily catalog.
+ */
+export const zExchangeInstrumentItem = z.object({
+    instrument_key: z.string(),
+    exchange: z.string(),
+    segment: z.string(),
+    trading_symbol: z.string(),
+    name: z.string(),
+    instrument_type: z.string(),
+    isin: z.string(),
+    underlying_symbol: z.string(),
+    expiry: z.iso.date().nullable(),
+    strike_price: z.number().nullable(),
+    lot_size: z.int().nullable(),
+    company_id: z.int().nullable()
+});
+
+/**
+ * ExchangeInstrumentPage
+ *
+ * Paginated NSE/BSE equity, index, futures, and options instruments.
+ */
+export const zExchangeInstrumentPage = z.object({
+    items: z.array(zExchangeInstrumentItem),
+    page: z.int(),
+    pages: z.int(),
+    total: z.int(),
+    page_size: z.int(),
+    segments: z.array(z.string()),
+    instrument_types: z.array(z.string())
+});
+
+/**
  * CompanyMarketFilters
  *
  * Search the saved directory, including companies without a quote.
@@ -485,6 +535,17 @@ export const zCompanyIssue = z.object({
 });
 
 /**
+ * CompanyListing
+ *
+ * One exchange-specific equity ticker for a company.
+ */
+export const zCompanyListing = z.object({
+    exchange: z.string(),
+    symbol: z.string(),
+    instrument_key: z.string()
+});
+
+/**
  * CompanyItem
  *
  * Company directory display fields, without scraped data or internal aliases.
@@ -493,6 +554,7 @@ export const zCompanyItem = z.object({
     id: z.int(),
     name: z.string(),
     symbol: z.string(),
+    listings: z.array(zCompanyListing),
     sector: z.string(),
     screener_url: z.string(),
     last_updated: z.iso.datetime().nullable()
@@ -1270,6 +1332,21 @@ export const zGetAppIpoPath = z.object({
  * OK
  */
 export const zGetAppIpoResponse = zIpoDetail;
+
+export const zListAppExchangeInstrumentsQuery = z.object({
+    page: z.int().optional().default(1),
+    page_size: z.int().gte(1).lte(100).nullish(),
+    q: z.string().max(100).optional().default(''),
+    exchange: z.string().regex(/^(|NSE|BSE)$/).optional().default(''),
+    segment: z.string().regex(/^[A-Z0-9_]{0,20}$/).optional().default(''),
+    instrument_type: z.string().regex(/^[A-Z0-9_]{0,30}$/).optional().default(''),
+    sort: z.string().regex(/^(|-?(exchange|trading_symbol|name|expiry))$/).optional().default('')
+});
+
+/**
+ * OK
+ */
+export const zListAppExchangeInstrumentsResponse = zExchangeInstrumentPage;
 
 export const zListAppCompanyMarketsQuery = z.object({
     page: z.int().optional().default(1),

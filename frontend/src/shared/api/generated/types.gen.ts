@@ -994,6 +994,138 @@ export type IpoSignal = {
 export type JsonValue = unknown;
 
 /**
+ * ExchangeInstrumentFilters
+ *
+ * Bound search and supported NSE/BSE catalog filters.
+ */
+export type ExchangeInstrumentFilters = {
+    /**
+     * Page
+     *
+     * Requested page; out-of-range values are clamped.
+     */
+    page?: number;
+    /**
+     * Page Size
+     *
+     * Rows per page, 1-100.
+     */
+    page_size?: number | null;
+    /**
+     * Q
+     */
+    q?: string;
+    /**
+     * Exchange
+     */
+    exchange?: string;
+    /**
+     * Segment
+     */
+    segment?: string;
+    /**
+     * Instrument Type
+     */
+    instrument_type?: string;
+    /**
+     * Sort
+     */
+    sort?: string;
+};
+
+/**
+ * ExchangeInstrumentItem
+ *
+ * One active instrument in the NSE/BSE daily catalog.
+ */
+export type ExchangeInstrumentItem = {
+    /**
+     * Instrument Key
+     */
+    instrument_key: string;
+    /**
+     * Exchange
+     */
+    exchange: string;
+    /**
+     * Segment
+     */
+    segment: string;
+    /**
+     * Trading Symbol
+     */
+    trading_symbol: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Instrument Type
+     */
+    instrument_type: string;
+    /**
+     * Isin
+     */
+    isin: string;
+    /**
+     * Underlying Symbol
+     */
+    underlying_symbol: string;
+    /**
+     * Expiry
+     */
+    expiry: string | null;
+    /**
+     * Strike Price
+     */
+    strike_price: number | null;
+    /**
+     * Lot Size
+     */
+    lot_size: number | null;
+    /**
+     * Company Id
+     */
+    company_id: number | null;
+};
+
+/**
+ * ExchangeInstrumentPage
+ *
+ * Paginated NSE/BSE equity, index, futures, and options instruments.
+ */
+export type ExchangeInstrumentPage = {
+    /**
+     * Items
+     */
+    items: Array<ExchangeInstrumentItem>;
+    /**
+     * Page
+     */
+    page: number;
+    /**
+     * Pages
+     */
+    pages: number;
+    /**
+     * Total
+     */
+    total: number;
+    /**
+     * Page Size
+     */
+    page_size: number;
+    /**
+     * Segments
+     */
+    segments: Array<string>;
+    /**
+     * Instrument Types
+     */
+    instrument_types: Array<string>;
+};
+
+/**
  * CompanyMarketFilters
  *
  * Search the saved directory, including companies without a quote.
@@ -1448,6 +1580,12 @@ export type CompanyItem = {
      */
     symbol: string;
     /**
+     * Listings
+     *
+     * Available exchange-specific equity listings.
+     */
+    listings: Array<CompanyListing>;
+    /**
      * Sector
      *
      * Sector, or empty when unknown.
@@ -1465,6 +1603,26 @@ export type CompanyItem = {
      * Last data fetch, or null if never fetched.
      */
     last_updated: string | null;
+};
+
+/**
+ * CompanyListing
+ *
+ * One exchange-specific equity ticker for a company.
+ */
+export type CompanyListing = {
+    /**
+     * Exchange
+     */
+    exchange: string;
+    /**
+     * Symbol
+     */
+    symbol: string;
+    /**
+     * Instrument Key
+     */
+    instrument_key: string;
 };
 
 /**
@@ -3354,6 +3512,76 @@ export type GetAppIpoResponses = {
 };
 
 export type GetAppIpoResponse = GetAppIpoResponses[keyof GetAppIpoResponses];
+
+export type ListAppExchangeInstrumentsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page
+         *
+         * Requested page; out-of-range values are clamped.
+         */
+        page?: number;
+        /**
+         * Page Size
+         *
+         * Rows per page, 1-100.
+         */
+        page_size?: number | null;
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * Exchange
+         */
+        exchange?: string;
+        /**
+         * Segment
+         */
+        segment?: string;
+        /**
+         * Instrument Type
+         */
+        instrument_type?: string;
+        /**
+         * Sort
+         */
+        sort?: string;
+    };
+    url: '/api/app/markets/instruments';
+};
+
+export type ListAppExchangeInstrumentsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type ListAppExchangeInstrumentsError = ListAppExchangeInstrumentsErrors[keyof ListAppExchangeInstrumentsErrors];
+
+export type ListAppExchangeInstrumentsResponses = {
+    /**
+     * OK
+     */
+    200: ExchangeInstrumentPage;
+};
+
+export type ListAppExchangeInstrumentsResponse = ListAppExchangeInstrumentsResponses[keyof ListAppExchangeInstrumentsResponses];
 
 export type ListAppCompanyMarketsData = {
     body?: never;

@@ -169,6 +169,25 @@ export function Companies({
               render: (row) => <span className="symbol-chip">{row.symbol}</span>,
             },
             {
+              id: "listings",
+              label: "Exchange listings",
+              value: (row) =>
+                row.listings.map((listing) => `${listing.exchange}:${listing.symbol}`).join(", "),
+              render: (row) =>
+                row.listings.length ? (
+                  <Group gap="xs">
+                    {row.listings.map((listing) => (
+                      <Text key={listing.instrument_key} size="sm">
+                        <span className="symbol-chip">{listing.exchange}</span> {listing.symbol}
+                      </Text>
+                    ))}
+                  </Group>
+                ) : (
+                  "Not imported"
+                ),
+              sortable: false,
+            },
+            {
               id: "sector",
               label: "Sector",
               value: (row) => row.sector,
@@ -209,7 +228,9 @@ export function Companies({
               {isStaff && !filters.q && !filters.sector && (
                 <>
                   {" "}
-                  Admins: add companies with <code>python manage.py import_companies</code>.
+                  Admins: refresh the NSE/BSE catalog with{" "}
+                  <code>python manage.py refresh_instruments</code>, or add a CSV with{" "}
+                  <code>python manage.py import_companies</code>.
                 </>
               )}
             </Text>

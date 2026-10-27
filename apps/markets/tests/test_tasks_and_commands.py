@@ -7,10 +7,29 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 
 from apps.markets import tasks
+from apps.markets.instrument_master import InstrumentMasterError
 from apps.markets.management.commands import fetch_quotes as fetch_quotes_command
 from apps.markets.models import Prediction
 
 from .helpers import MON, SAT, ist, prediction
+
+
+def test_instrument_refresh_task_returns_catalog_counts(monkeypatch):
+    result = {"instruments": 12, "equities": 4, "companies_created": 2, "instruments_added": 12}
+    monkeypatch.setattr(tasks, "refresh_instruments", lambda: result)
+
+    assert tasks.refresh_instrument_master() == result
+
+
+def test_instrument_refresh_task_does_not_hide_provider_failures(monkeypatch):
+    monkeypatch.setattr(
+        tasks,
+        "refresh_instruments",
+        lambda: (_ for _ in ()).throw(InstrumentMasterError("invalid master")),
+    )
+
+    with pytest.raises(InstrumentMasterError, match="invalid master"):
+        tasks.refresh_instrument_master()
 
 
 def test_the_fetch_task_downloads_and_then_checks_the_predictions(monkeypatch):

@@ -16,6 +16,10 @@ const detail: CompanyDetail = {
     id: 1,
     name: "<b>Example</b>",
     symbol: "EXAMPLE",
+    listings: [
+      { exchange: "NSE", symbol: "EXAMPLE", instrument_key: "NSE_EQ|INE002A01018" },
+      { exchange: "BSE", symbol: "500325", instrument_key: "BSE_EQ|INE002A01018" },
+    ],
     sector: "Energy",
     screener_url: "",
     last_updated: null,

@@ -209,6 +209,7 @@ def test_private_contract_is_separate_and_committed():
         "/api/app/ipos/{pk}",
         "/api/app/markets",
         "/api/app/markets/companies",
+        "/api/app/markets/instruments",
         "/api/app/companies",
         "/api/app/companies/{pk}",
         "/api/app/delivery",

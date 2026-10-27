@@ -18,6 +18,7 @@ import { Route as DeliveryIndexRouteImport } from './routes/delivery.index'
 import { Route as IposIndexRouteImport } from './routes/ipos.index'
 import { Route as IposIdRouteImport } from './routes/ipos.$id'
 import { Route as MarketsIndexRouteImport } from './routes/markets.index'
+import { Route as MarketsInstrumentsRouteImport } from './routes/markets.instruments'
 import { Route as MarketsLiveRouteImport } from './routes/markets.live'
 import { Route as NewsIndexRouteImport } from './routes/news.index'
 import { Route as OpsIndexRouteImport } from './routes/ops.index'
@@ -73,6 +74,11 @@ const MarketsIndexRoute = MarketsIndexRouteImport.update({
   path: '/markets/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MarketsInstrumentsRoute = MarketsInstrumentsRouteImport.update({
+  id: '/markets/instruments',
+  path: '/markets/instruments',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MarketsLiveRoute = MarketsLiveRouteImport.update({
   id: '/markets/live',
   path: '/markets/live',
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/companies/$id': typeof CompaniesIdRoute
   '/ipos/$id': typeof IposIdRoute
+  '/markets/instruments': typeof MarketsInstrumentsRoute
   '/markets/live': typeof MarketsLiveRoute
   '/ops/$': typeof OpsSplatRoute
   '/reports/$day': typeof ReportsDayRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/companies/$id': typeof CompaniesIdRoute
   '/ipos/$id': typeof IposIdRoute
+  '/markets/instruments': typeof MarketsInstrumentsRoute
   '/markets/live': typeof MarketsLiveRoute
   '/ops/$': typeof OpsSplatRoute
   '/reports/$day': typeof ReportsDayRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/companies/$id': typeof CompaniesIdRoute
   '/ipos/$id': typeof IposIdRoute
+  '/markets/instruments': typeof MarketsInstrumentsRoute
   '/markets/live': typeof MarketsLiveRoute
   '/ops/$': typeof OpsSplatRoute
   '/reports/$day': typeof ReportsDayRoute
@@ -186,6 +195,7 @@ export interface FileRouteTypes {
     | '/'
     | '/companies/$id'
     | '/ipos/$id'
+    | '/markets/instruments'
     | '/markets/live'
     | '/ops/$'
     | '/reports/$day'
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
     | '/'
     | '/companies/$id'
     | '/ipos/$id'
+    | '/markets/instruments'
     | '/markets/live'
     | '/ops/$'
     | '/reports/$day'
@@ -226,6 +237,7 @@ export interface FileRouteTypes {
     | '/'
     | '/companies/$id'
     | '/ipos/$id'
+    | '/markets/instruments'
     | '/markets/live'
     | '/ops/$'
     | '/reports/$day'
@@ -247,6 +259,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CompaniesIdRoute: typeof CompaniesIdRoute
   IposIdRoute: typeof IposIdRoute
+  MarketsInstrumentsRoute: typeof MarketsInstrumentsRoute
   MarketsLiveRoute: typeof MarketsLiveRoute
   OpsSplatRoute: typeof OpsSplatRoute
   ReportsDayRoute: typeof ReportsDayRoute
@@ -329,6 +342,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MarketsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/markets/instruments': {
+      id: '/markets/instruments'
+      path: '/markets/instruments'
+      fullPath: '/markets/instruments'
+      preLoaderRoute: typeof MarketsInstrumentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/markets/live': {
       id: '/markets/live'
       path: '/markets/live'
@@ -399,6 +419,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CompaniesIdRoute: CompaniesIdRoute,
   IposIdRoute: IposIdRoute,
+  MarketsInstrumentsRoute: MarketsInstrumentsRoute,
   MarketsLiveRoute: MarketsLiveRoute,
   OpsSplatRoute: OpsSplatRoute,
   ReportsDayRoute: ReportsDayRoute,

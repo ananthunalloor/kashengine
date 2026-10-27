@@ -469,6 +469,16 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
               <Badge size="md" variant="filled" color="violet">
                 {data.company.symbol}
               </Badge>
+              {data.company.listings.map((listing) => (
+                <Badge
+                  key={listing.instrument_key}
+                  size="md"
+                  variant="light"
+                  color={listing.exchange === "NSE" ? "blue" : "teal"}
+                >
+                  {listing.exchange}: {listing.symbol}
+                </Badge>
+              ))}
               <Badge size="md" variant="light" color="gray">
                 {data.company.sector || "Sector not available"}
               </Badge>

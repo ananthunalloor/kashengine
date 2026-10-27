@@ -1,7 +1,7 @@
 """Private Markets preview, sharing the legacy page's queries and evaluation rules."""
 
 from django.core.paginator import Paginator
-from django.db.models import OuterRef, Subquery
+from django.db.models import OuterRef, Q, Subquery
 from django.http import HttpRequest
 from django.template.defaultfilters import floatformat
 from ninja import Field, Query, Router
@@ -9,6 +9,7 @@ from ninja import Field, Query, Router
 from apps.api.v1.common import ERRORS, ERRORS_WITH_VALIDATION
 from apps.companies.models import Company, CompanyQuote
 from apps.markets.evaluation import accuracy_stats
+from apps.markets.models import MarketInstrument
 from apps.reports.formatting import score_out_of_ten
 from apps.siteconfig import conf
 from apps.web.queries import latest_quotes, prediction_history
@@ -16,8 +17,8 @@ from apps.web.templatetags.web_extras import percent, signed
 
 from .auth import AppSession
 from .companies import saved_price
-from .schemas import CompanyMarketPage, Markets
-from .tables import TableFilters
+from .schemas import CompanyMarketPage, ExchangeInstrumentPage, Markets
+from .tables import TableFilters, ordered
 
 router = Router(tags=["Markets"], auth=AppSession("markets"))
 
@@ -26,6 +27,89 @@ class CompanyMarketFilters(TableFilters):
     """Search the saved directory, including companies without a quote."""
 
     q: str = Field(default="", max_length=100)
+
+
+class ExchangeInstrumentFilters(TableFilters):
+    """Bound search and supported NSE/BSE catalog filters."""
+
+    q: str = Field(default="", max_length=100)
+    exchange: str = Field(default="", pattern="^(|NSE|BSE)$")
+    segment: str = Field(default="", pattern="^[A-Z0-9_]{0,20}$")
+    instrument_type: str = Field(default="", pattern="^[A-Z0-9_]{0,30}$")
+    sort: str = Field(default="", pattern="^(|-?(exchange|trading_symbol|name|expiry))$")
+
+
+@router.get(
+    "/markets/instruments",
+    response={200: ExchangeInstrumentPage, **ERRORS_WITH_VALIDATION},
+    operation_id="list_app_exchange_instruments",
+    summary="Search active NSE/BSE equity, index, futures, and options instruments",
+)
+def exchange_instruments(request: HttpRequest, filters: Query[ExchangeInstrumentFilters]):
+    """Read the latest imported instrument master without calling the provider."""
+    instruments = MarketInstrument.objects.filter(is_active=True)
+    if filters.exchange:
+        instruments = instruments.filter(exchange=filters.exchange)
+    if filters.segment:
+        instruments = instruments.filter(segment=filters.segment)
+    if filters.instrument_type:
+        instruments = instruments.filter(instrument_type=filters.instrument_type)
+    if query := filters.q.strip():
+        instruments = instruments.filter(
+            Q(trading_symbol__icontains=query)
+            | Q(name__icontains=query)
+            | Q(instrument_key__icontains=query)
+            | Q(isin__icontains=query)
+            | Q(underlying_symbol__icontains=query)
+        )
+    instruments = ordered(
+        instruments,
+        filters.sort,
+        {
+            "exchange": "exchange",
+            "trading_symbol": "trading_symbol",
+            "name": "name",
+            "expiry": "expiry",
+        },
+    )
+    page = Paginator(instruments, filters.page_size or conf.WEB_PAGE_SIZE).get_page(
+        max(1, filters.page)
+    )
+    segment_rows = MarketInstrument.objects.filter(is_active=True)
+    if filters.exchange:
+        segment_rows = segment_rows.filter(exchange=filters.exchange)
+    type_rows = segment_rows
+    return {
+        "items": [
+            {
+                "instrument_key": row.instrument_key,
+                "exchange": row.exchange,
+                "segment": row.segment,
+                "trading_symbol": row.trading_symbol,
+                "name": row.name,
+                "instrument_type": row.instrument_type,
+                "isin": row.isin,
+                "underlying_symbol": row.underlying_symbol,
+                "expiry": row.expiry,
+                "strike_price": float(row.strike_price) if row.strike_price is not None else None,
+                "lot_size": row.lot_size,
+                "company_id": row.company_id,
+            }
+            for row in page.object_list
+        ],
+        "page": page.number,
+        "pages": page.paginator.num_pages,
+        "total": page.paginator.count,
+        "page_size": page.paginator.per_page,
+        "segments": list(
+            segment_rows.order_by("segment").values_list("segment", flat=True).distinct()
+        ),
+        "instrument_types": list(
+            type_rows.order_by("instrument_type")
+            .values_list("instrument_type", flat=True)
+            .distinct()
+        ),
+    }
 
 
 @router.get(

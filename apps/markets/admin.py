@@ -1,12 +1,11 @@
-"""Django admin for the markets app.
+"""Django admin for market history, calendar exceptions, and the provider-owned instrument catalog.
 
-The module registers `IndexQuote`, `Prediction`, and calendar exceptions. `Instrument` has no
-admin class here. Admins edit the instruments on the Ops pages (Ops > Instruments).
+`Instrument` remains editable on the Ops pages (Ops > Instruments).
 """
 
 from django.contrib import admin
 
-from .models import IndexQuote, Prediction, TradingCalendarDay
+from .models import IndexQuote, MarketInstrument, Prediction, TradingCalendarDay
 
 
 @admin.register(TradingCalendarDay)
@@ -54,3 +53,44 @@ class PredictionAdmin(admin.ModelAdmin):
     list_filter = ("direction", "correct")
     date_hierarchy = "target_date"
     readonly_fields = ("created_at", "evaluated_at")
+
+
+@admin.register(MarketInstrument)
+class MarketInstrumentAdmin(admin.ModelAdmin):
+    """Read-only inspection of provider-managed NSE/BSE catalog entries."""
+
+    list_display = (
+        "exchange",
+        "trading_symbol",
+        "segment",
+        "instrument_type",
+        "expiry",
+        "is_active",
+    )
+    list_filter = ("exchange", "segment", "instrument_type", "is_active")
+    search_fields = ("trading_symbol", "name", "isin", "instrument_key")
+    readonly_fields = (
+        "id",
+        "instrument_key",
+        "exchange",
+        "segment",
+        "trading_symbol",
+        "name",
+        "instrument_type",
+        "isin",
+        "underlying_symbol",
+        "expiry",
+        "strike_price",
+        "lot_size",
+        "is_active",
+        "refreshed_at",
+        "company",
+    )
+
+    def has_add_permission(self, request):
+        """Prevent manual catalog additions that the next refresh would replace."""
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        """Keep provider-managed catalog records read-only."""
+        return False

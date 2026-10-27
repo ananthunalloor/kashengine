@@ -14,6 +14,10 @@ const data: CompanyPage = {
       id: 1,
       name: "<b>Alpha Bank</b>",
       symbol: "ALPHA",
+      listings: [
+        { exchange: "NSE", symbol: "ALPHA", instrument_key: "NSE_EQ|INE000A01001" },
+        { exchange: "BSE", symbol: "500001", instrument_key: "BSE_EQ|INE000A01001" },
+      ],
       sector: "Finance",
       screener_url: "https://www.screener.in/company/ALPHA/",
       last_updated: "2026-10-16T23:00:00Z",
@@ -22,6 +26,7 @@ const data: CompanyPage = {
       id: 2,
       name: "Beta Tools",
       symbol: "BETA",
+      listings: [],
       sector: "",
       screener_url: "javascript:alert(1)",
       last_updated: null,
@@ -106,6 +111,9 @@ it("shows directory fields, safe source links, IST dates and preview navigation"
   expect(screen.getByText("17 Oct 2026")).toBeInTheDocument();
   expect(screen.getByText("Not fetched")).toBeInTheDocument();
   expect(screen.getByText("Not available")).toBeInTheDocument();
+  expect(screen.getByText("NSE")).toBeInTheDocument();
+  expect(screen.getByText("500001")).toBeInTheDocument();
+  expect(screen.getByText("Not imported")).toBeInTheDocument();
   expect(screen.getByText("5 companies")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Compare with/ })).toHaveAttribute("href", "/companies/");
   expect(screen.getByRole("link", { name: "Companies", current: "page" })).toHaveAttribute(

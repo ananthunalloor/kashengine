@@ -3,9 +3,9 @@
 `IndexQuote` holds one daily close for each symbol. `quotes.py` writes it. `Prediction` holds the
 prediction for one trading day and, later, the real result. `prediction.py` creates it and
 `evaluation.py` fills in the result. `Instrument` is the list of symbols to download, with the
-weight and scale of each global cue. Admins edit `Instrument` on the Ops pages. The web pages, the
-reports and the Ops health checks read these models. `TradingCalendarDay` stores
-staff-maintained NSE holidays and special-session hours.
+weight and scale of each global cue. `MarketInstrument` is the provider-refreshed NSE/BSE catalog.
+Admins edit `Instrument` on the Ops pages. `TradingCalendarDay` stores staff-maintained NSE
+holidays and special-session hours.
 """
 
 from typing import ClassVar
@@ -75,6 +75,43 @@ class TradingCalendarDay(models.Model):
             self.opens_at is None or self.closes_at is None or self.closes_at <= self.opens_at
         ):
             raise ValidationError("Special sessions need a start and a later end time in IST.")
+
+
+class MarketInstrument(models.Model):
+    """One active NSE or BSE instrument from the Upstox daily instrument master."""
+
+    instrument_key = models.CharField(max_length=100, unique=True)
+    exchange = models.CharField(max_length=3)
+    segment = models.CharField(max_length=20)
+    trading_symbol = models.CharField(max_length=100)
+    name = models.CharField(max_length=200)
+    instrument_type = models.CharField(max_length=30)
+    isin = models.CharField(max_length=12, blank=True)
+    underlying_symbol = models.CharField(max_length=100, blank=True)
+    expiry = models.DateField(null=True, blank=True)
+    strike_price = models.DecimalField(max_digits=20, decimal_places=6, null=True, blank=True)
+    lot_size = models.PositiveIntegerField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    refreshed_at = models.DateTimeField(auto_now=True)
+    company = models.ForeignKey(
+        "companies.Company",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="market_instruments",
+    )
+
+    class Meta:
+        ordering: ClassVar[list[str]] = ["exchange", "trading_symbol", "expiry", "pk"]
+        indexes: ClassVar[list[models.Index]] = [
+            models.Index(fields=["exchange", "segment", "instrument_type"]),
+            models.Index(fields=["exchange", "trading_symbol"]),
+            models.Index(fields=["expiry"]),
+        ]
+
+    def __str__(self):
+        """Return the exchange and trading symbol."""
+        return f"{self.exchange}:{self.trading_symbol}"
 
 
 class IndexQuote(models.Model):

@@ -11,6 +11,7 @@ function detail(): CompanyDetail {
       id: 1,
       name: "Example",
       symbol: "EX",
+      listings: [],
       sector: "",
       screener_url: "",
       last_updated: null,

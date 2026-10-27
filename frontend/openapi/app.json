@@ -760,6 +760,162 @@
         ]
       }
     },
+    "/api/app/markets/instruments": {
+      "get": {
+        "operationId": "list_app_exchange_instruments",
+        "summary": "Search active NSE/BSE equity, index, futures, and options instruments",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "Requested page; out-of-range values are clamped.",
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Requested page; out-of-range values are clamped."
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rows per page, 1-100.",
+              "title": "Page Size"
+            },
+            "required": false,
+            "description": "Rows per page, 1-100."
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "default": "",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "exchange",
+            "schema": {
+              "default": "",
+              "pattern": "^(|NSE|BSE)$",
+              "title": "Exchange",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "segment",
+            "schema": {
+              "default": "",
+              "pattern": "^[A-Z0-9_]{0,20}$",
+              "title": "Segment",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "instrument_type",
+            "schema": {
+              "default": "",
+              "pattern": "^[A-Z0-9_]{0,30}$",
+              "title": "Instrument Type",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "default": "",
+              "pattern": "^(|-?(exchange|trading_symbol|name|expiry))$",
+              "title": "Sort",
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeInstrumentPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read the latest imported instrument master without calling the provider.",
+        "tags": [
+          "Markets"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
     "/api/app/markets/companies": {
       "get": {
         "operationId": "list_app_company_markets",
@@ -3659,6 +3815,214 @@
         "type": "object"
       },
       "JsonValue": {},
+      "ExchangeInstrumentFilters": {
+        "description": "Bound search and supported NSE/BSE catalog filters.",
+        "properties": {
+          "page": {
+            "default": 1,
+            "description": "Requested page; out-of-range values are clamped.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rows per page, 1-100.",
+            "title": "Page Size"
+          },
+          "q": {
+            "default": "",
+            "maxLength": 100,
+            "title": "Q",
+            "type": "string"
+          },
+          "exchange": {
+            "default": "",
+            "pattern": "^(|NSE|BSE)$",
+            "title": "Exchange",
+            "type": "string"
+          },
+          "segment": {
+            "default": "",
+            "pattern": "^[A-Z0-9_]{0,20}$",
+            "title": "Segment",
+            "type": "string"
+          },
+          "instrument_type": {
+            "default": "",
+            "pattern": "^[A-Z0-9_]{0,30}$",
+            "title": "Instrument Type",
+            "type": "string"
+          },
+          "sort": {
+            "default": "",
+            "pattern": "^(|-?(exchange|trading_symbol|name|expiry))$",
+            "title": "Sort",
+            "type": "string"
+          }
+        },
+        "title": "ExchangeInstrumentFilters",
+        "type": "object"
+      },
+      "ExchangeInstrumentItem": {
+        "description": "One active instrument in the NSE/BSE daily catalog.",
+        "properties": {
+          "instrument_key": {
+            "title": "Instrument Key",
+            "type": "string"
+          },
+          "exchange": {
+            "title": "Exchange",
+            "type": "string"
+          },
+          "segment": {
+            "title": "Segment",
+            "type": "string"
+          },
+          "trading_symbol": {
+            "title": "Trading Symbol",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "instrument_type": {
+            "title": "Instrument Type",
+            "type": "string"
+          },
+          "isin": {
+            "title": "Isin",
+            "type": "string"
+          },
+          "underlying_symbol": {
+            "title": "Underlying Symbol",
+            "type": "string"
+          },
+          "expiry": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiry"
+          },
+          "strike_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strike Price"
+          },
+          "lot_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Size"
+          },
+          "company_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Id"
+          }
+        },
+        "required": [
+          "instrument_key",
+          "exchange",
+          "segment",
+          "trading_symbol",
+          "name",
+          "instrument_type",
+          "isin",
+          "underlying_symbol",
+          "expiry",
+          "strike_price",
+          "lot_size",
+          "company_id"
+        ],
+        "title": "ExchangeInstrumentItem",
+        "type": "object"
+      },
+      "ExchangeInstrumentPage": {
+        "description": "Paginated NSE/BSE equity, index, futures, and options instruments.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ExchangeInstrumentItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "title": "Pages",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "segments": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Segments",
+            "type": "array"
+          },
+          "instrument_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Instrument Types",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pages",
+          "total",
+          "page_size",
+          "segments",
+          "instrument_types"
+        ],
+        "title": "ExchangeInstrumentPage",
+        "type": "object"
+      },
       "CompanyMarketFilters": {
         "description": "Search the saved directory, including companies without a quote.",
         "properties": {
@@ -4293,6 +4657,14 @@
             "title": "Symbol",
             "type": "string"
           },
+          "listings": {
+            "description": "Available exchange-specific equity listings.",
+            "items": {
+              "$ref": "#/components/schemas/CompanyListing"
+            },
+            "title": "Listings",
+            "type": "array"
+          },
           "sector": {
             "description": "Sector, or empty when unknown.",
             "title": "Sector",
@@ -4321,11 +4693,36 @@
           "id",
           "name",
           "symbol",
+          "listings",
           "sector",
           "screener_url",
           "last_updated"
         ],
         "title": "CompanyItem",
+        "type": "object"
+      },
+      "CompanyListing": {
+        "description": "One exchange-specific equity ticker for a company.",
+        "properties": {
+          "exchange": {
+            "title": "Exchange",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "instrument_key": {
+            "title": "Instrument Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "exchange",
+          "symbol",
+          "instrument_key"
+        ],
+        "title": "CompanyListing",
         "type": "object"
       },
       "CompanySignal": {

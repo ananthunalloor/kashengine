@@ -70,6 +70,22 @@ health of the exchange.
 
 ## Upstox data
 
+### NSE/BSE instrument catalog
+
+The `markets.refresh_instruments` task downloads Upstox's public daily BOD JSON master; it does not
+need an Upstox API token. It runs daily at 06:20 IST and can also be started with
+`python manage.py refresh_instruments`. The import validates the complete file before writing and
+deactivates removed contracts only after a successful refresh. It includes Upstox-provided NSE and
+BSE cash, index and derivative records, including the NSE currency/commodity and BSE currency
+segments present in the source, but excludes other exchanges such as MCX. The company directory
+groups equity listings with the same ISIN and shows each exchange symbol.
+
+The app's `/markets/instruments/` page and `/api/app/markets/instruments` endpoint provide search
+and filters for exchange, segment and instrument type. The listing is an instrument catalog, not a
+quote feed: it does not create historical or live prices for every catalog entry. Coverage follows
+the current Upstox instrument master and can differ from the exchanges' complete official security
+lists. See the [Upstox instrument master documentation](https://upstox.com/developer/api-documentation/instruments/).
+
 Upstox is **off** until a superuser turns on `UPSTOX_ENABLED` and saves `UPSTOX_ACCESS_TOKEN` on
 **Ops > Settings**. The token is a secret. It goes in the `Authorization` header only, never in a
 URL, a log line or an error text. The code does not renew the token. An expired token gives a clear

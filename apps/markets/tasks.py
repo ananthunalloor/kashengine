@@ -16,6 +16,7 @@ from apps.companies.outlook import save_outlook
 from apps.siteconfig import conf
 
 from .evaluation import evaluate_pending
+from .instrument_master import refresh_instruments
 from .prediction import make_prediction
 from .quotes import fetch_quotes as fetch_all_quotes
 from .trading import is_trading_day, session_close, session_open, today_ist
@@ -23,6 +24,19 @@ from .upstox import mapped_companies, sync_companies, sync_ipos, sync_news, sync
 from .upstox_client import UpstoxClient
 
 logger = logging.getLogger(__name__)
+
+
+@shared_task(name="markets.refresh_instruments", soft_time_limit=600)
+def refresh_instrument_master() -> dict:
+    """Refresh the daily NSE/BSE equity, index, futures, and options catalog.
+
+    The source is Upstox's public instrument master; no access token is required. Any download or
+    validation failure is raised so the task run is recorded as failed rather than as a partial
+    success.
+    """
+    result = refresh_instruments()
+    logger.info("Exchange instrument catalog refreshed: %s", result)
+    return result
 
 
 @shared_task(name="markets.upstox_quotes", soft_time_limit=240)

@@ -6,6 +6,7 @@ import pytest
 
 from apps.access.models import FeatureBlock
 from apps.companies.models import Company
+from apps.markets.models import MarketInstrument
 from apps.siteconfig import conf
 from apps.web.queries import company_queryset
 
@@ -100,6 +101,16 @@ def test_display_only_fields_and_read_only_behavior(client, member):
         screener_data={"private": "scraped data"},
     )
     Company.objects.create(name="Unfetched", symbol="EMPTY")
+    MarketInstrument.objects.create(
+        instrument_key="BSE_EQ|INE002A01018",
+        exchange="BSE",
+        segment="BSE_EQ",
+        trading_symbol="500325",
+        name="Plain company",
+        instrument_type="A",
+        isin="INE002A01018",
+        company=company,
+    )
     before = list(Company.objects.values())
     client.force_login(member)
     response = client.get(URL)
@@ -109,6 +120,13 @@ def test_display_only_fields_and_read_only_behavior(client, member):
         "id": company.pk,
         "name": "<b>Plain company</b>",
         "symbol": "PLAIN",
+        "listings": [
+            {
+                "exchange": "BSE",
+                "symbol": "500325",
+                "instrument_key": "BSE_EQ|INE002A01018",
+            }
+        ],
         "sector": "",
         "screener_url": "javascript:alert(1)",
         "last_updated": "2026-10-16T23:00:00Z",
@@ -119,6 +137,26 @@ def test_display_only_fields_and_read_only_behavior(client, member):
     assert "no-store" in response["Cache-Control"]
     assert "private" in response["Cache-Control"]
     assert list(Company.objects.values()) == before
+
+
+def test_search_matches_secondary_exchange_symbols(client, member):
+    company = Company.objects.create(name="Reliance Industries", symbol="RELIANCE")
+    MarketInstrument.objects.create(
+        instrument_key="BSE_EQ|INE002A01018",
+        exchange="BSE",
+        segment="BSE_EQ",
+        trading_symbol="500325",
+        name=company.name,
+        instrument_type="A",
+        company=company,
+    )
+    client.force_login(member)
+
+    response = client.get(URL, {"q": "500325"})
+
+    assert response.status_code == 200
+    assert response.json()["total"] == 1
+    assert response.json()["items"][0]["id"] == company.pk
 
 
 def test_preview_and_legacy_remain_separate(client, member):

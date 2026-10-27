@@ -6,14 +6,16 @@ import pytest
 from django.utils import timezone
 
 from apps.access.models import FeatureBlock
+from apps.companies.models import Company
 from apps.markets.evaluation import accuracy_stats
-from apps.markets.models import IndexQuote, Instrument, Prediction
+from apps.markets.models import IndexQuote, Instrument, MarketInstrument, Prediction
 from apps.siteconfig import conf
 from apps.web.queries import latest_quotes, prediction_history
 from apps.web.templatetags.web_extras import percent
 
 pytestmark = pytest.mark.django_db
 URL = "/api/app/markets"
+INSTRUMENTS_URL = "/api/app/markets/instruments"
 
 
 def test_session_feature_and_bearer_rejection(client, member, make_token, auth):
@@ -67,6 +69,55 @@ def test_empty_state_private_cache_and_original_page(client, member):
     assert b'id="root"' in preview.content
     assert "no-store" in preview["Cache-Control"]
     assert "web/markets.html" not in [t.name for t in preview.templates]
+
+
+def test_exchange_instrument_catalog_search_filters_and_pagination(client, member, settings):
+    settings.WEB_PAGE_SIZE = 1
+    conf.invalidate()
+    company = Company.objects.create(name="Reliance Industries", symbol="RELIANCE")
+    MarketInstrument.objects.create(
+        instrument_key="NSE_EQ|INE002A01018",
+        exchange="NSE",
+        segment="NSE_EQ",
+        trading_symbol="RELIANCE",
+        name=company.name,
+        instrument_type="EQ",
+        isin="INE002A01018",
+        company=company,
+    )
+    MarketInstrument.objects.create(
+        instrument_key="NSE_FO|RELIANCE26JUNFUT",
+        exchange="NSE",
+        segment="NSE_FO",
+        trading_symbol="RELIANCE26JUNFUT",
+        name=company.name,
+        instrument_type="FUTSTK",
+        underlying_symbol="RELIANCE",
+        company=company,
+    )
+    MarketInstrument.objects.create(
+        instrument_key="BSE_EQ|INE002A01018",
+        exchange="BSE",
+        segment="BSE_EQ",
+        trading_symbol="500325",
+        name=company.name,
+        instrument_type="EQ",
+        company=company,
+    )
+    client.force_login(member)
+
+    first_page = client.get(INSTRUMENTS_URL, {"exchange": "NSE"}).json()
+    second_page = client.get(INSTRUMENTS_URL, {"exchange": "NSE", "page": 2}).json()
+    contract = client.get(INSTRUMENTS_URL, {"q": "26JUN", "instrument_type": "FUTSTK"}).json()
+
+    assert first_page["total"] == 2
+    assert first_page["pages"] == 2
+    assert first_page["items"][0]["trading_symbol"] == "RELIANCE"
+    assert first_page["segments"] == ["NSE_EQ", "NSE_FO"]
+    assert second_page["items"][0]["trading_symbol"] == "RELIANCE26JUNFUT"
+    assert second_page["items"][0]["company_id"] == company.pk
+    assert contract["total"] == 1
+    assert contract["items"][0]["instrument_type"] == "FUTSTK"
 
 
 def test_results_formatting_statistics_and_read_only(client, member):

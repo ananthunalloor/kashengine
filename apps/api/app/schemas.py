@@ -676,12 +676,23 @@ class Today(Schema):
     )
 
 
+class CompanyListing(Schema):
+    """One exchange-specific equity ticker for a company."""
+
+    exchange: str
+    symbol: str
+    instrument_key: str
+
+
 class CompanyItem(Schema):
     """Company directory display fields, without scraped data or internal aliases."""
 
     id: int = Field(description="Company primary key.")
     name: str = Field(description="Company name, rendered as plain text.")
     symbol: str = Field(description="NSE or BSE symbol.")
+    listings: list[CompanyListing] = Field(
+        description="Available exchange-specific equity listings."
+    )
     sector: str = Field(description="Sector, or empty when unknown.")
     screener_url: str = Field(description="Source URL; the browser only links HTTP(S) URLs.")
     last_updated: datetime | None = Field(description="Last data fetch, or null if never fetched.")
@@ -799,6 +810,35 @@ class CompanyMarketPage(Schema):
     total: int
     page_size: int
     upstox_enabled: bool
+
+
+class ExchangeInstrumentItem(Schema):
+    """One active instrument in the NSE/BSE daily catalog."""
+
+    instrument_key: str
+    exchange: str
+    segment: str
+    trading_symbol: str
+    name: str
+    instrument_type: str
+    isin: str
+    underlying_symbol: str
+    expiry: dt.date | None
+    strike_price: float | None
+    lot_size: int | None
+    company_id: int | None
+
+
+class ExchangeInstrumentPage(Schema):
+    """Paginated NSE/BSE equity, index, futures, and options instruments."""
+
+    items: list[ExchangeInstrumentItem]
+    page: int
+    pages: int
+    total: int
+    page_size: int
+    segments: list[str]
+    instrument_types: list[str]
 
 
 class DeliveryItem(ReportDelivery):

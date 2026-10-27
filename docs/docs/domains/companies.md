@@ -10,10 +10,18 @@ Code: `apps/companies/`. Tasks: `companies.link_news`, `companies.refresh_stale`
 
 ## Records
 
-A `Company` has a symbol, a name, a sector, a list of aliases, the data from Screener.in and an optional
-Upstox instrument key.
+A `Company` has a name, a primary symbol, a sector, a list of aliases, an ISIN and an optional
+primary Upstox instrument key. The exchange instrument refresh groups NSE/BSE equity listings by
+ISIN, so one company record can show multiple exchange-specific symbols. It prefers the NSE symbol
+as the primary display value when both listings exist. Each Upstox key stays attached to its exact
+exchange instrument; a catalog refresh does not enable quote ingestion for every listed company.
 You can add companies with the command `import_companies` (a CSV file with the columns symbol,
 name, sector and aliases, or the built-in starter list with `--starter`).
+Run `python manage.py refresh_instruments` to import the active NSE/BSE listings and link them to
+companies by ISIN. NSE main-board and SME share series and BSE share series are included; funds,
+bonds and other non-share cash instruments remain in the full instrument catalog without being
+presented as companies. The refresh also updates the separate instrument catalog and runs daily
+at 06:20 IST.
 
 ## Match companies in news
 
@@ -42,9 +50,10 @@ articles. The command `link_news --all` checks all articles.
 | `CompanyFundamentals` | A full copy of the profile, the key ratios and the statements. Old copies stay. |
 | `CompanyOutlook` | The experimental outlook for the next session, with its inputs. |
 
-A company gets Upstox data only after an administrator enters its exact **instrument key** in Django
-admin (for example `NSE_EQ|INE002A01018`). The key must match the pattern of an NSE or BSE
-equity key. The code never guesses a key from a symbol. One key can belong to one company.
+A company gets Upstox fundamentals, quotes and candles only for its primary exact **instrument
+key** (for example `NSE_EQ|INE002A01018`). The directory also shows its other NSE/BSE equity
+listings, but those listings do not imply that a quote or fundamentals are saved for each exchange.
+The code never guesses a provider key from a symbol.
 
 The pages read these tables only. No page calls Upstox.
 
