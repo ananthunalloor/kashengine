@@ -16,6 +16,7 @@ from apps.companies.outlook import save_outlook
 from apps.siteconfig import conf
 
 from .evaluation import evaluate_pending
+from .index_constituents import refresh_index_constituents
 from .instrument_master import refresh_instruments
 from .prediction import make_prediction
 from .quotes import fetch_quotes as fetch_all_quotes
@@ -36,6 +37,14 @@ def refresh_instrument_master() -> dict:
     """
     result = refresh_instruments()
     logger.info("Exchange instrument catalog refreshed: %s", result)
+    return result
+
+
+@shared_task(name="markets.refresh_index_constituents", soft_time_limit=600)
+def refresh_index_memberships() -> dict:
+    """Refresh official Nifty index membership without hiding provider failures."""
+    result = refresh_index_constituents()
+    logger.info("Nifty index constituents refreshed: %s", result)
     return result
 
 

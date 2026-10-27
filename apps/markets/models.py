@@ -114,6 +114,35 @@ class MarketInstrument(models.Model):
         return f"{self.exchange}:{self.trading_symbol}"
 
 
+class IndexConstituent(models.Model):
+    """A company membership in an official Nifty index constituent file."""
+
+    index_code = models.CharField(max_length=30)
+    symbol = models.CharField(max_length=50)
+    isin = models.CharField(max_length=12)
+    company = models.ForeignKey(
+        "companies.Company",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="index_memberships",
+    )
+    refreshed_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering: ClassVar[list[str]] = ["index_code", "symbol"]
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            models.UniqueConstraint(fields=["index_code", "symbol"], name="unique_index_symbol"),
+        ]
+        indexes: ClassVar[list[models.Index]] = [
+            models.Index(fields=["index_code", "company"]),
+        ]
+
+    def __str__(self):
+        """Return the index and its company symbol."""
+        return f"{self.index_code}: {self.symbol}"
+
+
 class IndexQuote(models.Model):
     """The close of one day for one symbol (an index or a global cue), from Yahoo Finance.
 

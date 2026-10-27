@@ -18,7 +18,7 @@ from apps.web.queries import DASHBOARD_ITEMS, NEWS_WINDOW_HOURS, dashboard_ipos,
 from apps.web.templatetags.web_extras import rupees, signed, times
 
 from .auth import AppSession
-from .markets import market_quotes, market_stats
+from .markets import company_movers, market_quotes, market_stats
 from .reports import summary as report_summary
 from .schemas import Today
 from .stocks_watch import stocks_to_watch
@@ -84,6 +84,7 @@ def get_today(request: HttpRequest):
             "outlook": formatted,
             "stats": market_stats(),
             "quotes": market_quotes(),
+            "movers": company_movers(),
         }
     if access.can("news"):
         news = gather_news(now - timedelta(hours=NEWS_WINDOW_HOURS), limit=DASHBOARD_ITEMS)

@@ -4,6 +4,7 @@ from django.core.paginator import Paginator
 from django.db.models import OuterRef, Q, Subquery
 from django.http import HttpRequest
 from django.template.defaultfilters import floatformat
+from django.utils import timezone
 from ninja import Field, Query, Router
 
 from apps.api.v1.common import ERRORS, ERRORS_WITH_VALIDATION
@@ -184,6 +185,49 @@ def market_quotes() -> list[dict]:
         }
         for quote in latest_quotes()
     ]
+
+
+def company_movers() -> dict:
+    """Rank the latest saved company quotes and calculate breadth for that quote set."""
+    latest = CompanyQuote.objects.filter(
+        company=OuterRef("pk"), instrument_key=OuterRef("upstox_instrument_key")
+    ).order_by("-as_of")
+    companies = Company.objects.filter(upstox_instrument_key__gt="").annotate(
+        quote_id=Subquery(latest.values("pk")[:1])
+    )
+    companies = companies.exclude(quote_id__isnull=True).only("id", "name", "symbol")
+    quotes = CompanyQuote.objects.in_bulk(
+        company.quote_id for company in companies if company.quote_id is not None
+    )
+    changes = []
+    for company in companies:
+        quote = quotes[company.quote_id]
+        if quote.previous_close is None or quote.previous_close <= 0:
+            continue
+        change_pct = (quote.price / quote.previous_close - 1) * 100
+        changes.append(
+            {
+                "id": company.pk,
+                "name": company.name,
+                "symbol": company.symbol,
+                "price": quote.price,
+                "change_pct": change_pct,
+                "as_of": quote.as_of,
+            }
+        )
+    latest_day = timezone.localdate(max(row["as_of"] for row in changes)) if changes else None
+    changes = [row for row in changes if timezone.localdate(row["as_of"]) == latest_day]
+    gainers = [row for row in changes if row["change_pct"] > 0]
+    losers = [row for row in changes if row["change_pct"] < 0]
+    return {
+        "as_of": max((row["as_of"] for row in changes), default=None),
+        "coverage": len(changes),
+        "advancing": sum(row["change_pct"] > 0 for row in changes),
+        "declining": sum(row["change_pct"] < 0 for row in changes),
+        "unchanged": sum(row["change_pct"] == 0 for row in changes),
+        "gainers": sorted(gainers, key=lambda row: (-row["change_pct"], row["name"]))[:5],
+        "losers": sorted(losers, key=lambda row: (row["change_pct"], row["name"]))[:5],
+    }
 
 
 @router.get(

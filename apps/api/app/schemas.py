@@ -565,12 +565,36 @@ class TodayOutlook(Schema):
     notes: list[str]
 
 
+class CompanyMover(Schema):
+    """One company with the strongest positive or negative saved session change."""
+
+    id: int
+    name: str
+    symbol: str
+    price: float
+    change_pct: float
+    as_of: datetime
+
+
+class MarketMovers(Schema):
+    """Top changes and breadth across companies with saved Upstox quote snapshots."""
+
+    as_of: datetime | None
+    coverage: int
+    advancing: int
+    declining: int
+    unchanged: int
+    gainers: list[CompanyMover]
+    losers: list[CompanyMover]
+
+
 class TodayMarkets(Schema):
     """Markets section; omitted entirely when Markets is unavailable."""
 
     outlook: TodayOutlook | None
     stats: MarketStats
     quotes: list[MarketQuote]
+    movers: MarketMovers
 
 
 class TodayStory(Schema):
@@ -698,15 +722,28 @@ class CompanyItem(Schema):
     last_updated: datetime | None = Field(description="Last data fetch, or null if never fetched.")
 
 
+class CompanyIndexFilter(Schema):
+    """A supported Nifty index filter and its current locally matched company count."""
+
+    value: str
+    label: str
+    count: int
+
+
 class CompanyPage(Schema):
     """A page of the company directory, ordered by name."""
 
-    items: list[CompanyItem] = Field(description="Companies matching name, symbol, or sector.")
+    items: list[CompanyItem] = Field(
+        description="Companies matching the current search and filter criteria."
+    )
     page: int = Field(description="Resolved page number, starting at one.")
     pages: int = Field(description="Total pages; one when empty.")
     total: int = Field(description="Total matching companies.")
     page_size: int = Field(default=25, description="Resolved number of rows per page.")
     sectors: list[str] = Field(default_factory=list, description="All nonempty sectors, sorted.")
+    indices: list[CompanyIndexFilter] = Field(
+        default_factory=list, description="Supported index constituent filters and their counts."
+    )
 
 
 class CompanyPrice(Schema):

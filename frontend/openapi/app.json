@@ -1239,6 +1239,17 @@
           },
           {
             "in": "query",
+            "name": "index",
+            "schema": {
+              "default": "",
+              "pattern": "^($|NIFTY_50|NIFTY_NEXT_50|NIFTY_100|NIFTY_200|NIFTY_500|NIFTY_MIDCAP_50|NIFTY_MIDCAP_100|NIFTY_MIDCAP_150|NIFTY_SMALLCAP_50|NIFTY_SMALLCAP_100|NIFTY_SMALLCAP_250)$",
+              "title": "Index",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
             "name": "sort",
             "schema": {
               "default": "",
@@ -4884,6 +4895,12 @@
             "title": "Sector",
             "type": "string"
           },
+          "index": {
+            "default": "",
+            "pattern": "^($|NIFTY_50|NIFTY_NEXT_50|NIFTY_100|NIFTY_200|NIFTY_500|NIFTY_MIDCAP_50|NIFTY_MIDCAP_100|NIFTY_MIDCAP_150|NIFTY_SMALLCAP_50|NIFTY_SMALLCAP_100|NIFTY_SMALLCAP_250)$",
+            "title": "Index",
+            "type": "string"
+          },
           "sort": {
             "default": "",
             "pattern": "^(|-?(name|symbol|sector|last_updated))$",
@@ -4894,11 +4911,35 @@
         "title": "CompanyFilters",
         "type": "object"
       },
+      "CompanyIndexFilter": {
+        "description": "A supported Nifty index filter and its current locally matched company count.",
+        "properties": {
+          "value": {
+            "title": "Value",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "value",
+          "label",
+          "count"
+        ],
+        "title": "CompanyIndexFilter",
+        "type": "object"
+      },
       "CompanyPage": {
         "description": "A page of the company directory, ordered by name.",
         "properties": {
           "items": {
-            "description": "Companies matching name, symbol, or sector.",
+            "description": "Companies matching the current search and filter criteria.",
             "items": {
               "$ref": "#/components/schemas/CompanyItem"
             },
@@ -4932,6 +4973,14 @@
               "type": "string"
             },
             "title": "Sectors",
+            "type": "array"
+          },
+          "indices": {
+            "description": "Supported index constituent filters and their counts.",
+            "items": {
+              "$ref": "#/components/schemas/CompanyIndexFilter"
+            },
+            "title": "Indices",
             "type": "array"
           }
         },
@@ -5033,6 +5082,104 @@
           "items"
         ],
         "title": "DeliveryPage",
+        "type": "object"
+      },
+      "CompanyMover": {
+        "description": "One company with the strongest positive or negative saved session change.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "price": {
+            "title": "Price",
+            "type": "number"
+          },
+          "change_pct": {
+            "title": "Change Pct",
+            "type": "number"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "symbol",
+          "price",
+          "change_pct",
+          "as_of"
+        ],
+        "title": "CompanyMover",
+        "type": "object"
+      },
+      "MarketMovers": {
+        "description": "Top changes and breadth across companies with saved Upstox quote snapshots.",
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "coverage": {
+            "title": "Coverage",
+            "type": "integer"
+          },
+          "advancing": {
+            "title": "Advancing",
+            "type": "integer"
+          },
+          "declining": {
+            "title": "Declining",
+            "type": "integer"
+          },
+          "unchanged": {
+            "title": "Unchanged",
+            "type": "integer"
+          },
+          "gainers": {
+            "items": {
+              "$ref": "#/components/schemas/CompanyMover"
+            },
+            "title": "Gainers",
+            "type": "array"
+          },
+          "losers": {
+            "items": {
+              "$ref": "#/components/schemas/CompanyMover"
+            },
+            "title": "Losers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "coverage",
+          "advancing",
+          "declining",
+          "unchanged",
+          "gainers",
+          "losers"
+        ],
+        "title": "MarketMovers",
         "type": "object"
       },
       "StockWatchItem": {
@@ -5422,12 +5569,16 @@
             },
             "title": "Quotes",
             "type": "array"
+          },
+          "movers": {
+            "$ref": "#/components/schemas/MarketMovers"
           }
         },
         "required": [
           "outlook",
           "stats",
-          "quotes"
+          "quotes",
+          "movers"
         ],
         "title": "TodayMarkets",
         "type": "object"

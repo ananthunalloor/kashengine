@@ -36,6 +36,33 @@ const data: Today = {
       enough_results: false,
     },
     quotes: [{ name: "Nifty 50", day: "2026-10-16", close: "24500.00", change: "+0.40%" }],
+    movers: {
+      as_of: "2026-10-19T03:45:00Z",
+      coverage: 3,
+      advancing: 1,
+      declining: 1,
+      unchanged: 1,
+      gainers: [
+        {
+          id: 1,
+          name: "Alpha Company",
+          symbol: "ALPHA",
+          price: 110,
+          change_pct: 10,
+          as_of: "2026-10-19T03:45:00Z",
+        },
+      ],
+      losers: [
+        {
+          id: 2,
+          name: "Beta Company",
+          symbol: "BETA",
+          price: 90,
+          change_pct: -10,
+          as_of: "2026-10-19T03:45:00Z",
+        },
+      ],
+    },
   },
   news: {
     since: "2026-10-17T15:30:00Z",
@@ -171,6 +198,12 @@ it("renders the dated overview, evidence, baseline and colored values without in
   expect(screen.getByText("2.8/10")).toHaveAttribute("data-tone", "negative");
   expect(screen.getByText("\u22121.25%")).toHaveAttribute("data-tone", "negative");
   expect(screen.getByText("+0.40%")).toHaveAttribute("data-tone", "positive");
+  expect(screen.getByRole("heading", { name: "Stock movement" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "ALPHA" })).toHaveAttribute("href", "/companies/1/");
+  expect(screen.getByText("+10.00%")).toBeInTheDocument();
+  expect(screen.getByRole("article", { name: "Market breadth" })).toHaveTextContent(
+    "3 saved quotes with a previous close",
+  );
   expect(screen.getByText(/right on 1 of 2/)).toHaveTextContent("too few results");
   expect(screen.getByText("<b>Saved outlook note</b>")).toBeInTheDocument();
   expect(screen.getByText("<b>Plain explanation</b>")).toBeInTheDocument();

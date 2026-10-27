@@ -6,7 +6,7 @@ import pytest
 
 from apps.access.models import FeatureBlock
 from apps.companies.models import Company
-from apps.markets.models import MarketInstrument
+from apps.markets.models import IndexConstituent, MarketInstrument
 from apps.siteconfig import conf
 from apps.web.queries import company_queryset
 
@@ -73,17 +73,50 @@ def test_search_trimming_and_page_clamping(client, member, companies, settings):
     assert client.get(URL, {"page": -1}).json()["page"] == 1
     assert client.get(URL, {"q": " ALPHA "}).json()["total"] == 1
     empty = client.get(URL, {"q": "unmatched", "page": 99}).json()
-    assert empty == {
-        "items": [],
-        "total": 0,
-        "page": 1,
-        "pages": 1,
-        "page_size": 1,
-        "sectors": ["Finance", "Manufacturing", "Services"],
+    assert empty["items"] == []
+    assert empty["total"] == 0
+    assert empty["page"] == empty["pages"] == 1
+    assert empty["page_size"] == 1
+    assert empty["sectors"] == ["Finance", "Manufacturing", "Services"]
+    assert len(empty["indices"]) == 11
+    assert all(index["count"] == 0 for index in empty["indices"])
+
+
+def test_index_filter_returns_only_current_constituents(client, member, companies):
+    IndexConstituent.objects.create(
+        index_code="NIFTY_50",
+        symbol="BETA",
+        isin="INE000A01002",
+        company=companies[1],
+    )
+    IndexConstituent.objects.create(
+        index_code="NIFTY_100",
+        symbol="GAMMA",
+        isin="INE000A01003",
+        company=companies[2],
+    )
+    client.force_login(member)
+
+    body = client.get(URL, {"index": "NIFTY_50"}).json()
+
+    assert body["total"] == 1
+    assert body["items"][0]["symbol"] == "BETA"
+    assert next(item for item in body["indices"] if item["value"] == "NIFTY_50") == {
+        "value": "NIFTY_50",
+        "label": "Nifty 50",
+        "count": 1,
     }
 
 
-@pytest.mark.parametrize("params", [{"q": "x" * 101}, {"page": "invalid"}, {"page": "1.5"}])
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"q": "x" * 101},
+        {"page": "invalid"},
+        {"page": "1.5"},
+        {"index": "NOT_AN_INDEX"},
+    ],
+)
 def test_invalid_filters_return_problem(client, member, params):
     client.force_login(member)
     response = client.get(URL, params)
@@ -132,6 +165,7 @@ def test_display_only_fields_and_read_only_behavior(client, member):
         "last_updated": "2026-10-16T23:00:00Z",
     }
     assert body["items"][1]["last_updated"] is None
+    assert len(body["indices"]) == 11
     assert "aliases" not in row
     assert "screener_data" not in row
     assert "no-store" in response["Cache-Control"]

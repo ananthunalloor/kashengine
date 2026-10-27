@@ -6,6 +6,7 @@ list again. All times are IST. Each entry is (name, task, minute, hour, day of w
 
 DEFAULT_SCHEDULE: tuple[tuple[str, str, str, str, str], ...] = (
     ("refresh-exchange-instruments", "markets.refresh_instruments", "20", "6", "*"),
+    ("refresh-nifty-index-constituents", "markets.refresh_index_constituents", "30", "6", "*"),
     ("upstox-company-quotes", "markets.upstox_quotes", "*/5", "*", "*"),
     ("upstox-data-refresh", "markets.upstox_refresh", "10", "*/6", "*"),
     ("fetch-news-feeds", "news.fetch_feeds", "5", "*/3", "*"),

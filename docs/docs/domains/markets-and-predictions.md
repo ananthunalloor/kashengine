@@ -86,6 +86,13 @@ quote feed: it does not create historical or live prices for every catalog entry
 the current Upstox instrument master and can differ from the exchanges' complete official security
 lists. See the [Upstox instrument master documentation](https://upstox.com/developer/api-documentation/instruments/).
 
+The Companies filters use NSE Indices constituent CSVs for Nifty broad-market, Midcap and Smallcap
+indexes. `markets.refresh_index_constituents` validates and saves these lists daily at 06:30 IST;
+`python manage.py refresh_index_constituents` runs it manually. On Today, the gainers, losers and
+market-breadth cards use the latest saved company quotes with a previous close, restricted to the
+most recent quote date. They are not full-market rankings: coverage depends on companies with
+Upstox quotes saved in this app.
+
 Upstox is **off** until a superuser turns on `UPSTOX_ENABLED` and saves `UPSTOX_ACCESS_TOKEN` on
 **Ops > Settings**. The token is a secret. It goes in the `Authorization` header only, never in a
 URL, a log line or an error text. The code does not renew the token. An expired token gives a clear

@@ -624,7 +624,19 @@ export const zCompanyFilters = z.object({
     page_size: z.int().gte(1).lte(100).nullish(),
     q: z.string().max(100).optional().default(''),
     sector: z.string().max(100).optional().default(''),
+    index: z.string().regex(/^($|NIFTY_50|NIFTY_NEXT_50|NIFTY_100|NIFTY_200|NIFTY_500|NIFTY_MIDCAP_50|NIFTY_MIDCAP_100|NIFTY_MIDCAP_150|NIFTY_SMALLCAP_50|NIFTY_SMALLCAP_100|NIFTY_SMALLCAP_250)$/).optional().default(''),
     sort: z.string().regex(/^(|-?(name|symbol|sector|last_updated))$/).optional().default('')
+});
+
+/**
+ * CompanyIndexFilter
+ *
+ * A supported Nifty index filter and its current locally matched company count.
+ */
+export const zCompanyIndexFilter = z.object({
+    value: z.string(),
+    label: z.string(),
+    count: z.int()
 });
 
 /**
@@ -638,7 +650,8 @@ export const zCompanyPage = z.object({
     pages: z.int(),
     total: z.int(),
     page_size: z.int().optional().default(25),
-    sectors: z.array(z.string()).optional()
+    sectors: z.array(z.string()).optional(),
+    indices: z.array(zCompanyIndexFilter).optional()
 });
 
 /**
@@ -664,6 +677,35 @@ export const zDeliveryItem = z.object({
 export const zDeliveryPage = z.object({
     chat_count: z.int(),
     items: z.array(zDeliveryItem)
+});
+
+/**
+ * CompanyMover
+ *
+ * One company with the strongest positive or negative saved session change.
+ */
+export const zCompanyMover = z.object({
+    id: z.int(),
+    name: z.string(),
+    symbol: z.string(),
+    price: z.number(),
+    change_pct: z.number(),
+    as_of: z.iso.datetime()
+});
+
+/**
+ * MarketMovers
+ *
+ * Top changes and breadth across companies with saved Upstox quote snapshots.
+ */
+export const zMarketMovers = z.object({
+    as_of: z.iso.datetime().nullable(),
+    coverage: z.int(),
+    advancing: z.int(),
+    declining: z.int(),
+    unchanged: z.int(),
+    gainers: z.array(zCompanyMover),
+    losers: z.array(zCompanyMover)
 });
 
 /**
@@ -736,7 +778,8 @@ export const zTodayOutlook = z.object({
 export const zTodayMarkets = z.object({
     outlook: zTodayOutlook.nullable(),
     stats: zMarketStats,
-    quotes: z.array(zMarketQuote)
+    quotes: z.array(zMarketQuote),
+    movers: zMarketMovers
 });
 
 /**
@@ -1378,6 +1421,7 @@ export const zListAppCompaniesQuery = z.object({
     page_size: z.int().gte(1).lte(100).nullish(),
     q: z.string().max(100).optional().default(''),
     sector: z.string().max(100).optional().default(''),
+    index: z.string().regex(/^($|NIFTY_50|NIFTY_NEXT_50|NIFTY_100|NIFTY_200|NIFTY_500|NIFTY_MIDCAP_50|NIFTY_MIDCAP_100|NIFTY_MIDCAP_150|NIFTY_SMALLCAP_50|NIFTY_SMALLCAP_100|NIFTY_SMALLCAP_250)$/).optional().default(''),
     sort: z.string().regex(/^(|-?(name|symbol|sector|last_updated))$/).optional().default('')
 });
 

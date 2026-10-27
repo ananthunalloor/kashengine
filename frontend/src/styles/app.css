@@ -2102,6 +2102,18 @@ h2 {
   margin-top: 1.5rem;
 }
 
+.today-mover-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--mantine-spacing-sm);
+}
+
+@media (max-width: 48em) {
+  .today-mover-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .account-token-table {
   margin-top: 1.5rem;
 }

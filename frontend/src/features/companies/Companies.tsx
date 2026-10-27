@@ -36,7 +36,7 @@ export function Companies({
   useEffect(() => {
     setQuery(filters.q);
     return () => clearTimeout(timer.current);
-  }, [filters.q, filters.page, filters.sector, filters.sort, filters.page_size]);
+  }, [filters.q, filters.page, filters.sector, filters.index, filters.sort, filters.page_size]);
 
   function apply(q: string, replace = false) {
     clearTimeout(timer.current);
@@ -91,6 +91,40 @@ export function Companies({
           ))}
         </select>
       </TableFilterField>
+      <TableFilterField label="Nifty index" htmlFor="company-index">
+        <select
+          id="company-index"
+          value={filters.index ?? ""}
+          onChange={(event) => {
+            clearTimeout(timer.current);
+            onFilter({
+              ...filters,
+              q: query.trim(),
+              index: event.target.value,
+              page: 1,
+            });
+          }}
+        >
+          <option value="">All indexes</option>
+          {data.indices?.map((index) => (
+            <option key={index.value} value={index.value}>
+              {index.label} ({index.count})
+            </option>
+          ))}
+        </select>
+      </TableFilterField>
+      {data.indices?.length && !data.indices.some((index) => index.count > 0) ? (
+        <Text c="dimmed" size="xs" role="status">
+          Index membership lists have not been loaded yet.
+          {isStaff && (
+            <>
+              {" "}
+              Run <code>python manage.py refresh_index_constituents</code> after the source is
+              reachable.
+            </>
+          )}
+        </Text>
+      ) : null}
       <Group gap="xs">
         <Button type="submit" leftSection={<LuSearch aria-hidden="true" />}>
           Search
@@ -102,7 +136,7 @@ export function Companies({
           onClick={() => {
             setQuery("");
             clearTimeout(timer.current);
-            onFilter({ ...filters, q: "", sector: undefined, page: 1 });
+            onFilter({ ...filters, q: "", sector: undefined, index: "NIFTY_50", page: 1 });
             searchInput.current?.focus();
           }}
         >

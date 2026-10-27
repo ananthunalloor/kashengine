@@ -1730,9 +1730,33 @@ export type CompanyFilters = {
      */
     sector?: string;
     /**
+     * Index
+     */
+    index?: string;
+    /**
      * Sort
      */
     sort?: string;
+};
+
+/**
+ * CompanyIndexFilter
+ *
+ * A supported Nifty index filter and its current locally matched company count.
+ */
+export type CompanyIndexFilter = {
+    /**
+     * Value
+     */
+    value: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Count
+     */
+    count: number;
 };
 
 /**
@@ -1744,7 +1768,7 @@ export type CompanyPage = {
     /**
      * Items
      *
-     * Companies matching name, symbol, or sector.
+     * Companies matching the current search and filter criteria.
      */
     items: Array<CompanyItem>;
     /**
@@ -1777,6 +1801,12 @@ export type CompanyPage = {
      * All nonempty sectors, sorted.
      */
     sectors?: Array<string>;
+    /**
+     * Indices
+     *
+     * Supported index constituent filters and their counts.
+     */
+    indices?: Array<CompanyIndexFilter>;
 };
 
 /**
@@ -1847,6 +1877,74 @@ export type DeliveryPage = {
      * Newest 50 send attempts, newest first.
      */
     items: Array<DeliveryItem>;
+};
+
+/**
+ * CompanyMover
+ *
+ * One company with the strongest positive or negative saved session change.
+ */
+export type CompanyMover = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Symbol
+     */
+    symbol: string;
+    /**
+     * Price
+     */
+    price: number;
+    /**
+     * Change Pct
+     */
+    change_pct: number;
+    /**
+     * As Of
+     */
+    as_of: string;
+};
+
+/**
+ * MarketMovers
+ *
+ * Top changes and breadth across companies with saved Upstox quote snapshots.
+ */
+export type MarketMovers = {
+    /**
+     * As Of
+     */
+    as_of: string | null;
+    /**
+     * Coverage
+     */
+    coverage: number;
+    /**
+     * Advancing
+     */
+    advancing: number;
+    /**
+     * Declining
+     */
+    declining: number;
+    /**
+     * Unchanged
+     */
+    unchanged: number;
+    /**
+     * Gainers
+     */
+    gainers: Array<CompanyMover>;
+    /**
+     * Losers
+     */
+    losers: Array<CompanyMover>;
 };
 
 /**
@@ -2082,6 +2180,7 @@ export type TodayMarkets = {
      * Quotes
      */
     quotes: Array<MarketQuote>;
+    movers: MarketMovers;
 };
 
 /**
@@ -3744,6 +3843,10 @@ export type ListAppCompaniesData = {
          * Exact sector, or all.
          */
         sector?: string;
+        /**
+         * Index
+         */
+        index?: string;
         /**
          * Sort
          */

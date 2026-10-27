@@ -23,6 +23,12 @@ bonds and other non-share cash instruments remain in the full instrument catalog
 presented as companies. The refresh also updates the separate instrument catalog and runs daily
 at 06:20 IST.
 
+The directory can also filter the official Nifty 50, Next 50, 100, 200, 500, Midcap 50/100/150,
+and Smallcap 50/100/250 constituent groups. Run `python manage.py refresh_index_constituents` once
+after deployment and to update them manually; the task runs daily at 06:30 IST. The importer
+validates every CSV before replacing any saved memberships and matches constituents to companies
+by ISIN.
+
 ## Match companies in news
 
 `CompanyMatcher` finds the companies that a text names. The rules are simple on purpose, so that

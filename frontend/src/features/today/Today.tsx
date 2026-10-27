@@ -1,4 +1,4 @@
-import { Anchor, Stack, Text, Title } from "@mantine/core";
+import { Anchor, Group, Paper, Stack, Text, Title } from "@mantine/core";
 import { Link } from "@tanstack/react-router";
 import { LuArrowDownRight, LuArrowRight, LuArrowUpRight, LuHouse } from "react-icons/lu";
 
@@ -13,6 +13,8 @@ import { MarketCloses, MarketDate } from "../markets/MarketCloses";
 import { StocksToWatch } from "./StocksToWatch";
 import { useLiveQuotes } from "../../shared/api/liveQuotes";
 import { LiveIndices } from "../../shared/ui/LiveMarket";
+
+type SavedMarketMoversData = NonNullable<TodayData["markets"]>["movers"];
 
 export function Today({ data, session }: { data: TodayData; session: Session }) {
   usePageTitle("Today");
@@ -81,6 +83,7 @@ export function Today({ data, session }: { data: TodayData; session: Session }) 
           <LiveIndices live={live} />
         </div>
       )}
+      {markets && <SavedMarketMovers movers={markets.movers} />}
       {data.stocks_watch && (
         <StocksToWatch data={data.stocks_watch} live={markets ? live.companies : undefined} />
       )}
@@ -377,5 +380,99 @@ export function Today({ data, session }: { data: TodayData; session: Session }) 
         </section>
       )}
     </Stack>
+  );
+}
+
+const moverTime = new Intl.DateTimeFormat("en-IN", {
+  timeZone: "Asia/Kolkata",
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+const moverPercent = new Intl.NumberFormat("en-IN", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+  signDisplay: "always",
+});
+
+function SavedMarketMovers({ movers }: { movers: SavedMarketMoversData }) {
+  const renderList = (
+    title: string,
+    rows: typeof movers.gainers,
+    tone: "positive" | "negative",
+  ) => (
+    <Paper withBorder p="md" component="article" aria-label={title}>
+      <Title order={3} size="h4" mb="sm">
+        {title}
+      </Title>
+      {rows.length ? (
+        <Stack gap="xs">
+          {rows.map((row) => (
+            <Group key={row.id} justify="space-between" gap="xs" wrap="nowrap">
+              <Link to="/companies/$id/" params={{ id: String(row.id) }}>
+                {row.symbol}
+              </Link>
+              <Text c={tone === "positive" ? "teal" : "red"} fw={600} size="sm">
+                {moverPercent.format(row.change_pct)}%
+              </Text>
+            </Group>
+          ))}
+        </Stack>
+      ) : (
+        <Text c="dimmed" size="sm">
+          No saved quotes with a price change.
+        </Text>
+      )}
+    </Paper>
+  );
+  return (
+    <section className="news-card" aria-labelledby="saved-market-movers">
+      <Group justify="space-between" align="start" mb="md" gap="xs" wrap="wrap">
+        <div>
+          <Title order={2} id="saved-market-movers" size="h3">
+            Stock movement
+          </Title>
+          <Text c="dimmed" size="sm">
+            Top changes and breadth from saved company quotes; coverage is limited to companies with
+            available quotes.
+          </Text>
+        </div>
+        {movers.as_of && (
+          <Text c="dimmed" size="xs">
+            Latest quote{" "}
+            <time dateTime={movers.as_of}>{moverTime.format(new Date(movers.as_of))} IST</time>
+          </Text>
+        )}
+      </Group>
+      <div className="today-mover-grid">
+        {renderList("Top gainers", movers.gainers, "positive")}
+        {renderList("Top losers", movers.losers, "negative")}
+        <Paper withBorder p="md" component="article" aria-label="Market breadth">
+          <Title order={3} size="h4" mb="sm">
+            Market breadth
+          </Title>
+          <Stack gap="xs">
+            <Group justify="space-between">
+              <Text c="dimmed">Advancing</Text>
+              <Text fw={700} c="teal">
+                {movers.advancing}
+              </Text>
+            </Group>
+            <Group justify="space-between">
+              <Text c="dimmed">Declining</Text>
+              <Text fw={700} c="red">
+                {movers.declining}
+              </Text>
+            </Group>
+            <Group justify="space-between">
+              <Text c="dimmed">Unchanged</Text>
+              <Text fw={700}>{movers.unchanged}</Text>
+            </Group>
+            <Text c="dimmed" size="xs">
+              {movers.coverage} saved quotes with a previous close
+            </Text>
+          </Stack>
+        </Paper>
+      </div>
+    </section>
   );
 }
