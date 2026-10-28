@@ -4,21 +4,25 @@ from django.core.paginator import Paginator
 from django.db.models import Count, Prefetch
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
-from ninja import Field, Query, Router
+from ninja import Field, Query, Router, Status
 
 from apps.access.middleware import access_for
+from apps.api.errors import ApiError
 from apps.api.v1.common import ERRORS_WITH_NOT_FOUND, ERRORS_WITH_VALIDATION
 from apps.companies.models import Company, CompanyQuote
 from apps.markets.index_constituents import INDEXES
 from apps.markets.models import IndexConstituent, MarketInstrument
+from apps.ops.jobs import JOBS_BY_KEY, JobBusyError, JobDispatchError, active_run, start_job
+from apps.ops.models import TaskRun
 from apps.siteconfig import conf
 from apps.web.queries import company_queryset
 
-from .auth import AppSession
+from .auth import AppSession, OpsSession
 from .schemas import CompanyDetail, CompanyPage
 from .tables import TableFilters, ordered
 
 router = Router(tags=["Companies"], auth=AppSession("companies"))
+COMPANY_LIST_REFRESH_JOB = JOBS_BY_KEY["refresh-exchange-instruments"]
 
 
 def company_item(company: Company, listings: list[MarketInstrument] | None = None) -> dict:
@@ -208,3 +212,42 @@ def list_companies(request: HttpRequest, filters: Query[CompanyFilters]):
             for code, label, _filename in INDEXES
         ],
     }
+
+
+@router.get(
+    "/company-catalog/refresh/{task_id}",
+    response={200: dict, **ERRORS_WITH_NOT_FOUND},
+    auth=OpsSession(),
+    operation_id="get_app_company_list_refresh",
+    summary="Read the status of an exchange-catalog refresh",
+)
+def company_list_refresh_status(request: HttpRequest, task_id: str):
+    """Return only the status of this tracked company-catalog refresh."""
+    run = get_object_or_404(
+        TaskRun,
+        task_id=task_id,
+        label=COMPANY_LIST_REFRESH_JOB.run_label,
+    )
+    return {"status": run.status}
+
+
+@router.post(
+    "/company-catalog/refresh",
+    response={202: dict, **ERRORS_WITH_VALIDATION},
+    auth=OpsSession(),
+    operation_id="refresh_app_company_list",
+    summary="Queue a refresh of the NSE/BSE company catalog",
+)
+def refresh_company_list(request: HttpRequest):
+    """Queue the tracked exchange-catalog refresh for staff."""
+    try:
+        run = start_job(COMPANY_LIST_REFRESH_JOB, request.user, request=request)
+    except JobBusyError:
+        run = active_run(COMPANY_LIST_REFRESH_JOB)
+        if run is None:
+            raise ApiError(
+                "server_error", "The company list update could not be started."
+            ) from None
+    except JobDispatchError as exc:
+        raise ApiError("server_error", str(exc)) from exc
+    return Status(202, {"task_id": run.task_id})

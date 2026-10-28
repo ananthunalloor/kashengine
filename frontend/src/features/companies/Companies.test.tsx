@@ -54,8 +54,19 @@ async function showCompanies({
   vi.stubGlobal("scrollTo", vi.fn());
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (input: string) => {
+    vi.fn(async (input: string, init?: RequestInit) => {
       const isSession = input === "/api/app/session";
+      if (input === "/api/app/company-catalog/refresh" && init?.method === "POST") {
+        return new Response(JSON.stringify({ task_id: "company-refresh-1" }), {
+          status: 202,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (input === "/api/app/company-catalog/refresh/company-refresh-1") {
+        return new Response(JSON.stringify({ status: "success" }), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       return new Response(
         JSON.stringify(
           isSession
@@ -217,6 +228,22 @@ it("hides import guidance for a filtered empty result", async () => {
   });
   expect(await screen.findByText(/No company matches/)).toBeInTheDocument();
   expect(screen.queryByText("python manage.py import_companies")).not.toBeInTheDocument();
+});
+
+it("lets staff refresh the exchange company catalog and reloads the directory", async () => {
+  await showCompanies({ staff: true });
+
+  fireEvent.click(await screen.findByRole("button", { name: "Update company list" }));
+
+  expect(await screen.findByText(/Company list updated/)).toBeInTheDocument();
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/app/company-catalog/refresh",
+    expect.objectContaining({ method: "POST", credentials: "same-origin" }),
+  );
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/app/company-catalog/refresh/company-refresh-1",
+    expect.anything(),
+  );
 });
 
 it.each([401, 403])("handles %s access errors within the shell", async (status) => {

@@ -1,17 +1,20 @@
 """Company directory preview parity, private display fields, and access control."""
 
 from datetime import UTC, datetime
+from unittest.mock import patch
 
 import pytest
 
 from apps.access.models import FeatureBlock
 from apps.companies.models import Company
 from apps.markets.models import IndexConstituent, MarketInstrument
+from apps.ops.models import TaskRun
 from apps.siteconfig import conf
 from apps.web.queries import company_queryset
 
 pytestmark = pytest.mark.django_db
 URL = "/api/app/companies"
+REFRESH_URL = "/api/app/company-catalog/refresh"
 
 
 @pytest.fixture
@@ -191,6 +194,34 @@ def test_search_matches_secondary_exchange_symbols(client, member):
     assert response.status_code == 200
     assert response.json()["total"] == 1
     assert response.json()["items"][0]["id"] == company.pk
+
+
+def test_staff_can_queue_and_check_company_catalog_refresh(client, staff):
+    client.force_login(staff)
+    token = client.get("/api/app/session").cookies["csrftoken"].value
+    with patch("apps.ops.jobs.dispatch"):
+        response = client.post(REFRESH_URL, headers={"X-CSRFToken": token})
+
+    assert response.status_code == 202
+    task_id = response.json()["task_id"]
+    run = TaskRun.objects.get(task_id=task_id)
+    assert run.label == "markets.refresh_instruments"
+    assert run.triggered_by == staff
+    assert run.trigger == TaskRun.Trigger.MANUAL
+
+    status = client.get(f"{REFRESH_URL}/{task_id}")
+    assert status.status_code == 200
+    assert status.json() == {"status": TaskRun.Status.PENDING}
+
+
+def test_non_staff_cannot_start_company_catalog_refresh(client, member):
+    client.force_login(member)
+    token = client.get("/api/app/session").cookies["csrftoken"].value
+
+    response = client.post(REFRESH_URL, headers={"X-CSRFToken": token})
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "feature_not_available"
 
 
 def test_preview_and_legacy_remain_separate(client, member):

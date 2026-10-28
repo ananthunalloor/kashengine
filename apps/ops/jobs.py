@@ -96,6 +96,14 @@ JOBS: tuple[Job, ...] = (
         group="Markets",
     ),
     Job(
+        "refresh-exchange-instruments",
+        "Refresh exchange instruments",
+        "Refresh the NSE/BSE catalog and add newly listed companies.",
+        TASK,
+        "markets.refresh_instruments",
+        group="Markets",
+    ),
+    Job(
         "upstox-quotes",
         "Refresh Upstox quotes",
         "Save company quotes during the saved trading session; no external calls from pages.",

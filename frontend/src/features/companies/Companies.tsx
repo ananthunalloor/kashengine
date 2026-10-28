@@ -1,14 +1,20 @@
-import { Anchor, Button, Group, Stack, Text, Title } from "@mantine/core";
+import { Alert, Button, Group, Stack, Text, Title } from "@mantine/core";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { LuBuilding2, LuSearch, LuX } from "react-icons/lu";
+import { LuBuilding2, LuRefreshCw, LuSearch, LuX } from "react-icons/lu";
 
-import type { CompanySearch } from "../../shared/api/companies";
+import {
+  companyListRefreshStatusQuery,
+  refreshCompanyList,
+  type CompanySearch,
+} from "../../shared/api/companies";
 import type { CompanyPage } from "../../shared/api/generated/types.gen";
 import { sourceLink } from "../../shared/ui/sourceLink";
 import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { DataTable } from "../../shared/ui/DataTable";
 import { TableFilterField, TableFilters } from "../../shared/ui/TableFilters";
+import { notifyError } from "../../shared/ui/notifications";
 
 const fetchedDate = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
@@ -30,8 +36,44 @@ export function Companies({
 }) {
   usePageTitle(`Companies${data.page > 1 ? ` - page ${data.page}` : ""}`);
   const [query, setQuery] = useState(filters.q);
+  const [refreshTaskId, setRefreshTaskId] = useState<string | null>(null);
+  const [refreshMessage, setRefreshMessage] = useState("");
+  const [refreshError, setRefreshError] = useState("");
+  const queryClient = useQueryClient();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const searchInput = useRef<HTMLInputElement>(null);
+  const refreshMutation = useMutation({
+    mutationFn: refreshCompanyList,
+    onSuccess: ({ task_id }) => {
+      setRefreshMessage(
+        "Updating the NSE/BSE catalog. Newly listed companies will appear when it finishes.",
+      );
+      setRefreshTaskId(task_id);
+    },
+    onError: (error) => {
+      setRefreshError("Could not start the company list update.");
+      notifyError(error, "Company list update failed");
+    },
+  });
+  const refreshStatus = useQuery({
+    ...companyListRefreshStatusQuery(refreshTaskId ?? ""),
+    enabled: isStaff && refreshTaskId !== null,
+  });
+
+  useEffect(() => {
+    if (!refreshTaskId || !refreshStatus.data) return;
+    if (refreshStatus.data.status === "pending" || refreshStatus.data.status === "started") return;
+    setRefreshTaskId(null);
+    if (refreshStatus.data.status === "success") {
+      setRefreshMessage(
+        "Company list updated. Select All indexes to view new listings outside the Nifty 50.",
+      );
+      void queryClient.invalidateQueries({ queryKey: ["app", "companies"] });
+    } else {
+      setRefreshMessage("");
+      setRefreshError("The company list update failed. Check the Ops job history for details.");
+    }
+  }, [queryClient, refreshStatus.data, refreshTaskId]);
 
   useEffect(() => {
     setQuery(filters.q);
@@ -152,10 +194,41 @@ export function Companies({
           <LuBuilding2 aria-hidden="true" />
           The companies behind the stories
         </Text>
-        <Title order={1}>Companies</Title>
-        <Text c="dimmed" mt="sm">
-          Saved company details, fundamentals, prices, trends and score evidence.
-        </Text>
+        <Group justify="space-between" align="flex-start">
+          <div>
+            <Title order={1}>Companies</Title>
+            <Text c="dimmed" mt="sm">
+              Saved company details, fundamentals, prices, trends and score evidence.
+            </Text>
+          </div>
+          {isStaff && (
+            <Button
+              type="button"
+              variant="default"
+              leftSection={<LuRefreshCw aria-hidden="true" />}
+              loading={refreshMutation.isPending || refreshTaskId !== null}
+              onClick={() => {
+                setRefreshMessage("");
+                setRefreshError("");
+                refreshMutation.mutate();
+              }}
+            >
+              Update company list
+            </Button>
+          )}
+        </Group>
+        {refreshMessage && <Text role="status">{refreshMessage}</Text>}
+        {refreshError && (
+          <Alert color="red" role="alert" title="Company list update failed">
+            {refreshError}
+          </Alert>
+        )}
+        {refreshTaskId && refreshStatus.error && (
+          <Alert color="red" role="alert" title="Update status unavailable">
+            Could not check whether the company list update has finished. The app will keep
+            checking.
+          </Alert>
+        )}
       </header>
       <section aria-label="Company results">
         <Text size="sm" c="dimmed" role="status" mb="md">

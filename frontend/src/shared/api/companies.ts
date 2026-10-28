@@ -45,6 +45,42 @@ export function companiesQuery(filters: CompanySearch) {
   });
 }
 
+export async function refreshCompanyList() {
+  const result = z.object({ task_id: z.string().min(1) }).safeParse(
+    await appRequest("/api/app/company-catalog/refresh", {
+      method: "POST",
+    }),
+  );
+  if (!result.success)
+    throw new ApiError(
+      "contract",
+      "The company list update response does not match this app. Reload the page.",
+    );
+  return result.data;
+}
+
+export function companyListRefreshStatusQuery(taskId: string) {
+  return queryOptions({
+    queryKey: ["app", "company-list-refresh", taskId],
+    refetchInterval: 1_500,
+    queryFn: async ({ signal }) => {
+      const result = z
+        .object({ status: z.enum(["pending", "started", "success", "failure"]) })
+        .safeParse(
+          await appRequest(`/api/app/company-catalog/refresh/${encodeURIComponent(taskId)}`, {
+            signal,
+          }),
+        );
+      if (!result.success)
+        throw new ApiError(
+          "contract",
+          "The company list update status does not match this app. Reload the page.",
+        );
+      return result.data;
+    },
+  });
+}
+
 export function companyQuery(id: string) {
   return queryOptions({
     queryKey: ["app", "company", id],

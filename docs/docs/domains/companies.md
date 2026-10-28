@@ -22,6 +22,8 @@ companies by ISIN. NSE main-board and SME share series and BSE share series are 
 bonds and other non-share cash instruments remain in the full instrument catalog without being
 presented as companies. The refresh also updates the separate instrument catalog and runs daily
 at 06:20 IST.
+Staff can also select **Update company list** on the Companies page to queue the same refresh.
+New NSE/BSE listings appear in the directory after the queued job completes.
 
 The directory can also filter the official Nifty 50, Next 50, 100, 200, 500, Midcap 50/100/150,
 and Smallcap 50/100/250 constituent groups. Run `python manage.py refresh_index_constituents` once
