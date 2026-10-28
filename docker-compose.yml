@@ -141,6 +141,8 @@ services:
   # One Upstox market-data WebSocket (full mode) for mapped companies and the stream indices.
   # It saves the newest values and broadcasts them to `realtime` through Redis. It waits and
   # retries while Upstox is off or has no token, so it is safe to keep running.
+  # Keep the feed as the main process: a file-watcher can stay alive after its child fails,
+  # preventing Docker's restart policy from recovering the feed.
   streamer:
     <<: *app
     command: python manage.py stream_upstox

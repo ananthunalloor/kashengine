@@ -72,6 +72,7 @@ export type CompanyMarketSearch = z.infer<typeof companyMarketSearchSchema>;
 export function companyMarketsQuery(filters: CompanyMarketSearch) {
   return queryOptions({
     queryKey: ["app", "company-markets", filters],
+    refetchInterval: 5_000,
     queryFn: async ({ signal }) => {
       const params = new URLSearchParams({ q: filters.q, page: String(filters.page) });
       tableParams(params, filters);

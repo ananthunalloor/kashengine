@@ -78,6 +78,15 @@ def test_live_market_services_have_only_the_networks_they_need(prod):
     assert sorted(prod["services"]["streamer"]["networks"]) == ["backend", "egress"]
 
 
+@pytest.mark.parametrize("environment", ["dev", "prod"])
+def test_streamer_runs_directly_under_docker_restart_policy(base, dev, prod, environment):
+    override = dev if environment == "dev" else prod
+    streamer = base["services"]["streamer"] | override["services"]["streamer"]
+    assert streamer["command"] == "python manage.py stream_upstox"
+    assert streamer["restart"] == "unless-stopped"
+    assert streamer["stop_signal"] == "SIGTERM"
+
+
 def test_caddy_sends_only_websockets_to_the_realtime_service():
     text = "\n".join(site_block_lines())
     assert "handle /ws/* {\n\t\treverse_proxy realtime:8001" in text

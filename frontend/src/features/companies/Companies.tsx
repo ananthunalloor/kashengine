@@ -156,9 +156,6 @@ export function Companies({
         <Text c="dimmed" mt="sm">
           Saved company details, fundamentals, prices, trends and score evidence.
         </Text>
-        <Anchor href="/companies/" size="sm">
-          Compare with the existing Companies page
-        </Anchor>
       </header>
       <section aria-label="Company results">
         <Text size="sm" c="dimmed" role="status" mb="md">

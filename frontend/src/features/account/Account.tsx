@@ -266,9 +266,6 @@ export function Account({ data }: { data: AccountData }) {
           {data.username}
           {data.email && ` \u00b7 ${data.email}`}
         </Text>
-        <Anchor href="/account/" size="sm">
-          Compare with the original Account page
-        </Anchor>
       </header>
       <section className="news-card" aria-labelledby="account-plan">
         <Title order={2} size="h3" id="account-plan">

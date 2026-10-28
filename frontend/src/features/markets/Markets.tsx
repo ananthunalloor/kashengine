@@ -49,9 +49,6 @@ export function Markets({ data, isStaff }: { data: MarketsData; isStaff: boolean
         >
           NSE &amp; BSE instruments
         </Link>
-        <Anchor href="/markets/" size="sm">
-          Compare with the original Markets page
-        </Anchor>
       </header>
 
       <section className="news-card" aria-labelledby="market-record">

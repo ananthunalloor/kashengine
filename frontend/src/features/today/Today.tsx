@@ -54,9 +54,6 @@ export function Today({ data, session }: { data: TodayData; session: Session }) 
           <time dateTime={data.today}>{formatReportDate(data.today)}</time>
           {" · "}Your latest saved outlook, stories, and issues.
         </Text>
-        <Anchor href="/dashboard/" size="sm">
-          Compare with the original Today page
-        </Anchor>
       </header>
 
       {!session.features.length && (

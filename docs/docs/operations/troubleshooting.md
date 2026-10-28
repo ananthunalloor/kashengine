@@ -161,7 +161,14 @@ A new account can sign in, but a regular user sees only **Account** until the em
    saved only in a trading session. Check the [trading calendar](../domains/markets-and-predictions.md#the-trading-calendar).
 4. The page `/markets/live` shows the error of each company.
 5. Live prices come from the `streamer` service. Read its log: `docker compose logs streamer`.
-   It retries forever, so a new token or mapping is used at the next connect.
+   It retries forever, so a new token or mapping is used at the next connect. Docker runs the
+   feed command directly and restarts the container if that command exits, including a failed
+   startup check. Persistent configuration errors still need fixing; a running container or
+   an accepted browser WebSocket does not prove that fresh ticks are arriving. Compare quote
+   timestamps with the current trading session.
+   The streamer has no dev file-watcher; after Python code edits, run
+   `docker compose restart streamer`. When upgrading from a watcher-based configuration, use
+   `docker compose up -d --no-deps streamer` to apply the new command.
 6. If the Today page shows "Connecting" or "Reconnecting" all the time, check the `realtime`
    service (`docker compose logs realtime`) and that Caddy routes `/ws/*` to it. A socket closed
    with code 4403 means the account has no Markets access.

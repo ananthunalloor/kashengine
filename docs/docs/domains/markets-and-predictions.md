@@ -188,7 +188,9 @@ The browser sends `{"type": "subscribe", "companies": [1, 2]}` (25 company ids a
 follow companies. The indices are always sent. The server closes the socket with code 4401 for a
 signed-out user and 4403 for an account without Markets access.
 
-The page `/markets/live` lists the saved quotes of the companies. It reads the database only.
+The page `/markets/live` lists the saved quotes of the companies. It reads the database only and
+refetches them every five seconds while the page is open. It does not open a browser WebSocket;
+the live WebSocket is used by Today and company-detail pages.
 
 ## The prediction rule
 

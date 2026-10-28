@@ -204,6 +204,10 @@ Upstox V3 market feed --(wss, protobuf, full mode)--> streamer (stream_upstox)
 - The worker reconnects forever with backoff of up to 60 s. While Upstox is off or has no token,
   it waits and retries, so a token saved in Ops is used without a restart. Company mappings and
   stream indices are read again on each reconnect.
+- Docker runs the feed command directly and restarts it if it exits, including startup-check
+  failures. The streamer does not use a file-watcher: after editing its Python code in dev,
+  run `docker compose restart streamer`. A container restart does not fix a persistent
+  configuration error; check `docker compose logs streamer` if quotes stay old.
 - Set the indices with `UPSTOX_STREAM_INDICES` (**Ops > Settings > Markets and prediction**,
   or the environment). Full mode allows 2000 instruments per connection, and indices count
   towards this limit. Run **only one** streamer per Upstox token.

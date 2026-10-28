@@ -54,9 +54,6 @@ export function Delivery({
             "The daily report is not sent to Telegram yet."
           )}
         </Text>
-        <Anchor href="/delivery/" size="sm">
-          Compare with the existing Delivery page
-        </Anchor>
       </header>
       <section aria-labelledby="delivery-attempts">
         <Title order={2} id="delivery-attempts" size="h3">

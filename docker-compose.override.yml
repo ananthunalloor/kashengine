@@ -6,7 +6,7 @@
 #   worker - watchfiles restarts Celery when a .py file changes.
 #   beat   - watchfiles restarts Celery beat when a .py file changes.
 #   realtime - Uvicorn reloads when a .py file changes.
-#   streamer - watchfiles restarts the Upstox stream when a .py file changes.
+#   streamer - Docker restarts the feed if it exits. After code edits, restart it manually.
 # Rebuild (docker compose up --build) only when pyproject.toml or uv.lock changes.
 #
 # Open https://localhost/ . Caddy makes a local certificate (see the README to trust it).
@@ -79,9 +79,6 @@ services:
       args:
         INSTALL_DEV: "true"
     env_file: .env.dev
-    command: watchfiles --filter python "python manage.py stream_upstox" /app/apps /app/config
-    environment:
-      WATCHFILES_FORCE_POLLING: "true"
     volumes:
       - .:/app
 

@@ -181,9 +181,6 @@ export function Ipos({
           The verdict comes from GMP, final subscription, and news. The rule is a first guess, and
           GMP is not official data.
         </Text>
-        <Anchor href="/ipos/" size="sm">
-          Compare with the existing IPO pages
-        </Anchor>
       </header>
       <section aria-label="IPO results">
         <Text role="status" size="sm" c="dimmed" mb="md">

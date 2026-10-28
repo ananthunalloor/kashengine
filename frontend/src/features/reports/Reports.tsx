@@ -125,9 +125,6 @@ export function ReportsList({
           are reformatted for viewing without changing the original text. Signal strength is not a
           probability of being right. <StrengthLegend />
         </Text>
-        <Anchor href="/reports/" size="sm">
-          Compare with the existing Reports pages
-        </Anchor>
       </header>
       <DataTable
         data={data.items}

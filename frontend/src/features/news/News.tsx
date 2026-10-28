@@ -144,9 +144,6 @@ export function News({
           positive). Relevance ranges from 1.0/10 to 10.0/10: green at 6.4 or above, amber below,
           and neutral when unavailable. Relevance is not market direction.
         </Text>
-        <Anchor href="/news/" size="sm">
-          Compare with the existing News page
-        </Anchor>
       </header>
       <section aria-label="News results">
         <Text size="sm" c="dimmed" role="status" mb="md">
