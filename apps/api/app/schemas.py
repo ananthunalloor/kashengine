@@ -400,6 +400,10 @@ class NewsItem(Schema):
     title: str = Field(description="Original article headline, rendered as plain text.")
     url: str = Field(description="Original source URL; the browser only links HTTP(S) URLs.")
     source: str = Field(description="Publisher name.")
+    coverage: Literal["india", "international"] = Field(
+        description="Whether the report covers India or international markets."
+    )
+    region: str = Field(description="Publisher region, for example South India or Europe.")
     published_at: datetime | None = Field(description="Publication time, when known.")
     sentiment: Literal["positive", "negative", "neutral", "unscored"] = Field(
         description="Display tone using the existing sentiment thresholds."

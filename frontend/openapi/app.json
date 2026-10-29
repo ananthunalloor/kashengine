@@ -422,6 +422,19 @@
           },
           {
             "in": "query",
+            "name": "coverage",
+            "schema": {
+              "default": "",
+              "description": "Coverage category: India, international, or all.",
+              "pattern": "^(|india|international)$",
+              "title": "Coverage",
+              "type": "string"
+            },
+            "required": false,
+            "description": "Coverage category: India, international, or all."
+          },
+          {
+            "in": "query",
             "name": "sentiment",
             "schema": {
               "default": "",
@@ -1319,6 +1332,166 @@
         "security": [
           {
             "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/company-catalog/refresh/{task_id}": {
+      "get": {
+        "operationId": "get_app_company_list_refresh",
+        "summary": "Read the status of an exchange-catalog refresh",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "schema": {
+              "title": "Task Id",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Return only the status of this tracked company-catalog refresh.",
+        "tags": [
+          "Companies"
+        ],
+        "security": [
+          {
+            "OpsSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/company-catalog/refresh": {
+      "post": {
+        "operationId": "refresh_app_company_list",
+        "summary": "Queue a refresh of the NSE/BSE company catalog",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Queue the tracked exchange-catalog refresh for staff.",
+        "tags": [
+          "Companies"
+        ],
+        "security": [
+          {
+            "OpsSession": []
           }
         ]
       }
@@ -3198,6 +3371,13 @@
             "title": "Source",
             "type": "string"
           },
+          "coverage": {
+            "default": "",
+            "description": "Coverage category: India, international, or all.",
+            "pattern": "^(|india|international)$",
+            "title": "Coverage",
+            "type": "string"
+          },
           "sentiment": {
             "default": "",
             "description": "Sentiment category, or empty for all.",
@@ -3257,6 +3437,20 @@
           "source": {
             "description": "Publisher name.",
             "title": "Source",
+            "type": "string"
+          },
+          "coverage": {
+            "description": "Whether the report covers India or international markets.",
+            "enum": [
+              "india",
+              "international"
+            ],
+            "title": "Coverage",
+            "type": "string"
+          },
+          "region": {
+            "description": "Publisher region, for example South India or Europe.",
+            "title": "Region",
             "type": "string"
           },
           "published_at": {
@@ -3326,6 +3520,8 @@
           "title",
           "url",
           "source",
+          "coverage",
+          "region",
           "published_at",
           "sentiment",
           "score",

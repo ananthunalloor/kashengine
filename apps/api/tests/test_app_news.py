@@ -23,6 +23,8 @@ def article(title, score=None, **kwargs):
         source=kwargs.pop("source", "Mint"),
         sentiment_score=score,
         scored_at=timezone.now() if score is not None else None,
+        coverage=kwargs.pop("coverage", "india"),
+        region=kwargs.pop("region", "India"),
         **kwargs,
     )
 
@@ -87,6 +89,19 @@ def test_combined_search_source_and_pagination(client, member, settings):
     assert client.get(URL, {**filters, "page": 999}).json()["page"] == 2
     assert client.get(URL, {"q": "Credit"}).json()["items"][0]["id"] == first.pk
     assert client.get(URL, {"page": -1}).json()["page"] == 1
+
+
+def test_coverage_filter_returns_region_metadata(client, member):
+    domestic = article("RBI holds rates", coverage="india", region="West India")
+    article("US Fed signals cut", coverage="international", region="North America")
+    client.force_login(member)
+
+    response = client.get(URL, {"coverage": "india"})
+    assert response.json()["total"] == 1
+    assert response.json()["items"][0]["id"] == domestic.pk
+    assert response.json()["items"][0]["coverage"] == "india"
+    assert response.json()["items"][0]["region"] == "West India"
+    assert client.get(URL, {"coverage": "unknown"}).status_code == 422
 
 
 def test_display_values_nulls_company_limit_and_private_headers(client, member):

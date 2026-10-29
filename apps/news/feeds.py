@@ -16,3 +16,5 @@ class Feed:
     url: str
     enabled: bool = True
     pk: int | None = None  # The NewsFeed row, if the feed comes from the database.
+    coverage: str = "india"
+    region: str = "India"

@@ -173,6 +173,7 @@ export const zNewsFilters = z.object({
     page_size: z.int().gte(1).lte(100).nullish(),
     q: z.string().max(100).optional().default(''),
     source: z.string().max(100).optional().default(''),
+    coverage: z.string().regex(/^(|india|international)$/).optional().default(''),
     sentiment: z.string().regex(/^(|positive|negative|neutral|unscored)$/).optional().default(''),
     sort: z.string().regex(/^(|-?(title|source|published_at|score|relevance))$/).optional().default('')
 });
@@ -197,6 +198,8 @@ export const zNewsItem = z.object({
     title: z.string(),
     url: z.string(),
     source: z.string(),
+    coverage: z.enum(['india', 'international']),
+    region: z.string(),
     published_at: z.iso.datetime().nullable(),
     sentiment: z.enum([
         'positive',
@@ -1345,6 +1348,7 @@ export const zListAppNewsQuery = z.object({
     page_size: z.int().gte(1).lte(100).nullish(),
     q: z.string().max(100).optional().default(''),
     source: z.string().max(100).optional().default(''),
+    coverage: z.string().regex(/^(|india|international)$/).optional().default(''),
     sentiment: z.string().regex(/^(|positive|negative|neutral|unscored)$/).optional().default(''),
     sort: z.string().regex(/^(|-?(title|source|published_at|score|relevance))$/).optional().default('')
 });
@@ -1431,6 +1435,24 @@ export const zListAppCompaniesQuery = z.object({
  * OK
  */
 export const zListAppCompaniesResponse = zCompanyPage;
+
+export const zGetAppCompanyListRefreshPath = z.object({
+    task_id: z.string()
+});
+
+/**
+ * Response
+ *
+ * OK
+ */
+export const zGetAppCompanyListRefreshResponse = z.record(z.string(), z.unknown());
+
+/**
+ * Response
+ *
+ * Accepted
+ */
+export const zRefreshAppCompanyListResponse = z.record(z.string(), z.unknown());
 
 /**
  * OK

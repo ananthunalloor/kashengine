@@ -142,6 +142,8 @@ def news_queryset(filters: dict[str, str]):
         )
     if filters["source"]:
         articles = articles.filter(source=filters["source"])
+    if filters.get("coverage"):
+        articles = articles.filter(coverage=filters["coverage"])
     match filters["sentiment"]:
         case "positive":
             articles = articles.filter(sentiment_score__gte=STORY_MIN_SCORE)

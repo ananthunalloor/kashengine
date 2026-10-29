@@ -126,10 +126,29 @@ class ScheduleForm(forms.Form):
 class FeedForm(forms.ModelForm):
     """Add a news feed."""
 
+    coverage = forms.ChoiceField(
+        choices=NewsFeed._meta.get_field("coverage").choices,
+        required=False,
+        initial="india",
+        widget=forms.Select(attrs={"class": INPUT}),
+    )
+    region = forms.CharField(
+        max_length=50,
+        required=False,
+        initial="India",
+        widget=forms.TextInput(attrs={"class": INPUT}),
+    )
+
     class Meta:
         model = NewsFeed
-        fields = ("source", "name", "url")
-        widgets: ClassVar[dict] = {name: forms.TextInput(attrs={"class": INPUT}) for name in fields}
+        fields = ("source", "name", "coverage", "region", "url")
+        widgets: ClassVar[dict] = {
+            "source": forms.TextInput(attrs={"class": INPUT}),
+            "name": forms.TextInput(attrs={"class": INPUT}),
+            "coverage": forms.Select(attrs={"class": INPUT}),
+            "region": forms.TextInput(attrs={"class": INPUT}),
+            "url": forms.TextInput(attrs={"class": INPUT}),
+        }
 
     def clean_url(self) -> str:
         """Only http and https addresses."""
@@ -138,6 +157,12 @@ class FeedForm(forms.ModelForm):
             msg = "Use an address that starts with http:// or https://."
             raise forms.ValidationError(msg)
         return url
+
+    def clean_coverage(self) -> str:
+        return self.cleaned_data["coverage"] or "india"
+
+    def clean_region(self) -> str:
+        return self.cleaned_data["region"].strip() or "India"
 
 
 class InstrumentForm(forms.ModelForm):

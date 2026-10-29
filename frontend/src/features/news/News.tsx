@@ -1,4 +1,4 @@
-import { Anchor, Button, Group, Stack, Text, Title } from "@mantine/core";
+import { Anchor, Button, Group, SegmentedControl, Stack, Text, Title } from "@mantine/core";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { LuNewspaper, LuSlidersHorizontal, LuX } from "react-icons/lu";
@@ -35,12 +35,20 @@ export function News({
   const [query, setQuery] = useState(filters.q);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const searchInput = useRef<HTMLInputElement>(null);
-  const filtered = !!(filters.q || filters.source || filters.sentiment);
+  const filtered = !!(filters.q || filters.source || filters.sentiment || filters.coverage);
 
   useEffect(() => {
     setQuery(filters.q);
     return () => clearTimeout(timer.current);
-  }, [filters.q, filters.source, filters.sentiment, filters.page, filters.sort, filters.page_size]);
+  }, [
+    filters.q,
+    filters.source,
+    filters.sentiment,
+    filters.coverage,
+    filters.page,
+    filters.sort,
+    filters.page_size,
+  ]);
 
   function apply(values: NewsSearch, replace = false) {
     clearTimeout(timer.current);
@@ -121,7 +129,7 @@ export function News({
           leftSection={<LuX aria-hidden="true" />}
           onClick={() => {
             setQuery("");
-            apply({ ...filters, q: "", sentiment: "", source: "", page: 1 });
+            apply({ ...filters, q: "", sentiment: "", source: "", coverage: "", page: 1 });
             searchInput.current?.focus();
           }}
         >
@@ -146,6 +154,19 @@ export function News({
         </Text>
       </header>
       <section aria-label="News results">
+        <SegmentedControl
+          aria-label="News coverage"
+          value={filters.coverage}
+          onChange={(coverage) =>
+            apply({ ...filters, q: query, coverage: coverage as NewsSearch["coverage"] })
+          }
+          data={[
+            { label: "All", value: "" },
+            { label: "Local", value: "india" },
+            { label: "International", value: "international" },
+          ]}
+          mb="md"
+        />
         <Text size="sm" c="dimmed" role="status" mb="md">
           {data.total} article{data.total === 1 ? "" : "s"}
         </Text>
@@ -197,6 +218,7 @@ export function News({
               },
             },
             { id: "source", label: "Source", value: (row) => row.source },
+            { id: "region", label: "Region", value: (row) => row.region },
             {
               id: "published_at",
               label: "Published",

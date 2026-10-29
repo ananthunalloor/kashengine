@@ -10,6 +10,12 @@ class NewsArticle(models.Model):
     """One news article from a free source (RSS feed or web page)."""
 
     source = models.CharField(max_length=100, help_text="Source name, for example Moneycontrol.")
+    coverage = models.CharField(
+        max_length=20,
+        choices=[("india", "India"), ("international", "International")],
+        default="india",
+    )
+    region = models.CharField(max_length=50, default="India")
     title = models.CharField(max_length=500)
     url = models.URLField(max_length=1000, unique=True)
     summary = models.TextField(blank=True, help_text="Short text from the RSS feed.")
@@ -66,6 +72,12 @@ class NewsFeed(models.Model):
 
     source = models.CharField(max_length=100, help_text="The source name, for example Mint.")
     name = models.CharField(max_length=100, help_text="The name of the feed, for example Markets.")
+    coverage = models.CharField(
+        max_length=20,
+        choices=[("india", "India"), ("international", "International")],
+        default="india",
+    )
+    region = models.CharField(max_length=50, default="India")
     url = models.URLField(max_length=1000, unique=True)
     enabled = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

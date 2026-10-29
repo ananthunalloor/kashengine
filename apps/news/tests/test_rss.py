@@ -65,13 +65,21 @@ def test_parse_feed_rejects_a_page_that_is_not_a_feed():
 
 @pytest.mark.django_db
 def test_save_articles_removes_duplicates():
-    feed = Feed("Test News", "Markets", "https://news.test/rss")
+    feed = Feed(
+        "Test News",
+        "Markets",
+        "https://news.test/rss",
+        coverage="international",
+        region="Europe",
+    )
     items = parse_feed(SAMPLE_FEED)
 
     assert save_articles(feed, items) == 2  # The duplicate inside the feed is dropped.
     assert save_articles(feed, items) == 0  # A second run adds nothing.
     assert NewsArticle.objects.count() == 2
     assert set(NewsArticle.objects.values_list("source", flat=True)) == {"Test News"}
+    assert set(NewsArticle.objects.values_list("coverage", flat=True)) == {"international"}
+    assert set(NewsArticle.objects.values_list("region", flat=True)) == {"Europe"}
 
 
 @pytest.mark.django_db

@@ -9,6 +9,7 @@ import { pageSizeSchema, tableParams } from "./tableSearch";
 export const newsSearchSchema = z.object({
   q: z.string().trim().max(100).default(""),
   source: z.string().max(100).default(""),
+  coverage: z.enum(["", "india", "international"]).default(""),
   sentiment: z.enum(["", "positive", "negative", "neutral", "unscored"]).default(""),
   page: z.coerce.number().int().positive().safe().default(1),
   sort: z
@@ -29,6 +30,7 @@ export function newsQuery(filters: NewsSearch) {
         sentiment: filters.sentiment,
         page: String(filters.page),
       });
+      if (filters.coverage) params.set("coverage", filters.coverage);
       tableParams(params, filters);
       const result = zNewsPage.safeParse(await appRequest(`/api/app/news?${params}`, { signal }));
       if (!result.success) {

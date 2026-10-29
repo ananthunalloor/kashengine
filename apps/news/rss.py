@@ -85,7 +85,12 @@ def save_articles(feed: Feed, items: list[dict]) -> int:
         NewsArticle.objects.filter(url__in=by_url).values_list("url", flat=True),
     )
     new_articles = [
-        NewsArticle(source=feed.source, **item)
+        NewsArticle(
+            source=feed.source,
+            coverage=feed.coverage,
+            region=feed.region,
+            **item,
+        )
         for url, item in by_url.items()
         if url not in existing
     ]
@@ -104,7 +109,14 @@ def fetch_feed(feed: Feed, client: httpx.Client) -> int:
 def load_feeds() -> list[Feed]:
     """The enabled feeds from the database."""
     return [
-        Feed(row.source, row.name, row.url, pk=row.pk)
+        Feed(
+            row.source,
+            row.name,
+            row.url,
+            pk=row.pk,
+            coverage=row.coverage,
+            region=row.region,
+        )
         for row in NewsFeed.objects.filter(enabled=True)
     ]
 

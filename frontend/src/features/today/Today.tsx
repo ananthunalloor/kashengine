@@ -272,7 +272,10 @@ export function Today({ data, session }: { data: TodayData; session: Session }) 
             ]}
           />
           <Text size="sm" mt="md">
-            <Link to="/news/" search={{ q: "", source: "", sentiment: "", page: 1 }}>
+            <Link
+              to="/news/"
+              search={{ q: "", source: "", coverage: "", sentiment: "", page: 1 }}
+            >
               All news
             </Link>
           </Text>

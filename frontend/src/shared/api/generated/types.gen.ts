@@ -484,6 +484,12 @@ export type NewsFilters = {
      */
     source?: string;
     /**
+     * Coverage
+     *
+     * Coverage category: India, international, or all.
+     */
+    coverage?: string;
+    /**
      * Sentiment
      *
      * Sentiment category, or empty for all.
@@ -545,6 +551,18 @@ export type NewsItem = {
      * Publisher name.
      */
     source: string;
+    /**
+     * Coverage
+     *
+     * Whether the report covers India or international markets.
+     */
+    coverage: 'india' | 'international';
+    /**
+     * Region
+     *
+     * Publisher region, for example South India or Europe.
+     */
+    region: string;
     /**
      * Published At
      *
@@ -3445,6 +3463,12 @@ export type ListAppNewsData = {
          */
         source?: string;
         /**
+         * Coverage
+         *
+         * Coverage category: India, international, or all.
+         */
+        coverage?: string;
+        /**
          * Sentiment
          *
          * Sentiment category, or empty for all.
@@ -3884,6 +3908,97 @@ export type ListAppCompaniesResponses = {
 };
 
 export type ListAppCompaniesResponse = ListAppCompaniesResponses[keyof ListAppCompaniesResponses];
+
+export type GetAppCompanyListRefreshData = {
+    body?: never;
+    path: {
+        /**
+         * Task Id
+         */
+        task_id: string;
+    };
+    query?: never;
+    url: '/api/app/company-catalog/refresh/{task_id}';
+};
+
+export type GetAppCompanyListRefreshErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Not Found
+     */
+    404: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type GetAppCompanyListRefreshError = GetAppCompanyListRefreshErrors[keyof GetAppCompanyListRefreshErrors];
+
+export type GetAppCompanyListRefreshResponses = {
+    /**
+     * Response
+     *
+     * OK
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type GetAppCompanyListRefreshResponse = GetAppCompanyListRefreshResponses[keyof GetAppCompanyListRefreshResponses];
+
+export type RefreshAppCompanyListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/app/company-catalog/refresh';
+};
+
+export type RefreshAppCompanyListErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type RefreshAppCompanyListError = RefreshAppCompanyListErrors[keyof RefreshAppCompanyListErrors];
+
+export type RefreshAppCompanyListResponses = {
+    /**
+     * Response
+     *
+     * Accepted
+     */
+    202: {
+        [key: string]: unknown;
+    };
+};
+
+export type RefreshAppCompanyListResponse = RefreshAppCompanyListResponses[keyof RefreshAppCompanyListResponses];
 
 export type GetAppDeliveryData = {
     body?: never;

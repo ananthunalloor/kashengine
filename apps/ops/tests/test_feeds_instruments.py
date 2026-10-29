@@ -21,6 +21,14 @@ NEW_FEED = {"source": "Test News", "name": "Markets", "url": "https://news.test/
 
 def test_the_first_migration_saves_the_feeds_and_instruments():
     assert NewsFeed.objects.filter(enabled=True).count() >= 5
+    assert set(NewsFeed.objects.filter(coverage="india").values_list("region", flat=True)) >= {
+        "North India",
+        "West India",
+        "South India",
+    }
+    assert set(
+        NewsFeed.objects.filter(coverage="international").values_list("region", flat=True)
+    ) >= {"North America", "Europe", "East Asia"}
     assert Instrument.objects.filter(kind=Instrument.Kind.TARGET).count() == 1
     assert instruments.global_cues()
     assert instruments.target_symbol()
@@ -76,8 +84,23 @@ def test_a_superuser_adds_a_feed(boss_client):
     response = boss_client.post(reverse("ops:feeds"), NEW_FEED)
 
     assert response.status_code == 302
-    assert NewsFeed.objects.filter(url=NEW_FEED["url"], enabled=True).exists()
+    feed = NewsFeed.objects.get(url=NEW_FEED["url"], enabled=True)
+    assert (feed.coverage, feed.region) == ("india", "India")
     assert AuditEvent.objects.filter(action="add feed").exists()
+
+
+def test_a_superuser_can_add_an_international_feed(boss_client):
+    data = {
+        **NEW_FEED,
+        "url": "https://news.test/international",
+        "coverage": "international",
+        "region": "East Asia",
+    }
+    response = boss_client.post(reverse("ops:feeds"), data)
+
+    assert response.status_code == 302
+    feed = NewsFeed.objects.get(url=data["url"])
+    assert (feed.coverage, feed.region) == ("international", "East Asia")
 
 
 @pytest.mark.parametrize("url", ["ftp://news.test/rss", "javascript:alert(1)"])

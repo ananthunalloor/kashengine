@@ -22,6 +22,11 @@ class NewsFilters(TableFilters):
 
     q: str = Field(default="", max_length=100, description="Headline or summary search text.")
     source: str = Field(default="", max_length=100, description="Exact source name, or all.")
+    coverage: str = Field(
+        default="",
+        pattern="^(|india|international)$",
+        description="Coverage category: India, international, or all.",
+    )
     sentiment: str = Field(
         default="",
         pattern="^(|positive|negative|neutral|unscored)$",
@@ -41,6 +46,7 @@ def list_news(request: HttpRequest, filters: Query[NewsFilters]):
     values = {
         "q": filters.q.strip(),
         "source": filters.source.strip(),
+        "coverage": filters.coverage,
         "sentiment": filters.sentiment,
     }
     articles = (
@@ -80,6 +86,8 @@ def list_news(request: HttpRequest, filters: Query[NewsFilters]):
                 "title": article.title,
                 "url": article.url,
                 "source": article.source,
+                "coverage": article.coverage,
+                "region": article.region,
                 "published_at": article.published_at,
                 "sentiment": sentiment,
                 "score": score_out_of_ten(score, signed=True) if score is not None else None,

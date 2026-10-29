@@ -15,6 +15,8 @@ const news: NewsPage = {
       title: "Banks grow",
       url: "https://example.test/news",
       source: "Mint",
+      coverage: "india",
+      region: "North India",
       published_at: "2026-10-07T03:00:00Z",
       sentiment: "positive",
       score: "7.3/10",
@@ -105,6 +107,8 @@ it("shows scored articles, plain-text explanations, source links and IST publica
   expect(screen.getByText("<b>Strong earnings</b>")).toBeInTheDocument();
   expect(document.querySelector(".data-table b")).toBeNull();
   expect(screen.getByText("Example Bank")).toBeInTheDocument();
+  expect(screen.getByText("North India")).toBeInTheDocument();
+  expect(screen.getByRole("radiogroup", { name: "News coverage" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "News", current: "page" })).toHaveAttribute(
     "href",
     "/news/",
@@ -112,6 +116,16 @@ it("shows scored articles, plain-text explanations, source links and IST publica
   expect(screen.getByRole("link", { name: /Compare with/ })).toHaveAttribute("href", "/news/");
   expect(screen.getAllByRole("main")).toHaveLength(1);
   expect(document.querySelector("style")).toBeNull();
+});
+
+it("filters the table to international coverage and keeps it in the URL", async () => {
+  const router = await showNews();
+  fireEvent.click(await screen.findByRole("radio", { name: "International" }));
+  await waitFor(() => expect(router.state.location.search.coverage).toBe("international"));
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/app/news?q=&source=&sentiment=&page=1&coverage=international",
+    expect.anything(),
+  );
 });
 
 it.each([
@@ -190,7 +204,13 @@ it("applies on submit, clears filters, and cancels pending search input", async 
   fireEvent.change(screen.getByRole("searchbox"), { target: { value: "pending" } });
   fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
   await waitFor(() =>
-    expect(router.state.location.search).toEqual({ q: "", sentiment: "", source: "", page: 1 }),
+    expect(router.state.location.search).toEqual({
+      q: "",
+      sentiment: "",
+      source: "",
+      coverage: "",
+      page: 1,
+    }),
   );
   await new Promise((resolve) => setTimeout(resolve, 350));
   expect(router.state.location.search.q).toBe("");
