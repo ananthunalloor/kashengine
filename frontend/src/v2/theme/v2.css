@@ -12,11 +12,11 @@
 
 [data-ui="v2"] body {
   font-family: var(--mantine-font-family);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.45;
   color: var(--kv2-text);
   background: var(--kv2-canvas);
-  font-feature-settings: "cv11", "ss01";
+  font-feature-settings: "tnum", "cv02", "cv03", "cv04", "cv11";
 }
 
 [data-ui="v2"] :focus-visible {
@@ -228,7 +228,7 @@
   border-radius: 6px;
   background: var(--mantine-color-indigo-6);
   color: #fff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
 }
 [data-ui="v2"] .kv2-search-trigger {
@@ -236,7 +236,7 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  max-width: 420px;
+  max-width: 320px;
   height: 32px;
   padding: 0 8px 0 10px;
   border: 1px solid var(--kv2-border);
@@ -259,22 +259,42 @@
   gap: 6px;
   height: 28px;
   padding: 0 10px;
-  border: 1px solid var(--kv2-border);
+  border: 1px solid color-mix(in srgb, var(--kv2-gain) 20%, transparent);
   border-radius: 999px;
-  background: var(--kv2-surface);
+  background: var(--kv2-gain-soft);
   color: var(--kv2-text);
   font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
 }
 [data-ui="v2"] .kv2-market-pill:hover {
+  background: color-mix(in srgb, var(--kv2-gain-soft) 82%, var(--kv2-surface));
+}
+[data-ui="v2"] .kv2-sidebar-top {
+  min-height: 48px;
+  padding: 4px 4px 10px;
+  border-bottom: 1px solid var(--kv2-border);
+}
+[data-ui="v2"] .kv2-screener-link {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--kv2-border);
+  border-radius: 4px;
   background: var(--kv2-surface-muted);
+  color: var(--kv2-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+[data-ui="v2"] .kv2-screener-link:hover {
+  background: var(--kv2-brand-soft);
+  color: var(--kv2-brand);
 }
 
 [data-ui="v2"] .kv2-navlink {
   height: 32px;
   padding: 0 10px;
   border-radius: 4px;
+  border-left: 2px solid transparent;
   font-size: 13px;
   font-weight: 500;
   color: var(--kv2-text-muted);
@@ -287,6 +307,7 @@
   background: var(--kv2-brand-soft);
   color: var(--kv2-brand);
   font-weight: 600;
+  border-left-color: var(--kv2-brand);
 }
 [data-ui="v2"] .kv2-navlink .mantine-NavLink-section[data-position="left"] {
   margin-inline-end: 10px;
@@ -294,6 +315,18 @@
 [data-ui="v2"] .kv2-rail .kv2-navlink {
   justify-content: center;
   padding: 0;
+  border-left-color: transparent;
+}
+[data-ui="v2"] .kv2-rail .kv2-screener-link {
+  justify-content: center;
+  padding: 0;
+  border: 0;
+}
+[data-ui="v2"] .kv2-rail .kv2-screener-link .mantine-NavLink-body {
+  display: none;
+}
+[data-ui="v2"] .kv2-rail .kv2-screener-link .mantine-NavLink-section[data-position="left"] {
+  margin: 0;
 }
 [data-ui="v2"] .kv2-rail .kv2-navlink .mantine-NavLink-section[data-position="left"] {
   margin: 0;
@@ -307,11 +340,11 @@
 [data-ui="v2"] .kv2-page {
   max-width: 1440px;
   margin: 0 auto;
-  padding: 16px 24px 32px;
+  padding: 24px 24px 32px;
 }
 @media (max-width: 48em) {
   [data-ui="v2"] .kv2-page {
-    padding: 12px 12px 24px;
+    padding: 16px 16px 24px;
   }
 }
 [data-ui="v2"] .kv2-page-header {
@@ -321,6 +354,8 @@
   justify-content: space-between;
   gap: 8px 16px;
   margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--kv2-border);
 }
 [data-ui="v2"] .kv2-page-title {
   margin: 0;
@@ -332,7 +367,7 @@
 [data-ui="v2"] .kv2-panel {
   background: var(--kv2-surface);
   border: 1px solid var(--kv2-border);
-  border-radius: 6px;
+  border-radius: 8px;
   min-width: 0;
 }
 [data-ui="v2"] .kv2-panel-header {
@@ -346,9 +381,9 @@
 }
 [data-ui="v2"] .kv2-panel-title {
   margin: 0;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 600;
-  line-height: 18px;
+  line-height: 22px;
 }
 [data-ui="v2"] .kv2-panel-body {
   padding: 12px;
@@ -374,8 +409,8 @@
   min-width: 0;
 }
 [data-ui="v2"] .kv2-kpi-value {
-  font-size: 20px;
-  line-height: 26px;
+  font-size: 24px;
+  line-height: 30px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
@@ -566,21 +601,6 @@
 [data-ui="v2"] .kv2-state-icon[data-tone="loss"] {
   background: var(--kv2-loss-soft);
   color: var(--kv2-loss);
-}
-
-/* ---------- Mock data banner ---------- */
-
-[data-ui="v2"] .kv2-mock-banner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 24px;
-  background: var(--kv2-caution-soft);
-  color: var(--kv2-caution);
-  font-size: 11px;
-  font-weight: 600;
-  border-bottom: 1px solid var(--kv2-border);
 }
 
 /* ---------- Candles ---------- */

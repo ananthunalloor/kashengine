@@ -116,7 +116,7 @@ const noTransition = { duration: 0 };
 
 export const v2Theme = createTheme({
   primaryColor: "indigo",
-  primaryShade: { light: 6, dark: 6 },
+  primaryShade: { light: 6, dark: 5 },
   colors: palette,
   white: "#ffffff",
   black: "#0f172a",
@@ -140,10 +140,10 @@ export const v2Theme = createTheme({
   defaultRadius: "xs",
   shadows: {
     xs: "0 1px 2px 0 rgba(15, 23, 42, 0.05)",
-    sm: "0 1px 2px 0 rgba(15, 23, 42, 0.05)",
-    md: "0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04)",
-    lg: "0 10px 15px -3px rgba(15, 23, 42, 0.1), 0 4px 6px -4px rgba(15, 23, 42, 0.05)",
-    xl: "0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05)",
+    sm: "none",
+    md: "none",
+    lg: "none",
+    xl: "none",
   },
   cursorType: "pointer",
   focusRing: "auto",
@@ -171,8 +171,8 @@ export const v2Theme = createTheme({
       defaultProps: { size: "sm", radius: "xl", variant: "light" },
       classNames: { root: "kv2-badge" },
     }),
-    Card: Card.extend({ defaultProps: { radius: "sm", padding: "md", withBorder: true } }),
-    Paper: Paper.extend({ defaultProps: { radius: "sm", withBorder: true } }),
+    Card: Card.extend({ defaultProps: { radius: "md", padding: "md", withBorder: true } }),
+    Paper: Paper.extend({ defaultProps: { radius: "md", withBorder: true } }),
     Table: Table.extend({
       defaultProps: { highlightOnHover: true, verticalSpacing: 6, horizontalSpacing: "md" },
       classNames: { table: "kv2-table" },
@@ -188,10 +188,10 @@ export const v2Theme = createTheme({
       classNames: { header: "kv2-modal-header", title: "kv2-modal-title" },
     }),
     Menu: Menu.extend({
-      defaultProps: { shadow: "md", radius: "xs", transitionProps: noTransition },
+      defaultProps: { shadow: "xs", radius: "xs", transitionProps: noTransition },
     }),
     Popover: Popover.extend({
-      defaultProps: { shadow: "md", radius: "xs", transitionProps: noTransition },
+      defaultProps: { shadow: "xs", radius: "xs", transitionProps: noTransition },
     }),
     Tooltip: Tooltip.extend({
       defaultProps: { fz: "xs", withArrow: true, transitionProps: noTransition },

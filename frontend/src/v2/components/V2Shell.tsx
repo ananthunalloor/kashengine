@@ -29,7 +29,9 @@ import {
   LuChartCandlestick,
   LuChevronsLeft,
   LuChevronsRight,
+  LuBookOpen,
   LuFileText,
+  LuFilter,
   LuLayoutDashboard,
   LuLogOut,
   LuMoon,
@@ -48,7 +50,6 @@ import type { ReactNode } from "react";
 
 import { AppLink } from "../../shared/ui/AppLink";
 import { companies, marketStatus, notifications, sampleUser } from "../mock/data";
-import { StatusBadge } from "./Status";
 import { TradingCalendarModal } from "./TradingCalendarModal";
 
 export type NavItem = { label: string; href: string; icon: ReactNode };
@@ -76,6 +77,7 @@ function NavItems({ items, rail }: { items: NavItem[]; rail: boolean }) {
         const link = (
           <NavLink
             key={item.href}
+            className="kv2-navlink"
             component={AppLink}
             href={item.href}
             label={item.label}
@@ -112,17 +114,16 @@ function MarketPill() {
   const [opened, { open, close }] = useDisclosure(false);
   return (
     <>
-      <Tooltip label="Open trading calendar">
+      <Tooltip label="Sample market status · open trading calendar">
         <button type="button" className="kv2-market-pill" onClick={open}>
-          <span
-            className="kv2-dot"
-            data-pulse={marketStatus.open}
-            style={{ color: marketStatus.open ? "var(--kv2-gain)" : "var(--kv2-text-muted)" }}
-          />
+          <span className="kv2-dot" style={{ color: "var(--kv2-text-muted)" }} />
           <strong>{marketStatus.label}</strong>
           <Text span size="xs" c="dimmed" visibleFrom="lg">
             · {marketStatus.detail}
           </Text>
+          <Badge size="xs" color="amber" visibleFrom="sm">
+            Sample
+          </Badge>
           <LuCalendarDays size={14} />
         </button>
       </Tooltip>
@@ -269,7 +270,7 @@ export function V2Shell({ children }: { children: ReactNode }) {
     >
       <AppShell.Header className="kv2-header">
         <Group h="100%" px={12} gap={12} wrap="nowrap" justify="space-between">
-          <Group gap={8} wrap="nowrap" style={{ flex: "0 0 auto" }}>
+          <Group gap={12} wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
             <Burger
               opened={mobileOpened}
               onClick={toggleMobile}
@@ -278,20 +279,27 @@ export function V2Shell({ children }: { children: ReactNode }) {
               aria-label="Toggle navigation"
             />
             <AppLink href="/v2/today/" className="kv2-logo">
-              <span className="kv2-logo-mark">k</span>
+              <span className="kv2-logo-mark">k.</span>
               <span>kashengine</span>
             </AppLink>
-          </Group>
-          <Group style={{ flex: 1, justifyContent: "center" }} visibleFrom="md">
-            <SearchTrigger />
+            <Badge size="xs" variant="light" color="indigo" visibleFrom="sm">
+              v8
+            </Badge>
+            <Group visibleFrom="md" style={{ width: "min(320px, 100%)", minWidth: 0 }}>
+              <SearchTrigger />
+            </Group>
           </Group>
           <Group gap={6} wrap="nowrap">
             <ActionIcon aria-label="Search" hiddenFrom="md" onClick={() => spotlight.open()}>
               <LuSearch />
             </ActionIcon>
             <MarketPill />
-            <Tooltip label="Live updates connected">
-              <ActionIcon aria-label="Live connection status" visibleFrom="sm" c="var(--kv2-gain)">
+            <Tooltip label="No live connection in the sample preview">
+              <ActionIcon
+                aria-label="Sample preview has no live connection"
+                visibleFrom="sm"
+                c="var(--kv2-text-muted)"
+              >
                 <LuWifi />
               </ActionIcon>
             </Tooltip>
@@ -305,8 +313,43 @@ export function V2Shell({ children }: { children: ReactNode }) {
 
       <AppShell.Navbar className={`kv2-navbar ${rail ? "kv2-rail" : ""}`} p={8}>
         <AppShell.Section grow component={ScrollArea} scrollbarSize={6}>
-          <Stack gap={2}>
-            <NavItems items={primaryNav} rail={rail} />
+          <Stack gap={8}>
+            <div className="kv2-sidebar-top">
+              <Group justify="space-between" gap={4} wrap="nowrap">
+                {!rail ? (
+                  <Stack gap={2}>
+                    <Text size="xs" fw={600}>
+                      Terminal Node 01
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      NSE / BSE sample feed
+                    </Text>
+                  </Stack>
+                ) : null}
+                <Tooltip label={rail ? "Expand sidebar" : "Collapse sidebar"} position="right">
+                  <ActionIcon
+                    aria-label={rail ? "Expand sidebar" : "Collapse sidebar"}
+                    onClick={() => setRail(!rail)}
+                    variant="subtle"
+                  >
+                    {rail ? <LuChevronsRight /> : <LuChevronsLeft />}
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
+            </div>
+            <Stack gap={2}>
+              <NavItems items={primaryNav} rail={rail} />
+              <Tooltip label="Quick Screener" position="right" disabled={!rail}>
+                <NavLink
+                  className="kv2-screener-link"
+                  component={AppLink}
+                  href="/v2/companies/"
+                  label="Quick Screener"
+                  leftSection={<LuFilter />}
+                  aria-label="Quick Screener"
+                />
+              </Tooltip>
+            </Stack>
           </Stack>
         </AppShell.Section>
         <AppShell.Section>
@@ -334,27 +377,34 @@ export function V2Shell({ children }: { children: ReactNode }) {
                 />
               </Tooltip>
             ) : null}
-            <NavLink
-              component="button"
-              visibleFrom="sm"
-              label="Collapse"
-              leftSection={rail ? <LuChevronsRight /> : <LuChevronsLeft />}
-              onClick={() => setRail(!rail)}
-              aria-label={rail ? "Expand sidebar" : "Collapse sidebar"}
-            />
+          </Stack>
+          <Divider my={8} />
+          <Stack gap={2}>
+            <Tooltip label="Settings" position="right" disabled={!rail}>
+              <NavLink
+                className="kv2-navlink"
+                component={AppLink}
+                href="/v2/account/"
+                label="Settings"
+                leftSection={<LuSettings2 />}
+                aria-label="Settings"
+              />
+            </Tooltip>
+            <Tooltip label="Documentation" position="right" disabled={!rail}>
+              <NavLink
+                className="kv2-navlink"
+                component="a"
+                href="/docs/"
+                label="Documentation"
+                leftSection={<LuBookOpen />}
+                aria-label="Documentation"
+              />
+            </Tooltip>
           </Stack>
         </AppShell.Section>
       </AppShell.Navbar>
 
-      <AppShell.Main className="kv2-shell-main">
-        <div className="kv2-mock-banner">
-          <StatusBadge tone="caution" size="xs">
-            Preview
-          </StatusBadge>
-          v2 design preview · sample data only
-        </div>
-        {children}
-      </AppShell.Main>
+      <AppShell.Main className="kv2-shell-main">{children}</AppShell.Main>
 
       <Spotlight
         actions={actions}

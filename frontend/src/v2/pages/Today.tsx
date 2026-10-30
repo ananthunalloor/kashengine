@@ -121,40 +121,32 @@ export function TodayPage() {
       />
 
       <Stack gap={16}>
-        <Grid gutter={16}>
-          <Grid.Col span={{ base: 12, lg: 4 }}>
-            <OutlookCard />
-          </Grid.Col>
-          <Grid.Col span={{ base: 12, lg: 8 }}>
-            <Stack gap={12}>
-              <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }} spacing={12}>
-                {indices.map((index) => {
-                  const extra = indexExtras[index.symbol];
-                  return (
-                    <KpiTile
-                      key={index.symbol}
-                      label={index.name}
-                      value={<span className="kv2-num">{formatNumber(index.last, 2)}</span>}
-                      delta={<Delta value={index.changePct} size="xs" />}
-                      hint={
-                        extra
-                          ? `${formatNumber(extra.low, 0)} – ${formatNumber(extra.high, 0)}`
-                          : undefined
-                      }
-                      info={
-                        extra
-                          ? `Previous close ${formatNumber(extra.prevClose, 2)}. Day range shown below the change. Last trade ${extra.lastTrade} IST.`
-                          : undefined
-                      }
-                      aside={<Sparkline data={index.trend} w={56} h={20} />}
-                    />
-                  );
-                })}
-              </SimpleGrid>
-              <BreadthPanel />
-            </Stack>
-          </Grid.Col>
-        </Grid>
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing={12}>
+          <OutlookCard />
+          {indices.slice(0, 2).map((index) => {
+            const extra = indexExtras[index.symbol];
+            return (
+              <KpiTile
+                key={index.symbol}
+                label={index.name}
+                value={<span className="kv2-num">{formatNumber(index.last, 2)}</span>}
+                delta={<Delta value={index.changePct} size="xs" />}
+                hint={
+                  extra
+                    ? `${formatNumber(extra.low, 0)} – ${formatNumber(extra.high, 0)}`
+                    : undefined
+                }
+                info={
+                  extra
+                    ? `Previous close ${formatNumber(extra.prevClose, 2)}. Day range shown below the change. Last trade ${extra.lastTrade} IST.`
+                    : undefined
+                }
+                aside={<Sparkline data={index.trend} w={56} h={20} />}
+              />
+            );
+          })}
+          <BreadthPanel />
+        </SimpleGrid>
 
         <Grid gutter={16}>
           <Grid.Col span={{ base: 12, lg: 7 }}>

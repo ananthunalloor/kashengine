@@ -9,6 +9,7 @@ import {
   Progress,
   SegmentedControl,
   Select,
+  SimpleGrid,
   Stack,
   Table,
   Tabs,
@@ -265,6 +266,8 @@ export function CompanyDetailPage({ id }: { id: string }) {
           : hasDiscount
             ? "Sector discount"
             : "In line";
+  const totalDepthQty = detail.totalBuyQty + detail.totalSellQty;
+  const buyPressurePct = totalDepthQty > 0 ? (detail.totalBuyQty / totalDepthQty) * 100 : 0;
 
   const news = detail.news.filter(
     (n) =>
@@ -426,156 +429,114 @@ export function CompanyDetailPage({ id }: { id: string }) {
             hint={`${comparableCount} of 3 multiples comparable`}
           />
           <KpiTile
-            label="Delivery %"
-            info="Share of traded quantity taken into demat (not squared off intraday). High delivery on up days suggests accumulation."
-            value={`${formatNumber(company.deliveryPct, 1)}%`}
-            hint={`20D avg ${formatNumber(avgDelivery, 1)}%`}
+            label="Momentum score"
+            info="Sample 20- and 50-session trend blend, scaled from 0 to 10. Historical prices only."
+            value={`${formatNumber(detail.momentum, 1)} / 10`}
+            delta={<StrengthMeter score={detail.momentum} />}
+            hint="Sample trend indicator"
           />
         </KpiGrid>
 
         <Tabs value={tab} onChange={setTab} keepMounted={false}>
           <Tabs.List style={{ overflowX: "auto", flexWrap: "nowrap" }}>
             <Tabs.Tab value="overview">Overview</Tabs.Tab>
-            <Tabs.Tab value="financials">Financials</Tabs.Tab>
-            <Tabs.Tab value="signals">Signals &amp; setups</Tabs.Tab>
+            <Tabs.Tab value="signals">Signals &amp; Review</Tabs.Tab>
+            <Tabs.Tab value="financials">Fundamentals &amp; Valuation</Tabs.Tab>
             <Tabs.Tab
               value="news"
               rightSection={<StatusBadge size="xs">{detail.news.length}</StatusBadge>}
             >
-              News
+              Scored News
             </Tabs.Tab>
-            <Tabs.Tab value="delivery">Delivery & volume</Tabs.Tab>
+            <Tabs.Tab value="delivery">Delivery &amp; volume</Tabs.Tab>
             <Tabs.Tab
               value="ipos"
               rightSection={<StatusBadge size="xs">{detail.ipoScores.length}</StatusBadge>}
             >
-              IPO scores
+              IPO History
             </Tabs.Tab>
           </Tabs.List>
 
           <Tabs.Panel value="overview" pt={16}>
-            <Stack gap={16}>
-              <Grid gutter={16}>
-                <Grid.Col span={{ base: 12, md: 8 }}>
-                  <Stack gap={16}>
-                    <PriceChartPanel
-                      title={`${company.symbol} · Daily`}
-                      candles={candles}
-                      last={company.last}
+            <Grid gutter={16} align="start">
+              <Grid.Col span={{ base: 12, md: 8 }}>
+                <Stack gap={16}>
+                  <PriceChartPanel
+                    title={`${company.symbol} · Daily`}
+                    candles={candles}
+                    last={company.last}
+                  />
+                  <SimpleGrid cols={{ base: 1, sm: 3 }} spacing={12}>
+                    <KpiTile
+                      label="52-week range"
+                      value={`${formatInr(detail.week52Low)} – ${formatInr(detail.week52High)}`}
                     />
-                    <Panel title={`About ${company.name}`}>
-                      <Stack gap={10}>
-                        <Text size="sm">{detail.about}</Text>
-                        <DescriptionList
-                          items={[
-                            ["Founded", String(detail.founded)],
-                            ["Headquarters", detail.hq],
-                            ["Employees", formatNumber(detail.employees)],
-                            ["ISIN", <span className="kv2-mono">{detail.isin}</span>],
-                            ["Data from", formatDate(detail.dataFrom)],
-                          ]}
-                        />
-                      </Stack>
-                    </Panel>
-                  </Stack>
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, md: 4 }}>
-                  <Stack gap={16}>
-                    <Panel
-                      title="Key stats"
-                      info="Sample figures for today's session and the trailing 12 months."
-                    >
+                    <KpiTile
+                      label="Beta"
+                      info="How much the price moves relative to Sample Index 50. Below 1 means less volatile."
+                      value={detail.beta.toFixed(2)}
+                    />
+                    <KpiTile
+                      label="Delivery"
+                      info="Share of traded quantity taken into demat, not squared off intraday."
+                      value={`${formatNumber(company.deliveryPct, 1)}%`}
+                      hint={`20D avg ${formatNumber(avgDelivery, 1)}%`}
+                    />
+                  </SimpleGrid>
+                  <Panel title={`About ${company.name}`}>
+                    <Stack gap={10}>
+                      <Text size="sm">{detail.about}</Text>
                       <DescriptionList
                         items={[
-                          ["Open", <span className="kv2-num">{formatInr(detail.open)}</span>],
-                          [
-                            "Day range",
-                            <span className="kv2-num">{`${formatInr(detail.low)} – ${formatInr(detail.high)}`}</span>,
-                          ],
-                          [
-                            "52W range",
-                            <span className="kv2-num">{`${formatInr(detail.week52Low)} – ${formatInr(detail.week52High)}`}</span>,
-                          ],
-                          [
-                            "Market cap",
-                            <span className="kv2-num">{formatCompactInr(company.marketCap)}</span>,
-                          ],
-                          ["P/E", <span className="kv2-num">{formatNumber(company.pe, 1)}×</span>],
-                          ["P/B", <span className="kv2-num">{formatNumber(detail.pb, 2)}×</span>],
-                          [
-                            "Book value",
-                            <span className="kv2-num">{formatInr(detail.bookValue)}</span>,
-                          ],
-                          [
-                            "Dividend yield",
-                            <span className="kv2-num">
-                              {formatPercent(detail.dividendYield, { signed: false })}
-                            </span>,
-                          ],
-                          [
-                            <Group gap={4}>
-                              Beta
-                              <InfoTip>
-                                How much the price moves relative to Sample Index 50. Below 1 means
-                                less volatile.
-                              </InfoTip>
-                            </Group>,
-                            <span className="kv2-num">{detail.beta.toFixed(2)}</span>,
-                          ],
-                          [
-                            "Volume",
-                            <span className="kv2-num">{formatNumber(company.volume)}</span>,
-                          ],
+                          ["Founded", String(detail.founded)],
+                          ["Headquarters", detail.hq],
+                          ["Employees", formatNumber(detail.employees)],
+                          ["ISIN", <span className="kv2-mono">{detail.isin}</span>],
+                          ["Data from", formatDate(detail.dataFrom)],
                         ]}
                       />
-                    </Panel>
-                    <Panel
-                      title="Momentum"
-                      info="Blend of 20- and 50-session trend, scaled 0–10. Sample model, not investment advice."
-                    >
-                      <Stack gap={8}>
-                        <StrengthMeter score={detail.momentum} />
-                        <Muted>
-                          Not investment advice. Scores are computed from historical sample prices
-                          only.
-                        </Muted>
+                    </Stack>
+                  </Panel>
+                </Stack>
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, md: 4 }}>
+                <Panel
+                  title="Live depth & quote"
+                  info="Fictional saved quote and five-level order book. No live market connection."
+                  flush
+                >
+                  <Stack gap={12} p="md">
+                    <Group justify="space-between" align="flex-start" wrap="nowrap">
+                      <Stack gap={2}>
+                        <Text size="xs" c="dimmed">
+                          Last traded
+                        </Text>
+                        <Text size="xl" fw={700} className="kv2-num">
+                          {formatInr(company.last)}
+                        </Text>
                       </Stack>
-                    </Panel>
-                  </Stack>
-                </Grid.Col>
-              </Grid>
-              <Panel
-                title="Quote snapshot & market depth"
-                info="Fictional saved quote and five-level order book. This preview is not connected to a live market feed."
-                flush
-              >
-                <Grid gutter={16} p="md">
-                  <Grid.Col span={{ base: 12, md: 4 }}>
-                    <DescriptionList
-                      items={[
-                        ["Last traded", <span className="kv2-num">{formatInr(company.last)}</span>],
-                        [
-                          "Previous close",
-                          <span className="kv2-num">{formatInr(detail.prevClose)}</span>,
-                        ],
-                        ["Open", <span className="kv2-num">{formatInr(detail.open)}</span>],
-                        [
-                          "Average price",
-                          <span className="kv2-num">{formatInr(detail.averagePrice)}</span>,
-                        ],
-                        ["Volume", <span className="kv2-num">{formatNumber(company.volume)}</span>],
-                        [
-                          "Total buy qty",
-                          <span className="kv2-num">{formatNumber(detail.totalBuyQty)}</span>,
-                        ],
-                        [
-                          "Total sell qty",
-                          <span className="kv2-num">{formatNumber(detail.totalSellQty)}</span>,
-                        ],
-                      ]}
-                    />
-                  </Grid.Col>
-                  <Grid.Col span={{ base: 12, md: 8 }}>
+                      <Delta value={company.changePct} />
+                    </Group>
+                    <SimpleGrid cols={2} spacing={8}>
+                      <KpiTile label="Open" value={formatInr(detail.open)} />
+                      <KpiTile label="Prev close" value={formatInr(detail.prevClose)} />
+                      <KpiTile label="Average price" value={formatInr(detail.averagePrice)} />
+                      <KpiTile label="Volume" value={formatNumber(company.volume)} />
+                    </SimpleGrid>
+                    <Stack gap={4}>
+                      <Group justify="space-between">
+                        <Text size="xs" fw={600}>
+                          Buy / sell quantity
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          {formatNumber(detail.totalBuyQty)} / {formatNumber(detail.totalSellQty)}
+                        </Text>
+                      </Group>
+                      <Progress.Root size={7} aria-label="Buy and sell quantity ratio">
+                        <Progress.Section value={buyPressurePct} color="var(--kv2-gain)" />
+                        <Progress.Section value={100 - buyPressurePct} color="var(--kv2-loss)" />
+                      </Progress.Root>
+                    </Stack>
                     <div className="kv2-table-wrap">
                       <Table aria-label="Market depth (top 5)">
                         <Table.Thead>
@@ -608,10 +569,49 @@ export function CompanyDetailPage({ id }: { id: string }) {
                         </Table.Tbody>
                       </Table>
                     </div>
-                  </Grid.Col>
-                </Grid>
-              </Panel>
-            </Stack>
+                    <Accordion variant="default" styles={{ content: { paddingInline: 0 } }}>
+                      <Accordion.Item value="key-stats">
+                        <Accordion.Control>Key stats</Accordion.Control>
+                        <Accordion.Panel>
+                          <DescriptionList
+                            items={[
+                              [
+                                "Day range",
+                                <span className="kv2-num">{`${formatInr(detail.low)} – ${formatInr(detail.high)}`}</span>,
+                              ],
+                              [
+                                "Market cap",
+                                <span className="kv2-num">
+                                  {formatCompactInr(company.marketCap)}
+                                </span>,
+                              ],
+                              [
+                                "P/E",
+                                <span className="kv2-num">{formatNumber(company.pe, 1)}×</span>,
+                              ],
+                              [
+                                "P/B",
+                                <span className="kv2-num">{formatNumber(detail.pb, 2)}×</span>,
+                              ],
+                              [
+                                "Book value",
+                                <span className="kv2-num">{formatInr(detail.bookValue)}</span>,
+                              ],
+                              [
+                                "Dividend yield",
+                                <span className="kv2-num">
+                                  {formatPercent(detail.dividendYield, { signed: false })}
+                                </span>,
+                              ],
+                            ]}
+                          />
+                        </Accordion.Panel>
+                      </Accordion.Item>
+                    </Accordion>
+                  </Stack>
+                </Panel>
+              </Grid.Col>
+            </Grid>
           </Tabs.Panel>
 
           <Tabs.Panel value="financials" pt={16}>
