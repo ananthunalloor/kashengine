@@ -715,7 +715,7 @@ function InstrumentsTab() {
 
 /* ---------------------------------- Page ---------------------------------- */
 
-export function MarketsPage({ initialTab = "track" }: { initialTab?: string }) {
+export function MockMarketsPage({ initialTab = "track" }: { initialTab?: string }) {
   const [tab, setTab] = useState<string | null>(initialTab);
   useEffect(() => setTab(initialTab), [initialTab]);
   return (
@@ -733,6 +733,7 @@ export function MarketsPage({ initialTab = "track" }: { initialTab?: string }) {
             <InfoTip>{ACCURACY_INFO}</InfoTip>
           </Group>
         }
+
         actions={
           <Button
             variant="default"
@@ -768,3 +769,5 @@ export function MarketsPage({ initialTab = "track" }: { initialTab?: string }) {
     </Page>
   );
 }
+
+export { MarketsPage } from "./DataDriven";

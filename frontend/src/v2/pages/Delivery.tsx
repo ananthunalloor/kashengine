@@ -142,7 +142,7 @@ function ChannelRow({
 
 type Batch = { date: string; report: string; attempts: DeliveryAttempt[] };
 
-export function DeliveryPage() {
+export function MockDeliveryPage() {
   const [emailState, setEmailState] = useState<ChannelState>(
     profile.emailVerified ? "connected" : "pending",
   );
@@ -173,6 +173,7 @@ export function DeliveryPage() {
       if (!map.has(key)) map.set(key, { date: a.date, report: a.report, attempts: [] });
       map.get(key)?.attempts.push(a);
     }
+
     return [...map.entries()];
   }, [filteredLog]);
 
@@ -581,3 +582,5 @@ export function DeliveryPage() {
     </Page>
   );
 }
+
+export { DeliveryPage } from "./DataDriven";

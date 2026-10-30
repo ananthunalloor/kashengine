@@ -75,7 +75,7 @@ function AuthCard({ mode, children }: { mode: Mode; children: ReactNode }) {
   );
 }
 
-export function LoginPage() {
+export function MockLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
@@ -160,7 +160,7 @@ function passwordStrength(value: string) {
 
 type SignupErrors = { email?: string; invite?: string; password?: string; terms?: string };
 
-export function SignupPage() {
+export function MockSignupPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [invite, setInvite] = useState("");
@@ -218,6 +218,7 @@ export function SignupPage() {
                 </InfoTip>
               </Group>
             }
+
             description="Ask the admin for an invite."
             placeholder="e.g. SAMPLE-1234"
             autoComplete="off"
@@ -288,3 +289,5 @@ export function SignupPage() {
     </AuthCard>
   );
 }
+
+export { LoginPage, SignupPage } from "./DataDriven";

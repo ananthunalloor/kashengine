@@ -797,7 +797,7 @@ function PreferencesSection() {
   );
 }
 
-export function AccountPage() {
+export function MockAccountPage() {
   const [section, setSection] = useState<Section>("profile");
   const [verified, setVerified] = useState(profile.emailVerified);
   const wide = useMediaQuery("(min-width: 62em)");
@@ -878,3 +878,5 @@ export function AccountPage() {
     </Page>
   );
 }
+
+export { AccountPage } from "./DataDriven";

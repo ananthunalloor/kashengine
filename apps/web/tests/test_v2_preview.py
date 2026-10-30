@@ -1,4 +1,4 @@
-"""The v2 design preview under /v2/ is a staff-only React shell."""
+"""The V2 React shell under /v2/ remains staff-only while the UI is in review."""
 
 import pytest
 from django.contrib.auth import get_user_model

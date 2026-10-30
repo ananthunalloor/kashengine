@@ -256,19 +256,19 @@
 [data-ui="v2"] .kv2-market-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid color-mix(in srgb, var(--kv2-gain) 20%, transparent);
-  border-radius: 999px;
-  background: var(--kv2-gain-soft);
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--kv2-border);
+  border-radius: 4px;
+  background: var(--kv2-surface-muted);
   color: var(--kv2-text);
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
   white-space: nowrap;
 }
 [data-ui="v2"] .kv2-market-pill:hover {
-  background: color-mix(in srgb, var(--kv2-gain-soft) 82%, var(--kv2-surface));
+  background: var(--kv2-surface);
 }
 [data-ui="v2"] .kv2-sidebar-top {
   min-height: 48px;

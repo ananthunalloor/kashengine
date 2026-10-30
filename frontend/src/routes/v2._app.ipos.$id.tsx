@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { IpoDetailPage } from "../v2/pages/IpoDetail";
+import { ipoQuery } from "../shared/api/ipos";
+import { IpoDetailPage } from "../v2/pages/DataDriven";
 
 export const Route = createFileRoute("/v2/_app/ipos/$id")({
+  beforeLoad: ({ context, params }) => context.queryClient.ensureQueryData(ipoQuery(params.id)),
   component: Page,
 });
 

@@ -153,7 +153,7 @@ function DeliveryPanel({ report }: { report: DailyReport }) {
   );
 }
 
-export function ReportDetailPage({ day }: { day: string }) {
+export function MockReportDetailPage({ day }: { day: string }) {
   const { report, fallback } = useMemo(() => reportFor(day), [day]);
   const { older, newer } = useMemo(() => neighbours(report.day), [report.day]);
   const clipboard = useClipboard({ timeout: 1500 });
@@ -587,3 +587,5 @@ export function ReportDetailPage({ day }: { day: string }) {
     </Page>
   );
 }
+
+export { ReportDetailPage } from "./DataDriven";

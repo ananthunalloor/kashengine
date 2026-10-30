@@ -6,7 +6,6 @@ import {
   Burger,
   Divider,
   Group,
-  Indicator,
   Kbd,
   Menu,
   NavLink,
@@ -21,11 +20,10 @@ import {
 import { useDisclosure, useLocalStorage } from "@mantine/hooks";
 import { Spotlight, spotlight } from "@mantine/spotlight";
 import type { SpotlightActionData } from "@mantine/spotlight";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import {
-  LuBell,
   LuBuilding2,
-  LuCalendarDays,
   LuChartCandlestick,
   LuChevronsLeft,
   LuChevronsRight,
@@ -43,13 +41,15 @@ import {
   LuShieldCheck,
   LuSun,
   LuUser,
-  LuWifi,
 } from "react-icons/lu";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
+import { sessionQuery } from "../../shared/api/session";
+import type { Session } from "../../shared/api/generated/types.gen";
+import { csrfToken } from "../../shared/api/client";
+import { useLiveQuotes } from "../../shared/api/liveQuotes";
 import { AppLink } from "../../shared/ui/AppLink";
-import { companies, marketStatus, notifications, sampleUser } from "../mock/data";
 import { TradingCalendarModal } from "./TradingCalendarModal";
 
 export type NavItem = { label: string; href: string; icon: ReactNode };
@@ -112,19 +112,33 @@ function SearchTrigger() {
 
 function MarketPill() {
   const [opened, { open, close }] = useDisclosure(false);
+  const { data: session } = useSuspenseQuery(sessionQuery);
+  const live = useLiveQuotes([]);
+  const market = session.market_calendar;
+  const liveDetail = Object.entries(live.status?.segments ?? {})
+    .map(([segment, status]) => `${segment}: ${status}`)
+    .join(" · ");
   return (
     <>
-      <Tooltip label="Sample market status · open trading calendar">
-        <button type="button" className="kv2-market-pill" onClick={open}>
-          <span className="kv2-dot" style={{ color: "var(--kv2-text-muted)" }} />
-          <strong>{marketStatus.label}</strong>
-          <Text span size="xs" c="dimmed" visibleFrom="lg">
-            · {marketStatus.detail}
-          </Text>
-          <Badge size="xs" color="amber" visibleFrom="sm">
-            Sample
-          </Badge>
-          <LuCalendarDays size={14} />
+      <Tooltip
+        label={`${market.reason}${market.special_reason ? ` · ${market.special_reason}` : ""} · Feed ${live.connection}${liveDetail ? `: ${liveDetail}` : ""} · Open trading calendar`}
+      >
+        <button
+          type="button"
+          className="kv2-market-pill"
+          onClick={open}
+          aria-label={`NSE ${market.is_open ? "open" : market.status_key}; ${market.reason}; market feed ${live.connection}. Open trading calendar.`}
+        >
+          <span
+            className="kv2-dot"
+            style={{
+              color:
+                market.is_open && live.connection === "live"
+                  ? "var(--kv2-gain)"
+                  : "var(--kv2-text-muted)",
+            }}
+          />
+          <strong>NSE {market.is_open ? "open" : market.status_key}</strong>
         </button>
       </Tooltip>
       <TradingCalendarModal opened={opened} onClose={close} />
@@ -147,51 +161,21 @@ function ThemeToggle() {
   );
 }
 
-function NotificationsMenu() {
-  return (
-    <Menu width={300} position="bottom-end">
-      <Menu.Target>
-        <Indicator size={7} offset={7} color="red.6" processing={false}>
-          <ActionIcon aria-label="Notifications">
-            <LuBell />
-          </ActionIcon>
-        </Indicator>
-      </Menu.Target>
-      <Menu.Dropdown>
-        <Menu.Label>Notifications</Menu.Label>
-        {notifications.map((n) => (
-          <Menu.Item key={n.id}>
-            <Stack gap={0}>
-              <Text size="sm">{n.title}</Text>
-              <Text size="xs" c="dimmed">
-                {n.time}
-              </Text>
-            </Stack>
-          </Menu.Item>
-        ))}
-        <Menu.Divider />
-        <Menu.Item component={AppLink} href="/v2/delivery/" c="var(--kv2-brand)">
-          Delivery settings
-        </Menu.Item>
-      </Menu.Dropdown>
-    </Menu>
-  );
-}
-
-function UserMenu() {
+function UserMenu({ session }: { session: Session }) {
+  const initials = session.username.slice(0, 2).toUpperCase() || "U";
   return (
     <Menu width={220} position="bottom-end">
       <Menu.Target>
         <UnstyledButton aria-label="Account menu">
           <Group gap={8} wrap="nowrap">
             <Avatar size={28} radius="xl" color="indigo" variant="filled">
-              {sampleUser.initials}
+              {initials}
             </Avatar>
             <Stack gap={0} visibleFrom="md">
               <Text size="xs" fw={600} lh={1.2}>
-                {sampleUser.name}
+                {session.username}
               </Text>
-              {sampleUser.staff ? (
+              {session.is_staff ? (
                 <Text size="10px" c="dimmed" lh={1.2}>
                   Staff
                 </Text>
@@ -201,7 +185,7 @@ function UserMenu() {
         </UnstyledButton>
       </Menu.Target>
       <Menu.Dropdown>
-        <Menu.Label>{sampleUser.email}</Menu.Label>
+        <Menu.Label>{session.email}</Menu.Label>
         <Menu.Item leftSection={<LuUser size={14} />} component={AppLink} href="/v2/account/">
           Account
         </Menu.Item>
@@ -216,9 +200,17 @@ function UserMenu() {
           Design system
         </Menu.Item>
         <Menu.Divider />
-        <Menu.Item leftSection={<LuLogOut size={14} />} color="red">
-          Sign out
-        </Menu.Item>
+        <form action={session.logout_url} method="post">
+          <input type="hidden" name="csrfmiddlewaretoken" value={csrfToken() ?? ""} />
+          <Menu.Item
+            component="button"
+            type="submit"
+            leftSection={<LuLogOut size={14} />}
+            color="red"
+          >
+            Sign out
+          </Menu.Item>
+        </form>
       </Menu.Dropdown>
     </Menu>
   );
@@ -235,18 +227,12 @@ function useSpotlightActions(): SpotlightActionData[] {
       leftSection: item.icon,
       onClick: go(item.href),
     })),
-    ...companies.slice(0, 12).map((c) => ({
-      id: `co-${c.id}`,
-      label: c.name,
-      description: `${c.symbol} · ${c.sector}`,
-      leftSection: <LuBuilding2 />,
-      onClick: go(`/v2/companies/${c.id}/`),
-    })),
   ];
 }
 
 /** Authenticated v2 shell: 48px header, 220px navbar collapsing to a 56px rail, Spotlight. */
 export function V2Shell({ children }: { children: ReactNode }) {
+  const { data: session } = useSuspenseQuery(sessionQuery);
   const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] = useDisclosure(false);
   const [rail, setRail] = useLocalStorage({ key: "kv2-nav-rail", defaultValue: false });
   const actions = useSpotlightActions();
@@ -294,19 +280,9 @@ export function V2Shell({ children }: { children: ReactNode }) {
               <LuSearch />
             </ActionIcon>
             <MarketPill />
-            <Tooltip label="No live connection in the sample preview">
-              <ActionIcon
-                aria-label="Sample preview has no live connection"
-                visibleFrom="sm"
-                c="var(--kv2-text-muted)"
-              >
-                <LuWifi />
-              </ActionIcon>
-            </Tooltip>
             <ThemeToggle />
-            <NotificationsMenu />
             <Divider orientation="vertical" my={10} visibleFrom="sm" />
-            <UserMenu />
+            <UserMenu session={session} />
           </Group>
         </Group>
       </AppShell.Header>
@@ -322,7 +298,7 @@ export function V2Shell({ children }: { children: ReactNode }) {
                       Terminal Node 01
                     </Text>
                     <Text size="xs" c="dimmed">
-                      NSE / BSE sample feed
+                      Authenticated market feed
                     </Text>
                   </Stack>
                 ) : null}
@@ -359,8 +335,8 @@ export function V2Shell({ children }: { children: ReactNode }) {
               items={[{ label: "Account", href: "/v2/account/", icon: <LuUser /> }]}
               rail={rail}
             />
-            {sampleUser.staff ? (
-              <Tooltip label="Operations console (v1)" position="right" disabled={!rail}>
+            {session.is_staff ? (
+              <Tooltip label="Operations console" position="right" disabled={!rail}>
                 <NavLink
                   component="a"
                   href="/v2/ops/"

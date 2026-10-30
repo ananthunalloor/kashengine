@@ -59,7 +59,7 @@ export function opsPageQuery(path: string, filters: OpsSearch) {
   });
 }
 
-export async function submitOpsForm(form: OpsForm, body: FormData) {
+export async function submitOpsForm(form: { action: string; download?: boolean }, body: FormData) {
   if (!form.action.startsWith("/api/app/ops/actions/"))
     throw new ApiError("contract", "This Ops action is not supported.");
   const path: `/api/app/${string}` = `/api/app/${form.action.slice("/api/app/".length)}`;

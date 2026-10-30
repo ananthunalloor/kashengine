@@ -240,7 +240,7 @@ function ArticleRow({
   );
 }
 
-export function NewsPage() {
+export function MockNewsPage() {
   const [coverage, setCoverage] = useState("all");
   const [search, setSearch] = useState("");
   const [debounced] = useDebouncedValue(search, 250);
@@ -269,6 +269,7 @@ export function NewsPage() {
         const b = bucketOf(a.sentiment);
         if (!b || !buckets.includes(b)) return false;
       }
+
       if (source && a.source !== source) return false;
       if (company && !a.companyIds.includes(company)) return false;
       if (a.minutesAgo > maxAge) return false;
@@ -609,3 +610,5 @@ export function NewsPage() {
     </Page>
   );
 }
+
+export { NewsPage } from "./DataDriven";

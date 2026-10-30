@@ -210,7 +210,7 @@ function CalendarHeatmap({ month, rows }: { month: string; rows: DailyReport[] }
   );
 }
 
-export function ReportsPage() {
+export function MockReportsPage() {
   const navigate = useNavigate();
   const [view, setView] = useState<"table" | "calendar">("table");
   const [search, setSearch] = useState("");
@@ -387,6 +387,7 @@ export function ReportsPage() {
           ? "Try another month or outlook, or clear the filters."
           : "The first report is built before the market opens on the next trading day."
       }
+
       action={
         filtersActive ? (
           <Button size="xs" variant="default" onClick={clear}>
@@ -550,3 +551,5 @@ export function ReportsPage() {
     </Page>
   );
 }
+
+export { ReportsPage } from "./DataDriven";

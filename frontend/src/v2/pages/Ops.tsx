@@ -799,7 +799,7 @@ function OpsNavigation({ active }: { active: string }) {
 }
 
 /** All v2 operations surfaces use sample-only data. `path` is the route splat below `/v2/ops/`. */
-export function OpsPage({ path = "ops/" }: { path?: string }) {
+export function MockOpsPage({ path = "ops/" }: { path?: string }) {
   const { key: routeKey, detail } = routeFor(path);
   const key = [
     "run-detail",
@@ -1444,3 +1444,5 @@ function AlertLogNotice() {
     </Group>
   );
 }
+
+export { OpsPage } from "./DataDriven";

@@ -229,7 +229,7 @@ function marketDepthRows(levels: MarketDepthLevel[]) {
   return levels.map((level, index) => ({ ...level, level: index + 1 }));
 }
 
-export function CompanyDetailPage({ id }: { id: string }) {
+export function MockCompanyDetailPage({ id }: { id: string }) {
   const company = findCompany(id);
   const detail = useMemo(() => companyDetail(company), [company]);
   const candles = useMemo(() => mockCandles(260, company.last, companySeed(company)), [company]);
@@ -359,6 +359,7 @@ export function CompanyDetailPage({ id }: { id: string }) {
             </StatusBadge>
           </>
         }
+
         description={
           <Group gap={10} wrap="wrap" component="span">
             <Text component="span" size="xl" fw={700} className="kv2-num" c="var(--kv2-text)">
@@ -1430,3 +1431,5 @@ export function CompanyDetailPage({ id }: { id: string }) {
     </Page>
   );
 }
+
+export { CompanyDetailPage } from "./DataDriven";

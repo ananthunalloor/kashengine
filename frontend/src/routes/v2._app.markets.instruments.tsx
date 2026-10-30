@@ -1,7 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { MarketsPage } from "../v2/pages/Markets";
+import { exchangeInstrumentsQuery } from "../shared/api/exchangeInstruments";
+import { MarketInstrumentsPage } from "../v2/pages/DataDriven";
 
 export const Route = createFileRoute("/v2/_app/markets/instruments")({
-  component: () => <MarketsPage initialTab="instruments" />,
+  beforeLoad: ({ context }) =>
+    context.queryClient.ensureQueryData(
+      exchangeInstrumentsQuery({
+        q: "",
+        page: 1,
+        page_size: 25,
+        exchange: "",
+        segment: "",
+        instrument_type: "",
+      }),
+    ),
+  component: MarketInstrumentsPage,
 });

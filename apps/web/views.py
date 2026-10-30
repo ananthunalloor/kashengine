@@ -111,9 +111,10 @@ def react_app(request: HttpRequest) -> HttpResponse:
 @staff_required
 @safe_only
 def react_v2_preview(request: HttpRequest, rest: str = "") -> HttpResponse:
-    """Serve the React shell for the staff-only v2 design preview under `/v2/`.
+    """Serve the staff-only V2 React shell under `/v2/`.
 
-    The preview pages use static sample data, so only staff can open them.
+    Authenticated V2 pages use the existing `/api/app/` endpoints. Staff access remains
+    required while the redesigned UI is being reviewed.
 
     Args:
         request: The incoming request.

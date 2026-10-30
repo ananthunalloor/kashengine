@@ -131,7 +131,7 @@ const columns: Column<Company>[] = [
   },
 ];
 
-export function CompaniesPage() {
+export function MockCompaniesPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [index, setIndex] = useState("all");
@@ -285,3 +285,5 @@ export function CompaniesPage() {
     </Page>
   );
 }
+
+export { CompaniesPage } from "./DataDriven";

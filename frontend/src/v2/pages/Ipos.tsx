@@ -221,7 +221,7 @@ const columns: Column<Ipo>[] = [
 type Tab = IpoStatus | "all";
 const tabs: Tab[] = ["open", "upcoming", "closed", "listed", "all"];
 
-export function IposPage() {
+export function MockIposPage() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("open");
   const [board, setBoard] = useState("all");
@@ -377,3 +377,5 @@ export function IposPage() {
     </Page>
   );
 }
+
+export { IposPage } from "./DataDriven";

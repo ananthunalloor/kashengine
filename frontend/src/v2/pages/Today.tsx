@@ -74,7 +74,7 @@ const biasMeta: Record<NewsBias, { tone: Tone; label: string }> = {
   none: { tone: "neutral", label: "No clear edge" },
 };
 
-export function TodayPage() {
+export function MockTodayPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [asOf, setAsOf] = useState(todayMeta.asOf);
 
@@ -731,3 +731,5 @@ function DeliveryPanel() {
     </Panel>
   );
 }
+
+export { TodayPage } from "./DataDriven";

@@ -196,7 +196,7 @@ function VerdictCard({ ipo }: { ipo: Ipo }) {
   );
 }
 
-export function IpoDetailPage({ id }: { id: string }) {
+export function MockIpoDetailPage({ id }: { id: string }) {
   const ipo = findIpo(id);
   const gain = listingGainPct(ipo);
   const totalSub = ipo.subscription;
@@ -265,6 +265,7 @@ export function IpoDetailPage({ id }: { id: string }) {
             </StatusBadge>
           </Group>
         }
+
         description={`${ipo.sector} · book-built issue · sample data`}
         actions={
           <>
@@ -511,3 +512,5 @@ export function IpoDetailPage({ id }: { id: string }) {
     </Page>
   );
 }
+
+export { IpoDetailPage } from "./DataDriven";
