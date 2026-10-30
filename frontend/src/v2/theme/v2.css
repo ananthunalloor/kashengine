@@ -436,6 +436,16 @@
   border-bottom: 1px solid var(--kv2-border);
   gap: 4px;
 }
+[data-ui="v2"] .ops-page-tabs [role="tablist"] {
+  top: 48px;
+  z-index: 5;
+  padding-block: 4px;
+  border-bottom: 1px solid var(--kv2-border);
+  background: var(--kv2-canvas);
+}
+[data-ui="v2"] .ops-page-tabs .ops-page-tab-panel {
+  padding-top: 12px;
+}
 [data-ui="v2"] .kv2-tabs-list::before {
   display: none;
 }

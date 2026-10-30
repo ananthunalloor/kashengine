@@ -20,6 +20,7 @@ import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
+import { useRouterState } from "@tanstack/react-router";
 import { LuExternalLink, LuRefreshCw } from "react-icons/lu";
 
 import {
@@ -46,7 +47,13 @@ import { marketsQuery } from "../../shared/api/markets";
 import { newsQuery } from "../../shared/api/news";
 import { ipoQuery, iposQuery } from "../../shared/api/ipos";
 import { reportQuery, reportsQuery } from "../../shared/api/reports";
-import { auditQuery, runQuery, runsQuery } from "../../shared/api/ops";
+import {
+  auditQuery,
+  auditSearchSchema,
+  runQuery,
+  runSearchSchema,
+  runsQuery,
+} from "../../shared/api/ops";
 import type { AuditSearch, RunSearch } from "../../shared/api/ops";
 import { opsPageQuery, opsSearchSchema, submitOpsForm } from "../../shared/api/opsWorkspace";
 import type { OpsSearch } from "../../shared/api/opsWorkspace";
@@ -54,6 +61,7 @@ import { todayQuery } from "../../shared/api/today";
 import { stopRun } from "../../shared/api/ops";
 import { csrfToken } from "../../shared/api/client";
 import { sessionQuery } from "../../shared/api/session";
+import { OpsPageTabs } from "../../shared/ui/OpsNavigation";
 import type {
   Account,
   CompanyDetail,
@@ -2075,39 +2083,36 @@ export function DeliveryPage() {
 export function OpsPage({ path = "ops/" }: { path?: string }) {
   const client = useQueryClient();
   const { data: session } = useSuspenseQuery(sessionQuery);
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const normalizedPath = path.replace(/^ops\/?/, "") || "overview/";
   const pagePath = normalizedPath.endsWith("/") ? normalizedPath : `${normalizedPath}/`;
+  const isAuditPage = pagePath === "audit/";
+  const isRunsPage = pagePath === "runs/";
   const [filters, setFilters] = useState<OpsSearch>(() => opsSearchSchema.parse({}));
-  const [auditFilters, setAuditFilters] = useState<AuditSearch>({
-    q: "",
-    actor: "",
-    action: "",
-    page: 1,
-    page_size: pageSize,
-  });
-  const [runsFilters, setRunsFilters] = useState<RunSearch>({
-    q: "",
-    label: "",
-    status: "",
-    trigger: "",
-    page: 1,
-    page_size: pageSize,
-  });
+  const [auditFilters, setAuditFilters] = useState<AuditSearch>(() =>
+    auditSearchSchema.parse({ page_size: pageSize }),
+  );
+  const [runsFilters, setRunsFilters] = useState<RunSearch>(() =>
+    runSearchSchema.parse({ page_size: pageSize }),
+  );
   const detailRunId = pagePath.match(/^runs\/(\d+)\/$/)?.[1];
-  const query = useQuery({ ...opsPageQuery(pagePath, filters), enabled: !detailRunId });
+  const query = useQuery({
+    ...opsPageQuery(pagePath, filters),
+    enabled: !detailRunId && !isAuditPage && !isRunsPage,
+  });
   const [pageData, setPageData] = useState<OpsPage | null>(null);
   const data = pageData ?? query.data;
   const audit = useQuery({
     ...auditQuery({
       ...auditFilters,
     }),
-    enabled: pagePath === "audit/",
+    enabled: isAuditPage,
   });
   const runs = useQuery({
     ...runsQuery({
       ...runsFilters,
     }),
-    enabled: pagePath === "runs/",
+    enabled: isRunsPage,
   });
   const detailRun = useQuery({
     ...runQuery(detailRunId ?? ""),
@@ -2123,23 +2128,33 @@ export function OpsPage({ path = "ops/" }: { path?: string }) {
       </Page>
     );
   }
-  const isPending = detailRunId ? detailRun.isPending : query.isPending;
-  const error = detailRunId ? detailRun.error : query.error;
+  const activeQuery = detailRunId ? detailRun : isAuditPage ? audit : isRunsPage ? runs : query;
+  const pageTitle =
+    detailRun.data?.label ??
+    data?.title ??
+    (isRunsPage ? "Task runs" : isAuditPage ? "Audit trail" : "Operations");
   return (
     <Page>
       <PageHeader
-        title={detailRun.data?.label ?? data?.title ?? "Operations"}
-        description={data?.description}
+        title={pageTitle}
+        description={
+          data?.description ??
+          (isRunsPage
+            ? "Review recorded task runs and their outcomes."
+            : isAuditPage
+              ? "Review recorded operations and account changes."
+              : undefined)
+        }
         meta={<StatusBadge tone="caution">Staff workspace</StatusBadge>}
       />
-      <QueryState
-        pending={isPending}
-        error={error}
-        retry={() => void (detailRunId ? detailRun.refetch() : query.refetch())}
-      >
-        {data || detailRun.data ? (
+      <OpsPageTabs superuser={session.is_superuser} pathname={pathname} basePath="/v2/ops/">
+        <QueryState
+          pending={activeQuery.isPending}
+          error={activeQuery.error}
+          retry={() => void activeQuery.refetch()}
+        >
           <OpsContent
-            page={data ?? { title: "Task run", sections: [] }}
+            page={data ?? { title: pageTitle, sections: [] }}
             audit={audit.data}
             runs={runs.data}
             runDetail={detailRun.data}
@@ -2166,8 +2181,8 @@ export function OpsPage({ path = "ops/" }: { path?: string }) {
               }
             }}
           />
-        ) : null}
-      </QueryState>
+        </QueryState>
+      </OpsPageTabs>
     </Page>
   );
 }

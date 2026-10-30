@@ -2,7 +2,6 @@ import {
   ActionIcon,
   AppShell,
   Avatar,
-  Badge,
   Burger,
   Divider,
   Group,
@@ -29,7 +28,6 @@ import {
   LuChevronsRight,
   LuBookOpen,
   LuFileText,
-  LuFilter,
   LuLayoutDashboard,
   LuLogOut,
   LuMoon,
@@ -50,6 +48,7 @@ import type { Session } from "../../shared/api/generated/types.gen";
 import { csrfToken } from "../../shared/api/client";
 import { useLiveQuotes } from "../../shared/api/liveQuotes";
 import { AppLink } from "../../shared/ui/AppLink";
+import { OpsNavigation } from "../../shared/ui/OpsNavigation";
 import { TradingCalendarModal } from "./TradingCalendarModal";
 
 export type NavItem = { label: string; href: string; icon: ReactNode };
@@ -238,6 +237,7 @@ export function V2Shell({ children }: { children: ReactNode }) {
   const actions = useSpotlightActions();
   const [query, setQuery] = useState("");
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const inOps = pathname.startsWith("/v2/ops/");
   const [lastPath, setLastPath] = useState(pathname);
   if (lastPath !== pathname) {
     setLastPath(pathname);
@@ -268,9 +268,6 @@ export function V2Shell({ children }: { children: ReactNode }) {
               <span className="kv2-logo-mark">k.</span>
               <span>kashengine</span>
             </AppLink>
-            <Badge size="xs" variant="light" color="indigo" visibleFrom="sm">
-              v8
-            </Badge>
             <Group visibleFrom="md" style={{ width: "min(320px, 100%)", minWidth: 0 }}>
               <SearchTrigger />
             </Group>
@@ -295,10 +292,10 @@ export function V2Shell({ children }: { children: ReactNode }) {
                 {!rail ? (
                   <Stack gap={2}>
                     <Text size="xs" fw={600}>
-                      Terminal Node 01
+                      {inOps ? "Operations" : "Workspace"}
                     </Text>
                     <Text size="xs" c="dimmed">
-                      Authenticated market feed
+                      {inOps ? "Staff-only tools" : "Market research"}
                     </Text>
                   </Stack>
                 ) : null}
@@ -313,41 +310,39 @@ export function V2Shell({ children }: { children: ReactNode }) {
                 </Tooltip>
               </Group>
             </div>
-            <Stack gap={2}>
+            {inOps ? (
+              <OpsNavigation
+                superuser={session.is_superuser}
+                pathname={pathname}
+                onNavigate={closeMobile}
+                basePath="/v2/ops/"
+                rail={rail}
+                showPages={false}
+              />
+            ) : (
               <NavItems items={primaryNav} rail={rail} />
-              <Tooltip label="Quick Screener" position="right" disabled={!rail}>
-                <NavLink
-                  className="kv2-screener-link"
-                  component={AppLink}
-                  href="/v2/companies/"
-                  label="Quick Screener"
-                  leftSection={<LuFilter />}
-                  aria-label="Quick Screener"
-                />
-              </Tooltip>
-            </Stack>
+            )}
           </Stack>
         </AppShell.Section>
         <AppShell.Section>
           <Divider my={8} />
           <Stack gap={2}>
             <NavItems
-              items={[{ label: "Account", href: "/v2/account/", icon: <LuUser /> }]}
+              items={[
+                { label: "Account", href: "/v2/account/", icon: <LuUser /> },
+                ...(inOps
+                  ? [{ label: "Today", href: "/v2/today/", icon: <LuLayoutDashboard /> }]
+                  : []),
+              ]}
               rail={rail}
             />
-            {session.is_staff ? (
+            {session.is_staff && !inOps ? (
               <Tooltip label="Operations console" position="right" disabled={!rail}>
                 <NavLink
+                  className="kv2-navlink"
                   component="a"
                   href="/v2/ops/"
-                  label={
-                    <Group gap={6} wrap="nowrap">
-                      Ops
-                      <Badge size="xs" variant="light" color="amber">
-                        Staff
-                      </Badge>
-                    </Group>
-                  }
+                  label="Operations"
                   leftSection={<LuShieldCheck />}
                   aria-label="Ops"
                 />
