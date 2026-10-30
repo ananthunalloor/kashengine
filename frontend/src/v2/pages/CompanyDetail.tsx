@@ -1,5 +1,7 @@
 import { BarChart, DonutChart, LineChart } from "@mantine/charts";
 import {
+  Accordion,
+  Alert,
   Anchor,
   Button,
   Grid,
@@ -46,8 +48,9 @@ import {
 } from "../components";
 import type { Column, Tone } from "../components";
 import { companyDetail, companySeed, findCompany } from "../mock/companies";
-import type { CompanyNews, DeliveryDay } from "../mock/companies";
+import type { CompanyNews, DeliveryDay, MarketDepthLevel } from "../mock/companies";
 import { mockCandles } from "../mock/generate";
+import type { Candle } from "../mock/generate";
 
 const crore = 1e7;
 
@@ -86,6 +89,8 @@ const valuationTone: Record<string, Tone> = {
   "In line": "info",
   "Sector premium": "caution",
   "Sector discount": "gain",
+  "Mixed valuation": "neutral",
+  "Insufficient data": "neutral",
 };
 
 const newsColumns: Column<CompanyNews>[] = [
@@ -179,6 +184,50 @@ const deliveryColumns: Column<DeliveryDay>[] = [
   },
 ];
 
+type ForecastResult = {
+  origin: string;
+  target: string;
+  originClose: number;
+  predicted: number;
+  actual: number;
+  error: number;
+  directionMatched: boolean;
+};
+
+function forecastResults(candles: Candle[], horizon: number): ForecastResult[] {
+  const results: ForecastResult[] = [];
+  for (let originIndex = 20; originIndex + horizon - 1 < candles.length; originIndex += horizon) {
+    const history = candles.slice(originIndex - 20, originIndex);
+    const mean = history.reduce((sum, candle) => sum + candle.close, 0) / history.length;
+    const meanX = (history.length - 1) / 2;
+    const denominator = history.reduce((sum, _, i) => sum + (i - meanX) ** 2, 0);
+    const slope =
+      denominator === 0
+        ? 0
+        : history.reduce((sum, candle, i) => sum + (i - meanX) * (candle.close - mean), 0) /
+          denominator;
+    const origin = candles[originIndex - 1];
+    const target = candles[originIndex + horizon - 1];
+    const predicted = mean + slope * (history.length + horizon - 1 - meanX);
+    const predictedMove = predicted - origin.close;
+    const actualMove = target.close - origin.close;
+    results.push({
+      origin: origin.date,
+      target: target.date,
+      originClose: origin.close,
+      predicted,
+      actual: target.close,
+      error: predicted - target.close,
+      directionMatched: Math.sign(predictedMove) === Math.sign(actualMove),
+    });
+  }
+  return results;
+}
+
+function marketDepthRows(levels: MarketDepthLevel[]) {
+  return levels.map((level, index) => ({ ...level, level: index + 1 }));
+}
+
 export function CompanyDetailPage({ id }: { id: string }) {
   const company = findCompany(id);
   const detail = useMemo(() => companyDetail(company), [company]);
@@ -186,19 +235,44 @@ export function CompanyDetailPage({ id }: { id: string }) {
   const [tab, setTab] = useState<string | null>("overview");
   const [period, setPeriod] = useState("quarterly");
   const [newsSentiment, setNewsSentiment] = useState<string | null>(null);
+  const [newsSource, setNewsSource] = useState<string | null>(null);
+  const [horizon, setHorizon] = useState(5);
 
   const change = company.last - detail.prevClose;
   const s = detail.sentiment;
-  const comparable = detail.multiples.filter(
-    (m) => Math.abs(m.company / m.sector - 1) <= 0.1,
-  ).length;
+  const valuationRows = detail.multiples.map((multiple) => {
+    const comparable =
+      Number.isFinite(multiple.company) &&
+      Number.isFinite(multiple.sector) &&
+      multiple.company > 0 &&
+      multiple.sector > 0;
+    return {
+      ...multiple,
+      comparable,
+      difference: comparable ? (multiple.company / multiple.sector - 1) * 100 : null,
+    };
+  });
+  const comparableCount = valuationRows.filter((row) => row.comparable).length;
+  const hasPremium = valuationRows.some((row) => row.difference !== null && row.difference > 10);
+  const hasDiscount = valuationRows.some((row) => row.difference !== null && row.difference < -10);
+  const valuationState =
+    comparableCount === 0
+      ? "Insufficient data"
+      : hasPremium && hasDiscount
+        ? "Mixed valuation"
+        : hasPremium
+          ? "Sector premium"
+          : hasDiscount
+            ? "Sector discount"
+            : "In line";
 
   const news = detail.news.filter(
     (n) =>
-      !newsSentiment ||
-      (newsSentiment === "positive" && n.score >= 0.15) ||
-      (newsSentiment === "negative" && n.score <= -0.15) ||
-      (newsSentiment === "neutral" && Math.abs(n.score) < 0.15),
+      (!newsSource || n.source === newsSource) &&
+      (!newsSentiment ||
+        (newsSentiment === "positive" && n.score >= 0.15) ||
+        (newsSentiment === "negative" && n.score <= -0.15) ||
+        (newsSentiment === "neutral" && Math.abs(n.score) < 0.15)),
   );
 
   const avgDelivery =
@@ -210,6 +284,50 @@ export function CompanyDetailPage({ id }: { id: string }) {
     Intraday: Math.round((d.volume - d.delivered) / 1000),
     "Delivery %": d.deliveryPct,
   }));
+  const predictions = useMemo(() => forecastResults(candles, horizon), [candles, horizon]);
+  const predictionSummary = useMemo(() => {
+    if (!predictions.length) return null;
+    const absoluteError = predictions.reduce((sum, row) => sum + Math.abs(row.error), 0);
+    const baselineError = predictions.reduce(
+      (sum, row) => sum + Math.abs(row.originClose - row.actual),
+      0,
+    );
+    const mape =
+      predictions.reduce((sum, row) => sum + Math.abs(row.error / row.actual) * 100, 0) /
+      predictions.length;
+    return {
+      count: predictions.length,
+      accuracy:
+        (predictions.filter((row) => row.directionMatched).length / predictions.length) * 100,
+      mae: absoluteError / predictions.length,
+      baselineMae: baselineError / predictions.length,
+      mape,
+    };
+  }, [predictions]);
+  const latestPrediction = predictions.at(-1);
+  const tradeEvidence = useMemo(() => {
+    if (candles.length < 21) return null;
+    const recent = candles.slice(-21);
+    const previous = recent.slice(0, -1);
+    const latest = recent.at(-1)!;
+    const support = Math.min(...previous.map((candle) => candle.low));
+    const resistance = Math.max(...previous.map((candle) => candle.high));
+    const sma20 = recent.slice(-20).reduce((sum, candle) => sum + candle.close, 0) / 20;
+    const last50 = candles.slice(-50);
+    const sma50 =
+      last50.length === 50 ? last50.reduce((sum, candle) => sum + candle.close, 0) / 50 : null;
+    const averageVolume = previous.reduce((sum, candle) => sum + candle.volume, 0) / 20;
+    return {
+      latest,
+      support,
+      resistance,
+      sma20,
+      sma50,
+      risk: resistance - support,
+      rising: latest.close > sma20 && latest.close > previous[0].close,
+      volumeConfirmed: latest.volume > averageVolume,
+    };
+  }, [candles]);
 
   const financialRows =
     period === "quarterly"
@@ -245,7 +363,7 @@ export function CompanyDetailPage({ id }: { id: string }) {
             </Text>
             <Delta value={change} kind="points" />
             <Delta value={company.changePct} />
-            <FreshnessTag state="live" detail="11:42 IST" />
+            <FreshnessTag state="delayed" detail="sample snapshot" />
           </Group>
         }
         actions={
@@ -304,10 +422,8 @@ export function CompanyDetailPage({ id }: { id: string }) {
           <KpiTile
             label="Valuation"
             info="Compares P/E, P/B and EV/EBITDA with the sector median. Within ±10% counts as in line."
-            value={
-              <StatusBadge tone={valuationTone[detail.valuation]}>{detail.valuation}</StatusBadge>
-            }
-            hint={`${comparable} of 3 multiples in line`}
+            value={<StatusBadge tone={valuationTone[valuationState]}>{valuationState}</StatusBadge>}
+            hint={`${comparableCount} of 3 multiples comparable`}
           />
           <KpiTile
             label="Delivery %"
@@ -321,6 +437,7 @@ export function CompanyDetailPage({ id }: { id: string }) {
           <Tabs.List style={{ overflowX: "auto", flexWrap: "nowrap" }}>
             <Tabs.Tab value="overview">Overview</Tabs.Tab>
             <Tabs.Tab value="financials">Financials</Tabs.Tab>
+            <Tabs.Tab value="signals">Signals &amp; setups</Tabs.Tab>
             <Tabs.Tab
               value="news"
               rightSection={<StatusBadge size="xs">{detail.news.length}</StatusBadge>}
@@ -328,95 +445,173 @@ export function CompanyDetailPage({ id }: { id: string }) {
               News
             </Tabs.Tab>
             <Tabs.Tab value="delivery">Delivery & volume</Tabs.Tab>
+            <Tabs.Tab
+              value="ipos"
+              rightSection={<StatusBadge size="xs">{detail.ipoScores.length}</StatusBadge>}
+            >
+              IPO scores
+            </Tabs.Tab>
           </Tabs.List>
 
           <Tabs.Panel value="overview" pt={16}>
-            <Grid gutter={16}>
-              <Grid.Col span={{ base: 12, md: 8 }}>
-                <Stack gap={16}>
-                  <PriceChartPanel
-                    title={`${company.symbol} · Daily`}
-                    candles={candles}
-                    last={company.last}
-                  />
-                  <Panel title={`About ${company.name}`}>
-                    <Stack gap={10}>
-                      <Text size="sm">{detail.about}</Text>
+            <Stack gap={16}>
+              <Grid gutter={16}>
+                <Grid.Col span={{ base: 12, md: 8 }}>
+                  <Stack gap={16}>
+                    <PriceChartPanel
+                      title={`${company.symbol} · Daily`}
+                      candles={candles}
+                      last={company.last}
+                    />
+                    <Panel title={`About ${company.name}`}>
+                      <Stack gap={10}>
+                        <Text size="sm">{detail.about}</Text>
+                        <DescriptionList
+                          items={[
+                            ["Founded", String(detail.founded)],
+                            ["Headquarters", detail.hq],
+                            ["Employees", formatNumber(detail.employees)],
+                            ["ISIN", <span className="kv2-mono">{detail.isin}</span>],
+                            ["Data from", formatDate(detail.dataFrom)],
+                          ]}
+                        />
+                      </Stack>
+                    </Panel>
+                  </Stack>
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, md: 4 }}>
+                  <Stack gap={16}>
+                    <Panel
+                      title="Key stats"
+                      info="Sample figures for today's session and the trailing 12 months."
+                    >
                       <DescriptionList
                         items={[
-                          ["Founded", String(detail.founded)],
-                          ["Headquarters", detail.hq],
-                          ["Employees", formatNumber(detail.employees)],
-                          ["ISIN", <span className="kv2-mono">{detail.isin}</span>],
-                          ["Data from", formatDate(detail.dataFrom)],
+                          ["Open", <span className="kv2-num">{formatInr(detail.open)}</span>],
+                          [
+                            "Day range",
+                            <span className="kv2-num">{`${formatInr(detail.low)} – ${formatInr(detail.high)}`}</span>,
+                          ],
+                          [
+                            "52W range",
+                            <span className="kv2-num">{`${formatInr(detail.week52Low)} – ${formatInr(detail.week52High)}`}</span>,
+                          ],
+                          [
+                            "Market cap",
+                            <span className="kv2-num">{formatCompactInr(company.marketCap)}</span>,
+                          ],
+                          ["P/E", <span className="kv2-num">{formatNumber(company.pe, 1)}×</span>],
+                          ["P/B", <span className="kv2-num">{formatNumber(detail.pb, 2)}×</span>],
+                          [
+                            "Book value",
+                            <span className="kv2-num">{formatInr(detail.bookValue)}</span>,
+                          ],
+                          [
+                            "Dividend yield",
+                            <span className="kv2-num">
+                              {formatPercent(detail.dividendYield, { signed: false })}
+                            </span>,
+                          ],
+                          [
+                            <Group gap={4}>
+                              Beta
+                              <InfoTip>
+                                How much the price moves relative to Sample Index 50. Below 1 means
+                                less volatile.
+                              </InfoTip>
+                            </Group>,
+                            <span className="kv2-num">{detail.beta.toFixed(2)}</span>,
+                          ],
+                          [
+                            "Volume",
+                            <span className="kv2-num">{formatNumber(company.volume)}</span>,
+                          ],
                         ]}
                       />
-                    </Stack>
-                  </Panel>
-                </Stack>
-              </Grid.Col>
-              <Grid.Col span={{ base: 12, md: 4 }}>
-                <Stack gap={16}>
-                  <Panel
-                    title="Key stats"
-                    info="Sample figures for today's session and the trailing 12 months."
-                  >
+                    </Panel>
+                    <Panel
+                      title="Momentum"
+                      info="Blend of 20- and 50-session trend, scaled 0–10. Sample model, not investment advice."
+                    >
+                      <Stack gap={8}>
+                        <StrengthMeter score={detail.momentum} />
+                        <Muted>
+                          Not investment advice. Scores are computed from historical sample prices
+                          only.
+                        </Muted>
+                      </Stack>
+                    </Panel>
+                  </Stack>
+                </Grid.Col>
+              </Grid>
+              <Panel
+                title="Quote snapshot & market depth"
+                info="Fictional saved quote and five-level order book. This preview is not connected to a live market feed."
+                flush
+              >
+                <Grid gutter={16} p="md">
+                  <Grid.Col span={{ base: 12, md: 4 }}>
                     <DescriptionList
                       items={[
+                        ["Last traded", <span className="kv2-num">{formatInr(company.last)}</span>],
+                        [
+                          "Previous close",
+                          <span className="kv2-num">{formatInr(detail.prevClose)}</span>,
+                        ],
                         ["Open", <span className="kv2-num">{formatInr(detail.open)}</span>],
                         [
-                          "Day range",
-                          <span className="kv2-num">{`${formatInr(detail.low)} – ${formatInr(detail.high)}`}</span>,
-                        ],
-                        [
-                          "52W range",
-                          <span className="kv2-num">{`${formatInr(detail.week52Low)} – ${formatInr(detail.week52High)}`}</span>,
-                        ],
-                        [
-                          "Market cap",
-                          <span className="kv2-num">{formatCompactInr(company.marketCap)}</span>,
-                        ],
-                        ["P/E", <span className="kv2-num">{formatNumber(company.pe, 1)}×</span>],
-                        ["P/B", <span className="kv2-num">{formatNumber(detail.pb, 2)}×</span>],
-                        [
-                          "Book value",
-                          <span className="kv2-num">{formatInr(detail.bookValue)}</span>,
-                        ],
-                        [
-                          "Dividend yield",
-                          <span className="kv2-num">
-                            {formatPercent(detail.dividendYield, { signed: false })}
-                          </span>,
-                        ],
-                        [
-                          <Group gap={4}>
-                            Beta
-                            <InfoTip>
-                              How much the price moves relative to Sample Index 50. Below 1 means
-                              less volatile.
-                            </InfoTip>
-                          </Group>,
-                          <span className="kv2-num">{detail.beta.toFixed(2)}</span>,
+                          "Average price",
+                          <span className="kv2-num">{formatInr(detail.averagePrice)}</span>,
                         ],
                         ["Volume", <span className="kv2-num">{formatNumber(company.volume)}</span>],
+                        [
+                          "Total buy qty",
+                          <span className="kv2-num">{formatNumber(detail.totalBuyQty)}</span>,
+                        ],
+                        [
+                          "Total sell qty",
+                          <span className="kv2-num">{formatNumber(detail.totalSellQty)}</span>,
+                        ],
                       ]}
                     />
-                  </Panel>
-                  <Panel
-                    title="Momentum"
-                    info="Blend of 20- and 50-session trend, scaled 0–10. Sample model, not investment advice."
-                  >
-                    <Stack gap={8}>
-                      <StrengthMeter score={detail.momentum} />
-                      <Muted>
-                        Not investment advice. Scores are computed from historical sample prices
-                        only.
-                      </Muted>
-                    </Stack>
-                  </Panel>
-                </Stack>
-              </Grid.Col>
-            </Grid>
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 8 }}>
+                    <div className="kv2-table-wrap">
+                      <Table aria-label="Market depth (top 5)">
+                        <Table.Thead>
+                          <Table.Tr>
+                            <Table.Th>Level</Table.Th>
+                            <Table.Th data-align="right">Bid qty</Table.Th>
+                            <Table.Th data-align="right">Bid price</Table.Th>
+                            <Table.Th data-align="right">Ask price</Table.Th>
+                            <Table.Th data-align="right">Ask qty</Table.Th>
+                          </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                          {marketDepthRows(detail.marketDepth).map((level) => (
+                            <Table.Tr key={level.level}>
+                              <Table.Td>{level.level}</Table.Td>
+                              <Table.Td data-align="right" className="kv2-num">
+                                {formatNumber(level.bidQty)}
+                              </Table.Td>
+                              <Table.Td data-align="right" className="kv2-num">
+                                {formatInr(level.bidPrice)}
+                              </Table.Td>
+                              <Table.Td data-align="right" className="kv2-num">
+                                {formatInr(level.askPrice)}
+                              </Table.Td>
+                              <Table.Td data-align="right" className="kv2-num">
+                                {formatNumber(level.askQty)}
+                              </Table.Td>
+                            </Table.Tr>
+                          ))}
+                        </Table.Tbody>
+                      </Table>
+                    </div>
+                  </Grid.Col>
+                </Grid>
+              </Panel>
+            </Stack>
           </Tabs.Panel>
 
           <Tabs.Panel value="financials" pt={16}>
@@ -482,9 +677,7 @@ export function CompanyDetailPage({ id }: { id: string }) {
                 title="Is this company overvalued?"
                 info="Each multiple is compared with the sector median. Within ±10% is in line; higher is a premium, lower a discount."
                 actions={
-                  <StatusBadge tone={valuationTone[detail.valuation]}>
-                    {detail.valuation}
-                  </StatusBadge>
+                  <StatusBadge tone={valuationTone[valuationState]}>{valuationState}</StatusBadge>
                 }
                 flush
               >
@@ -499,10 +692,15 @@ export function CompanyDetailPage({ id }: { id: string }) {
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                      {detail.multiples.map((m) => {
-                        const diff = (m.company / m.sector - 1) * 100;
-                        const tone: Tone =
-                          Math.abs(diff) <= 10 ? "info" : diff > 0 ? "caution" : "gain";
+                      {valuationRows.map((m) => {
+                        const diff = m.difference;
+                        const tone: Tone = !m.comparable
+                          ? "neutral"
+                          : Math.abs(diff!) <= 10
+                            ? "info"
+                            : diff! > 0
+                              ? "caution"
+                              : "gain";
                         return (
                           <Table.Tr key={m.name}>
                             <Table.Td>
@@ -512,16 +710,18 @@ export function CompanyDetailPage({ id }: { id: string }) {
                               </Group>
                             </Table.Td>
                             <Table.Td data-align="right" className="kv2-num">
-                              {formatNumber(m.company, 1)}×
+                              {m.comparable ? `${formatNumber(m.company, 1)}×` : "Not available"}
                             </Table.Td>
                             <Table.Td data-align="right" className="kv2-num">
-                              {formatNumber(m.sector, 1)}×
+                              {m.comparable ? `${formatNumber(m.sector, 1)}×` : "Not available"}
                             </Table.Td>
                             <Table.Td>
                               <StatusBadge tone={tone} size="xs">
-                                {Math.abs(diff) <= 10
-                                  ? "In line"
-                                  : `${formatPercent(diff, { decimals: 0 })} ${diff > 0 ? "premium" : "discount"}`}
+                                {diff === null
+                                  ? "Not comparable"
+                                  : Math.abs(diff) <= 10
+                                    ? "In line"
+                                    : `${formatPercent(diff, { decimals: 0 })} ${diff > 0 ? "premium" : "discount"}`}
                               </StatusBadge>
                             </Table.Td>
                           </Table.Tr>
@@ -530,6 +730,22 @@ export function CompanyDetailPage({ id }: { id: string }) {
                     </Table.Tbody>
                   </Table>
                 </div>
+                <Text size="xs" c="dimmed" p="md">
+                  Saved sample values · not live. Premium/discount compares each positive multiple
+                  with its sample sector value. Opposing comparisons are mixed; missing or
+                  non-positive values are not comparable. This is not a fair-value estimate or
+                  recommendation.
+                </Text>
+                <Accordion variant="separated" mx="md" mb="md">
+                  <Accordion.Item value="valuation-method">
+                    <Accordion.Control>How to read this valuation</Accordion.Control>
+                    <Accordion.Panel>
+                      Premium/discount = (company multiple ÷ sector multiple − 1) × 100. Opposing
+                      comparisons are mixed. No ratios are averaged into a fair-value price, and a
+                      lower multiple is not proof of undervaluation.
+                    </Accordion.Panel>
+                  </Accordion.Item>
+                </Accordion>
               </Panel>
 
               <Panel title="Quarterly results" info="₹ crore unless noted. Sample figures." flush>
@@ -612,6 +828,358 @@ export function CompanyDetailPage({ id }: { id: string }) {
             </Stack>
           </Tabs.Panel>
 
+          <Tabs.Panel value="signals" pt={16}>
+            <Stack gap={16}>
+              <Panel
+                title="Prediction accuracy & deviations"
+                info="A historical simulation from fictional sample closes, not the engine's live track record."
+                actions={
+                  <Select
+                    aria-label="Forecast horizon"
+                    value={String(horizon)}
+                    onChange={(value) => value && setHorizon(Number(value))}
+                    data={[
+                      { value: "1", label: "Next session" },
+                      { value: "5", label: "5 sessions" },
+                      { value: "20", label: "20 sessions" },
+                    ]}
+                    w={150}
+                    size="xs"
+                  />
+                }
+              >
+                {predictionSummary ? (
+                  <Stack gap={12}>
+                    <Alert
+                      color={
+                        predictionSummary.mae < predictionSummary.baselineMae ? "teal" : "orange"
+                      }
+                      title={
+                        predictionSummary.mae < predictionSummary.baselineMae
+                          ? "Lower price error than a no-change baseline"
+                          : "No improvement over a no-change baseline"
+                      }
+                    >
+                      {predictionSummary.count} sample comparisons. Future dashed values and
+                      historical simulations are not verified predictions.
+                    </Alert>
+                    <KpiGrid cols={3}>
+                      <KpiTile
+                        label="Direction correct"
+                        value={`${formatNumber(predictionSummary.accuracy, 1)}%`}
+                        hint={`${predictions.filter((row) => row.directionMatched).length} of ${predictionSummary.count} matched`}
+                        delta={
+                          <Progress
+                            value={predictionSummary.accuracy}
+                            size={5}
+                            aria-label={`Direction correct ${formatNumber(predictionSummary.accuracy, 1)}%`}
+                          />
+                        }
+                      />
+                      <KpiTile
+                        label="Average price miss"
+                        value={formatInr(predictionSummary.mae)}
+                        hint={`${formatNumber(predictionSummary.mape, 2)}% average error`}
+                      />
+                      <KpiTile
+                        label="No-change baseline miss"
+                        value={formatInr(predictionSummary.baselineMae)}
+                        hint="Uses origin close as the price guess"
+                      />
+                    </KpiGrid>
+                    {latestPrediction ? (
+                      <Panel title={`Latest comparison · ${formatDate(latestPrediction.target)}`}>
+                        <Stack gap={8}>
+                          <Group gap={8} wrap="wrap">
+                            <StatusBadge tone={latestPrediction.directionMatched ? "gain" : "loss"}>
+                              {latestPrediction.directionMatched
+                                ? "Direction matched"
+                                : "Direction missed"}
+                            </StatusBadge>
+                            <Text size="xs" c="dimmed">
+                              Projected {formatInr(latestPrediction.predicted)} · Actual{" "}
+                              {formatInr(latestPrediction.actual)} · Difference{" "}
+                              {formatSigned(latestPrediction.error)} INR
+                            </Text>
+                          </Group>
+                          <Text size="xs" c="dimmed">
+                            Related news is possible context only, not a confirmed cause:{" "}
+                            {detail.news[0]?.title ?? "No sample article available"}.
+                          </Text>
+                        </Stack>
+                      </Panel>
+                    ) : null}
+                    <Accordion variant="separated">
+                      <Accordion.Item value="deviations">
+                        <Accordion.Control>
+                          Projection deviations &amp; sample comparisons ({predictions.length})
+                        </Accordion.Control>
+                        <Accordion.Panel>
+                          <div className="kv2-table-wrap">
+                            <Table>
+                              <Table.Thead>
+                                <Table.Tr>
+                                  <Table.Th>Origin</Table.Th>
+                                  <Table.Th>Target</Table.Th>
+                                  <Table.Th data-align="right">Projected</Table.Th>
+                                  <Table.Th data-align="right">Actual</Table.Th>
+                                  <Table.Th data-align="right">Difference</Table.Th>
+                                  <Table.Th>Direction</Table.Th>
+                                </Table.Tr>
+                              </Table.Thead>
+                              <Table.Tbody>
+                                {[...predictions]
+                                  .reverse()
+                                  .slice(0, 12)
+                                  .map((row) => (
+                                    <Table.Tr key={`${row.origin}-${row.target}`}>
+                                      <Table.Td>{formatDate(row.origin)}</Table.Td>
+                                      <Table.Td>{formatDate(row.target)}</Table.Td>
+                                      <Table.Td data-align="right" className="kv2-num">
+                                        {formatInr(row.predicted)}
+                                      </Table.Td>
+                                      <Table.Td data-align="right" className="kv2-num">
+                                        {formatInr(row.actual)}
+                                      </Table.Td>
+                                      <Table.Td data-align="right" className="kv2-num">
+                                        {formatSigned(row.error)}
+                                      </Table.Td>
+                                      <Table.Td>
+                                        <StatusBadge
+                                          tone={row.directionMatched ? "gain" : "loss"}
+                                          size="xs"
+                                        >
+                                          {row.directionMatched ? "Matched" : "Missed"}
+                                        </StatusBadge>
+                                      </Table.Td>
+                                    </Table.Tr>
+                                  ))}
+                              </Table.Tbody>
+                            </Table>
+                          </div>
+                        </Accordion.Panel>
+                      </Accordion.Item>
+                    </Accordion>
+                    <Text size="xs" c="dimmed">
+                      Direction accuracy and price error are calculated from the sample history
+                      shown; no saved forecast record or real outcome is represented.
+                    </Text>
+                  </Stack>
+                ) : (
+                  <EmptyState
+                    title="Not enough history"
+                    description="No comparisons can be computed for this horizon."
+                  />
+                )}
+              </Panel>
+
+              <Panel
+                title="Saved engine outlook"
+                info="The original product records direction, strength, target date, and model inputs. This preview shows sample-only placeholders."
+              >
+                <Stack gap={12}>
+                  <Group gap={10} wrap="wrap">
+                    <DirectionBadge direction={detail.outlook.direction} />
+                    <Text size="sm">
+                      Current sample outlook · target {formatInr(detail.outlook.target)}
+                    </Text>
+                    <StrengthMeter score={detail.outlook.score} />
+                  </Group>
+                  <DescriptionList
+                    items={[
+                      ["Momentum input", `${formatNumber(detail.momentum, 1)} / 10`],
+                      [
+                        "News input",
+                        `${formatSigned(s.score)} · ${s.positive} positive / ${s.neutral} neutral / ${s.negative} negative`,
+                      ],
+                      ["Data status", "Fictional snapshot · not live"],
+                    ]}
+                  />
+                  <Accordion variant="separated">
+                    <Accordion.Item value="saved-outlook-records">
+                      <Accordion.Control>
+                        Sample historical outcome checks ({predictions.length})
+                      </Accordion.Control>
+                      <Accordion.Panel>
+                        <Text size="xs" c="dimmed" mb="sm">
+                          These rows are generated from fictional price history to demonstrate the
+                          review layout. No production prediction records are shown.
+                        </Text>
+                        <div className="kv2-table-wrap">
+                          <Table>
+                            <Table.Thead>
+                              <Table.Tr>
+                                <Table.Th>Origin</Table.Th>
+                                <Table.Th>Target</Table.Th>
+                                <Table.Th>Sample direction</Table.Th>
+                                <Table.Th data-align="right">Strength</Table.Th>
+                                <Table.Th>Outcome</Table.Th>
+                              </Table.Tr>
+                            </Table.Thead>
+                            <Table.Tbody>
+                              {[...predictions]
+                                .reverse()
+                                .slice(0, 8)
+                                .map((row) => {
+                                  const direction =
+                                    row.predicted > row.originClose
+                                      ? "up"
+                                      : row.predicted < row.originClose
+                                        ? "down"
+                                        : "flat";
+                                  const strength = Math.min(
+                                    9.5,
+                                    4 +
+                                      (Math.abs(row.predicted - row.originClose) /
+                                        row.originClose) *
+                                        100,
+                                  );
+                                  return (
+                                    <Table.Tr key={`saved-${row.origin}-${row.target}`}>
+                                      <Table.Td>{formatDate(row.origin)}</Table.Td>
+                                      <Table.Td>{formatDate(row.target)}</Table.Td>
+                                      <Table.Td>
+                                        <DirectionBadge direction={direction} />
+                                      </Table.Td>
+                                      <Table.Td data-align="right" className="kv2-num">
+                                        {formatNumber(strength, 1)} / 10
+                                      </Table.Td>
+                                      <Table.Td>
+                                        <StatusBadge
+                                          tone={row.directionMatched ? "gain" : "loss"}
+                                          size="xs"
+                                        >
+                                          {row.directionMatched ? "Matched" : "Missed"}
+                                        </StatusBadge>
+                                      </Table.Td>
+                                    </Table.Tr>
+                                  );
+                                })}
+                            </Table.Tbody>
+                          </Table>
+                        </div>
+                      </Accordion.Panel>
+                    </Accordion.Item>
+                  </Accordion>
+                </Stack>
+              </Panel>
+
+              <Panel
+                title="Trade setup watchlist"
+                info="Conditional examples calculated from saved sample OHLCV history, not investment advice."
+                flush
+              >
+                {tradeEvidence ? (
+                  <Stack gap={12} p="md">
+                    <Alert color="orange" title="Sample history freshness is not verified">
+                      This mock page cannot confirm whether saved candles are recent or whether a
+                      quoted price is executable.
+                    </Alert>
+                    <Text size="sm">
+                      As of {formatDate(tradeEvidence.latest.date)}: close{" "}
+                      <span className="kv2-num">{formatInr(tradeEvidence.latest.close)}</span>, SMA
+                      20 <span className="kv2-num">{formatInr(tradeEvidence.sma20)}</span>
+                      {tradeEvidence.sma50 !== null ? (
+                        <>
+                          {" "}
+                          and SMA 50{" "}
+                          <span className="kv2-num">{formatInr(tradeEvidence.sma50)}</span>
+                        </>
+                      ) : null}
+                      . Prior 20-session low/high: {formatInr(tradeEvidence.support)} /{" "}
+                      {formatInr(tradeEvidence.resistance)}. Latest volume{" "}
+                      {tradeEvidence.volumeConfirmed ? "exceeds" : "does not exceed"} the prior
+                      20-session average.
+                    </Text>
+                    <div className="kv2-table-wrap">
+                      <Table>
+                        <Table.Thead>
+                          <Table.Tr>
+                            <Table.Th>Style</Table.Th>
+                            <Table.Th>State &amp; rationale</Table.Th>
+                            <Table.Th>Condition &amp; risk plan</Table.Th>
+                          </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                          <Table.Tr>
+                            <Table.Td>Swing long · days to weeks</Table.Td>
+                            <Table.Td>
+                              <StatusBadge
+                                tone={tradeEvidence.rising ? "gain" : "neutral"}
+                                size="xs"
+                              >
+                                {tradeEvidence.rising
+                                  ? "Watch for confirmation"
+                                  : "Wait / no long setup"}
+                              </StatusBadge>
+                              <Text size="xs" c="dimmed" mt={4}>
+                                {tradeEvidence.rising
+                                  ? "Close is above SMA 20 with positive 20-session momentum."
+                                  : "Trend and momentum do not both support a long setup."}
+                              </Text>
+                            </Table.Td>
+                            <Table.Td>
+                              Watch only after a completed daily close above{" "}
+                              {formatInr(tradeEvidence.resistance)} with above-average volume. If
+                              already above, do not chase; reassess a retest. Illustrative
+                              invalidation below {formatInr(tradeEvidence.support)} gives risk of{" "}
+                              {formatInr(tradeEvidence.risk)} per share (
+                              {formatNumber(
+                                (tradeEvidence.risk / tradeEvidence.resistance) * 100,
+                                1,
+                              )}
+                              %); a 2R arithmetic level is{" "}
+                              {formatInr(tradeEvidence.resistance + 2 * tradeEvidence.risk)}, not a
+                              predicted target.
+                            </Table.Td>
+                          </Table.Tr>
+                          <Table.Tr>
+                            <Table.Td>Positional long · weeks to months</Table.Td>
+                            <Table.Td>
+                              <StatusBadge tone="neutral" size="xs">
+                                {tradeEvidence.sma50 === null
+                                  ? "Need 50 sessions"
+                                  : tradeEvidence.rising &&
+                                      tradeEvidence.sma20 > tradeEvidence.sma50
+                                    ? "Trend-aligned watch"
+                                    : "Wait / trend not aligned"}
+                              </StatusBadge>
+                            </Table.Td>
+                            <Table.Td>
+                              Require close &gt; SMA 20 &gt; SMA 50, then reassess after a confirmed
+                              breakout or supported pullback. Review fundamentals and liquidity.
+                            </Table.Td>
+                          </Table.Tr>
+                          <Table.Tr>
+                            <Table.Td>Intraday / short selling</Table.Td>
+                            <Table.Td>
+                              <StatusBadge tone="neutral" size="xs">
+                                Not assessable
+                              </StatusBadge>
+                            </Table.Td>
+                            <Table.Td>
+                              Daily sample data cannot establish intraday entries, spreads,
+                              execution liquidity, or short eligibility.
+                            </Table.Td>
+                          </Table.Tr>
+                        </Table.Tbody>
+                      </Table>
+                    </div>
+                    <Text size="xs" c="dimmed">
+                      Illustrative scenarios only. The history is not live or backtested; gaps,
+                      fees, slippage, and actual entry prices can materially change risk.
+                    </Text>
+                  </Stack>
+                ) : (
+                  <EmptyState
+                    title="Wait / insufficient data"
+                    description="At least 21 valid daily sample sessions are needed to calculate setup examples."
+                  />
+                )}
+              </Panel>
+            </Stack>
+          </Tabs.Panel>
+
           <Tabs.Panel value="news" pt={16}>
             <Panel
               flush
@@ -651,6 +1219,27 @@ export function CompanyDetailPage({ id }: { id: string }) {
                       clearable
                       w={{ base: "100%", sm: 180 }}
                     />
+                    <Select
+                      aria-label="Source"
+                      placeholder="Any source"
+                      data={[...new Set(detail.news.map((article) => article.source))]}
+                      value={newsSource}
+                      onChange={setNewsSource}
+                      clearable
+                      w={{ base: "100%", sm: 180 }}
+                    />
+                    {newsSource || newsSentiment ? (
+                      <Button
+                        size="xs"
+                        variant="subtle"
+                        onClick={() => {
+                          setNewsSource(null);
+                          setNewsSentiment(null);
+                        }}
+                      >
+                        Clear filters
+                      </Button>
+                    ) : null}
                     <Text size="xs" c="dimmed" ml="auto">
                       {news.length} of {detail.news.length} articles ·{" "}
                       <Anchor component={AppLink} href="/v2/news/" size="xs">
@@ -667,6 +1256,73 @@ export function CompanyDetailPage({ id }: { id: string }) {
                 }
               />
             </Panel>
+          </Tabs.Panel>
+
+          <Tabs.Panel value="ipos" pt={16}>
+            <Stack gap={12}>
+              <Alert color="gray" title="Sample IPO score history">
+                All scores and inputs below are fictional placeholders. Grey market premium is
+                unofficial and indicative only.
+              </Alert>
+              {detail.ipoScores.map((ipo) => (
+                <Panel
+                  key={ipo.id}
+                  title={ipo.name}
+                  info={`Sample score saved ${ipo.scoredAt}. This is not investment advice.`}
+                  actions={
+                    <Group gap={6}>
+                      <StatusBadge
+                        tone={
+                          ipo.verdict === "positive"
+                            ? "gain"
+                            : ipo.verdict === "avoid"
+                              ? "loss"
+                              : "neutral"
+                        }
+                        size="xs"
+                      >
+                        {ipo.verdict}
+                      </StatusBadge>
+                      <StatusBadge tone="info" size="xs">
+                        Score {formatSigned(ipo.score)}
+                      </StatusBadge>
+                    </Group>
+                  }
+                >
+                  <Accordion variant="separated">
+                    <Accordion.Item value={`inputs-${ipo.id}`}>
+                      <Accordion.Control>All IPO scoring inputs</Accordion.Control>
+                      <Accordion.Panel>
+                        <div className="kv2-table-wrap">
+                          <Table>
+                            <Table.Thead>
+                              <Table.Tr>
+                                <Table.Th>Signal</Table.Th>
+                                <Table.Th>Value</Table.Th>
+                                <Table.Th data-align="right">Signal score</Table.Th>
+                                <Table.Th>Notes</Table.Th>
+                              </Table.Tr>
+                            </Table.Thead>
+                            <Table.Tbody>
+                              {ipo.inputs.map((input) => (
+                                <Table.Tr key={input.name}>
+                                  <Table.Td>{input.name}</Table.Td>
+                                  <Table.Td>{input.value}</Table.Td>
+                                  <Table.Td data-align="right" className="kv2-num">
+                                    {formatSigned(input.score)}
+                                  </Table.Td>
+                                  <Table.Td>{input.note}</Table.Td>
+                                </Table.Tr>
+                              ))}
+                            </Table.Tbody>
+                          </Table>
+                        </div>
+                      </Accordion.Panel>
+                    </Accordion.Item>
+                  </Accordion>
+                </Panel>
+              ))}
+            </Stack>
           </Tabs.Panel>
 
           <Tabs.Panel value="delivery" pt={16}>

@@ -56,11 +56,12 @@ export function PublicShell({ children }: { children: ReactNode }) {
               © kashengine · Research only. Not investment advice.
             </Text>
             <Group gap={16}>
-              {["Terms", "Privacy", "Contact"].map((label) => (
-                <Anchor key={label} href="#" size="xs" c="dimmed">
-                  {label}
-                </Anchor>
-              ))}
+              <Anchor component={AppLink} href="/v2/public/legal/" size="xs" c="dimmed">
+                Terms & privacy
+              </Anchor>
+              <Anchor href="mailto:hello@example.test" size="xs" c="dimmed">
+                Contact
+              </Anchor>
             </Group>
           </Group>
         </Container>

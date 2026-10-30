@@ -161,6 +161,7 @@ function passwordStrength(value: string) {
 type SignupErrors = { email?: string; invite?: string; password?: string; terms?: string };
 
 export function SignupPage() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [invite, setInvite] = useState("");
   const [password, setPassword] = useState("");
@@ -189,6 +190,7 @@ export function SignupPage() {
     window.setTimeout(() => {
       setPending(false);
       showPreviewNotice();
+      void navigate({ to: "/v2/public/signup-complete/" });
     }, 600);
   };
 
@@ -262,11 +264,11 @@ export function SignupPage() {
             label={
               <>
                 I agree to the{" "}
-                <Anchor href="#" size="sm">
+                <Anchor component={AppLink} href="/v2/public/legal/" size="sm">
                   Terms
                 </Anchor>{" "}
                 and{" "}
-                <Anchor href="#" size="sm">
+                <Anchor component={AppLink} href="/v2/public/legal/" size="sm">
                   Privacy Notice
                 </Anchor>
               </>

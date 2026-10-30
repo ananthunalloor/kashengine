@@ -2,7 +2,7 @@ import { ModalsProvider } from "@mantine/modals";
 import { Notifications } from "@mantine/notifications";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 
-import { EmptyState, AppLink } from "../v2/components";
+import { V2Shell } from "../v2/components";
 import { V2ThemeScope } from "../v2/theme/V2ThemeScope";
 import "../v2/theme/v2.css";
 
@@ -24,10 +24,11 @@ function V2Layout() {
 
 function V2NotFound() {
   return (
-    <EmptyState
-      title="Page not found"
-      description="This v2 preview page doesn't exist."
-      action={<AppLink href="/v2/">Back to the v2 index</AppLink>}
-    />
+    <V2Shell>
+      <div className="kv2-page">
+        <h1 className="kv2-page-title">Page not found</h1>
+        <p>This v2 preview page doesn’t exist.</p>
+      </div>
+    </V2Shell>
   );
 }

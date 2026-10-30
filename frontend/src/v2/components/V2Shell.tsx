@@ -320,7 +320,7 @@ export function V2Shell({ children }: { children: ReactNode }) {
               <Tooltip label="Operations console (v1)" position="right" disabled={!rail}>
                 <NavLink
                   component="a"
-                  href="/ops/"
+                  href="/v2/ops/"
                   label={
                     <Group gap={6} wrap="nowrap">
                       Ops

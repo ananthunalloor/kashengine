@@ -60,6 +60,18 @@ export type DeliveryDay = {
   deliveryPct: number;
   close: number;
 };
+export type MarketDepthLevel = {
+  bidPrice: number;
+  bidQty: number;
+  askPrice: number;
+  askQty: number;
+};
+export type IpoScoreInput = {
+  name: string;
+  value: string;
+  score: number;
+  note: string;
+};
 
 export type CompanyDetail = {
   about: string;
@@ -79,6 +91,18 @@ export type CompanyDetail = {
   dividendYield: number;
   pb: number;
   bookValue: number;
+  averagePrice: number;
+  totalBuyQty: number;
+  totalSellQty: number;
+  marketDepth: MarketDepthLevel[];
+  ipoScores: Array<{
+    id: string;
+    name: string;
+    verdict: "positive" | "neutral" | "avoid";
+    score: number;
+    scoredAt: string;
+    inputs: IpoScoreInput[];
+  }>;
   outlook: { direction: "up" | "down" | "flat"; score: number; target: number };
   momentum: number;
   sentiment: { score: number; positive: number; neutral: number; negative: number };
@@ -174,11 +198,22 @@ export function companyDetail(company: Company): CompanyDetail {
   const sentimentScore = Number(
     ((positive - negative) / (positive + neutral + negative)).toFixed(2),
   );
+  const ipoRand = seeded(companySeed(company) + 9);
+  const marketRand = seeded(companySeed(company) + 7);
+  const ipoScore = Number(((ipoRand() - 0.5) * 1.5).toFixed(2));
   const outlookScore = Number((4 + rand() * 5).toFixed(1));
   const direction =
     company.signal === "Accumulation" ? "up" : company.signal === "Distribution" ? "down" : "flat";
 
   const deliveryRand = seeded(companySeed(company) + 3);
+  const depthRand = seeded(companySeed(company) + 5);
+  const spread = last * 0.0005;
+  const marketDepth: MarketDepthLevel[] = Array.from({ length: 5 }, (_, i) => ({
+    bidPrice: Number((last - spread * (i + 1)).toFixed(2)),
+    bidQty: Math.round(100 + depthRand() * 900),
+    askPrice: Number((last + spread * (i + 1)).toFixed(2)),
+    askQty: Math.round(100 + depthRand() * 900),
+  }));
   const delivery: DeliveryDay[] = [];
   let close = prevClose * 0.97;
   const day = new Date(Date.UTC(2026, 0, 12));
@@ -216,6 +251,51 @@ export function companyDetail(company: Company): CompanyDetail {
     dividendYield: Number((rand() * 2.5).toFixed(2)),
     pb,
     bookValue: last / pb,
+    averagePrice: Number((last * (0.997 + marketRand() * 0.006)).toFixed(2)),
+    totalBuyQty: Math.round(company.volume * (0.12 + marketRand() * 0.08)),
+    totalSellQty: Math.round(company.volume * (0.12 + marketRand() * 0.08)),
+    marketDepth,
+    ipoScores: [
+      {
+        id: `${company.id}-sample-issue`,
+        name: `${company.name} · sample IPO score`,
+        verdict: ipoScore > 0.25 ? "positive" : ipoScore < -0.25 ? "avoid" : "neutral",
+        score: ipoScore,
+        scoredAt: "2026-01-12 08:15 IST",
+        inputs: [
+          {
+            name: "Subscription demand",
+            value: `${formatSample(2 + ipoRand() * 4)}×`,
+            score: Number((ipoRand() * 2 - 1).toFixed(2)),
+            note: "Illustrative sample subscription signal.",
+          },
+          {
+            name: "GMP (unofficial)",
+            value: `${formatSample(ipoRand() * 14)}%`,
+            score: Number((ipoRand() * 2 - 1).toFixed(2)),
+            note: "Grey market premium is unofficial and indicative only.",
+          },
+          {
+            name: "Financial trend",
+            value: ipoRand() > 0.4 ? "Improving" : "Mixed",
+            score: Number((ipoRand() * 2 - 1).toFixed(2)),
+            note: "Derived from fictional revenue and profit history.",
+          },
+          {
+            name: "Valuation vs peers",
+            value: ipoRand() > 0.5 ? "In line" : "Premium",
+            score: Number((ipoRand() * 2 - 1).toFixed(2)),
+            note: "Illustrative peer comparison; not a fair-value estimate.",
+          },
+          {
+            name: "Lead manager record",
+            value: ipoRand() > 0.35 ? "Average" : "Limited data",
+            score: Number((ipoRand() * 2 - 1).toFixed(2)),
+            note: "Sample input; no real manager history is represented.",
+          },
+        ],
+      },
+    ],
     outlook: {
       direction,
       score: outlookScore,
@@ -259,4 +339,8 @@ export function companyDetail(company: Company): CompanyDetail {
     })),
     delivery,
   };
+}
+
+function formatSample(value: number): string {
+  return value.toFixed(1);
 }

@@ -13,7 +13,7 @@ import {
   TextInput,
   Tooltip,
 } from "@mantine/core";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   LuCircleAlert,
   LuDatabase,
@@ -715,8 +715,9 @@ function InstrumentsTab() {
 
 /* ---------------------------------- Page ---------------------------------- */
 
-export function MarketsPage() {
-  const [tab, setTab] = useState<string | null>("track");
+export function MarketsPage({ initialTab = "track" }: { initialTab?: string }) {
+  const [tab, setTab] = useState<string | null>(initialTab);
+  useEffect(() => setTab(initialTab), [initialTab]);
   return (
     <Page>
       <PageHeader

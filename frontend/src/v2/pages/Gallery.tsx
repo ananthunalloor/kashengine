@@ -13,6 +13,8 @@ import {
   LuPalette,
   LuRocket,
   LuSend,
+  LuSettings2,
+  LuShieldCheck,
   LuUser,
   LuUserPlus,
 } from "react-icons/lu";
@@ -70,6 +72,18 @@ const groups: { title: string; info: string; entries: Entry[] }[] = [
         icon: LuChartCandlestick,
       },
       {
+        label: "Live quotes",
+        href: "/v2/markets/live/",
+        description: "Current sample quotes and feed freshness.",
+        icon: LuChartCandlestick,
+      },
+      {
+        label: "Instruments",
+        href: "/v2/markets/instruments/",
+        description: "Search the mock market instrument directory.",
+        icon: LuChartCandlestick,
+      },
+      {
         label: "Companies",
         href: "/v2/companies/",
         description: "Searchable company list with signals and delivery %.",
@@ -123,6 +137,138 @@ const groups: { title: string; info: string; entries: Entry[] }[] = [
         description: "Invite-based account creation.",
         icon: LuUserPlus,
       },
+      {
+        label: "Sign-up complete",
+        href: "/v2/public/signup-complete/",
+        description: "Preview of the account request confirmation state.",
+        icon: LuUserPlus,
+      },
+      {
+        label: "Email verification",
+        href: "/v2/public/verify-email/sample-token/",
+        description: "Preview of the verification result state.",
+        icon: LuUserPlus,
+      },
+      {
+        label: "Access unavailable",
+        href: "/v2/public/access/",
+        description: "Locked or unavailable feature state.",
+        icon: LuUser,
+      },
+      {
+        label: "Legal",
+        href: "/v2/public/legal/",
+        description: "Placeholder terms and privacy disclosures.",
+        icon: LuFileText,
+      },
+      {
+        label: "Not found",
+        href: "/v2/public/not-found/",
+        description: "Public 404 state for unknown preview pages.",
+        icon: LuGlobe,
+      },
+    ],
+  },
+  {
+    title: "Operations (staff)",
+    info: "Mock versions of the original staff-only Ops routes and the operations design concepts.",
+    entries: [
+      {
+        label: "Overview",
+        href: "/v2/ops/",
+        description: "System health, sample service checks and recent activity.",
+        icon: LuLayoutDashboard,
+      },
+      {
+        label: "Jobs & queues",
+        href: "/v2/ops/jobs/",
+        description: "Job registry, queue states and sample run actions.",
+        icon: LuSettings2,
+      },
+      {
+        label: "Task runs",
+        href: "/v2/ops/runs/",
+        description: "Run history and a sample task detail.",
+        icon: LuSettings2,
+      },
+      {
+        label: "Logs",
+        href: "/v2/ops/logs/",
+        description: "Sample worker log stream and filters.",
+        icon: LuSettings2,
+      },
+      {
+        label: "SMTP queue & relay",
+        href: "/v2/ops/smtp/",
+        description: "Mock outbound queue and safe failover controls.",
+        icon: LuSettings2,
+      },
+      {
+        label: "Metrics",
+        href: "/v2/ops/metrics/",
+        description: "Placeholder telemetry for workers and queues.",
+        icon: LuSettings2,
+      },
+      {
+        label: "Schedule",
+        href: "/v2/ops/schedule/",
+        description: "Recurring task schedule and edit states.",
+        icon: LuSettings2,
+      },
+      {
+        label: "Users & access",
+        href: "/v2/ops/users/",
+        description: "Mock accounts, entitlements and user detail.",
+        icon: LuUser,
+      },
+      {
+        label: "Invite codes",
+        href: "/v2/ops/invites/",
+        description: "Create and review fictional invite tokens.",
+        icon: LuUserPlus,
+      },
+      {
+        label: "Subscriptions",
+        href: "/v2/ops/subscriptions/",
+        description: "Sample subscription states and renewals.",
+        icon: LuUser,
+      },
+      {
+        label: "Logins & lockouts",
+        href: "/v2/ops/logins/",
+        description: "Mock sessions and sign-in activity.",
+        icon: LuShieldCheck,
+      },
+      {
+        label: "Audit trail",
+        href: "/v2/ops/audit/",
+        description: "Sample append-only admin activity.",
+        icon: LuFileText,
+      },
+      {
+        label: "Feeds",
+        href: "/v2/ops/feeds/",
+        description: "Sample ingestion source health and status.",
+        icon: LuSettings2,
+      },
+      {
+        label: "Instrument master",
+        href: "/v2/ops/instruments/",
+        description: "Manageable mock market instrument list.",
+        icon: LuChartCandlestick,
+      },
+      {
+        label: "Config & settings",
+        href: "/v2/ops/config/",
+        description: "Settings groups and safe placeholder values.",
+        icon: LuSettings2,
+      },
+      {
+        label: "Backups",
+        href: "/v2/ops/backups/",
+        description: "Sample backup and recovery status.",
+        icon: LuSettings2,
+      },
     ],
   },
 ];
@@ -133,7 +279,7 @@ export function GalleryPage() {
       <PageHeader
         title="v2 preview gallery"
         meta={<StatusBadge tone="caution">Sample data</StatusBadge>}
-        description="Every page of the redesigned UI, filled with fictional placeholder data. Ops pages come later."
+        description="The redesigned product and operations pages, filled with fictional placeholder data."
       />
       <Stack gap={16}>
         {groups.map((group) => (
@@ -180,9 +326,6 @@ export function GalleryPage() {
             </SimpleGrid>
           </Panel>
         ))}
-        <Text size="xs" c="dimmed">
-          Ops (staff) pages — jobs, runs, logs, users and more — will be added in a later preview.
-        </Text>
       </Stack>
     </Page>
   );

@@ -39,14 +39,24 @@ import { Route as V2AppMarketsRouteImport } from './routes/v2._app.markets'
 import { Route as V2AppNewsRouteImport } from './routes/v2._app.news'
 import { Route as V2AppTodayRouteImport } from './routes/v2._app.today'
 import { Route as V2PublicIndexRouteImport } from './routes/v2.public.index'
+import { Route as V2PublicSplatRouteImport } from './routes/v2.public.$'
+import { Route as V2PublicAccessRouteImport } from './routes/v2.public.access'
+import { Route as V2PublicLegalRouteImport } from './routes/v2.public.legal'
 import { Route as V2PublicLoginRouteImport } from './routes/v2.public.login'
 import { Route as V2PublicSignupRouteImport } from './routes/v2.public.signup'
+import { Route as V2PublicSignupCompleteRouteImport } from './routes/v2.public.signup-complete'
 import { Route as V2AppCompaniesIndexRouteImport } from './routes/v2._app.companies.index'
 import { Route as V2AppCompaniesIdRouteImport } from './routes/v2._app.companies.$id'
 import { Route as V2AppIposIndexRouteImport } from './routes/v2._app.ipos.index'
 import { Route as V2AppIposIdRouteImport } from './routes/v2._app.ipos.$id'
+import { Route as V2AppMarketsIndexRouteImport } from './routes/v2._app.markets.index'
+import { Route as V2AppMarketsInstrumentsRouteImport } from './routes/v2._app.markets.instruments'
+import { Route as V2AppMarketsLiveRouteImport } from './routes/v2._app.markets.live'
+import { Route as V2AppOpsIndexRouteImport } from './routes/v2._app.ops.index'
+import { Route as V2AppOpsSplatRouteImport } from './routes/v2._app.ops.$'
 import { Route as V2AppReportsIndexRouteImport } from './routes/v2._app.reports.index'
 import { Route as V2AppReportsDayRouteImport } from './routes/v2._app.reports.$day'
+import { Route as V2PublicVerifyEmailTokenRouteImport } from './routes/v2.public.verify-email.$token'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -197,6 +207,21 @@ const V2PublicIndexRoute = V2PublicIndexRouteImport.update({
   path: '/',
   getParentRoute: () => V2PublicRoute,
 } as any)
+const V2PublicSplatRoute = V2PublicSplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => V2PublicRoute,
+} as any)
+const V2PublicAccessRoute = V2PublicAccessRouteImport.update({
+  id: '/access',
+  path: '/access',
+  getParentRoute: () => V2PublicRoute,
+} as any)
+const V2PublicLegalRoute = V2PublicLegalRouteImport.update({
+  id: '/legal',
+  path: '/legal',
+  getParentRoute: () => V2PublicRoute,
+} as any)
 const V2PublicLoginRoute = V2PublicLoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -205,6 +230,11 @@ const V2PublicLoginRoute = V2PublicLoginRouteImport.update({
 const V2PublicSignupRoute = V2PublicSignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => V2PublicRoute,
+} as any)
+const V2PublicSignupCompleteRoute = V2PublicSignupCompleteRouteImport.update({
+  id: '/signup-complete',
+  path: '/signup-complete',
   getParentRoute: () => V2PublicRoute,
 } as any)
 const V2AppCompaniesIndexRoute = V2AppCompaniesIndexRouteImport.update({
@@ -227,6 +257,31 @@ const V2AppIposIdRoute = V2AppIposIdRouteImport.update({
   path: '/ipos/$id',
   getParentRoute: () => V2AppRoute,
 } as any)
+const V2AppMarketsIndexRoute = V2AppMarketsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => V2AppMarketsRoute,
+} as any)
+const V2AppMarketsInstrumentsRoute = V2AppMarketsInstrumentsRouteImport.update({
+  id: '/instruments',
+  path: '/instruments',
+  getParentRoute: () => V2AppMarketsRoute,
+} as any)
+const V2AppMarketsLiveRoute = V2AppMarketsLiveRouteImport.update({
+  id: '/live',
+  path: '/live',
+  getParentRoute: () => V2AppMarketsRoute,
+} as any)
+const V2AppOpsIndexRoute = V2AppOpsIndexRouteImport.update({
+  id: '/ops/',
+  path: '/ops/',
+  getParentRoute: () => V2AppRoute,
+} as any)
+const V2AppOpsSplatRoute = V2AppOpsSplatRouteImport.update({
+  id: '/ops/$',
+  path: '/ops/$',
+  getParentRoute: () => V2AppRoute,
+} as any)
 const V2AppReportsIndexRoute = V2AppReportsIndexRouteImport.update({
   id: '/reports/',
   path: '/reports/',
@@ -237,6 +292,12 @@ const V2AppReportsDayRoute = V2AppReportsDayRouteImport.update({
   path: '/reports/$day',
   getParentRoute: () => V2AppRoute,
 } as any)
+const V2PublicVerifyEmailTokenRoute =
+  V2PublicVerifyEmailTokenRouteImport.update({
+    id: '/verify-email/$token',
+    path: '/verify-email/$token',
+    getParentRoute: () => V2PublicRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -261,20 +322,30 @@ export interface FileRoutesByFullPath {
   '/v2/account': typeof V2AppAccountRoute
   '/v2/delivery': typeof V2AppDeliveryRoute
   '/v2/design-system': typeof V2AppDesignSystemRoute
-  '/v2/markets': typeof V2AppMarketsRoute
+  '/v2/markets': typeof V2AppMarketsRouteWithChildren
   '/v2/news': typeof V2AppNewsRoute
   '/v2/today': typeof V2AppTodayRoute
+  '/v2/public/$': typeof V2PublicSplatRoute
+  '/v2/public/access': typeof V2PublicAccessRoute
+  '/v2/public/legal': typeof V2PublicLegalRoute
   '/v2/public/login': typeof V2PublicLoginRoute
   '/v2/public/signup': typeof V2PublicSignupRoute
+  '/v2/public/signup-complete': typeof V2PublicSignupCompleteRoute
   '/ops/audit/': typeof OpsAuditIndexRoute
   '/ops/runs/': typeof OpsRunsIndexRoute
   '/v2/': typeof V2AppIndexRoute
   '/v2/public/': typeof V2PublicIndexRoute
   '/v2/companies/$id': typeof V2AppCompaniesIdRoute
   '/v2/ipos/$id': typeof V2AppIposIdRoute
+  '/v2/markets/instruments': typeof V2AppMarketsInstrumentsRoute
+  '/v2/markets/live': typeof V2AppMarketsLiveRoute
+  '/v2/ops/$': typeof V2AppOpsSplatRoute
   '/v2/reports/$day': typeof V2AppReportsDayRoute
+  '/v2/public/verify-email/$token': typeof V2PublicVerifyEmailTokenRoute
   '/v2/companies/': typeof V2AppCompaniesIndexRoute
   '/v2/ipos/': typeof V2AppIposIndexRoute
+  '/v2/markets/': typeof V2AppMarketsIndexRoute
+  '/v2/ops/': typeof V2AppOpsIndexRoute
   '/v2/reports/': typeof V2AppReportsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -299,19 +370,28 @@ export interface FileRoutesByTo {
   '/v2/account': typeof V2AppAccountRoute
   '/v2/delivery': typeof V2AppDeliveryRoute
   '/v2/design-system': typeof V2AppDesignSystemRoute
-  '/v2/markets': typeof V2AppMarketsRoute
   '/v2/news': typeof V2AppNewsRoute
   '/v2/today': typeof V2AppTodayRoute
+  '/v2/public/$': typeof V2PublicSplatRoute
+  '/v2/public/access': typeof V2PublicAccessRoute
+  '/v2/public/legal': typeof V2PublicLegalRoute
   '/v2/public/login': typeof V2PublicLoginRoute
   '/v2/public/signup': typeof V2PublicSignupRoute
+  '/v2/public/signup-complete': typeof V2PublicSignupCompleteRoute
   '/ops/audit': typeof OpsAuditIndexRoute
   '/ops/runs': typeof OpsRunsIndexRoute
   '/v2/public': typeof V2PublicIndexRoute
   '/v2/companies/$id': typeof V2AppCompaniesIdRoute
   '/v2/ipos/$id': typeof V2AppIposIdRoute
+  '/v2/markets/instruments': typeof V2AppMarketsInstrumentsRoute
+  '/v2/markets/live': typeof V2AppMarketsLiveRoute
+  '/v2/ops/$': typeof V2AppOpsSplatRoute
   '/v2/reports/$day': typeof V2AppReportsDayRoute
+  '/v2/public/verify-email/$token': typeof V2PublicVerifyEmailTokenRoute
   '/v2/companies': typeof V2AppCompaniesIndexRoute
   '/v2/ipos': typeof V2AppIposIndexRoute
+  '/v2/markets': typeof V2AppMarketsIndexRoute
+  '/v2/ops': typeof V2AppOpsIndexRoute
   '/v2/reports': typeof V2AppReportsIndexRoute
 }
 export interface FileRoutesById {
@@ -339,20 +419,30 @@ export interface FileRoutesById {
   '/v2/_app/account': typeof V2AppAccountRoute
   '/v2/_app/delivery': typeof V2AppDeliveryRoute
   '/v2/_app/design-system': typeof V2AppDesignSystemRoute
-  '/v2/_app/markets': typeof V2AppMarketsRoute
+  '/v2/_app/markets': typeof V2AppMarketsRouteWithChildren
   '/v2/_app/news': typeof V2AppNewsRoute
   '/v2/_app/today': typeof V2AppTodayRoute
+  '/v2/public/$': typeof V2PublicSplatRoute
+  '/v2/public/access': typeof V2PublicAccessRoute
+  '/v2/public/legal': typeof V2PublicLegalRoute
   '/v2/public/login': typeof V2PublicLoginRoute
   '/v2/public/signup': typeof V2PublicSignupRoute
+  '/v2/public/signup-complete': typeof V2PublicSignupCompleteRoute
   '/ops/audit/': typeof OpsAuditIndexRoute
   '/ops/runs/': typeof OpsRunsIndexRoute
   '/v2/_app/': typeof V2AppIndexRoute
   '/v2/public/': typeof V2PublicIndexRoute
   '/v2/_app/companies/$id': typeof V2AppCompaniesIdRoute
   '/v2/_app/ipos/$id': typeof V2AppIposIdRoute
+  '/v2/_app/markets/instruments': typeof V2AppMarketsInstrumentsRoute
+  '/v2/_app/markets/live': typeof V2AppMarketsLiveRoute
+  '/v2/_app/ops/$': typeof V2AppOpsSplatRoute
   '/v2/_app/reports/$day': typeof V2AppReportsDayRoute
+  '/v2/public/verify-email/$token': typeof V2PublicVerifyEmailTokenRoute
   '/v2/_app/companies/': typeof V2AppCompaniesIndexRoute
   '/v2/_app/ipos/': typeof V2AppIposIndexRoute
+  '/v2/_app/markets/': typeof V2AppMarketsIndexRoute
+  '/v2/_app/ops/': typeof V2AppOpsIndexRoute
   '/v2/_app/reports/': typeof V2AppReportsIndexRoute
 }
 export interface FileRouteTypes {
@@ -383,17 +473,27 @@ export interface FileRouteTypes {
     | '/v2/markets'
     | '/v2/news'
     | '/v2/today'
+    | '/v2/public/$'
+    | '/v2/public/access'
+    | '/v2/public/legal'
     | '/v2/public/login'
     | '/v2/public/signup'
+    | '/v2/public/signup-complete'
     | '/ops/audit/'
     | '/ops/runs/'
     | '/v2/'
     | '/v2/public/'
     | '/v2/companies/$id'
     | '/v2/ipos/$id'
+    | '/v2/markets/instruments'
+    | '/v2/markets/live'
+    | '/v2/ops/$'
     | '/v2/reports/$day'
+    | '/v2/public/verify-email/$token'
     | '/v2/companies/'
     | '/v2/ipos/'
+    | '/v2/markets/'
+    | '/v2/ops/'
     | '/v2/reports/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -418,19 +518,28 @@ export interface FileRouteTypes {
     | '/v2/account'
     | '/v2/delivery'
     | '/v2/design-system'
-    | '/v2/markets'
     | '/v2/news'
     | '/v2/today'
+    | '/v2/public/$'
+    | '/v2/public/access'
+    | '/v2/public/legal'
     | '/v2/public/login'
     | '/v2/public/signup'
+    | '/v2/public/signup-complete'
     | '/ops/audit'
     | '/ops/runs'
     | '/v2/public'
     | '/v2/companies/$id'
     | '/v2/ipos/$id'
+    | '/v2/markets/instruments'
+    | '/v2/markets/live'
+    | '/v2/ops/$'
     | '/v2/reports/$day'
+    | '/v2/public/verify-email/$token'
     | '/v2/companies'
     | '/v2/ipos'
+    | '/v2/markets'
+    | '/v2/ops'
     | '/v2/reports'
   id:
     | '__root__'
@@ -460,17 +569,27 @@ export interface FileRouteTypes {
     | '/v2/_app/markets'
     | '/v2/_app/news'
     | '/v2/_app/today'
+    | '/v2/public/$'
+    | '/v2/public/access'
+    | '/v2/public/legal'
     | '/v2/public/login'
     | '/v2/public/signup'
+    | '/v2/public/signup-complete'
     | '/ops/audit/'
     | '/ops/runs/'
     | '/v2/_app/'
     | '/v2/public/'
     | '/v2/_app/companies/$id'
     | '/v2/_app/ipos/$id'
+    | '/v2/_app/markets/instruments'
+    | '/v2/_app/markets/live'
+    | '/v2/_app/ops/$'
     | '/v2/_app/reports/$day'
+    | '/v2/public/verify-email/$token'
     | '/v2/_app/companies/'
     | '/v2/_app/ipos/'
+    | '/v2/_app/markets/'
+    | '/v2/_app/ops/'
     | '/v2/_app/reports/'
   fileRoutesById: FileRoutesById
 }
@@ -709,6 +828,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V2PublicIndexRouteImport
       parentRoute: typeof V2PublicRoute
     }
+    '/v2/public/$': {
+      id: '/v2/public/$'
+      path: '/$'
+      fullPath: '/v2/public/$'
+      preLoaderRoute: typeof V2PublicSplatRouteImport
+      parentRoute: typeof V2PublicRoute
+    }
+    '/v2/public/access': {
+      id: '/v2/public/access'
+      path: '/access'
+      fullPath: '/v2/public/access'
+      preLoaderRoute: typeof V2PublicAccessRouteImport
+      parentRoute: typeof V2PublicRoute
+    }
+    '/v2/public/legal': {
+      id: '/v2/public/legal'
+      path: '/legal'
+      fullPath: '/v2/public/legal'
+      preLoaderRoute: typeof V2PublicLegalRouteImport
+      parentRoute: typeof V2PublicRoute
+    }
     '/v2/public/login': {
       id: '/v2/public/login'
       path: '/login'
@@ -721,6 +861,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/v2/public/signup'
       preLoaderRoute: typeof V2PublicSignupRouteImport
+      parentRoute: typeof V2PublicRoute
+    }
+    '/v2/public/signup-complete': {
+      id: '/v2/public/signup-complete'
+      path: '/signup-complete'
+      fullPath: '/v2/public/signup-complete'
+      preLoaderRoute: typeof V2PublicSignupCompleteRouteImport
       parentRoute: typeof V2PublicRoute
     }
     '/v2/_app/companies/': {
@@ -751,6 +898,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V2AppIposIdRouteImport
       parentRoute: typeof V2AppRoute
     }
+    '/v2/_app/markets/': {
+      id: '/v2/_app/markets/'
+      path: '/'
+      fullPath: '/v2/markets/'
+      preLoaderRoute: typeof V2AppMarketsIndexRouteImport
+      parentRoute: typeof V2AppMarketsRoute
+    }
+    '/v2/_app/markets/instruments': {
+      id: '/v2/_app/markets/instruments'
+      path: '/instruments'
+      fullPath: '/v2/markets/instruments'
+      preLoaderRoute: typeof V2AppMarketsInstrumentsRouteImport
+      parentRoute: typeof V2AppMarketsRoute
+    }
+    '/v2/_app/markets/live': {
+      id: '/v2/_app/markets/live'
+      path: '/live'
+      fullPath: '/v2/markets/live'
+      preLoaderRoute: typeof V2AppMarketsLiveRouteImport
+      parentRoute: typeof V2AppMarketsRoute
+    }
+    '/v2/_app/ops/': {
+      id: '/v2/_app/ops/'
+      path: '/ops'
+      fullPath: '/v2/ops/'
+      preLoaderRoute: typeof V2AppOpsIndexRouteImport
+      parentRoute: typeof V2AppRoute
+    }
+    '/v2/_app/ops/$': {
+      id: '/v2/_app/ops/$'
+      path: '/ops/$'
+      fullPath: '/v2/ops/$'
+      preLoaderRoute: typeof V2AppOpsSplatRouteImport
+      parentRoute: typeof V2AppRoute
+    }
     '/v2/_app/reports/': {
       id: '/v2/_app/reports/'
       path: '/reports'
@@ -765,22 +947,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V2AppReportsDayRouteImport
       parentRoute: typeof V2AppRoute
     }
+    '/v2/public/verify-email/$token': {
+      id: '/v2/public/verify-email/$token'
+      path: '/verify-email/$token'
+      fullPath: '/v2/public/verify-email/$token'
+      preLoaderRoute: typeof V2PublicVerifyEmailTokenRouteImport
+      parentRoute: typeof V2PublicRoute
+    }
   }
 }
+
+interface V2AppMarketsRouteChildren {
+  V2AppMarketsInstrumentsRoute: typeof V2AppMarketsInstrumentsRoute
+  V2AppMarketsLiveRoute: typeof V2AppMarketsLiveRoute
+  V2AppMarketsIndexRoute: typeof V2AppMarketsIndexRoute
+}
+
+const V2AppMarketsRouteChildren: V2AppMarketsRouteChildren = {
+  V2AppMarketsInstrumentsRoute: V2AppMarketsInstrumentsRoute,
+  V2AppMarketsLiveRoute: V2AppMarketsLiveRoute,
+  V2AppMarketsIndexRoute: V2AppMarketsIndexRoute,
+}
+
+const V2AppMarketsRouteWithChildren = V2AppMarketsRoute._addFileChildren(
+  V2AppMarketsRouteChildren,
+)
 
 interface V2AppRouteChildren {
   V2AppAccountRoute: typeof V2AppAccountRoute
   V2AppDeliveryRoute: typeof V2AppDeliveryRoute
   V2AppDesignSystemRoute: typeof V2AppDesignSystemRoute
-  V2AppMarketsRoute: typeof V2AppMarketsRoute
+  V2AppMarketsRoute: typeof V2AppMarketsRouteWithChildren
   V2AppNewsRoute: typeof V2AppNewsRoute
   V2AppTodayRoute: typeof V2AppTodayRoute
   V2AppIndexRoute: typeof V2AppIndexRoute
   V2AppCompaniesIdRoute: typeof V2AppCompaniesIdRoute
   V2AppIposIdRoute: typeof V2AppIposIdRoute
+  V2AppOpsSplatRoute: typeof V2AppOpsSplatRoute
   V2AppReportsDayRoute: typeof V2AppReportsDayRoute
   V2AppCompaniesIndexRoute: typeof V2AppCompaniesIndexRoute
   V2AppIposIndexRoute: typeof V2AppIposIndexRoute
+  V2AppOpsIndexRoute: typeof V2AppOpsIndexRoute
   V2AppReportsIndexRoute: typeof V2AppReportsIndexRoute
 }
 
@@ -788,30 +995,42 @@ const V2AppRouteChildren: V2AppRouteChildren = {
   V2AppAccountRoute: V2AppAccountRoute,
   V2AppDeliveryRoute: V2AppDeliveryRoute,
   V2AppDesignSystemRoute: V2AppDesignSystemRoute,
-  V2AppMarketsRoute: V2AppMarketsRoute,
+  V2AppMarketsRoute: V2AppMarketsRouteWithChildren,
   V2AppNewsRoute: V2AppNewsRoute,
   V2AppTodayRoute: V2AppTodayRoute,
   V2AppIndexRoute: V2AppIndexRoute,
   V2AppCompaniesIdRoute: V2AppCompaniesIdRoute,
   V2AppIposIdRoute: V2AppIposIdRoute,
+  V2AppOpsSplatRoute: V2AppOpsSplatRoute,
   V2AppReportsDayRoute: V2AppReportsDayRoute,
   V2AppCompaniesIndexRoute: V2AppCompaniesIndexRoute,
   V2AppIposIndexRoute: V2AppIposIndexRoute,
+  V2AppOpsIndexRoute: V2AppOpsIndexRoute,
   V2AppReportsIndexRoute: V2AppReportsIndexRoute,
 }
 
 const V2AppRouteWithChildren = V2AppRoute._addFileChildren(V2AppRouteChildren)
 
 interface V2PublicRouteChildren {
+  V2PublicSplatRoute: typeof V2PublicSplatRoute
+  V2PublicAccessRoute: typeof V2PublicAccessRoute
+  V2PublicLegalRoute: typeof V2PublicLegalRoute
   V2PublicLoginRoute: typeof V2PublicLoginRoute
   V2PublicSignupRoute: typeof V2PublicSignupRoute
+  V2PublicSignupCompleteRoute: typeof V2PublicSignupCompleteRoute
   V2PublicIndexRoute: typeof V2PublicIndexRoute
+  V2PublicVerifyEmailTokenRoute: typeof V2PublicVerifyEmailTokenRoute
 }
 
 const V2PublicRouteChildren: V2PublicRouteChildren = {
+  V2PublicSplatRoute: V2PublicSplatRoute,
+  V2PublicAccessRoute: V2PublicAccessRoute,
+  V2PublicLegalRoute: V2PublicLegalRoute,
   V2PublicLoginRoute: V2PublicLoginRoute,
   V2PublicSignupRoute: V2PublicSignupRoute,
+  V2PublicSignupCompleteRoute: V2PublicSignupCompleteRoute,
   V2PublicIndexRoute: V2PublicIndexRoute,
+  V2PublicVerifyEmailTokenRoute: V2PublicVerifyEmailTokenRoute,
 }
 
 const V2PublicRouteWithChildren = V2PublicRoute._addFileChildren(
