@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { expect, it, vi } from "vitest";
 
 import { session } from "../../test/session";
@@ -8,11 +9,13 @@ import { ApplicationShell } from "./ApplicationShell";
 
 function showShell(value: Session = session) {
   return render(
-    <ThemeProvider>
-      <ApplicationShell session={value}>
-        <h1>Preview</h1>
-      </ApplicationShell>
-    </ThemeProvider>,
+    <QueryClientProvider client={new QueryClient()}>
+      <ThemeProvider>
+        <ApplicationShell session={value}>
+          <h1>Preview</h1>
+        </ApplicationShell>
+      </ThemeProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -33,14 +36,16 @@ it("renders the server-provided links without inventing access", () => {
 
 it("shows ops categories in the sidebar and page options as tabs", () => {
   render(
-    <ThemeProvider>
-      <ApplicationShell
-        session={{ ...session, is_staff: true, is_superuser: true }}
-        pathname="/ops/jobs/"
-      >
-        <h1>Jobs preview</h1>
-      </ApplicationShell>
-    </ThemeProvider>,
+    <QueryClientProvider client={new QueryClient()}>
+      <ThemeProvider>
+        <ApplicationShell
+          session={{ ...session, is_staff: true, is_superuser: true }}
+          pathname="/ops/jobs/"
+        >
+          <h1>Jobs preview</h1>
+        </ApplicationShell>
+      </ThemeProvider>
+    </QueryClientProvider>,
   );
 
   expect(screen.getByRole("navigation", { name: "Operations options" })).toBeInTheDocument();
@@ -49,16 +54,43 @@ it("shows ops categories in the sidebar and page options as tabs", () => {
   expect(activityLink).not.toHaveAttribute("aria-current", "page");
   expect(screen.getByRole("tab", { name: "Overview" })).toHaveAttribute("href", "/ops/");
   expect(screen.getByRole("tab", { name: "Jobs" })).toHaveAttribute("aria-selected", "true");
+  for (const [label, href] of [
+    ["Grafana", "/grafana/"],
+    ["Prometheus", "/prometheus/"],
+    ["Sentry", "/sentry/"],
+  ]) {
+    expect(screen.getByRole("link", { name: label })).toHaveAttribute("href", href);
+    expect(screen.getByRole("link", { name: label })).toHaveAttribute("target", "_blank");
+  }
+  expect(screen.getByRole("tab", { name: "Logs" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Jobs preview" })).toBeInTheDocument();
+});
+
+it("hides observability links and log navigation from staff", () => {
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <ThemeProvider>
+        <ApplicationShell session={{ ...session, is_staff: true }} pathname="/ops/jobs/">
+          <h1>Jobs preview</h1>
+        </ApplicationShell>
+      </ThemeProvider>
+    </QueryClientProvider>,
+  );
+  expect(screen.queryByRole("link", { name: "Grafana" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Prometheus" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Sentry" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("tab", { name: "Logs" })).not.toBeInTheDocument();
 });
 
 it("shows the tabs buffer only while pinned and clears it when scrolling back", () => {
   const view = render(
-    <ThemeProvider>
-      <ApplicationShell session={{ ...session, is_staff: true }} pathname="/ops/jobs/">
-        <h1>Jobs preview</h1>
-      </ApplicationShell>
-    </ThemeProvider>,
+    <QueryClientProvider client={new QueryClient()}>
+      <ThemeProvider>
+        <ApplicationShell session={{ ...session, is_staff: true }} pathname="/ops/jobs/">
+          <h1>Jobs preview</h1>
+        </ApplicationShell>
+      </ThemeProvider>
+    </QueryClientProvider>,
   );
   const tabs = screen.getByRole("tablist", { name: "Activity pages" });
   tabs.style.top = "64px";
@@ -196,11 +228,13 @@ it("closes account details when the route changes", () => {
   const view = showShell();
   fireEvent.click(screen.getByRole("button", { name: "Account menu for member" }));
   view.rerender(
-    <ThemeProvider>
-      <ApplicationShell session={session} pathname="/account/">
-        <h1>Account</h1>
-      </ApplicationShell>
-    </ThemeProvider>,
+    <QueryClientProvider client={new QueryClient()}>
+      <ThemeProvider>
+        <ApplicationShell session={session} pathname="/account/">
+          <h1>Account</h1>
+        </ApplicationShell>
+      </ThemeProvider>
+    </QueryClientProvider>,
   );
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
@@ -219,11 +253,13 @@ it("keeps a dismissed market notice hidden when navigating into Ops", () => {
   const view = showShell(value);
   fireEvent.click(screen.getByRole("button", { name: "Dismiss market notice" }));
   view.rerender(
-    <ThemeProvider>
-      <ApplicationShell session={value} pathname="/ops/jobs/">
-        <h1>Jobs preview</h1>
-      </ApplicationShell>
-    </ThemeProvider>,
+    <QueryClientProvider client={new QueryClient()}>
+      <ThemeProvider>
+        <ApplicationShell session={value} pathname="/ops/jobs/">
+          <h1>Jobs preview</h1>
+        </ApplicationShell>
+      </ThemeProvider>
+    </QueryClientProvider>,
   );
   expect(screen.queryByRole("status", { name: "Market closed" })).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Trading calendar" })).toBeInTheDocument();

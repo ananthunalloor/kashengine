@@ -1,9 +1,10 @@
 """The monitoring and user pages of the Ops area.
 
-Staff users can look at these pages. Only a superuser can change something, and only with a POST
-request. The decorators in `permissions.py` enforce this. `urls.py` maps each view to a path in
-the `ops` namespace. The feature permission and subscription views are in `views_access.py`. The
-settings, schedule, feed, and instrument views are in `views_settings.py`.
+Staff users can look at these pages, except for Logs, which is superuser-only. Only a superuser
+can change something, and only with a POST request. The decorators in `permissions.py` enforce
+these rules. `urls.py` maps each view to a path in the `ops` namespace. The feature permission
+and subscription views are in `views_access.py`. The settings, schedule, feed, and instrument
+views are in `views_settings.py`.
 
 The module has these groups of views:
 
@@ -40,7 +41,7 @@ from apps.web.datastar import is_datastar, querystring, read_filters, read_page,
 
 from . import audit, configview, health, jobs, logs, metrics, schedule, users, views_access
 from .models import AuditEvent, LoginEvent, TaskRun
-from .permissions import staff_required, superuser_post_required
+from .permissions import staff_required, superuser_post_required, superuser_required
 
 RUN_STATUS_FILTERS = TaskRun.Status.choices
 RUN_TRIGGER_FILTERS = TaskRun.Trigger.choices
@@ -304,17 +305,18 @@ def run_stop(request: HttpRequest, pk: int) -> HttpResponse:
     return redirect("ops:run", pk=pk)
 
 
-@staff_required
+@superuser_required
 def log_view(request: HttpRequest) -> HttpResponse:
     """Show the entries of the log file, newest first, with filters.
 
-    The filters are `level` (the lowest level), `logger` (part of the logger name), `q` (part of
-    the message), `limit` (the number of entries), and `live` (the text `true` turns on the
-    automatic refresh). The view passes the filters to `logs.query`, which reads the end of the
-    log file. A Datastar request gets only the HTML of the log panel.
+    Only superusers can read the application log. The filters are `level` (the lowest level),
+    `logger` (part of the logger name), `q` (part of the message), `limit` (the number of entries),
+    and `live` (the text `true` turns on the automatic refresh). The view passes the filters to
+    `logs.query`, which reads the end of the log file. A Datastar request gets only the HTML of the
+    log panel.
 
     Args:
-        request: The HTTP request. The staff check already passed.
+        request: The HTTP request.         The superuser check already passed.
 
     Returns:
         The page `ops/logs.html`, or the panel `ops/_log_panel.html` for Datastar.

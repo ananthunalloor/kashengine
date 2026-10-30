@@ -44,7 +44,10 @@ def test_a_normal_user_gets_a_403(member_client, name):
 
 
 @pytest.mark.parametrize("name", PAGES)
-def test_a_staff_user_can_open_every_page(staff_client, offline, name):
+def test_a_staff_user_can_open_every_page_except_logs(staff_client, offline, name):
+    if name == "ops:logs":
+        assert staff_client.get(reverse(name)).status_code == 403
+        return
     assert staff_client.get(reverse(name)).status_code == 200
 
 
@@ -76,7 +79,8 @@ def test_the_ops_pages_have_their_own_menu(staff_client, offline):
     page = staff_client.get(reverse("ops:jobs")).content.decode()
 
     for name in PAGES:
-        assert f'href="{reverse(name)}"' in page
+        expected = name != "ops:logs"
+        assert (f'href="{reverse(name)}"' in page) is expected
 
 
 def test_a_staff_user_does_not_see_the_run_buttons(staff_client, boss_client, offline):
@@ -217,15 +221,15 @@ def test_the_jobs_page_shows_the_last_run_and_the_next_run(staff_client, offline
 # Logs
 
 
-def test_the_log_page_filters_and_gives_a_partial(staff_client, tmp_path, settings):
+def test_the_log_page_filters_and_gives_a_partial(boss_client, tmp_path, settings):
     path = tmp_path / "app.log"
     path.write_text(
         "2026-10-07 07:00:01,100 INFO a.b: all good\n2026-10-07 07:00:02,200 ERROR a.b: it broke\n"
     )
     settings.LOG_FILE = path
 
-    page = staff_client.get(reverse("ops:logs"), {"level": "ERROR"}).content.decode()
-    partial = staff_client.get(reverse("ops:logs"), {"q": "good"}, headers=DS).content.decode()
+    page = boss_client.get(reverse("ops:logs"), {"level": "ERROR"}).content.decode()
+    partial = boss_client.get(reverse("ops:logs"), {"q": "good"}, headers=DS).content.decode()
 
     assert "it broke" in page
     assert "all good" not in page
@@ -233,28 +237,28 @@ def test_the_log_page_filters_and_gives_a_partial(staff_client, tmp_path, settin
     assert "all good" in partial
 
 
-def test_the_log_page_works_without_a_file(staff_client, tmp_path, settings):
+def test_the_log_page_works_without_a_file(boss_client, tmp_path, settings):
     settings.LOG_FILE = tmp_path / "missing.log"
 
-    response = staff_client.get(reverse("ops:logs"))
+    response = boss_client.get(reverse("ops:logs"))
 
     assert response.status_code == 200
     assert "There is no log file yet" in response.content.decode()
 
 
-def test_the_log_page_accepts_datastar_signals(staff_client, tmp_path, settings):
+def test_the_log_page_accepts_datastar_signals(boss_client, tmp_path, settings):
     path = tmp_path / "app.log"
     path.write_text("2026-10-07 07:00:01,100 INFO a.b: hello world\n")
     settings.LOG_FILE = path
     signals = '{"level":"","logger":"","q":"hello","limit":"10","live":true}'
 
-    response = staff_client.get(reverse("ops:logs"), {"datastar": signals}, headers=DS)
+    response = boss_client.get(reverse("ops:logs"), {"datastar": signals}, headers=DS)
 
     assert "hello world" in response.content.decode()
 
 
-def test_a_bad_datastar_value_does_not_break_the_page(staff_client, offline):
-    response = staff_client.get(reverse("ops:logs"), {"datastar": "{not json", "limit": "abc"})
+def test_a_bad_datastar_value_does_not_break_the_page(boss_client, offline):
+    response = boss_client.get(reverse("ops:logs"), {"datastar": "{not json", "limit": "abc"})
 
     assert response.status_code == 200
 

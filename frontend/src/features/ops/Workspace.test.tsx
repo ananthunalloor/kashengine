@@ -219,10 +219,16 @@ it("renders native React Ops tables, complete navigation, escaped cells and IST 
   );
   expect(screen.getByRole("cell", { name: "<b>Saved feed</b>" })).toBeInTheDocument();
   expect(document.querySelector(".data-table b")).toBeNull();
-  const nav = within(screen.getByRole("navigation", { name: "Operations" }));
-  expect(nav.getAllByRole("link")).toHaveLength(15);
-  expect(nav.getByRole("link", { name: "Feeds" })).toHaveAttribute("aria-current", "page");
-  expect(nav.getByRole("link", { name: "Feeds" }).querySelector("svg")).not.toBeNull();
+  const nav = within(screen.getByRole("navigation", { name: "Operations options" }));
+  expect(nav.getAllByRole("link")).toHaveLength(6);
+  expect(nav.getByRole("link", { name: "Data & configuration" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  expect(
+    nav.getByRole("link", { name: "Data & configuration" }).querySelector("svg"),
+  ).not.toBeNull();
+  expect(screen.getByRole("tab", { name: "Feeds" })).toHaveAttribute("aria-selected", "true");
   expect(document.querySelector(".ops-shell")).not.toBeNull();
   expect(screen.getByRole("cell", { name: "On" }).querySelector(".ops-status")).toHaveClass(
     "ops-tone-positive",
@@ -287,6 +293,14 @@ it("does not fetch operations for nonstaff and hides backups from staff navigati
   expect(fetchMock.mock.calls.every(([url]) => url.includes("/session"))).toBe(true);
 });
 
+it("does not fetch the log viewer for staff who are not superusers", async () => {
+  const { fetchMock } = await show({ path: "/ops/logs/", superuser: false });
+  await waitFor(() =>
+    expect(screen.getByText("This Ops page requires additional permissions.")).toBeInTheDocument(),
+  );
+  expect(fetchMock.mock.calls.every(([url]) => url.includes("/session"))).toBe(true);
+});
+
 it("keeps read-only staff access while excluding backups", async () => {
   const readonly = zOpsPage.parse({
     ...page,
@@ -295,11 +309,7 @@ it("keeps read-only staff access while excluding backups", async () => {
   await show({ superuser: false, body: readonly });
   await screen.findByRole("heading", { name: "News feeds", level: 1 });
   expect(screen.queryByRole("button", { name: "Add feed" })).not.toBeInTheDocument();
-  expect(
-    within(screen.getByRole("navigation", { name: "Operations" })).queryByRole("link", {
-      name: "Backups",
-    }),
-  ).not.toBeInTheDocument();
+  expect(screen.queryByRole("tab", { name: "Backups" })).not.toBeInTheDocument();
 });
 
 const invitationsPage = zOpsPage.parse({
@@ -480,10 +490,12 @@ it("navigates Ops links within the mounted shell and keeps filter changes out of
   const shell = document.querySelector(".app-shell");
   const transition = document.querySelector(".page-transition");
   fireEvent.click(
-    within(screen.getByRole("navigation", { name: "Operations" })).getByRole("link", {
-      name: "Jobs",
+    within(screen.getByRole("navigation", { name: "Operations options" })).getByRole("link", {
+      name: "Activity",
     }),
   );
+  await waitFor(() => expect(router.state.location.pathname).toBe("/ops/"));
+  fireEvent.click(screen.getByRole("tab", { name: "Jobs" }));
   await waitFor(() => expect(router.state.location.pathname).toBe("/ops/jobs/"));
   await waitFor(() =>
     expect(fetchMock.mock.calls.some(([url]) => url.includes("/pages/jobs/"))).toBe(true),

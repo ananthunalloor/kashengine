@@ -12,11 +12,12 @@ The Ops pages are at `/ops/`. Caddy lets only `ADMIN_ALLOWED_IPS` reach them. In
 | --- | --- |
 | Anonymous | Goes to the login page. |
 | Normal user | Gets 403. |
-| Staff | Can look at every page. |
-| Superuser | Can also change things. Every change is a POST request and goes in the audit trail. |
+| Staff | Can look at every page except Logs. |
+| Superuser | Can also read Logs and change things. Every change is a POST request and goes in the audit trail. |
 
 A staff user cannot change anything, also when the user sends a POST request. Hiding a link is
-not the control. The view checks the role.
+not the control. The view checks the role. Only superusers can read application logs or use the
+Grafana (`/grafana/`), Prometheus (`/prometheus/`) and Sentry (`/sentry/`) links in Ops.
 
 ### React task-history preview
 
@@ -41,7 +42,7 @@ The original `/ops/audit/` remains available. Reading either page does not write
 | Overview | The [health checks](#health-checks), the last task runs and the last logins. | Nothing. |
 | Jobs | The list of [jobs](../reference/generated/system/jobs.md), the schedule, the next run and the last run. | Start a job. |
 | Runs | The history of task runs with status, time, worker, result and a safe error. | Nothing. |
-| Logs | The end of the application log, with filters for level, logger and text. Secrets are hidden. | Nothing. |
+| Logs | The end of the application log, with search and filters for level and logger. Secrets are hidden. | Nothing. |
 | Metrics | Host, database, Redis, worker and queue numbers, row counts and the prediction accuracy. | Nothing. |
 | Users | Each user with the last login, login count, failed logins, open sessions, the API tokens, and the features. | Turn a user on or off, end sessions, revoke API tokens, remove a feature. |
 | Subscriptions | The trial or subscription of each user, with its history. | Start, extend or end a subscription. |

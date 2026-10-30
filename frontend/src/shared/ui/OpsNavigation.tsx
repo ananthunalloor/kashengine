@@ -6,6 +6,7 @@ import {
   LuChartColumn,
   LuClipboardList,
   LuDatabaseBackup,
+  LuExternalLink,
   LuFileSliders,
   LuGauge,
   LuKeyRound,
@@ -70,6 +71,12 @@ const pages: readonly OpsPage[] = sections.reduce<OpsPage[]>(
   [],
 );
 
+const observabilityLinks = [
+  ["Grafana", "/grafana/"],
+  ["Prometheus", "/prometheus/"],
+  ["Sentry", "/sentry/"],
+] as const;
+
 export function opsPageIcon(path: string) {
   return pages.find(([prefix]) => prefix && path.startsWith(prefix))?.[2] ?? LuGauge;
 }
@@ -86,7 +93,9 @@ export function OpsNavigation({
   const visibleSections = sections
     .map((section) => ({
       ...section,
-      pages: section.pages.filter(([path]) => path !== "backups/" || superuser),
+      pages: section.pages.filter(
+        ([path]) => (path !== "backups/" || superuser) && (path !== "logs/" || superuser),
+      ),
     }))
     .filter(({ pages: sectionPages }) => sectionPages.length > 0);
 
@@ -114,6 +123,19 @@ export function OpsNavigation({
           />
         );
       })}
+      {superuser &&
+        observabilityLinks.map(([label, href]) => (
+          <NavLink
+            component="a"
+            href={href}
+            key={label}
+            label={label}
+            leftSection={<LuExternalLink aria-hidden="true" />}
+            target="_blank"
+            rel="noreferrer"
+            onClick={onNavigate}
+          />
+        ))}
     </nav>
   );
 }
@@ -150,7 +172,9 @@ export function OpsPageTabs({
   const visibleSections = sections
     .map((section) => ({
       ...section,
-      pages: section.pages.filter(([path]) => path !== "backups/" || superuser),
+      pages: section.pages.filter(
+        ([path]) => (path !== "backups/" || superuser) && (path !== "logs/" || superuser),
+      ),
     }))
     .filter(({ pages: sectionPages }) => sectionPages.length > 0);
   const activeSection = visibleSections.find(({ pages: sectionPages }) =>

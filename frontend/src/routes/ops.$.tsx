@@ -16,7 +16,8 @@ export const Route = createFileRoute("/ops/$")({
   beforeLoad: ({ context, params }) => {
     if (
       !context.session.is_staff ||
-      (params._splat?.replace(/\/$/, "") === "backups" && !context.session.is_superuser)
+      (["backups", "logs"].includes(params._splat?.replace(/\/$/, "") ?? "") &&
+        !context.session.is_superuser)
     )
       throw new ApiError("forbidden", "This Ops page requires additional permissions.", {
         code: "feature_not_available",

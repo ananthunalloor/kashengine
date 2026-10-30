@@ -152,7 +152,9 @@ The page is read-only, has no polling, and never creates audit events.
 The full Ops workspace starts at `/ops/`: Overview, Jobs, Logs, Metrics, Users and user
 details/access/subscriptions, Subscriptions, Logins/lockouts, Settings and every setting group,
 Schedule/add/edit, Feeds, Instruments, Configuration, and Backups. Runs/Audit retain their
-dedicated endpoints. The legacy Ops handlers are reused internally by the private API.
+dedicated endpoints. Logs and the Grafana (`/grafana/`), Prometheus (`/prometheus/`) and Sentry
+(`/sentry/`) links are superuser-only. The legacy Ops handlers are reused internally by the
+private API.
 
 Ops uses a scoped square-edged console layout with icon navigation. Status badges combine
 labels and icons with green success, red failure, and amber warning colors in both themes;
@@ -177,10 +179,10 @@ validation, defaults, and reset controls. Password widgets always serialize empt
 `POST /api/app/ops/actions/{path}` resolves a separate fixed action allowlist and invokes the
 existing decorated handler, preserving all domain validation, dispatch/busy checks, audit events,
 self/last-superuser protections, managed backup schedule rules, and transaction behavior.
-It requires a superuser, a browser session, and CSRF; reads still require staff (Backups requires
-superuser). Redirects and Django notifications become typed outcomes in React, invalid forms
-remain editable with field errors, and snapshot exports remain streaming attachments. A restore
-keeps the existing typed RESTORE confirmation and signs out before any subsequent refetch.
+It requires a superuser, a browser session, and CSRF; reads require staff, except Logs and Backups,
+which require a superuser. Redirects and Django notifications become typed outcomes in React,
+invalid forms remain editable with field errors, and snapshot exports remain streaming attachments.
+A restore keeps the existing typed RESTORE confirmation and signs out before any subsequent refetch.
 Session termination uses an opaque HMAC identifier rather than exposing usable session keys.
 No action is automatically retried or optimistically reported as saved. Form submissions are
 imperative: credentials/uploads are not retained in Query/mutation caches, storage, or URLs.

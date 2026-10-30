@@ -40,13 +40,17 @@ def ops_nav(request) -> dict:
 
     Returns:
         A dictionary with the key `ops_sections`. Its value is a list of tuples
-        `(key, label, url)` in the order of `SECTIONS`. The dictionary is empty outside the Ops
-        pages.
+        `(key, label, url)` in the order of `SECTIONS`, excluding Logs for non-superusers. The
+        dictionary is empty outside the Ops pages.
     """
     match = getattr(request, "resolver_match", None)
     if not match or match.namespace != "ops":
         return {}
-    sections = [(key, label, reverse(name)) for key, label, name in SECTIONS]
+    sections = [
+        (key, label, reverse(name))
+        for key, label, name in SECTIONS
+        if key != "logs" or request.user.is_superuser
+    ]
     if request.user.is_superuser:
         sections.append(("backups", "Backups", reverse("ops:backups")))
     return {"ops_sections": sections}

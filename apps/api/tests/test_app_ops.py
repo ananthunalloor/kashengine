@@ -11,6 +11,7 @@ from apps.siteconfig import conf
 
 pytestmark = pytest.mark.django_db
 URL = "/api/app/ops/runs"
+LOGS_URL = "/api/app/ops/pages/logs/"
 
 
 @pytest.fixture
@@ -44,6 +45,20 @@ def test_anonymous_and_non_staff_never_query_runs(client, member, path):
         assert response.status_code == 403
         assert response.json()["detail"] == "Staff access is required for Ops."
         assert response["Cache-Control"] == "private, no-store"
+
+
+def test_only_superusers_can_read_the_log_workspace(client, staff):
+    client.force_login(staff)
+    response = client.get(LOGS_URL)
+    assert response.status_code == 403
+    assert response["Cache-Control"] == "private, no-store"
+
+    staff.is_superuser = True
+    staff.save(update_fields=["is_superuser"])
+    client.force_login(staff)
+    response = client.get(LOGS_URL)
+    assert response.status_code == 200
+    assert response.json()["title"] == "Application logs"
 
 
 @pytest.mark.parametrize("superuser", [False, True])

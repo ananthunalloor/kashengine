@@ -600,7 +600,7 @@ def _present_logs(request: HttpRequest, name: str, context: dict[str, Any]) -> O
     """Present the logs workspace without serializing model internals.
 
     Args:
-        request: The staff request containing log filters.
+        request: The superuser request containing log filters.
         name: The resolved allowlisted Ops view name.
         context: The context prepared by the original protected view.
 
@@ -610,9 +610,7 @@ def _present_logs(request: HttpRequest, name: str, context: dict[str, Any]) -> O
     c = context
     sections: list[OpsSection] = []
     title = name.replace("_", " ").title()
-    description = (
-        "Staff can inspect operations. Only superusers can make changes. Times are shown in IST."
-    )
+    description = "Only superusers can inspect logs. Times are shown in IST."
     refresh = 0
     title = "Application logs"
     view = c["view"]
