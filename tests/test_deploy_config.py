@@ -54,10 +54,26 @@ def test_only_caddy_publishes_ports_in_prod(prod):
 def test_backend_and_proxy_networks_have_no_internet(prod):
     assert prod["networks"]["backend"]["internal"] is True
     assert prod["networks"]["proxy"]["internal"] is True
+    assert prod["networks"]["observability"]["internal"] is True
 
 
 @pytest.mark.parametrize(
-    "name", ["web", "realtime", "streamer", "worker", "beat", "db", "redis", "ollama"]
+    "name",
+    [
+        "web",
+        "realtime",
+        "streamer",
+        "worker",
+        "beat",
+        "db",
+        "redis",
+        "ollama",
+        "grafana",
+        "prometheus",
+        "glitchtip",
+        "glitchtip-db",
+        "glitchtip-valkey",
+    ],
 )
 def test_services_are_not_on_the_edge_network(prod, name):
     assert "edge" not in prod["services"][name]["networks"]
@@ -142,6 +158,17 @@ def test_caddyfile_limits_the_ops_pages_like_the_admin_site():
     ):
         assert path in rule.split()
     assert "not remote_ip {$ADMIN_ALLOWED_IPS" in rule
+
+
+def test_caddy_protects_monitoring_paths_with_superuser_session():
+    text = (ROOT / "deploy" / "caddy" / "Caddyfile").read_text()
+
+    assert "forward_auth web:8000" in text
+    assert "uri /ops/observability/authorize/" in text
+    assert "reverse_proxy grafana:3000" in text
+    assert "reverse_proxy prometheus:9090" in text
+    assert "sentry.{$SITE_ADDRESS}" in text
+    assert "reverse_proxy glitchtip:8000" in text
 
 
 def test_archived_site_is_not_configured():
@@ -255,7 +282,13 @@ def merged_config(tmp_path: Path, *names: str) -> dict:
         (tmp_path / env_file).write_text(
             "MINIO_ROOT_USER=test-minio-user\nMINIO_ROOT_PASSWORD=test-minio-password\n"
         )
-    (tmp_path / "test.env").write_text("SITE_ADDRESS=kash.example.com\nACME_EMAIL=a@example.com\n")
+    (tmp_path / "test.env").write_text(
+        "SITE_ADDRESS=kash.example.com\n"
+        "ACME_EMAIL=a@example.com\n"
+        "GLITCHTIP_DB_PASSWORD=test-glitchtip-password\n"
+        "GLITCHTIP_SECRET_KEY=test-glitchtip-secret\n"
+        "GRAFANA_ADMIN_PASSWORD=test-grafana-password\n"
+    )
     command = [docker, "compose", "--env-file", "test.env"]
     for name in dict.fromkeys(("docker-compose.yml", *names)):
         command += ["-f", name]
@@ -329,6 +362,21 @@ def test_silo_dev_ports_are_loopback_only(dev_config):
     ports = dev_config["services"]["silo"]["ports"]
     assert {port["published"] for port in ports} == {"9000", "9001"}
     assert {port["host_ip"] for port in ports} == {"127.0.0.1"}
+
+
+def test_observability_services_are_private_in_prod(prod_config):
+    services = prod_config["services"]
+    assert set(services["grafana"]["networks"]) == {"observability"}
+    assert set(services["prometheus"]["networks"]) == {"observability"}
+    assert set(services["glitchtip"]["networks"]) == {"observability", "observability-egress"}
+    assert set(services["glitchtip-db"]["networks"]) == {"observability"}
+    assert set(services["glitchtip-valkey"]["networks"]) == {"observability"}
+    assert services["grafana"]["environment"]["GF_SECURITY_ADMIN_PASSWORD"]
+    assert services["glitchtip"]["environment"]["GLITCHTIP_DOMAIN"] == (
+        f"https://sentry.{services['caddy']['environment']['SITE_ADDRESS']}"
+    )
+    for service in ("grafana", "prometheus", "glitchtip", "glitchtip-db", "glitchtip-valkey"):
+        assert not services[service].get("ports")
 
 
 @pytest.mark.parametrize(

@@ -2,7 +2,7 @@
 
 import pytest
 from django.contrib.sessions.models import Session
-from django.test import Client
+from django.test import Client, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -54,6 +54,17 @@ def test_a_staff_user_can_open_every_page_except_logs(staff_client, offline, nam
 @pytest.mark.parametrize("name", PAGES)
 def test_a_superuser_can_open_every_page(boss_client, offline, name):
     assert boss_client.get(reverse(name)).status_code == 200
+
+
+@override_settings(ROOT_URLCONF="config.urls")
+def test_observability_authorization_allows_only_superusers(client, staff, boss):
+    path = reverse("ops:observability_authorize")
+
+    assert client.get(path).status_code == 403
+    client.force_login(staff)
+    assert client.get(path).status_code == 403
+    client.force_login(boss)
+    assert client.get(path).status_code == 204
 
 
 def test_the_detail_pages_follow_the_same_rules(

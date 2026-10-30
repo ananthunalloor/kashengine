@@ -20,6 +20,11 @@ documentation site is one of the services (`docs`). Caddy shows it at `https://<
 | `ollama` | Local LLM | 11434 |
 | `silo` | S3-compatible storage for backups | 9000 (API), 9001 (console) |
 | `silo-init` | Makes the private buckets one time, then stops | none |
+| `grafana` | Monitoring dashboards with a provisioned Prometheus data source | 3000 |
+| `prometheus` | Time-series database; initially scrapes its own metrics | 9090 |
+| `glitchtip` | Sentry-compatible error tracking | 8000 |
+| `glitchtip-db` | PostgreSQL data for GlitchTip | 5432 |
+| `glitchtip-valkey` | GlitchTip task queue and cache | 6379 |
 | `frontend` | Vite development server (development only) | 5173 |
 | `docs` | nginx with the static documentation site | 8080 |
 
@@ -78,7 +83,8 @@ pnpm build        # production build in frontend/dist
 Use a Linux host with Docker Engine and the Compose plugin. The production model needs 16 GB of
 RAM or more. The size depends on the model that you choose.
 
-1. Point the DNS record of your domain to the server. Open TCP 80, TCP 443 and UDP 443.
+1. Point the DNS records for your domain and `sentry.<SITE_ADDRESS>` to the server. Open TCP 80,
+   TCP 443 and UDP 443.
 2. Make the environment file and protect it:
 
    ```bash
@@ -92,7 +98,12 @@ RAM or more. The size depends on the model that you choose.
    `TELEGRAM_BOT_TOKEN`. Keep `localhost` in `DJANGO_ALLOWED_HOSTS`:
    the Docker health check needs it. Set `ADMIN_ALLOWED_IPS` and `DOCS_ALLOWED_IPS`.
    Configure SMTP values, `TELEGRAM_BOT_USERNAME`, and a random
-   `TELEGRAM_WEBHOOK_SECRET` if users should self-register and receive reports. Register
+   `TELEGRAM_WEBHOOK_SECRET` if users should self-register and receive reports. Set
+   `GRAFANA_ADMIN_PASSWORD`, `GLITCHTIP_DB_PASSWORD`, and `GLITCHTIP_SECRET_KEY` to unique random
+   values. Set `GLITCHTIP_EMAIL_URL` to an SMTP URL if GlitchTip should send email; otherwise it
+   logs email locally. The GlitchTip login is separate from Kash Engine accounts. Its link appears
+   only for Kash Engine superusers, and `ADMIN_ALLOWED_IPS` also limits the GlitchTip host.
+   Register
    `https://<SITE_ADDRESS>/api/telegram/webhook/` with Telegram as the bot webhook using that same
    secret token. Keep `SIGNUP_INVITE_REQUIRED=true` and generate single-use invitations in
    Django admin after creating your superuser. Review and adapt the starter Terms of Use and
@@ -109,12 +120,16 @@ RAM or more. The size depends on the model that you choose.
    ```
 
    The production file does not use the development override.
-5. Make the first superuser and download the model:
+5. Make the first superusers and download the model:
 
    ```bash
    docker compose --env-file .env.prod \
      -f docker-compose.yml -f docker-compose.prod.yml \
      exec web python manage.py createsuperuser
+
+   docker compose --env-file .env.prod \
+     -f docker-compose.yml -f docker-compose.prod.yml \
+     exec glitchtip python manage.py createsuperuser
 
    docker compose --env-file .env.prod \
      -f docker-compose.yml -f docker-compose.prod.yml \
@@ -129,7 +144,8 @@ RAM or more. The size depends on the model that you choose.
      exec web python manage.py check --deploy
    ```
 
-7. Open `https://<SITE_ADDRESS>/`, sign in and open the app, `https://<SITE_ADDRESS>/docs/` and
+7. Open `https://<SITE_ADDRESS>/`, sign in and open the app, `https://sentry.<SITE_ADDRESS>/`,
+   `https://<SITE_ADDRESS>/docs/` and
    `https://<SITE_ADDRESS>/api/v1/docs`. Make sure that no file returns 404 and that the browser
    console shows no CSP violation. Open **Trading calendar** in the app and enter the holidays
    of the year at `/admin/markets/tradingcalendarday/` (see
@@ -137,6 +153,11 @@ RAM or more. The size depends on the model that you choose.
 8. Test the controls before you depend on the system: a login lockout, the
    `ADMIN_ALLOWED_IPS` rule from a blocked address, a report, Telegram delivery, the next run
    times on **Ops > Schedule**, a backup and a restore.
+
+Grafana and Prometheus are available at `/grafana/` and `/prometheus/` to Kash Engine superusers.
+Prometheus initially scrapes only itself; add exporters or application metrics to
+`deploy/prometheus/prometheus.yml` for more targets. GlitchTip is Sentry-compatible, but it is not
+the Sentry product. Its data persists in the `glitchtip_db` and `glitchtip_uploads` volumes.
 
 On start, `web` runs `migrate` and `collectstatic`, then starts gunicorn with 3 workers and 16
 threads for each worker (`--worker-class gthread`). The threads are needed because each open

@@ -88,7 +88,28 @@
 		}
 	}
 
-	# 3. Live market WebSockets go to the ASGI realtime service. It checks the session, the
+	# 3. Monitoring paths require a superuser session before Caddy proxies each request.
+	@grafana path /grafana /grafana/*
+	handle @grafana {
+		forward_auth web:8000 {
+			uri /ops/observability/authorize/
+		}
+		reverse_proxy grafana:3000 {
+			header_down -Server
+		}
+	}
+	@prometheus path /prometheus /prometheus/*
+	handle @prometheus {
+		forward_auth web:8000 {
+			uri /ops/observability/authorize/
+		}
+		uri strip_prefix /prometheus
+		reverse_proxy prometheus:9090 {
+			header_down -Server
+		}
+	}
+
+	# 4. Live market WebSockets go to the ASGI realtime service. It checks the session, the
 	# Origin header and Markets access itself. Caddy upgrades the connection automatically.
 	handle /ws/* {
 		reverse_proxy realtime:8001 {
@@ -96,10 +117,26 @@
 		}
 	}
 
-	# 4. Everything else is the Django app. Caddy replaces any X-Forwarded-* header from the
+	# 5. Everything else is the Django app. Caddy replaces any X-Forwarded-* header from the
 	# client, so the app can trust X-Forwarded-Proto (SECURE_PROXY_SSL_HEADER).
 	handle {
 		reverse_proxy web:8000 {
+			header_down -Server
+		}
+	}
+}
+
+sentry.{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	@sentry_admin_denied {
+		not remote_ip {$ADMIN_ALLOWED_IPS:0.0.0.0/0 ::/0}
+	}
+	handle @sentry_admin_denied {
+		respond "Forbidden" 403
+	}
+	handle {
+		reverse_proxy glitchtip:8000 {
 			header_down -Server
 		}
 	}

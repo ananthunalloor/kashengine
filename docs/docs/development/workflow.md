@@ -152,9 +152,9 @@ The page is read-only, has no polling, and never creates audit events.
 The full Ops workspace starts at `/ops/`: Overview, Jobs, Logs, Metrics, Users and user
 details/access/subscriptions, Subscriptions, Logins/lockouts, Settings and every setting group,
 Schedule/add/edit, Feeds, Instruments, Configuration, and Backups. Runs/Audit retain their
-dedicated endpoints. Logs and the Grafana (`/grafana/`), Prometheus (`/prometheus/`) and Sentry
-(`/sentry/`) links are superuser-only. The legacy Ops handlers are reused internally by the
-private API.
+dedicated endpoints. Logs, Grafana (`/grafana/`), Prometheus (`/prometheus/`), and GlitchTip
+(`https://sentry.<SITE_ADDRESS>`) are superuser-only in Ops. GlitchTip provides Sentry-compatible
+error tracking. The legacy Ops handlers are reused internally by the private API.
 
 Ops uses a scoped square-edged console layout with icon navigation. Status badges combine
 labels and icons with green success, red failure, and amber warning colors in both themes;

@@ -7,6 +7,8 @@
 # - The networks keep the services apart:
 #     edge     Caddy only. It has the published ports and can reach the internet (for TLS).
 #     proxy    Caddy, web, realtime and docs. No route to the internet.
+#     observability Caddy, Grafana, Prometheus, GlitchTip, and GlitchTip data stores. No internet.
+#     observability-egress GlitchTip only. Outbound mail and other configured integrations.
 #     backend  web, realtime, streamer, worker, beat, db, redis, ollama, silo, silo-init.
 #              No route to the internet.
 #     egress   streamer, worker, beat, ollama. Outbound only: news, quotes (including the
@@ -59,6 +61,62 @@ services:
     networks:
       - edge
       - proxy
+      - observability
+
+  grafana:
+    <<: *hardened
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env.prod}
+    read_only: true
+    tmpfs:
+      - /tmp
+    networks:
+      - observability
+
+  prometheus:
+    <<: *hardened
+    read_only: true
+    tmpfs:
+      - /tmp
+    networks:
+      - observability
+
+  glitchtip:
+    <<: *hardened
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:?Set GLITCHTIP_SECRET_KEY in .env.prod}
+      DATABASE_URL: postgresql://glitchtip:${GLITCHTIP_DB_PASSWORD:?Set GLITCHTIP_DB_PASSWORD in .env.prod}@glitchtip-db:5432/glitchtip
+      GLITCHTIP_DOMAIN: https://sentry.${SITE_ADDRESS:?Set SITE_ADDRESS in .env.prod}
+    networks:
+      - observability
+      - observability-egress
+
+  glitchtip-db:
+    <<: *hardened
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    environment:
+      POSTGRES_DB: glitchtip
+      POSTGRES_USER: glitchtip
+      POSTGRES_PASSWORD: ${GLITCHTIP_DB_PASSWORD:?Set GLITCHTIP_DB_PASSWORD in .env.prod}
+    networks:
+      - observability
+
+  glitchtip-valkey:
+    <<: *hardened
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    networks:
+      - observability
 
   # Static files only. No secrets, no database, no route to the internet.
   docs:
@@ -162,6 +220,9 @@ services:
       - egress
 
 networks:
+  observability:
+    internal: true
+  observability-egress: {}
   edge: {}
   proxy:
     internal: true

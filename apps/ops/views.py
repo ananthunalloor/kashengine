@@ -23,9 +23,12 @@ Settings: `OPS_PAGE_SIZE` (rows on a list page) and `OPS_RETENTION_DAYS` (shown 
 come from `apps.siteconfig.conf`.
 """
 
+from http import HTTPStatus
+
 from django.contrib import messages
 from django.contrib.admin.models import LogEntry
 from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_not_required
 from django.core.paginator import Paginator
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -52,6 +55,23 @@ RUN_FILTERS = ("label", "status", "trigger", "page")
 LOGIN_FILTERS = ("kind", "q", "hours", "page")
 USER_FILTERS = ("q",)
 LOGIN_HOURS = {"24": "Last 24 hours", "168": "Last 7 days", "720": "Last 30 days", "": "All"}
+
+
+@login_not_required
+@superuser_required
+def observability_authorize(request: HttpRequest) -> HttpResponse:
+    """Authorize Caddy access to monitoring tools for a superuser.
+
+    Args:
+        request: The internal Caddy authorization request.
+
+    Returns:
+        An empty response with status 204 for a superuser.
+
+    Security:
+        Caddy calls this view before it proxies Grafana or Prometheus requests.
+    """
+    return HttpResponse(status=HTTPStatus.NO_CONTENT)
 
 
 def _paginate(items, filters: dict[str, str]):

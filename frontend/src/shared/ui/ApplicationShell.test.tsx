@@ -57,7 +57,7 @@ it("shows ops categories in the sidebar and page options as tabs", () => {
   for (const [label, href] of [
     ["Grafana", "/grafana/"],
     ["Prometheus", "/prometheus/"],
-    ["Sentry", "/sentry/"],
+    ["Sentry", "http://sentry.localhost/"],
   ]) {
     expect(screen.getByRole("link", { name: label })).toHaveAttribute("href", href);
     expect(screen.getByRole("link", { name: label })).toHaveAttribute("target", "_blank");

@@ -77,6 +77,77 @@ services:
         DOCS_SOURCE_REF: "${DOCS_SOURCE_REF:-main}"
     restart: unless-stopped
 
+  grafana:
+    image: grafana/grafana:12
+    environment:
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-dev-grafana-change-me}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_LOG_MODE: console
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+
+  prometheus:
+    image: prom/prometheus:v3
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.external-url=https://${SITE_ADDRESS:-localhost}/prometheus/
+      - --web.route-prefix=/
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+
+  glitchtip-db:
+    image: postgres:17
+    command: ["postgres", "-c", "max_locks_per_transaction=512"]
+    environment:
+      POSTGRES_DB: glitchtip
+      POSTGRES_USER: glitchtip
+      POSTGRES_PASSWORD: ${GLITCHTIP_DB_PASSWORD:-dev-glitchtip-change-me}
+    volumes:
+      - glitchtip_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  glitchtip-valkey:
+    image: valkey/valkey:9
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  glitchtip:
+    image: glitchtip/glitchtip:6
+    depends_on:
+      glitchtip-db:
+        condition: service_healthy
+      glitchtip-valkey:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://glitchtip:${GLITCHTIP_DB_PASSWORD:-dev-glitchtip-change-me}@glitchtip-db:5432/glitchtip
+      VALKEY_URL: redis://glitchtip-valkey:6379
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:-dev-glitchtip-secret-change-me}
+      GLITCHTIP_DOMAIN: https://sentry.${SITE_ADDRESS:-localhost}
+      DEFAULT_FROM_EMAIL: ${GLITCHTIP_FROM_EMAIL:-glitchtip@localhost}
+      EMAIL_URL: ${GLITCHTIP_EMAIL_URL:-consolemail://}
+      ENABLE_ADMIN: "False"
+      ENABLE_OPENAPI: "False"
+      GLITCHTIP_ENABLE_MCP: "False"
+      GLITCHTIP_ENABLE_DUCKDB: "False"
+      SERVER_ROLE: all_in_one
+    volumes:
+      - glitchtip_uploads:/code/uploads
+
   # Reverse proxy. Dev and prod use the same image, the same Caddyfile, and the same hardening.
   caddy:
     image: caddy:2-alpine
@@ -166,7 +237,14 @@ services:
 volumes:
   postgres_data:
   ollama_data:
+  grafana_data:
+  prometheus_data:
+  glitchtip_db:
+  glitchtip_uploads:
   caddy_data:
   caddy_config:
   # Keep this historical volume name so existing MinIO data is reused by Silo.
   minio_data:
+
+networks:
+  observability:

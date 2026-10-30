@@ -7,10 +7,17 @@ from apps.web import views
 
 from .permissions import staff_required, superuser_required
 from .urls import urlpatterns as legacy_patterns
+from .views import observability_authorize
 
 app_name = "ops"
 
 urlpatterns = [
+    path(
+        "observability/authorize/",
+        observability_authorize,
+        name="observability_authorize",
+    ),
+] + [
     path(
         str(pattern.pattern),
         (superuser_required if pattern.name == "backups" else staff_required)(

@@ -13,12 +13,14 @@ Each layer has its own controls. A change in one layer must not weaken another l
 Caddy is the only service that is open to the internet. In production it publishes ports 80
 (TCP), 443 (TCP) and 443 (UDP, for HTTP/3). No other service publishes a port.
 
-Four Docker networks keep the services apart (`docker-compose.prod.yml`):
+Six Docker networks keep the services apart (`docker-compose.prod.yml`):
 
 | Network | Members | Route to the internet |
 | --- | --- | --- |
 | `edge` | `caddy` | Yes. Caddy needs it for certificates. |
 | `proxy` | `caddy`, `web`, `docs` | No. The network is `internal`. |
+| `observability` | `caddy`, `grafana`, `prometheus`, `glitchtip`, `glitchtip-db`, `glitchtip-valkey` | No. The network is `internal`. |
+| `observability-egress` | `glitchtip` | Yes. For configured outbound mail and integrations. |
 | `backend` | `web`, `worker`, `beat`, `db`, `redis`, `silo`, `silo-init`, `ollama` | No. The network is `internal`. |
 | `egress` | `worker`, `beat`, `ollama` | Yes. For news, quotes, Telegram and model downloads. |
 
@@ -52,7 +54,12 @@ Caddy runs the `handle` blocks in the order written. The first match wins. The o
 1. `/admin`, `/ops`, `/app/ops`, and `/api/app/ops` (including children) for an address outside `ADMIN_ALLOWED_IPS` get `403`.
 2. `/docs` for an address outside `DOCS_ALLOWED_IPS` gets `403`.
 3. `/docs` goes to `docs:8080`. Caddy does not remove the prefix.
-4. Everything else goes to `web:8000`.
+4. `/grafana/` and `/prometheus/` require a superuser session, then go to their private services.
+5. Everything else goes to `web:8000`.
+
+The separate `sentry.<SITE_ADDRESS>` host goes to GlitchTip only from `ADMIN_ALLOWED_IPS`.
+GlitchTip also requires its own account login. Grafana and Prometheus use a Kash Engine
+superuser-session check at the proxy; Grafana also requires its own admin login.
 
 `tests/test_deploy_config.py` checks this order. It also runs the real `caddy` binary when the
 binary is present.
@@ -106,7 +113,9 @@ Test the address that Caddy sees from an allowed client and from a blocked clien
 and VPNs can change it.
 
 The proxy rule is not the only guard. Django also checks who the user is. Only superusers can
-change settings. Normal users never see configuration or infrastructure errors.
+change settings or pass the Grafana and Prometheus proxy check. GlitchTip has separate accounts
+and is limited by `ADMIN_ALLOWED_IPS`. Normal users never see configuration or infrastructure
+errors.
 
 `DOCS_ALLOWED_IPS` has the same format. The docs do not contain secrets, but they describe the
 system. Limit them in production.

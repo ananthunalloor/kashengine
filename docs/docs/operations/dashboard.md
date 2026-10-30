@@ -17,7 +17,9 @@ The Ops pages are at `/ops/`. Caddy lets only `ADMIN_ALLOWED_IPS` reach them. In
 
 A staff user cannot change anything, also when the user sends a POST request. Hiding a link is
 not the control. The view checks the role. Only superusers can read application logs or use the
-Grafana (`/grafana/`), Prometheus (`/prometheus/`) and Sentry (`/sentry/`) links in Ops.
+Grafana (`/grafana/`), Prometheus (`/prometheus/`) and GlitchTip
+(`https://sentry.<SITE_ADDRESS>`) links in Ops. GlitchTip provides Sentry-compatible error
+tracking and has its own user accounts.
 
 ### React task-history preview
 

@@ -74,7 +74,6 @@ const pages: readonly OpsPage[] = sections.reduce<OpsPage[]>(
 const observabilityLinks = [
   ["Grafana", "/grafana/"],
   ["Prometheus", "/prometheus/"],
-  ["Sentry", "/sentry/"],
 ] as const;
 
 export function opsPageIcon(path: string) {
@@ -124,7 +123,10 @@ export function OpsNavigation({
         );
       })}
       {superuser &&
-        observabilityLinks.map(([label, href]) => (
+        [
+          ...observabilityLinks,
+          ["Sentry", `${window.location.protocol}//sentry.${window.location.hostname}/`] as const,
+        ].map(([label, href]) => (
           <NavLink
             component="a"
             href={href}
