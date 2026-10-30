@@ -1,15 +1,21 @@
 """Private company directory preview, sharing the existing name/symbol/sector query."""
 
 from django.core.paginator import Paginator
-from django.db.models import Count, Prefetch
+from django.db.models import Count, OuterRef, Prefetch, Subquery
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from ninja import Field, Query, Router, Status
 
 from apps.access.middleware import access_for
 from apps.api.errors import ApiError
 from apps.api.v1.common import ERRORS_WITH_NOT_FOUND, ERRORS_WITH_VALIDATION
-from apps.companies.models import Company, CompanyQuote
+from apps.companies.models import (
+    Company,
+    CompanyPriceAlert,
+    CompanyQuote,
+    CompanyWatchlistEntry,
+)
 from apps.markets.index_constituents import INDEXES
 from apps.markets.models import IndexConstituent, MarketInstrument
 from apps.ops.jobs import JOBS_BY_KEY, JobBusyError, JobDispatchError, active_run, start_job
@@ -18,7 +24,16 @@ from apps.siteconfig import conf
 from apps.web.queries import company_queryset
 
 from .auth import AppSession, OpsSession
-from .schemas import CompanyDetail, CompanyPage
+from .schemas import (
+    CompanyDetail,
+    CompanyPage,
+    WatchlistAction,
+    WatchlistChange,
+    WatchlistNotification,
+    WatchlistPage,
+    WatchlistPriceAlertCreate,
+)
+from .schemas import WatchlistPriceAlert as WatchlistPriceAlertSchema
 from .tables import TableFilters, ordered
 
 router = Router(tags=["Companies"], auth=AppSession("companies"))
@@ -212,6 +227,198 @@ def list_companies(request: HttpRequest, filters: Query[CompanyFilters]):
             for code, label, _filename in INDEXES
         ],
     }
+
+
+def watchlist_alert_item(alert: CompanyPriceAlert) -> dict:
+    """Return display-safe threshold and trigger fields."""
+    return {
+        "id": alert.pk,
+        "above_price": alert.above_price,
+        "is_active": alert.is_active,
+        "created_at": alert.created_at,
+        "triggered_at": alert.triggered_at,
+        "triggered_price": alert.triggered_price,
+    }
+
+
+def require_markets_access(request: HttpRequest) -> None:
+    """Keep saved market data and price alerts behind the Markets feature."""
+    if not access_for(request).can("markets"):
+        raise ApiError("feature_not_available", "Markets access is required for price alerts.")
+
+
+@router.get(
+    "/watchlist",
+    response={200: WatchlistPage, **ERRORS_WITH_VALIDATION},
+    operation_id="list_app_watchlist",
+    summary="Read the current user's bookmarked companies and price alerts",
+)
+def list_watchlist(request: HttpRequest):
+    """Read bookmarks, and include market prices and alerts only with Markets access."""
+    markets_available = access_for(request).can("markets")
+    entries_query = (
+        CompanyWatchlistEntry.objects.filter(user=request.user)
+        .select_related("company")
+        .prefetch_related("price_alerts")
+    )
+    if markets_available:
+        latest_quote_id = (
+            CompanyQuote.objects.filter(
+                company_id=OuterRef("company_id"),
+                instrument_key=OuterRef("company__upstox_instrument_key"),
+            )
+            .order_by("-as_of", "-pk")
+            .values("pk")[:1]
+        )
+        entries_query = entries_query.annotate(latest_quote_id=Subquery(latest_quote_id))
+    entries = list(entries_query)
+    quote_ids = (
+        [entry.latest_quote_id for entry in entries if entry.latest_quote_id]
+        if markets_available
+        else []
+    )
+    quotes = {quote.pk: quote for quote in CompanyQuote.objects.filter(pk__in=quote_ids)}
+    return {
+        "items": [
+            {
+                "id": entry.pk,
+                "company": {
+                    "id": entry.company_id,
+                    "name": entry.company.name,
+                    "symbol": entry.company.symbol,
+                    "sector": entry.company.sector,
+                },
+                "quote": saved_price(quotes.get(entry.latest_quote_id))
+                if markets_available
+                else None,
+                "alerts": [watchlist_alert_item(alert) for alert in entry.price_alerts.all()]
+                if markets_available
+                else [],
+            }
+            for entry in entries
+        ]
+    }
+
+
+@router.get(
+    "/watchlist/notifications",
+    response={200: list[WatchlistNotification], **ERRORS_WITH_VALIDATION},
+    operation_id="list_app_watchlist_notifications",
+    summary="Read the current user's unread triggered price alerts",
+)
+def list_watchlist_notifications(request: HttpRequest):
+    """Return a bounded list of unread price-crossing notifications."""
+    require_markets_access(request)
+    alerts = (
+        CompanyPriceAlert.objects.filter(
+            watchlist_entry__user=request.user,
+            is_active=False,
+            triggered_at__isnull=False,
+            notification_read_at__isnull=True,
+        )
+        .select_related("watchlist_entry__company")
+        .order_by("-triggered_at", "-pk")[:20]
+    )
+    return [
+        {
+            "id": alert.pk,
+            "company_id": alert.watchlist_entry.company_id,
+            "company_name": alert.watchlist_entry.company.name,
+            "symbol": alert.watchlist_entry.company.symbol,
+            "above_price": alert.above_price,
+            "triggered_price": alert.triggered_price,
+            "triggered_at": alert.triggered_at,
+        }
+        for alert in alerts
+    ]
+
+
+@router.put(
+    "/watchlist/{company_id}",
+    response={200: WatchlistChange, **ERRORS_WITH_NOT_FOUND},
+    operation_id="add_app_watchlist_company",
+    summary="Bookmark a company in the current user's watchlist",
+)
+def add_watchlist_company(request: HttpRequest, company_id: int):
+    """Add a company once, returning the same success for an existing bookmark."""
+    company = get_object_or_404(Company, pk=company_id)
+    CompanyWatchlistEntry.objects.get_or_create(user=request.user, company=company)
+    return {"watchlisted": True}
+
+
+@router.delete(
+    "/watchlist/{company_id}",
+    response={200: WatchlistChange, **ERRORS_WITH_NOT_FOUND},
+    operation_id="remove_app_watchlist_company",
+    summary="Remove a company and its alerts from the current user's watchlist",
+)
+def remove_watchlist_company(request: HttpRequest, company_id: int):
+    """Remove only the current user's bookmark and its associated alerts."""
+    entry = get_object_or_404(CompanyWatchlistEntry, user=request.user, company_id=company_id)
+    entry.delete()
+    return {"watchlisted": False}
+
+
+@router.post(
+    "/watchlist/{company_id}/alerts",
+    response={201: WatchlistPriceAlertSchema, **ERRORS_WITH_NOT_FOUND, **ERRORS_WITH_VALIDATION},
+    operation_id="create_app_watchlist_price_alert",
+    summary="Notify once when a watched company's price rises above a threshold",
+)
+def create_watchlist_price_alert(
+    request: HttpRequest, company_id: int, body: WatchlistPriceAlertCreate
+):
+    """Create an independent one-shot threshold alert for a bookmarked company."""
+    require_markets_access(request)
+    entry = get_object_or_404(
+        CompanyWatchlistEntry.objects.select_related("company"),
+        user=request.user,
+        company_id=company_id,
+    )
+    alert = CompanyPriceAlert.objects.create(
+        watchlist_entry=entry,
+        above_price=body.above_price,
+    )
+    return Status(201, watchlist_alert_item(alert))
+
+
+@router.delete(
+    "/watchlist/alerts/{alert_id}",
+    response={200: WatchlistAction, **ERRORS_WITH_NOT_FOUND},
+    operation_id="delete_app_watchlist_price_alert",
+    summary="Delete one of the current user's price alerts",
+)
+def delete_watchlist_price_alert(request: HttpRequest, alert_id: int):
+    """Delete an alert only when it belongs to the current user's watchlist."""
+    alert = get_object_or_404(
+        CompanyPriceAlert,
+        pk=alert_id,
+        watchlist_entry__user=request.user,
+    )
+    alert.delete()
+    return {"ok": True}
+
+
+@router.post(
+    "/watchlist/notifications/{alert_id}/read",
+    response={200: WatchlistAction, **ERRORS_WITH_NOT_FOUND},
+    operation_id="mark_app_watchlist_notification_read",
+    summary="Mark one of the current user's price notifications as read",
+)
+def mark_watchlist_notification_read(request: HttpRequest, alert_id: int):
+    """Acknowledge an unread notification only for its owner."""
+    require_markets_access(request)
+    alert = get_object_or_404(
+        CompanyPriceAlert,
+        pk=alert_id,
+        watchlist_entry__user=request.user,
+        is_active=False,
+        triggered_at__isnull=False,
+    )
+    if alert.notification_read_at is None:
+        alert.notification_read_at = timezone.now()
+        alert.save(update_fields=["notification_read_at"])
+    return {"ok": True}
 
 
 @router.get(

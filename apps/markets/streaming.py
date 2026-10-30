@@ -139,11 +139,13 @@ class FeedWriter:
         if now - self.saved_at.get(key, -SAVE_INTERVAL) < SAVE_INTERVAL:
             return
         company = self.companies[key]
+        as_of = datetime.fromisoformat(payload["as_of"])
+        exists = CompanyQuote.objects.filter(company=company, as_of=as_of).exists()
         CompanyQuote.objects.bulk_create(
             [
                 CompanyQuote(
                     company=company,
-                    as_of=datetime.fromisoformat(payload["as_of"]),
+                    as_of=as_of,
                     instrument_key=key,
                     price=payload["ltp"],
                     previous_close=payload["previous_close"],
@@ -153,6 +155,12 @@ class FeedWriter:
             ],
             ignore_conflicts=True,
         )
+        if not exists:
+            quote = CompanyQuote.objects.filter(company=company, as_of=as_of).first()
+            if quote is not None:
+                from apps.companies.alerts import evaluate_price_alerts  # noqa: PLC0415
+
+                evaluate_price_alerts(quote)
         if company.upstox_errors.get("quotes"):
             record_error(company, "quotes")
         self.saved_at[key] = now

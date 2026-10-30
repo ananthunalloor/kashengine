@@ -133,7 +133,11 @@ async function show(path: string, body: unknown) {
           JSON.stringify(
             input === "/api/app/session"
               ? { ...session, features: [...session.features, "companies", "markets"] }
-              : body,
+              : input === "/api/app/watchlist"
+                ? { items: [] }
+                : input === "/api/app/watchlist/notifications"
+                  ? []
+                  : body,
           ),
           { headers: { "Content-Type": "application/json" } },
         ),

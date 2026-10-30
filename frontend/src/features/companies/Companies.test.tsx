@@ -67,6 +67,11 @@ async function showCompanies({
           headers: { "Content-Type": "application/json" },
         });
       }
+      if (input === "/api/app/watchlist") {
+        return new Response(JSON.stringify({ items: [] }), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       return new Response(
         JSON.stringify(
           isSession

@@ -1336,6 +1336,594 @@
         ]
       }
     },
+    "/api/app/watchlist": {
+      "get": {
+        "operationId": "list_app_watchlist",
+        "summary": "Read the current user's bookmarked companies and price alerts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read only this user's watchlist and the newest saved quote for each company.",
+        "tags": [
+          "Companies"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/watchlist/notifications": {
+      "get": {
+        "operationId": "list_app_watchlist_notifications",
+        "summary": "Read the current user's unread triggered price alerts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WatchlistNotification"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Return a bounded list of unread price-crossing notifications.",
+        "tags": [
+          "Companies"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/watchlist/{company_id}": {
+      "put": {
+        "operationId": "add_app_watchlist_company",
+        "summary": "Bookmark a company in the current user's watchlist",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "schema": {
+              "title": "Company Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistChange"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Add a company once, returning the same success for an existing bookmark.",
+        "tags": [
+          "Companies"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "remove_app_watchlist_company",
+        "summary": "Remove a company and its alerts from the current user's watchlist",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "schema": {
+              "title": "Company Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistChange"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Remove only the current user's bookmark and its associated alerts.",
+        "tags": [
+          "Companies"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/watchlist/{company_id}/alerts": {
+      "post": {
+        "operationId": "create_app_watchlist_price_alert",
+        "summary": "Notify once when a watched company's price rises above a threshold",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "schema": {
+              "title": "Company Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistPriceAlert"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Create an independent one-shot threshold alert for a bookmarked company.",
+        "tags": [
+          "Companies"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatchlistPriceAlertCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/watchlist/alerts/{alert_id}": {
+      "delete": {
+        "operationId": "delete_app_watchlist_price_alert",
+        "summary": "Delete one of the current user's price alerts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "alert_id",
+            "schema": {
+              "title": "Alert Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistAction"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Delete an alert only when it belongs to the current user's watchlist.",
+        "tags": [
+          "Companies"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
+    "/api/app/watchlist/notifications/{alert_id}/read": {
+      "post": {
+        "operationId": "mark_app_watchlist_notification_read",
+        "summary": "Mark one of the current user's price notifications as read",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "alert_id",
+            "schema": {
+              "title": "Alert Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistAction"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Acknowledge an unread notification only for its owner.",
+        "tags": [
+          "Companies"
+        ],
+        "security": [
+          {
+            "AppSession": []
+          }
+        ]
+      }
+    },
     "/api/app/company-catalog/refresh/{task_id}": {
       "get": {
         "operationId": "get_app_company_list_refresh",
@@ -5188,6 +5776,239 @@
           "total"
         ],
         "title": "CompanyPage",
+        "type": "object"
+      },
+      "WatchlistCompany": {
+        "description": "Display-safe company details for one saved watchlist row.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "sector": {
+            "title": "Sector",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "symbol",
+          "sector"
+        ],
+        "title": "WatchlistCompany",
+        "type": "object"
+      },
+      "WatchlistItem": {
+        "description": "A bookmarked company, its newest saved quote and its threshold alerts.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "company": {
+            "$ref": "#/components/schemas/WatchlistCompany"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompanyPrice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/WatchlistPriceAlert"
+            },
+            "title": "Alerts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "company",
+          "quote",
+          "alerts"
+        ],
+        "title": "WatchlistItem",
+        "type": "object"
+      },
+      "WatchlistPage": {
+        "description": "The current user's saved companies.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WatchlistItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "WatchlistPage",
+        "type": "object"
+      },
+      "WatchlistPriceAlert": {
+        "description": "One threshold and its one-shot notification state.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "above_price": {
+            "title": "Above Price",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "triggered_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Triggered At"
+          },
+          "triggered_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Triggered Price"
+          }
+        },
+        "required": [
+          "id",
+          "above_price",
+          "is_active",
+          "created_at",
+          "triggered_at",
+          "triggered_price"
+        ],
+        "title": "WatchlistPriceAlert",
+        "type": "object"
+      },
+      "WatchlistNotification": {
+        "description": "A triggered, unread threshold notification.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "company_id": {
+            "title": "Company Id",
+            "type": "integer"
+          },
+          "company_name": {
+            "title": "Company Name",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "above_price": {
+            "title": "Above Price",
+            "type": "string"
+          },
+          "triggered_price": {
+            "title": "Triggered Price",
+            "type": "number"
+          },
+          "triggered_at": {
+            "format": "date-time",
+            "title": "Triggered At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "company_id",
+          "company_name",
+          "symbol",
+          "above_price",
+          "triggered_price",
+          "triggered_at"
+        ],
+        "title": "WatchlistNotification",
+        "type": "object"
+      },
+      "WatchlistChange": {
+        "description": "Result of adding or removing a company from a watchlist.",
+        "properties": {
+          "watchlisted": {
+            "title": "Watchlisted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "watchlisted"
+        ],
+        "title": "WatchlistChange",
+        "type": "object"
+      },
+      "WatchlistPriceAlertCreate": {
+        "description": "A positive price threshold, with two decimal places at most.",
+        "properties": {
+          "above_price": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Above Price"
+          }
+        },
+        "required": [
+          "above_price"
+        ],
+        "title": "WatchlistPriceAlertCreate",
+        "type": "object"
+      },
+      "WatchlistAction": {
+        "description": "Acknowledgement for a watchlist alert action.",
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "WatchlistAction",
         "type": "object"
       },
       "DeliveryItem": {

@@ -1828,6 +1828,164 @@ export type CompanyPage = {
 };
 
 /**
+ * WatchlistCompany
+ *
+ * Display-safe company details for one saved watchlist row.
+ */
+export type WatchlistCompany = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Symbol
+     */
+    symbol: string;
+    /**
+     * Sector
+     */
+    sector: string;
+};
+
+/**
+ * WatchlistItem
+ *
+ * A bookmarked company, its newest saved quote and its threshold alerts.
+ */
+export type WatchlistItem = {
+    /**
+     * Id
+     */
+    id: number;
+    company: WatchlistCompany;
+    quote: CompanyPrice | null;
+    /**
+     * Alerts
+     */
+    alerts: Array<WatchlistPriceAlert>;
+};
+
+/**
+ * WatchlistPage
+ *
+ * The current user's saved companies.
+ */
+export type WatchlistPage = {
+    /**
+     * Items
+     */
+    items: Array<WatchlistItem>;
+};
+
+/**
+ * WatchlistPriceAlert
+ *
+ * One threshold and its one-shot notification state.
+ */
+export type WatchlistPriceAlert = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Above Price
+     */
+    above_price: string;
+    /**
+     * Is Active
+     */
+    is_active: boolean;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Triggered At
+     */
+    triggered_at: string | null;
+    /**
+     * Triggered Price
+     */
+    triggered_price: number | null;
+};
+
+/**
+ * WatchlistNotification
+ *
+ * A triggered, unread threshold notification.
+ */
+export type WatchlistNotification = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Company Id
+     */
+    company_id: number;
+    /**
+     * Company Name
+     */
+    company_name: string;
+    /**
+     * Symbol
+     */
+    symbol: string;
+    /**
+     * Above Price
+     */
+    above_price: string;
+    /**
+     * Triggered Price
+     */
+    triggered_price: number;
+    /**
+     * Triggered At
+     */
+    triggered_at: string;
+};
+
+/**
+ * WatchlistChange
+ *
+ * Result of adding or removing a company from a watchlist.
+ */
+export type WatchlistChange = {
+    /**
+     * Watchlisted
+     */
+    watchlisted: boolean;
+};
+
+/**
+ * WatchlistPriceAlertCreate
+ *
+ * A positive price threshold, with two decimal places at most.
+ */
+export type WatchlistPriceAlertCreate = {
+    /**
+     * Above Price
+     */
+    above_price: number | string;
+};
+
+/**
+ * WatchlistAction
+ *
+ * Acknowledgement for a watchlist alert action.
+ */
+export type WatchlistAction = {
+    /**
+     * Ok
+     */
+    ok: boolean;
+};
+
+/**
  * DeliveryItem
  *
  * A send attempt associated with a report, or a test without a saved report.
@@ -3908,6 +4066,312 @@ export type ListAppCompaniesResponses = {
 };
 
 export type ListAppCompaniesResponse = ListAppCompaniesResponses[keyof ListAppCompaniesResponses];
+
+export type ListAppWatchlistData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/app/watchlist';
+};
+
+export type ListAppWatchlistErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type ListAppWatchlistError = ListAppWatchlistErrors[keyof ListAppWatchlistErrors];
+
+export type ListAppWatchlistResponses = {
+    /**
+     * OK
+     */
+    200: WatchlistPage;
+};
+
+export type ListAppWatchlistResponse = ListAppWatchlistResponses[keyof ListAppWatchlistResponses];
+
+export type ListAppWatchlistNotificationsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/app/watchlist/notifications';
+};
+
+export type ListAppWatchlistNotificationsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type ListAppWatchlistNotificationsError = ListAppWatchlistNotificationsErrors[keyof ListAppWatchlistNotificationsErrors];
+
+export type ListAppWatchlistNotificationsResponses = {
+    /**
+     * Response
+     *
+     * OK
+     */
+    200: Array<WatchlistNotification>;
+};
+
+export type ListAppWatchlistNotificationsResponse = ListAppWatchlistNotificationsResponses[keyof ListAppWatchlistNotificationsResponses];
+
+export type RemoveAppWatchlistCompanyData = {
+    body?: never;
+    path: {
+        /**
+         * Company Id
+         */
+        company_id: number;
+    };
+    query?: never;
+    url: '/api/app/watchlist/{company_id}';
+};
+
+export type RemoveAppWatchlistCompanyErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Not Found
+     */
+    404: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type RemoveAppWatchlistCompanyError = RemoveAppWatchlistCompanyErrors[keyof RemoveAppWatchlistCompanyErrors];
+
+export type RemoveAppWatchlistCompanyResponses = {
+    /**
+     * OK
+     */
+    200: WatchlistChange;
+};
+
+export type RemoveAppWatchlistCompanyResponse = RemoveAppWatchlistCompanyResponses[keyof RemoveAppWatchlistCompanyResponses];
+
+export type AddAppWatchlistCompanyData = {
+    body?: never;
+    path: {
+        /**
+         * Company Id
+         */
+        company_id: number;
+    };
+    query?: never;
+    url: '/api/app/watchlist/{company_id}';
+};
+
+export type AddAppWatchlistCompanyErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Not Found
+     */
+    404: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type AddAppWatchlistCompanyError = AddAppWatchlistCompanyErrors[keyof AddAppWatchlistCompanyErrors];
+
+export type AddAppWatchlistCompanyResponses = {
+    /**
+     * OK
+     */
+    200: WatchlistChange;
+};
+
+export type AddAppWatchlistCompanyResponse = AddAppWatchlistCompanyResponses[keyof AddAppWatchlistCompanyResponses];
+
+export type CreateAppWatchlistPriceAlertData = {
+    body: WatchlistPriceAlertCreate;
+    path: {
+        /**
+         * Company Id
+         */
+        company_id: number;
+    };
+    query?: never;
+    url: '/api/app/watchlist/{company_id}/alerts';
+};
+
+export type CreateAppWatchlistPriceAlertErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Not Found
+     */
+    404: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type CreateAppWatchlistPriceAlertError = CreateAppWatchlistPriceAlertErrors[keyof CreateAppWatchlistPriceAlertErrors];
+
+export type CreateAppWatchlistPriceAlertResponses = {
+    /**
+     * Created
+     */
+    201: WatchlistPriceAlert;
+};
+
+export type CreateAppWatchlistPriceAlertResponse = CreateAppWatchlistPriceAlertResponses[keyof CreateAppWatchlistPriceAlertResponses];
+
+export type DeleteAppWatchlistPriceAlertData = {
+    body?: never;
+    path: {
+        /**
+         * Alert Id
+         */
+        alert_id: number;
+    };
+    query?: never;
+    url: '/api/app/watchlist/alerts/{alert_id}';
+};
+
+export type DeleteAppWatchlistPriceAlertErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Not Found
+     */
+    404: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type DeleteAppWatchlistPriceAlertError = DeleteAppWatchlistPriceAlertErrors[keyof DeleteAppWatchlistPriceAlertErrors];
+
+export type DeleteAppWatchlistPriceAlertResponses = {
+    /**
+     * OK
+     */
+    200: WatchlistAction;
+};
+
+export type DeleteAppWatchlistPriceAlertResponse = DeleteAppWatchlistPriceAlertResponses[keyof DeleteAppWatchlistPriceAlertResponses];
+
+export type MarkAppWatchlistNotificationReadData = {
+    body?: never;
+    path: {
+        /**
+         * Alert Id
+         */
+        alert_id: number;
+    };
+    query?: never;
+    url: '/api/app/watchlist/notifications/{alert_id}/read';
+};
+
+export type MarkAppWatchlistNotificationReadErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
+     * Not Found
+     */
+    404: Problem;
+    /**
+     * Unprocessable Content
+     */
+    422: Problem;
+    /**
+     * Too Many Requests
+     */
+    429: Problem;
+};
+
+export type MarkAppWatchlistNotificationReadError = MarkAppWatchlistNotificationReadErrors[keyof MarkAppWatchlistNotificationReadErrors];
+
+export type MarkAppWatchlistNotificationReadResponses = {
+    /**
+     * OK
+     */
+    200: WatchlistAction;
+};
+
+export type MarkAppWatchlistNotificationReadResponse = MarkAppWatchlistNotificationReadResponses[keyof MarkAppWatchlistNotificationReadResponses];
 
 export type GetAppCompanyListRefreshData = {
     body?: never;

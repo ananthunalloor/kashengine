@@ -130,7 +130,7 @@ def save_quote(company: Company, data: Quote) -> bool:
     if timezone.is_naive(data.timestamp):
         raise UpstoxError("Upstox returned a quote without a timezone.")
     previous = data.ohlc.get("close")
-    _, created = CompanyQuote.objects.get_or_create(
+    quote, created = CompanyQuote.objects.get_or_create(
         company=company,
         as_of=data.timestamp,
         defaults={
@@ -141,6 +141,10 @@ def save_quote(company: Company, data: Quote) -> bool:
             "mode": "snapshot",
         },
     )
+    if created:
+        from apps.companies.alerts import evaluate_price_alerts  # noqa: PLC0415
+
+        evaluate_price_alerts(quote)
     return created
 
 

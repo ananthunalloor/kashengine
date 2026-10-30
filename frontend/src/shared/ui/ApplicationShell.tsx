@@ -12,6 +12,7 @@ import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import {
   LuActivity,
+  LuBookmark,
   LuBuilding2,
   LuChartNoAxesCombined,
   LuCircleUserRound,
@@ -33,6 +34,7 @@ import { AppLink } from "./AppLink";
 import { ApplicationAlerts } from "./ApplicationAlerts";
 import { MarketCalendar } from "./MarketCalendar";
 import { AppFooter } from "./AppFooter";
+import { WatchlistNotifications } from "../../features/companies/WatchlistNotifications";
 
 const navigationIcons: Record<string, IconType> = {
   "/dashboard/": LuHouse,
@@ -41,6 +43,7 @@ const navigationIcons: Record<string, IconType> = {
   "/ipos/": LuActivity,
   "/markets/": LuChartNoAxesCombined,
   "/companies/": LuBuilding2,
+  "/watchlist/": LuBookmark,
   "/delivery/": LuSend,
   "/account/": LuCircleUserRound,
 };
@@ -89,6 +92,12 @@ export function ApplicationShell({
         </Alert>
       )}
       <ApplicationAlerts />
+      <WatchlistNotifications
+        enabled={
+          session.features.includes("markets") &&
+          session.navigation.some((item) => item.url === "/watchlist/")
+        }
+      />
     </>
   );
 

@@ -25,6 +25,7 @@ import { Route as OpsIndexRouteImport } from './routes/ops.index'
 import { Route as OpsSplatRouteImport } from './routes/ops.$'
 import { Route as ReportsIndexRouteImport } from './routes/reports.index'
 import { Route as ReportsDayRouteImport } from './routes/reports.$day'
+import { Route as WatchlistIndexRouteImport } from './routes/watchlist.index'
 import { Route as OpsAuditIndexRouteImport } from './routes/ops.audit.index'
 import { Route as OpsRunsIndexRouteImport } from './routes/ops.runs.index'
 import { Route as OpsRunsIdRouteImport } from './routes/ops.runs.$id'
@@ -109,6 +110,11 @@ const ReportsDayRoute = ReportsDayRouteImport.update({
   path: '/reports/$day',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WatchlistIndexRoute = WatchlistIndexRouteImport.update({
+  id: '/watchlist/',
+  path: '/watchlist/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OpsAuditIndexRoute = OpsAuditIndexRouteImport.update({
   id: '/ops/audit/',
   path: '/ops/audit/',
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/news/': typeof NewsIndexRoute
   '/ops/': typeof OpsIndexRoute
   '/reports/': typeof ReportsIndexRoute
+  '/watchlist/': typeof WatchlistIndexRoute
   '/ops/runs/$id': typeof OpsRunsIdRoute
   '/ops/audit/': typeof OpsAuditIndexRoute
   '/ops/runs/': typeof OpsRunsIndexRoute
@@ -163,6 +170,7 @@ export interface FileRoutesByTo {
   '/news': typeof NewsIndexRoute
   '/ops': typeof OpsIndexRoute
   '/reports': typeof ReportsIndexRoute
+  '/watchlist': typeof WatchlistIndexRoute
   '/ops/runs/$id': typeof OpsRunsIdRoute
   '/ops/audit': typeof OpsAuditIndexRoute
   '/ops/runs': typeof OpsRunsIndexRoute
@@ -185,6 +193,7 @@ export interface FileRoutesById {
   '/news/': typeof NewsIndexRoute
   '/ops/': typeof OpsIndexRoute
   '/reports/': typeof ReportsIndexRoute
+  '/watchlist/': typeof WatchlistIndexRoute
   '/ops/runs/$id': typeof OpsRunsIdRoute
   '/ops/audit/': typeof OpsAuditIndexRoute
   '/ops/runs/': typeof OpsRunsIndexRoute
@@ -208,6 +217,7 @@ export interface FileRouteTypes {
     | '/news/'
     | '/ops/'
     | '/reports/'
+    | '/watchlist/'
     | '/ops/runs/$id'
     | '/ops/audit/'
     | '/ops/runs/'
@@ -229,6 +239,7 @@ export interface FileRouteTypes {
     | '/news'
     | '/ops'
     | '/reports'
+    | '/watchlist'
     | '/ops/runs/$id'
     | '/ops/audit'
     | '/ops/runs'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/news/'
     | '/ops/'
     | '/reports/'
+    | '/watchlist/'
     | '/ops/runs/$id'
     | '/ops/audit/'
     | '/ops/runs/'
@@ -272,6 +284,7 @@ export interface RootRouteChildren {
   NewsIndexRoute: typeof NewsIndexRoute
   OpsIndexRoute: typeof OpsIndexRoute
   ReportsIndexRoute: typeof ReportsIndexRoute
+  WatchlistIndexRoute: typeof WatchlistIndexRoute
   OpsRunsIdRoute: typeof OpsRunsIdRoute
   OpsAuditIndexRoute: typeof OpsAuditIndexRoute
   OpsRunsIndexRoute: typeof OpsRunsIndexRoute
@@ -391,6 +404,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsDayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/watchlist/': {
+      id: '/watchlist/'
+      path: '/watchlist'
+      fullPath: '/watchlist/'
+      preLoaderRoute: typeof WatchlistIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ops/audit/': {
       id: '/ops/audit/'
       path: '/ops/audit'
@@ -432,6 +452,7 @@ const rootRouteChildren: RootRouteChildren = {
   NewsIndexRoute: NewsIndexRoute,
   OpsIndexRoute: OpsIndexRoute,
   ReportsIndexRoute: ReportsIndexRoute,
+  WatchlistIndexRoute: WatchlistIndexRoute,
   OpsRunsIdRoute: OpsRunsIdRoute,
   OpsAuditIndexRoute: OpsAuditIndexRoute,
   OpsRunsIndexRoute: OpsRunsIndexRoute,

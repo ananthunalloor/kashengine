@@ -65,6 +65,20 @@ The code never guesses a provider key from a symbol.
 
 The pages read these tables only. No page calls Upstox.
 
+## Personal watchlist and price alerts
+
+Users can bookmark companies in their personal watchlist from the directory or a company page.
+The **Watchlist** page shows each saved company, its latest stored quote and its alerts. Removing
+a company also removes its alerts.
+
+A watchlisted company can have multiple one-shot alerts. Each alert fires when a newly saved quote
+moves from below its INR threshold to at or above it. Both scheduled snapshots and stream quotes
+are checked; old or duplicate quotes do not trigger alerts. A fired alert is retained in the
+watchlist as history, while its unread in-app notification links back to the company. Notifications
+are user-specific and are acknowledged by the app. Quotes, alerts and notifications require
+Markets access; bookmarks remain available with Companies access. No page or notification fetches
+a live quote from the provider.
+
 ## The company outlook
 
 `save_outlook` (`apps/companies/outlook.py`) makes a simple outlook for the next trading day:

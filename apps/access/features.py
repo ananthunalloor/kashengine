@@ -45,8 +45,8 @@ FEATURES: tuple[Feature, ...] = (
     Feature(
         "companies",
         "Companies",
-        "Company directory and details.",
-        frozenset({"companies", "company"}),
+        "Company directory, details, watchlist, and price alerts.",
+        frozenset({"companies", "company", "watchlist"}),
     ),
     Feature(
         "delivery",

@@ -2,6 +2,7 @@
 
 import datetime as dt
 from datetime import datetime
+from decimal import Decimal
 from typing import Literal
 
 from ninja import Field, Schema
@@ -830,6 +831,71 @@ class CompanyDetail(Schema):
     )
     news: list[CompanyStory]
     ipos: list[CompanyIssue]
+
+
+class WatchlistCompany(Schema):
+    """Display-safe company details for one saved watchlist row."""
+
+    id: int
+    name: str
+    symbol: str
+    sector: str
+
+
+class WatchlistPriceAlert(Schema):
+    """One threshold and its one-shot notification state."""
+
+    id: int
+    above_price: Decimal
+    is_active: bool
+    created_at: datetime
+    triggered_at: datetime | None
+    triggered_price: float | None
+
+
+class WatchlistItem(Schema):
+    """A bookmarked company, its newest saved quote and its threshold alerts."""
+
+    id: int
+    company: WatchlistCompany
+    quote: CompanyPrice | None
+    alerts: list[WatchlistPriceAlert]
+
+
+class WatchlistPage(Schema):
+    """The current user's saved companies."""
+
+    items: list[WatchlistItem]
+
+
+class WatchlistPriceAlertCreate(Schema):
+    """A positive price threshold, with two decimal places at most."""
+
+    above_price: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
+
+
+class WatchlistNotification(Schema):
+    """A triggered, unread threshold notification."""
+
+    id: int
+    company_id: int
+    company_name: str
+    symbol: str
+    above_price: Decimal
+    triggered_price: float
+    triggered_at: datetime
+
+
+class WatchlistChange(Schema):
+    """Result of adding or removing a company from a watchlist."""
+
+    watchlisted: bool
+
+
+class WatchlistAction(Schema):
+    """Acknowledgement for a watchlist alert action."""
+
+    ok: bool
 
 
 class CompanyMarketItem(Schema):

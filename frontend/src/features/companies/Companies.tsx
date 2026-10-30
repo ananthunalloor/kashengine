@@ -15,6 +15,7 @@ import { usePageTitle } from "../../shared/ui/usePageTitle";
 import { DataTable } from "../../shared/ui/DataTable";
 import { TableFilterField, TableFilters } from "../../shared/ui/TableFilters";
 import { notifyError } from "../../shared/ui/notifications";
+import { BookmarkButton } from "./WatchlistControls";
 
 const fetchedDate = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
@@ -309,6 +310,13 @@ export function Companies({
                 ) : (
                   "Not fetched"
                 ),
+            },
+            {
+              id: "watchlist",
+              label: "Watchlist",
+              value: (row) => row.id,
+              render: (row) => <BookmarkButton companyId={row.id} companyName={row.name} />,
+              sortable: false,
             },
           ]}
           server={{

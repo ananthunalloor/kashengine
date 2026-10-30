@@ -14,6 +14,7 @@ SECTIONS = (
     ("IPOs", "web:ipos", {"ipos", "ipo"}, "ipos"),
     ("Markets", "web:markets", {"markets"}, "markets"),
     ("Companies", "web:companies", {"companies"}, "companies"),
+    ("Watchlist", "web:watchlist", {"watchlist"}, "companies"),
     ("Delivery", "web:delivery", {"delivery"}, "delivery"),
 )
 

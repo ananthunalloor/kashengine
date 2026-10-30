@@ -2,7 +2,8 @@
 
 from typing import TYPE_CHECKING, ClassVar
 
-from django.core.validators import RegexValidator
+from django.conf import settings
+from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
 
 if TYPE_CHECKING:
@@ -153,3 +154,56 @@ class CompanyOutlook(models.Model):
     def __str__(self):
         """Return the company, the target day and the direction."""
         return f"{self.company} {self.target_date}: {self.direction}"
+
+
+class CompanyWatchlistEntry(models.Model):
+    """A company saved to one user's watchlist."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="company_watchlist"
+    )
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="watchlist_entries")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering: ClassVar[list[str]] = ["company__name", "pk"]
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            models.UniqueConstraint(
+                fields=["user", "company"], name="unique_user_watchlist_company"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user} watches {self.company}"
+
+
+class CompanyPriceAlert(models.Model):
+    """A one-shot notification when a watched company's price crosses above a threshold."""
+
+    watchlist_entry = models.ForeignKey(
+        CompanyWatchlistEntry, on_delete=models.CASCADE, related_name="price_alerts"
+    )
+    above_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(0.01)],
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    triggered_at = models.DateTimeField(null=True, blank=True)
+    triggered_price = models.FloatField(null=True, blank=True)
+    notification_read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering: ClassVar[list[str]] = ["-created_at", "-pk"]
+        indexes: ClassVar[list[models.Index]] = [
+            models.Index(fields=["watchlist_entry", "is_active"]),
+        ]
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            models.CheckConstraint(
+                condition=models.Q(above_price__gt=0), name="price_alert_positive"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.watchlist_entry.company} above {self.above_price}"

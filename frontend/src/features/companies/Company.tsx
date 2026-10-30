@@ -50,6 +50,7 @@ import { PredictionReview } from "./PredictionReview";
 import { CompanyValuation } from "./CompanyValuation";
 import { collectFacts, comparableNumber, humanize } from "./fundamentalFacts";
 import { projectClosingPrices } from "./predictionAnalysis";
+import { BookmarkButton, PriceAlertForm } from "./WatchlistControls";
 export { projectClosingPrices } from "./predictionAnalysis";
 
 const number = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 });
@@ -524,6 +525,10 @@ export function CompanyView({ data }: { data: CompanyDetail }) {
               {data.instrument_key || "No instrument mapping configured."}
             </Text>
           </div>
+        </Group>
+        <Group align="end" gap="md" mt="md" wrap="wrap">
+          <BookmarkButton companyId={data.company.id} companyName={data.company.name} />
+          <PriceAlertForm companyId={data.company.id} marketsAvailable={hasMarkets} />
         </Group>
       </header>
 

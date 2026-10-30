@@ -29,5 +29,6 @@ urlpatterns = [
     path("markets/live/", views.react_app, name="market_live"),
     path("companies/", views.react_app, name="companies"),
     path("companies/<int:pk>/", views.react_company, name="company"),
+    path("watchlist/", views.react_app, name="watchlist"),
     path("delivery/", views.react_app, name="delivery"),
 ]

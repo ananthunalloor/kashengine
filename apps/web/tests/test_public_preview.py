@@ -164,6 +164,7 @@ def test_all_legacy_product_pages_and_actions_have_react_equivalents():
         "ipo": "/ipos/1/",
         "markets": "/markets/",
         "companies": "/companies/",
+        "watchlist": "/watchlist/",
         "delivery": "/delivery/",
         "account": "/account/",
         "token_create": "/api/app/account/tokens",

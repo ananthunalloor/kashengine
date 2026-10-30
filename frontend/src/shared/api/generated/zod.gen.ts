@@ -659,6 +659,98 @@ export const zCompanyPage = z.object({
 });
 
 /**
+ * WatchlistCompany
+ *
+ * Display-safe company details for one saved watchlist row.
+ */
+export const zWatchlistCompany = z.object({
+    id: z.int(),
+    name: z.string(),
+    symbol: z.string(),
+    sector: z.string()
+});
+
+/**
+ * WatchlistPriceAlert
+ *
+ * One threshold and its one-shot notification state.
+ */
+export const zWatchlistPriceAlert = z.object({
+    id: z.int(),
+    above_price: z.string(),
+    is_active: z.boolean(),
+    created_at: z.iso.datetime(),
+    triggered_at: z.iso.datetime().nullable(),
+    triggered_price: z.number().nullable()
+});
+
+/**
+ * WatchlistItem
+ *
+ * A bookmarked company, its newest saved quote and its threshold alerts.
+ */
+export const zWatchlistItem = z.object({
+    id: z.int(),
+    company: zWatchlistCompany,
+    quote: zCompanyPrice.nullable(),
+    alerts: z.array(zWatchlistPriceAlert)
+});
+
+/**
+ * WatchlistPage
+ *
+ * The current user's saved companies.
+ */
+export const zWatchlistPage = z.object({
+    items: z.array(zWatchlistItem)
+});
+
+/**
+ * WatchlistNotification
+ *
+ * A triggered, unread threshold notification.
+ */
+export const zWatchlistNotification = z.object({
+    id: z.int(),
+    company_id: z.int(),
+    company_name: z.string(),
+    symbol: z.string(),
+    above_price: z.string(),
+    triggered_price: z.number(),
+    triggered_at: z.iso.datetime()
+});
+
+/**
+ * WatchlistChange
+ *
+ * Result of adding or removing a company from a watchlist.
+ */
+export const zWatchlistChange = z.object({
+    watchlisted: z.boolean()
+});
+
+/**
+ * WatchlistPriceAlertCreate
+ *
+ * A positive price threshold, with two decimal places at most.
+ */
+export const zWatchlistPriceAlertCreate = z.object({
+    above_price: z.union([
+        z.number().gt(0),
+        z.string()
+    ])
+});
+
+/**
+ * WatchlistAction
+ *
+ * Acknowledgement for a watchlist alert action.
+ */
+export const zWatchlistAction = z.object({
+    ok: z.boolean()
+});
+
+/**
  * DeliveryItem
  *
  * A send attempt associated with a report, or a test without a saved report.
@@ -1435,6 +1527,65 @@ export const zListAppCompaniesQuery = z.object({
  * OK
  */
 export const zListAppCompaniesResponse = zCompanyPage;
+
+/**
+ * OK
+ */
+export const zListAppWatchlistResponse = zWatchlistPage;
+
+/**
+ * Response
+ *
+ * OK
+ */
+export const zListAppWatchlistNotificationsResponse = z.array(zWatchlistNotification);
+
+export const zRemoveAppWatchlistCompanyPath = z.object({
+    company_id: z.int()
+});
+
+/**
+ * OK
+ */
+export const zRemoveAppWatchlistCompanyResponse = zWatchlistChange;
+
+export const zAddAppWatchlistCompanyPath = z.object({
+    company_id: z.int()
+});
+
+/**
+ * OK
+ */
+export const zAddAppWatchlistCompanyResponse = zWatchlistChange;
+
+export const zCreateAppWatchlistPriceAlertBody = zWatchlistPriceAlertCreate;
+
+export const zCreateAppWatchlistPriceAlertPath = z.object({
+    company_id: z.int()
+});
+
+/**
+ * Created
+ */
+export const zCreateAppWatchlistPriceAlertResponse = zWatchlistPriceAlert;
+
+export const zDeleteAppWatchlistPriceAlertPath = z.object({
+    alert_id: z.int()
+});
+
+/**
+ * OK
+ */
+export const zDeleteAppWatchlistPriceAlertResponse = zWatchlistAction;
+
+export const zMarkAppWatchlistNotificationReadPath = z.object({
+    alert_id: z.int()
+});
+
+/**
+ * OK
+ */
+export const zMarkAppWatchlistNotificationReadResponse = zWatchlistAction;
 
 export const zGetAppCompanyListRefreshPath = z.object({
     task_id: z.string()
