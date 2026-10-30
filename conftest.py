@@ -1,6 +1,22 @@
+from pathlib import Path
+
 import pytest
 
 from apps.siteconfig import conf
+
+LEGACY_TEMPLATES = Path(__file__).parent / "tests" / "legacy_templates"
+
+
+@pytest.fixture(autouse=True)
+def legacy_templates_for_render_tests(settings):
+    """Keep retired page templates available to tests, but not runtime app discovery."""
+    settings.TEMPLATES = [
+        {
+            **backend,
+            "DIRS": [*backend["DIRS"], LEGACY_TEMPLATES],
+        }
+        for backend in settings.TEMPLATES
+    ]
 
 
 @pytest.fixture(autouse=True)

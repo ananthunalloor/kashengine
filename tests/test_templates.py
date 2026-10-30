@@ -5,7 +5,12 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-TEMPLATES = sorted((ROOT / "apps").glob("*/templates/**/*.html"))
+TEMPLATES = sorted(
+    [
+        *(ROOT / "apps").glob("*/templates/**/*.html"),
+        *(ROOT / "tests/legacy_templates").glob("**/*.html"),
+    ]
+)
 
 
 @pytest.mark.parametrize("path", TEMPLATES, ids=lambda p: str(p.relative_to(ROOT)))
