@@ -1,6 +1,6 @@
-"""URL routes of the Ops pages.
+"""Internal route patterns used by the React Ops API and tests.
 
-`config/urls.py` includes this module under the prefix `ops/`. The namespace is `ops`, so a
+These patterns are not exposed directly to browsers. The namespace is `ops`, so a
 template uses names like `ops:jobs`. The routes map to the views in `views.py` (monitoring and
 user actions), `views_access.py` (feature permissions and subscriptions), and `views_settings.py`
 (settings, schedule, feeds, and instruments). The decorators in `permissions.py` set who can call

@@ -4,14 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>{% if archived %}Archived · {% endif %}{% block title %}Kash Engine{% endblock %}</title>
+  <title>{% block title %}Kash Engine{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   {% block head %}{% endblock %}
 </head>
 <body class="antialiased">
-  {% if archived %}
-  <aside role="note" class="border-b border-rule bg-warn-soft px-4 py-3 text-center font-semibold">Archived Django interface — superuser access only. This is not the current application. <a href="{{ main_site_url }}/">Open the current application</a>.</aside>
-  {% endif %}
   <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:bg-card focus:px-3 focus:py-2">Skip to the content</a>
   <header class="border-b border-rule bg-card">
     <div class="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">

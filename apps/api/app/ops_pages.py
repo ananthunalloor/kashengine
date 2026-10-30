@@ -1688,7 +1688,7 @@ def target(path: str, allowed: set[str]):
         raise Http404
     path = "" if path == "overview/" else path
     try:
-        match = resolve(f"/ops/{path}", urlconf="config.legacy_urls")
+        match = resolve(f"/ops/{path}", urlconf="config.internal_ops_urls")
     except Resolver404 as exc:
         raise Http404 from exc
     if match.namespace != "ops" or match.url_name not in allowed:

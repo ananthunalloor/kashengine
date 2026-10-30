@@ -5,7 +5,7 @@ The Ops pages and the admin site have their own rules (staff only), so they are 
 """
 
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect
 from django.urls import reverse
 
 from apps.web.public_preview import preview_response
@@ -35,24 +35,19 @@ def access_for(request: HttpRequest) -> Access:
     return existing
 
 
-def _refuse(request: HttpRequest, template: str, context: dict) -> HttpResponse:
-    """Return a 403 answer. A Datastar request gets a short text, so the page does not break.
+def _refuse(request: HttpRequest, feature_label: str) -> HttpResponse:
+    """Return a 403 answer, using plain text for Datastar requests.
 
     Args:
         request: The request.
-        template: The template of the 403 page.
-        context: The context of the template.
+        feature_label: The feature the user cannot access.
 
     Returns:
-        A response with status 403. It is plain text for a Datastar request, else the page.
+        A 403 response in the format expected by the requesting interface.
     """
     if request.headers.get(DATASTAR_HEADER):
         return HttpResponse("Not allowed.", status=403, content_type="text/plain")
-    if not getattr(request, "is_archive", False):
-        return preview_response(
-            request, page="access", status=403, feature=context["feature"].label
-        )
-    return render(request, template, context, status=403)
+    return preview_response(request, page="access", status=403, feature=feature_label)
 
 
 class AccessMiddleware:
@@ -73,7 +68,7 @@ class AccessMiddleware:
         A URL name in `OPEN_URL_NAMES` (dashboard, account, login, logout) is always allowed.
         If the subscription rule fails, the user goes to the account page (a Datastar request
         gets a 403 text). If the page belongs to a feature that the user may not use, the user
-        gets the 403 page `web/no_access.html`.
+        gets a React 403 preview.
 
         Args:
             request: The request. The resolved URL of the request decides the check.
@@ -103,5 +98,5 @@ class AccessMiddleware:
             return redirect(reverse("web:account"))
         feature = features.BY_URL_NAME.get(name or "")
         if feature and not access.can(feature.key):
-            return _refuse(request, "web/no_access.html", {"feature": feature})
+            return _refuse(request, feature.label)
         return None

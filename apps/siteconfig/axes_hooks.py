@@ -70,6 +70,6 @@ def lockout(
     """
     wait = cooloff(request)
     minutes = math.ceil(wait.total_seconds() / 60) if wait else None
-    if not getattr(request, "is_archive", False) and not request.path.startswith("/admin/"):
+    if not request.path.startswith("/admin/"):
         return preview_response(request, page="lockout", status=429, minutes=minutes)
     return render(request, "web/locked_out.html", {"minutes": minutes}, status=429)

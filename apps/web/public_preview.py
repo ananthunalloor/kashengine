@@ -79,18 +79,16 @@ class PreviewLogin(LoginView):
 
 
 def permission_denied(request: HttpRequest, exception: Exception) -> HttpResponse:
-    """Keep preview permission failures in React without changing legacy responses.
+    """Keep preview permission failures in React without changing admin responses.
 
     Args:
         request: The denied browser request.
         exception: The original Django permission failure.
 
     Returns:
-        A React preview 403 or Django's original legacy 403.
+        A React preview 403 or Django's original admin 403.
     """
-    if not getattr(request, "is_archive", False) and not request.path.startswith(
-        ("/admin/", "/api/")
-    ):
+    if not request.path.startswith(("/admin/", "/api/")):
         return preview_response(request, page="access", status=403, feature="This page")
     return django_permission_denied(request, exception)
 
@@ -108,6 +106,4 @@ def page_not_found(request: HttpRequest, exception: Exception | None = None) -> 
     """
     if request.path.startswith("/api/"):
         return django_page_not_found(request, exception)
-    if getattr(request, "is_archive", False):
-        return render(request, "web/archive_status.html", {"missing": True}, status=404)
     return preview_response(request, page="not-found", status=404)

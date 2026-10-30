@@ -1,6 +1,6 @@
-"""Isolated URLconf for unit tests of archived renderers and domain actions.
+"""Isolated URLconf for tests of legacy renderers and domain actions.
 
-Deployed hostname and role authorization are exercised separately in test_archive.
+Canonical routes are tested separately from legacy views.
 """
 
 from django.contrib import admin
@@ -15,14 +15,3 @@ urlpatterns = [
     path("ops/", include("apps.ops.urls")),
     path("", include("apps.web.legacy_urls")),
 ]
-
-
-class LegacyRendererContext:
-    """Supply archive presentation context without replacing domain permission checks."""
-
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        request.is_archive = True
-        return self.get_response(request)

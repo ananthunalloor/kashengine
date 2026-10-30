@@ -63,16 +63,6 @@ Open the browser console and the network panel.
 - **In development the page is blank and port 5173 does not answer.** The `frontend` service is
   not running or `DJANGO_VITE_DEV_MODE` is off. Check `docker compose logs frontend`.
 
-## The archive host does not work
-
-The archived Django interface is at `OLD_SITE_ADDRESS`. If it fails:
-
-1. Check that the host name has a DNS record and is in `DJANGO_ALLOWED_HOSTS` and
-   `DJANGO_CSRF_TRUSTED_ORIGINS`. A `400` means the host name is not allowed.
-2. Only a superuser can sign in. A staff or member account always gets "wrong login".
-3. A `403` "Forbidden" from Caddy means the address is not in `ADMIN_ALLOWED_IPS`. The whole
-   archive host uses this rule.
-
 ## The app is slow or live updates stop
 
 The app refreshes with a live update stream (`/api/app/events`). Each open tab holds one Gunicorn

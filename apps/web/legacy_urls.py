@@ -1,4 +1,4 @@
-"""URL routes of the web pages."""
+"""Test-only URL patterns for the retired Django-rendered product pages."""
 
 from datetime import date
 

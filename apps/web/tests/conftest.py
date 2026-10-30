@@ -9,7 +9,7 @@ def fast_password_hashing(settings):
 
 @pytest.fixture(autouse=True)
 def legacy_renderer_unit_context(settings, request):
-    """Keep archived renderer tests independent of the deployed host authorization gate."""
+    """Keep legacy renderer tests independent of the canonical React URLconf."""
     if request.node.path.name not in {
         "test_views.py",
         "test_landing.py",
@@ -20,9 +20,3 @@ def legacy_renderer_unit_context(settings, request):
     if "react_shell" in request.node.name or "reports_preview" in request.node.name:
         return
     settings.ROOT_URLCONF = "apps.web.tests.legacy_urls"
-    settings.MIDDLEWARE = [
-        "apps.web.tests.legacy_urls.LegacyRendererContext"
-        if item == "apps.web.archive.ArchiveMiddleware"
-        else item
-        for item in settings.MIDDLEWARE
-    ]

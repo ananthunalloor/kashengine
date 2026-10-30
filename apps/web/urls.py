@@ -1,4 +1,4 @@
-"""Canonical React product URLs; templates are isolated in the archive URLconf."""
+"""Canonical product URLs for the React application."""
 
 from django.urls import path
 

@@ -179,3 +179,8 @@ def test_all_legacy_product_pages_and_actions_have_react_equivalents():
         assert resolve(path)
     ops_names = {pattern.name for pattern in ops_patterns}
     assert ops_names == PAGES | ACTIONS | {"runs", "run", "run_stop", "audit"}
+
+
+def test_main_product_routes_never_resolve_to_legacy_views():
+    for path in ["/dashboard/", "/news/", "/ipos/", "/ops/feeds/"]:
+        assert resolve(path).func.__module__ == "apps.web.views"

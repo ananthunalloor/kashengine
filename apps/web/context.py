@@ -52,7 +52,6 @@ def web_settings(request) -> dict:
     user = getattr(request, "user", None)
     if user is None or not user.is_authenticated:
         return {
-            "archived": getattr(request, "is_archive", False),
             "main_site_url": f"{request.scheme}://{settings.SITE_ADDRESS}",
             "datastar_src": conf.DATASTAR_SRC,
             "nav": [],
@@ -61,7 +60,6 @@ def web_settings(request) -> dict:
         }
     access = access_for(request)
     return {
-        "archived": getattr(request, "is_archive", False),
         "main_site_url": f"{request.scheme}://{settings.SITE_ADDRESS}",
         "datastar_src": conf.DATASTAR_SRC,
         "nav": navigation_for(request),

@@ -3,8 +3,7 @@
 from datetime import timedelta
 
 import pytest
-from django.conf import settings
-from django.test import Client, RequestFactory
+from django.test import Client, RequestFactory, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -98,15 +97,16 @@ def test_the_locked_address_is_listed_and_an_admin_can_unlock_it(member, django_
     assert row["until"] > timezone.now()
 
     boss = django_user_model.objects.create_superuser("boss", "b@example.com", PASSWORD)
-    admin = Client(HTTP_HOST=settings.OLD_SITE_ADDRESS)
+    admin = Client()
     admin.force_login(boss)
-    page = admin.get(reverse("ops:logins")).content.decode()
-    assert "203.0.113.77" in page
+    with override_settings(ROOT_URLCONF="apps.web.tests.legacy_urls"):
+        page = admin.get(reverse("ops:logins")).content.decode()
+        assert "203.0.113.77" in page
 
-    response = admin.post(
-        reverse("ops:lockout_unlock", urlconf="config.legacy_urls"),
-        {"ip_address": "203.0.113.77"},
-    )
+        response = admin.post(
+            reverse("ops:lockout_unlock"),
+            {"ip_address": "203.0.113.77"},
+        )
 
     assert response.status_code == 302
     assert users.lockouts() == []
@@ -115,13 +115,14 @@ def test_the_locked_address_is_listed_and_an_admin_can_unlock_it(member, django_
 
 def test_a_staff_user_cannot_unlock(member, django_user_model):
     staff = django_user_model.objects.create_user("st", password=PASSWORD, is_staff=True)
-    client = Client(HTTP_HOST=settings.OLD_SITE_ADDRESS)
+    client = Client()
     client.force_login(staff)
 
-    response = client.post(
-        reverse("ops:lockout_unlock", urlconf="config.legacy_urls"),
-        {"ip_address": "203.0.113.77"},
-    )
+    with override_settings(ROOT_URLCONF="apps.web.tests.legacy_urls"):
+        response = client.post(
+            reverse("ops:lockout_unlock"),
+            {"ip_address": "203.0.113.77"},
+        )
 
     assert response.status_code == 403
 

@@ -43,7 +43,7 @@ the app and two HTTP APIs for it.
 
 | Service | What it does | Network (production) |
 | --- | --- | --- |
-| `caddy` | Terminates TLS. Routes `/docs` to `docs`, `/ws/*` to `realtime` and all other paths to `web`. Adds security headers. Limits `/admin/`, `/ops/`, `/app/ops/`, and `/api/app/ops/` to `ADMIN_ALLOWED_IPS`. Serves the archive host (`OLD_SITE_ADDRESS`) as a second site. | `edge` and `proxy` |
+| `caddy` | Terminates TLS. Routes `/docs` to `docs`, `/ws/*` to `realtime` and all other paths to `web`. Adds security headers. Limits `/admin/`, `/ops/`, `/app/ops/`, and `/api/app/ops/` to `ADMIN_ALLOWED_IPS`. | `edge` and `proxy` |
 | `web` | Django. The production command runs `migrate`, then `collectstatic`, then Gunicorn with 3 workers and 16 threads for each worker (`gthread`). | `proxy` and `backend` |
 | `realtime` | Django Channels on Uvicorn (ASGI). It serves only the live quote WebSocket `/ws/live/quotes/`. It relays the messages of the stream worker from the Redis channel layer. | `proxy` and `backend` |
 | `streamer` | `python manage.py stream_upstox`: the one Upstox market-data WebSocket (full mode). It saves the newest value of each instrument and broadcasts it about once a second. | `backend` and `egress` |
@@ -74,7 +74,7 @@ Only Caddy publishes ports (80, 443 TCP and 443 UDP).
 | `apps/reports/` | Builds the daily report from the stored data. |
 | `apps/delivery/` | Sends the report by email and on Telegram, keeps a delivery log, and keeps the sign-up invitations, the email verification and the Telegram links. |
 | `apps/llm/` | The client of the local LLM server. |
-| `apps/web/` | The landing page, the sign-up, sign-in and legal pages, and the archived Django pages. The archived pages use Datastar and Tailwind. Only a superuser can open them, and only on the archive host. |
+| `apps/web/` | The React application shell, public landing and sign-in screens, sign-up, and legal pages. |
 | `apps/api/` | The public read-only HTTP API (`/api/v1/`), the tokens, the Swagger page, the private API of the React app (`/api/app/`), and the live updates. |
 | `apps/access/` | Features and subscriptions: who may use what. |
 | `apps/siteconfig/` | Settings that a superuser changes on the dashboard. Encrypted secrets. |
@@ -94,11 +94,7 @@ manifest in `frontend/dist`. The app calls the private API. It never calls the p
 
 | Host | What it shows | Who can use it |
 | --- | --- | --- |
-| `SITE_ADDRESS` | The landing page, the React app at `/app/...`, and the React Ops pages. | Everyone for the landing page. A signed-in user for the app. A staff user for Ops. |
-| `OLD_SITE_ADDRESS` | The archived Django pages (the old interface). | A superuser only. |
-
-The archive host is chosen by the `Host` header (`apps.web.archive.ArchiveMiddleware`). It uses
-its own URL file (`config/legacy_urls.py`). The middleware checks every view on that host.
+| `SITE_ADDRESS` | The landing page, the React app, and the React Ops pages at their canonical URLs. | Everyone for the landing page. A signed-in user for the app. A staff user for Ops. |
 
 ## Two HTTP APIs
 

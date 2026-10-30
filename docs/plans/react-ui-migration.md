@@ -1,12 +1,11 @@
 # Plan: migrate the web UI to React
 
-Status: canonical React cutover complete; Django UI archived · Last updated: 2026-10-19
+Status: canonical React cutover complete; legacy Django UI removed · Last updated: 2026-10-30
 
 React now serves all subscriber and Ops pages at the original URLs, including `/` and `/login/`.
-The `/app/` prefix was removed. Legacy Django templates and actions are isolated at
-`old.${SITE_ADDRESS}`, guarded by active-superuser authorization with a dedicated archive
-login and visible Archived notices. Django Admin, API docs, and the documentation site remain
-outside the migration. The architecture and phases below record the original proposal.
+The `/app/` prefix and the legacy Django page host and routes have been removed. Django Admin,
+API docs, and the documentation site remain outside the migration. The architecture and phases
+below record the original proposal.
 
 ## 1. Goal and scope
 
@@ -17,7 +16,7 @@ contract, or the security posture (Caddy, CSP, IP allow-lists, session auth, dja
 In scope: Today dashboard, Reports, News, IPOs, Markets, Companies, Delivery, Account (API
 tokens), all Ops pages, landing, login, and access/lockout screens.
 
-Original product URLs now serve React; Django pages are available only on the archive hostname.
+Original product URLs now serve React; legacy Django page templates are no longer served.
 Logout remains a native CSRF-protected Django POST rather than a separate screen.
 `/admin/`, Swagger at `/api/v1/docs`, and Docusaurus at `/docs/` are not being replaced.
 

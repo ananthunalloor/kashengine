@@ -16,16 +16,10 @@ PASSWORD = "pw-access-test-1"
 
 @pytest.fixture(autouse=True)
 def legacy_feature_unit_context(settings, request):
-    """Test original feature rendering separately from the archive's superuser boundary."""
+    """Test legacy feature rendering separately from canonical React routes."""
     if request.node.path.name != "test_web.py":
         return
     settings.ROOT_URLCONF = "apps.web.tests.legacy_urls"
-    settings.MIDDLEWARE = [
-        "apps.web.tests.legacy_urls.LegacyRendererContext"
-        if item == "apps.web.archive.ArchiveMiddleware"
-        else item
-        for item in settings.MIDDLEWARE
-    ]
 
 
 @pytest.fixture

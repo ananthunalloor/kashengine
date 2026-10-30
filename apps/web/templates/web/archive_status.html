@@ -1,7 +1,0 @@
-{% extends "web/base.html" %}
-{% block title %}Archived · Kash Engine{% endblock %}
-{% block content %}
-<h1 class="text-3xl font-semibold">{% if missing %}Page not found{% else %}Superuser access required{% endif %}</h1>
-<p class="mt-4">This is the archived Django interface. {% if missing %}The requested page does not exist.{% else %}Only an active superuser can access its pages and actions.{% endif %}</p>
-<p class="mt-4"><a href="/login/">Sign in to the archive</a></p>
-{% endblock %}

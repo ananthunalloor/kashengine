@@ -9,6 +9,7 @@ from django.utils import timezone
 from apps.access import service
 from apps.access.models import FeatureBlock, Subscription
 from apps.siteconfig import service as site_service
+from apps.web.tests.test_public_preview import presentation
 
 pytestmark = pytest.mark.django_db
 
@@ -57,7 +58,8 @@ def test_a_removed_feature_gives_a_403_page_and_the_others_work(member, member_c
     response = member_client.get(FEATURE_PAGES[feature])
 
     assert response.status_code == 403
-    assert "Not on your account" in response.content.decode()
+    assert presentation(response)["page"] == "access"
+    assert presentation(response)["feature"]
     for other, url in FEATURE_PAGES.items():
         if other != feature:
             assert member_client.get(url).status_code == 200

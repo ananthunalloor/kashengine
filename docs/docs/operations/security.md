@@ -36,8 +36,8 @@ IP address it uses its own CA. These are the controls in `deploy/caddy/Caddyfile
 - The Caddy admin API is off (`admin off`).
 - Slow clients are closed: header 10 s, body 30 s, write 60 s, idle 2 min.
 - A request body is limited to 2 MB. Only the backup import path
-  (`/api/app/ops/actions/backups/import/`, and `/ops/backups/import/` on the archive host) allows
-  141 MiB. This includes the form overhead of a snapshot file.
+  (`/api/app/ops/actions/backups/import/`) allows 141 MiB. This includes the form overhead of a
+  snapshot file.
 - Responses use `zstd` and `gzip`. Logs go to stdout as JSON.
 - Caddy replaces the `X-Forwarded-*` headers of the client. Django trusts
   `X-Forwarded-Proto` only because of this (`SECURE_PROXY_SSL_HEADER`).
@@ -76,10 +76,6 @@ form-action 'self'; frame-ancestors 'none'
 - Do not add a new script host or `'unsafe-eval'` to fix a page. Find which file is blocked and
   serve it from the site.
 
-The archive host (`OLD_SITE_ADDRESS`) keeps the older policy. It allows `https://cdn.jsdelivr.net`
-and `'unsafe-eval'`, because the archived pages use Datastar. Only a superuser can open that
-host, and it has `X-Robots-Tag: noindex, nofollow, noarchive`.
-
 The docs site (`/docs/`) has its own policy. The `docs` service sets it. Docusaurus puts a few
 small inline scripts in each page. The build step reads the page files and puts the hash of each
 script in the policy (`docs/scripts/csp_hashes.py`). So the docs policy does not use
@@ -89,19 +85,6 @@ first.
 To test a new policy without blocking users, set
 `CSP_HEADER=Content-Security-Policy-Report-Only`. The development override does this, because the
 Django debug pages use inline styles.
-
-## The archive host
-
-The archived Django pages are available only on `OLD_SITE_ADDRESS` (for example
-`old.example.com`). Three controls protect them:
-
-- Caddy gives `403` to every address that is not in `ADMIN_ALLOWED_IPS`, for the whole host.
-- `ArchiveMiddleware` selects the archive URL file only when the `Host` header matches. It then
-  checks every resolved view. Only an active **superuser** can sign in there. A member or a staff
-  user gets the normal "wrong login" answer, and the failure counts for `django-axes`.
-- Every archive response is private and has `noindex` headers.
-
-If you do not need the archive, do not publish a DNS record for the host.
 
 ## Containers
 

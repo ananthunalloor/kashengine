@@ -31,8 +31,8 @@ bad markup. `Report.data` keeps the numbers and the lists for the web page and t
 ### How scores are shown
 
 The database keeps news scores, IPO scores and prediction scores from -1 to 1. It keeps the
-confidence (shown as "strength") from 0 to 1. The Telegram report, the React app and the archived
-pages show them on a scale of 1 to 10. The formula is `1 + 9 * value`. A signed score first
+confidence (shown as "strength") from 0 to 1. The Telegram report and the React app show them on
+a scale of 1 to 10. The formula is `1 + 9 * value`. A signed score first
 becomes `(score + 1) / 2`, so 0 is shown as 5.5/10. The function is `score_out_of_ten` in
 `apps/reports/formatting.py`. The HTTP API returns the stored values, not the 1 to 10 text.
 

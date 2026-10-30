@@ -63,21 +63,10 @@ React serves all product pages at their canonical URLs, including `/`, `/login/`
 documentation interfaces remain unchanged. Start Vite with
 `pnpm --dir frontend dev` alongside Django, or use the frontend service in the dev Compose file.
 
-`ArchiveMiddleware` selects `config.legacy_urls` only for the exact, validated
-`OLD_SITE_ADDRESS` hostname (default `old.${SITE_ADDRESS}`, or `old.localhost` in dev).
-Before any archived view or action runs, it requires an active superuser. Only the archive
-login form is public, and its authentication form rejects ordinary staff and members.
-Rejected non-superuser credentials also emit Django's failure signal for axes lockout counting.
-The archive retains live writes, confirmations, and CSRF protection; it is not a database
-snapshot. Every response is private/no-store and noindex/nofollow/noarchive. Templates display
-an Archived banner. Session/CSRF cookies remain host-only, with a separate archive login.
-Caddy serves both hosts and applies `ADMIN_ALLOWED_IPS` to the entire archive.
-
 The main URLconf contains only React page views and private/public APIs; legacy POST paths
-are not exposed on the main hostname. Ops API adapters resolve their allowlists explicitly
-against `config.legacy_urls`, retaining the original domain handlers without reopening them
-as browser endpoints. Archived renderer/domain unit tests use an isolated test URLconf;
-`apps/web/tests/test_archive.py` exercises the actual deployed host and role boundary.
+are not exposed as browser endpoints. Ops API adapters resolve allowlisted original domain
+handlers internally with `config.internal_ops_urls`. Legacy renderer/domain unit tests use an
+isolated test URLconf; those routes are not part of the deployed URL configuration.
 
 Public screens use the separate `src/public.tsx` Vite entry, not the authenticated router:
 anonymous visitors never request the private session endpoint. Django passes a small,
@@ -85,8 +74,8 @@ anonymous visitors never request the private session endpoint. Django passes a s
 data are included. The login form submits directly to Django's `LoginView`, preserving CSRF,
 safe `next` validation, axes signals, and session rotation. Invalid submissions never echo
 passwords or usernames. Axes returns the React lockout screen at the real 429 response; feature
-and Ops permission failures return the React access screen with 403. Legacy responses retain
-their original templates. No standalone route can simulate or bypass a permission or lockout.
+and Ops permission failures return the React access screen with 403. Django Admin retains its
+own error pages. No standalone route can simulate or bypass a permission or lockout.
 Logout remains the existing CSRF-protected POST with a React `next` destination.
 The route-inventory regression test in `apps/web/tests/test_public_preview.py` checks every
 original product page/action against its React counterpart so new pages cannot be overlooked.
@@ -126,14 +115,14 @@ the secret lives only in component-local state until hidden or unmounted. It nev
 query caches, URLs, or browser storage. If creation succeeds but metadata refresh fails,
 the page retains the secret and explicitly reports the partial success. When the public API
 is disabled, creation is denied, but masked metadata and revocation remain available
-intentionally, unlike the archived page's hidden API section.
+intentionally.
 
 Staff task history opens `/ops/runs/`, with details at `/ops/runs/{id}/`. The private
 GET endpoints `/api/app/ops/runs` and `/api/app/ops/runs/{id}` use `OpsSession`: the existing
 session/CSRF/rate-limit rules plus the same `is_staff` flag as Django Ops. Non-staff are rejected
 before operational queries; subscriptions and the public API switch do not gate staff reads.
 Direct URLs are staff-protected too. Caddy applies `ADMIN_ALLOWED_IPS` to `/ops`
-and `/api/app/ops` and their children, and to the entire archive hostname.
+and `/api/app/ops` and their children.
 
 The TanStack run table searches job labels, task names/IDs, and triggering usernames, with the
 legacy exact job/result/trigger filters, sorting, and `OPS_PAGE_SIZE` pagination (override 1-100).
@@ -144,7 +133,7 @@ duration formatter. Waiting/running details poll every three seconds while visib
 when terminal, on errors, or on navigation. Failed refreshes explicitly hide stale operational
 data, with manual retry for recoverable errors. Neither endpoint dispatches a job, calls
 external services, or writes audit events. Job execution is available in the full React Ops
-workspace; original template renderers are available only on the archive hostname.
+workspace; legacy Ops page routes are not exposed to browsers.
 
 The audit trail opens `/ops/audit/` and reads `GET /api/app/ops/audit` with the
 same `OpsSession` staff check and Caddy IP restrictions. All legacy display fields are retained:
@@ -163,7 +152,7 @@ The page is read-only, has no polling, and never creates audit events.
 The full Ops workspace starts at `/ops/`: Overview, Jobs, Logs, Metrics, Users and user
 details/access/subscriptions, Subscriptions, Logins/lockouts, Settings and every setting group,
 Schedule/add/edit, Feeds, Instruments, Configuration, and Backups. Runs/Audit retain their
-dedicated endpoints. Legacy `/ops/` pages and actions are isolated on the archive hostname.
+dedicated endpoints. The legacy Ops handlers are reused internally by the private API.
 
 Ops uses a scoped square-edged console layout with icon navigation. Status badges combine
 labels and icons with green success, red failure, and amber warning colors in both themes;

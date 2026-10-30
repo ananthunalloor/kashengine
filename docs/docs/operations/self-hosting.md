@@ -11,7 +11,7 @@ documentation site is one of the services (`docs`). Caddy shows it at `https://<
 
 | Service | Job | Port inside Docker |
 | --- | --- | --- |
-| `caddy` | TLS, routing, headers. It serves `SITE_ADDRESS` and the archive host `OLD_SITE_ADDRESS`. | 80, 443 (published) |
+| `caddy` | TLS, routing, headers. It serves `SITE_ADDRESS`. | 80, 443 (published) |
 | `web` | Django (gunicorn in production, `runserver` in development). It serves the React app. | 8000 |
 | `worker` | Celery worker | none |
 | `beat` | Celery Beat. The schedule is in the database. | none |
@@ -46,7 +46,6 @@ Compose loads `docker-compose.override.yml` by itself. The override file:
 - sets `SITE_ADDRESS=localhost`, so Caddy makes a certificate with its own CA (the browser shows a
   warning the first time);
 - sets the CSP to report-only;
-- sets `OLD_SITE_ADDRESS=old.localhost` for the archived interface;
 - runs the `frontend` service (`pnpm dev` on `127.0.0.1:5173`) and sets `DJANGO_VITE_DEV_MODE`,
   so Django loads the React app from the Vite server with hot reload;
 - mounts the source tree and reloads `web`, `worker` and `beat` when a `.py` file changes.
@@ -59,7 +58,6 @@ docker compose exec ollama ollama pull llama3.2:3b
 ```
 
 Open `https://localhost/` for the app and `https://localhost/docs/` for these docs.
-`https://old.localhost/` shows the archived Django interface. Only a superuser can sign in there.
 
 Rebuild only when `pyproject.toml` or `uv.lock` changes. A change to `frontend/package.json` or
 `frontend/pnpm-lock.yaml` needs a restart of the `frontend` service.
@@ -80,9 +78,7 @@ pnpm build        # production build in frontend/dist
 Use a Linux host with Docker Engine and the Compose plugin. The production model needs 16 GB of
 RAM or more. The size depends on the model that you choose.
 
-1. Point the DNS record of your domain to the server. Open TCP 80, TCP 443 and UDP 443. Add a
-   second record for the archive host (for example `old.your-domain.com`), or leave it out if you
-   do not publish the archive. Caddy gets a certificate for each host name.
+1. Point the DNS record of your domain to the server. Open TCP 80, TCP 443 and UDP 443.
 2. Make the environment file and protect it:
 
    ```bash
@@ -93,8 +89,7 @@ RAM or more. The size depends on the model that you choose.
 3. Set real values for `SITE_ADDRESS`, `ACME_EMAIL`, `DJANGO_ALLOWED_HOSTS`,
    `DJANGO_CSRF_TRUSTED_ORIGINS`, `DJANGO_SECRET_KEY`, `POSTGRES_PASSWORD` (and the same password
    in `DATABASE_URL`), `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD` (the Silo credentials), and
-   `TELEGRAM_BOT_TOKEN`. `OLD_SITE_ADDRESS` is `old.<SITE_ADDRESS>` by default. Add that host to
-   `DJANGO_ALLOWED_HOSTS` and `DJANGO_CSRF_TRUSTED_ORIGINS` if you use it. Keep `localhost` in `DJANGO_ALLOWED_HOSTS`:
+   `TELEGRAM_BOT_TOKEN`. Keep `localhost` in `DJANGO_ALLOWED_HOSTS`:
    the Docker health check needs it. Set `ADMIN_ALLOWED_IPS` and `DOCS_ALLOWED_IPS`.
    Configure SMTP values, `TELEGRAM_BOT_USERNAME`, and a random
    `TELEGRAM_WEBHOOK_SECRET` if users should self-register and receive reports. Register

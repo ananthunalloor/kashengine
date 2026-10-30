@@ -68,7 +68,7 @@ Early development. Phase 1 (project setup) is done. The features below are plann
 - Predict the next-day market direction
 - Score and list upcoming IPOs
 - Send the daily report with Telegram (email later)
-- Show all data in a web UI (Django templates and a React SPA, with Tailwind for legacy pages)
+- Show all data in a React web application
 - Read the data with a versioned, read-only REST API (`/api/v1/`, with Swagger UI)
 
 ## Stack
@@ -325,7 +325,7 @@ You need a server with Docker, a domain name, and 16 GB RAM or more (for the pro
 
 1. Point the DNS record of your domain to the server. Open ports 80 and 443 (TCP) and 443 (UDP) on the firewall.
 
-2. Make the env file and put real values in it. Set `SITE_ADDRESS`, `OLD_SITE_ADDRESS`, `ACME_EMAIL`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, and all the `change-me` values. Point both hostnames at the server and include both in the allowed hosts and trusted origins:
+2. Make the env file and put real values in it. Set `SITE_ADDRESS`, `ACME_EMAIL`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, and all the `change-me` values. Point the domain at the server and include it in the allowed hosts and trusted origins:
 
    ```bash
    cp .env.prod.example .env.prod
@@ -500,26 +500,6 @@ denials and login lockouts render React with their original 403/429 statuses.
 Authentication, logout, and subscription redirects stay within React. Django Admin,
 API documentation, and the documentation site are intentionally outside this migration.
 
-### Archived Django interface
-
-The original Django-template UI is available only at `https://old.<your-domain>/`
-(`https://old.localhost/` in development). Every legacy page and action requires an active
-superuser; ordinary staff and members receive 403. Anonymous visitors are sent to the archive's
-login form, which accepts only active superusers and retains CSRF and django-axes protection.
-Sessions and CSRF cookies are host-only: sign in separately on the archive.
-
-All archived pages show an **Archived Django interface — superuser access only** notice,
-use private/no-store responses, and send `X-Robots-Tag: noindex, nofollow, noarchive`.
-Existing actions still operate on the live database; **archived does not mean read-only**.
-The archive does not mount the APIs, Django Admin, docs, or React routes. The whole archive
-also respects `ADMIN_ALLOWED_IPS` at Caddy.
-
-Set `OLD_SITE_ADDRESS=old.your-domain.com` (defaults to `old.${SITE_ADDRESS}`), add its DNS
-record pointing to this server, and include it in `DJANGO_ALLOWED_HOSTS` and
-`DJANGO_CSRF_TRUSTED_ORIGINS`. Rebuild/redeploy Caddy and web with the updated Compose files.
-Do not set a shared parent-domain session or CSRF cookie. Local development uses
-`old.localhost`; add a local hosts entry if your resolver does not support `.localhost`.
-
 Undefined browser URLs display a themed React 404 with home/dashboard recovery links and
 retain HTTP 404 (also for anonymous visitors). React navigation has the same catch-all
 screen. Existing API error handling and protected-route permissions remain unchanged.
@@ -630,14 +610,13 @@ Active run details refresh every three seconds and stop on completion or error. 
 distinguish waiting, running, done, and failed runs. These read-only pages use staff-only
 session endpoints under `/api/app/ops/runs`, with the same admin IP restrictions as `/ops/`.
 Job execution and all other Ops controls now also have React pages under `/ops/`;
-the original template pages are restricted to superusers on the archive hostname.
+the retired Django template pages are no longer served.
 
 The read-only Ops audit page is at `/ops/audit/`, backed by staff-only
 `GET /api/app/ops/audit`. Its TanStack table searches recorded names, actions, targets, details,
 and addresses across all retained records before pagination. Exact recorded-admin/action filters,
 sorting, and page size are preserved in the URL. Actor names survive account renames/deletion;
 details render as plain text, with timestamps in IST. Audit reads never create or alter events.
-The original audit template is available only on the superuser archive.
 
 The full Ops workspace includes Overview, Jobs, Logs, Metrics, Users/access/subscriptions,
 Logins/lockouts, Settings, Schedule, Feeds, Instruments, Configuration, and Backups.
