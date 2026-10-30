@@ -29,6 +29,7 @@ from apps.markets.evaluation import accuracy_stats
 from apps.markets.trading import today_ist
 from apps.ops import audit
 from apps.ops.models import TaskRun
+from apps.ops.permissions import staff_required
 from apps.reports.builder import render_text
 from apps.reports.models import Report
 from apps.siteconfig import conf
@@ -98,6 +99,26 @@ def react_app(request: HttpRequest) -> HttpResponse:
 
     Args:
         request: The incoming request.
+
+    Returns:
+        The rendered application shell.
+    """
+    return render(request, "web/spa.html")
+
+
+@never_cache
+@login_required(login_url="web:login")
+@staff_required
+@safe_only
+def react_v2_preview(request: HttpRequest, rest: str = "") -> HttpResponse:
+    """Serve the staff-only V2 React shell under `/v2/`.
+
+    Authenticated V2 pages use the existing `/api/app/` endpoints. Staff access remains
+    required while the redesigned UI is being reviewed.
+
+    Args:
+        request: The incoming request.
+        rest: The client-side path after `/v2/`. React reads it from the URL.
 
     Returns:
         The rendered application shell.

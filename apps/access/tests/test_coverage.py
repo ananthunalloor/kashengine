@@ -15,6 +15,8 @@ NOT_FEATURES = features.OPEN_URL_NAMES | {
     "react_ops",
     "react_ops_backups",
     "react_ops_page",
+    "v2_preview",
+    "v2_preview_page",
 }
 
 

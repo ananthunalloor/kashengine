@@ -1180,7 +1180,6 @@ h2 {
   flex-wrap: wrap;
   gap: var(--ui-space-1);
 }
-
 .ops-page-tabs [role="tablist"][data-stuck="true"]::after {
   content: "";
   position: absolute;
