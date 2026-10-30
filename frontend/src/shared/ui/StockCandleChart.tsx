@@ -24,11 +24,13 @@ export function movingAverage(candles: Candle[], index: number, period: number) 
 export function StockCandleChart({
   candles,
   projectionPoints = [],
+  muted = false,
   ariaLabel,
   height: requestedHeight = 440,
 }: {
   candles: Candle[];
   projectionPoints?: Projection[];
+  muted?: boolean;
   ariaLabel: string;
   height?: number;
 }) {
@@ -280,7 +282,11 @@ export function StockCandleChart({
           </text>
           <g clipPath={`url(#${id}-plot)`}>
             {visible.map((bar, index) => {
-              const color = bar.close >= bar.open ? "var(--brand-gain)" : "var(--brand-loss)";
+              const color = muted
+                ? "#858b92"
+                : bar.close >= bar.open
+                  ? "var(--brand-gain)"
+                  : "var(--brand-loss)";
               const bodyWidth = Math.min(16, step * 0.7);
               return (
                 <g key={bar.label} data-candle={bar.label}>
@@ -317,7 +323,7 @@ export function StockCandleChart({
               <path
                 d={path(averages.map((point, index) => ({ index, value: point.short })))}
                 fill="none"
-                stroke="var(--brand-purple)"
+                stroke={muted ? "#858b92" : "var(--brand-purple)"}
                 strokeWidth={2}
                 aria-label="20-session moving average"
               />
@@ -326,7 +332,7 @@ export function StockCandleChart({
               <path
                 d={path(averages.map((point, index) => ({ index, value: point.long })))}
                 fill="none"
-                stroke="var(--brand-muted)"
+                stroke="#858b92"
                 strokeWidth={2}
                 strokeDasharray="3 2"
                 aria-label="50-session moving average"
@@ -342,7 +348,7 @@ export function StockCandleChart({
                   })),
                 ])}
                 fill="none"
-                stroke="var(--brand-purple)"
+                stroke="#858b92"
                 strokeWidth={2}
                 strokeDasharray="6 5"
                 aria-label="History-only projection"
@@ -420,8 +426,11 @@ export function StockCandleChart({
       <Text id={`${id}-help`} size="xs" c="dimmed">
         {visible[0]?.label} to {visible.at(-1)?.label} · {visible.length} daily sessions. Hover or
         touch for OHLCV. Drag horizontally or use Earlier/Later to pan. Focus chart: arrows inspect,
-        Shift+arrows pan, +/- zoom. Ranges use 20 sessions per month. SMA 20 is purple; SMA 50 is
-        dashed gray. Saved daily data, not an intraday feed.
+        Shift+arrows pan, +/- zoom. Ranges use 20 sessions per month.{" "}
+        {muted
+          ? "Company price history and projection use a muted gray style."
+          : "SMA 20 is purple; SMA 50 is dashed gray."}{" "}
+        Saved daily data, not an intraday feed.
       </Text>
     </Stack>
   );

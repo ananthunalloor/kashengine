@@ -128,3 +128,28 @@ it("does not draw a projection without observed candles to anchor it", () => {
   expect(screen.getByLabelText("Selected chart values")).toHaveTextContent("No saved candles.");
   expect(screen.queryByLabelText("History-only projection")).not.toBeInTheDocument();
 });
+
+it("renders company history and its projection in muted gray", () => {
+  const { container } = render(
+    <ThemeProvider>
+      <StockCandleChart
+        candles={candles}
+        projectionPoints={[
+          { label: "Session 130", value: 231 },
+          { label: "T+1", value: 232 },
+        ]}
+        muted
+        ariaLabel="Muted company price chart"
+      />
+    </ThemeProvider>,
+  );
+  expect(container.querySelector("[data-candle] line")).toHaveAttribute("stroke", "#858b92");
+  expect(container.querySelector('[aria-label="20-session moving average"]')).toHaveAttribute(
+    "stroke",
+    "#858b92",
+  );
+  expect(container.querySelector('[aria-label="History-only projection"]')).toHaveAttribute(
+    "stroke",
+    "#858b92",
+  );
+});

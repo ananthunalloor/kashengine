@@ -174,6 +174,7 @@ function PriceTrend({ candles }: { candles: CompanyBar[] }) {
       <CandlestickTrendChart
         candles={candles.map((bar) => ({ ...bar, label: bar.day }))}
         projectionPoints={projectionPoints}
+        muted
         ariaLabel="Daily candlestick chart; each candle shows open, high, low and close in INR"
         height={440}
       />

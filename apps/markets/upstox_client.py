@@ -52,6 +52,8 @@ class UpstoxClient:
             raise UpstoxError("Upstox is disabled.")
         if not conf.UPSTOX_ACCESS_TOKEN:
             raise UpstoxError("Configure an Upstox access token in Ops settings.")
+        self.access_token = conf.UPSTOX_ACCESS_TOKEN
+        self.access_token = conf.UPSTOX_ACCESS_TOKEN
         self.client = client or httpx.Client(timeout=30, follow_redirects=False)
         self.owned = client is None
 
@@ -91,7 +93,7 @@ class UpstoxClient:
                 params=params,
                 headers={
                     "Accept": "application/json",
-                    "Authorization": f"Bearer {conf.UPSTOX_ACCESS_TOKEN}",
+                    "Authorization": f"Bearer {self.access_token}",
                 },
             )
         except httpx.HTTPError:
