@@ -15,9 +15,15 @@
     "api:check": "openapi-ts && git diff --exit-code -- src/shared/api/generated"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@mantine/charts": "8.3.18",
     "@mantine/core": "^8.2.0",
     "@mantine/dates": "^8.2.0",
     "@mantine/hooks": "^8.2.0",
+    "@mantine/modals": "8.3.18",
+    "@mantine/notifications": "8.3.18",
+    "@mantine/spotlight": "8.3.18",
     "@tanstack/charts": "^1.1.0",
     "@tanstack/react-query": "^5.83.0",
     "@tanstack/react-router": "^1.130.17",
@@ -26,6 +32,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-icons": "^5.5.0",
+    "recharts": "^2.15.4",
     "zod": "^4.1.0"
   },
   "devDependencies": {

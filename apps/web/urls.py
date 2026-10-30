@@ -30,4 +30,6 @@ urlpatterns = [
     path("companies/", views.react_app, name="companies"),
     path("companies/<int:pk>/", views.react_company, name="company"),
     path("delivery/", views.react_app, name="delivery"),
+    path("v2/", views.react_v2_preview, name="v2_preview"),
+    path("v2/<path:rest>", views.react_v2_preview, name="v2_preview_page"),
 ]

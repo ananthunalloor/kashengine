@@ -14,9 +14,10 @@
   --brand-loss-soft: #fceeed;
 }
 
-/* Square corners are a product-wide rule, including library controls and pseudo-elements. */
-*,
-*::before,
-*::after {
+/* Square corners are a product-wide rule, including library controls and pseudo-elements.
+   The v2 preview (html[data-ui="v2"]) uses the rounded Tailwind radius scale instead. */
+:root:not([data-ui="v2"]) *,
+:root:not([data-ui="v2"]) *::before,
+:root:not([data-ui="v2"]) *::after {
   border-radius: 0 !important;
 }

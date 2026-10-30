@@ -37,6 +37,9 @@ function RootLayout() {
     return () => window.clearTimeout(timer);
   }, [client, session.market_calendar]);
 
+  // The v2 preview renders its own shell and theme scope.
+  if (pathname === "/v2" || pathname.startsWith("/v2/")) return <Outlet />;
+
   return (
     <ApplicationShell session={session} pathname={pathname}>
       {session.email_verified && <LiveUpdates staff={session.is_staff} />}

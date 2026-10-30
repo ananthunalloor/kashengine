@@ -541,3 +541,13 @@ A record of jobs, sessions, account changes and token actions. Names are kept af
 5. Ops: the generic workspace template + Overview, Jobs, Run detail, Logs, User detail, Backups.
 6. Public: Landing, Log in, Sign up, 404.
 7. Mobile versions of Today, Company detail, News and Account.
+
+---
+
+## 12. V2 mock preview
+
+The first implementation of the redesign is available inside the existing app at `/v2/`. It is a staff-only preview and uses the existing Django login/session; all page content is fictional mock data and is not connected to production APIs. This allows the layout and interactions to be reviewed before database migrations and data wiring.
+
+The preview includes the authenticated pages (Today, Reports and report detail, News, IPOs and detail, Markets, Companies and detail, Delivery, Account, and Design System) plus public Landing, Log in, and Sign up mock pages. Ops pages are intentionally not included in this first pass. Do not use the concept screenshots as app assets; the preview uses the concept HTML for layout reference only.
+
+The preview's route and access rules are implemented by `frontend/src/routes/v2.tsx` and `apps/web/urls.py`. Before public release, replace mock data with real API-backed data and review authentication, legal content, and permissions for any public-facing pages.
